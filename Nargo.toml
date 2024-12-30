@@ -1,8 +1,5 @@
-[package]
-name = "aztec_starter"
-type = "contract"
-authors = [ "" ]
-compiler_version = ">=1.0.0"
-
-[dependencies]
-aztec = { git = "https://github.com/AztecProtocol/aztec-packages/", tag = "aztec-packages-v0.68.2", directory = "noir-projects/aztec-nr/aztec" }
+[workspace]
+members = [
+"src/easy_private_voting",
+"src/token_contract"
+]
