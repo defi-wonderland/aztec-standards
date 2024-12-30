@@ -1,0 +1,36 @@
+{
+  "name": "aztec_standards",
+  "version": "0.0.0",
+  "repository": "https://github.com/defi-wonderland/aztec-standards.git",
+  "author": "Wonderland",
+  "license": "MIT",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "clean": "rm -rf ./src/artifacts ./target",
+    "codegen": "aztec codegen target --outdir src/artifacts",
+    "compile": "aztec-nargo compile",
+    "test": "yarn test:js && yarn test:nr",
+    "test:js": "NODE_NO_WARNINGS=1 node --experimental-vm-modules $(yarn bin jest) --no-cache --runInBand --config jest.integration.config.json",
+    "test:nr": "aztec test"
+  },
+  "dependencies": {
+    "@aztec/accounts": "0.68.2",
+    "@aztec/aztec.js": "0.68.2",
+    "@aztec/noir-contracts.js": "0.68.2",
+    "@types/node": "22.5.1"
+  },
+  "devDependencies": {
+    "@types/jest": "29.5.11",
+    "@types/mocha": "10.0.6",
+    "@types/node": "22.5.1",
+    "jest": "29.7.0",
+    "ts-jest": "29.2.5",
+    "ts-node": "10.9.2",
+    "typescript": "5.7.2"
+  },
+  "jest": {
+    "testTimeout": 200000
+  },
+  "packageManager": "yarn@1.22.22+sha512.a6b2f7906b721bba3d67d4aff083df04dad64c399707841b7acf00f6b133b7ac24255f2652fa22ae3534329dc6180534e98d17432037ff6fd140556e2bb3137e"
+}
