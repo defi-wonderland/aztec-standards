@@ -69,12 +69,6 @@ contract Token {
     // docs:start:storage_struct
     #[storage]
     struct Storage<Context> {
-        // docs:start:storage_admin
-        admin: PublicMutable<AztecAddress, Context>,
-        // docs:end:storage_admin
-        // docs:start:storage_minters
-        minters: Map<AztecAddress, PublicMutable<bool, Context>, Context>,
-        // docs:end:storage_minters
         // docs:start:storage_balances
         balances: Map<AztecAddress, BalanceSet<Context>, Context>,
         // docs:end:storage_balances
@@ -92,9 +86,6 @@ contract Token {
     #[public]
     #[initializer]
     fn constructor(admin: AztecAddress, name: str<31>, symbol: str<31>, decimals: u8) {
-        assert(!admin.is_zero(), "invalid admin");
-        storage.admin.write(admin);
-        storage.minters.at(admin).write(true);
         storage.name.initialize(FieldCompressedString::from_string(name));
         storage.symbol.initialize(FieldCompressedString::from_string(symbol));
         // docs:start:initialize_decimals
@@ -102,16 +93,6 @@ contract Token {
         // docs:end:initialize_decimals
     }
     // docs:end:constructor
-
-    // docs:start:set_admin
-    #[public]
-    fn set_admin(new_admin: AztecAddress) {
-        assert(storage.admin.read().eq(context.msg_sender()), "caller is not admin");
-        // docs:start:write_admin
-        storage.admin.write(new_admin);
-        // docs:end:write_admin
-    }
-    // docs:end:set_admin
 
     #[public]
     #[view]
@@ -149,22 +130,6 @@ contract Token {
         storage.decimals.read()
     }
 
-    // docs:start:admin
-    #[public]
-    #[view]
-    fn get_admin() -> Field {
-        storage.admin.read().to_field()
-    }
-    // docs:end:admin
-
-    // docs:start:is_minter
-    #[public]
-    #[view]
-    fn is_minter(minter: AztecAddress) -> bool {
-        storage.minters.at(minter).read()
-    }
-    // docs:end:is_minter
-
     // docs:start:total_supply
     #[public]
     #[view]
@@ -181,24 +146,9 @@ contract Token {
     }
     // docs:end:balance_of_public
 
-    // docs:start:set_minter
-    #[public]
-    fn set_minter(minter: AztecAddress, approve: bool) {
-        // docs:start:read_admin
-        assert(storage.admin.read().eq(context.msg_sender()), "caller is not admin");
-        // docs:end:read_admin
-        // docs:start:write_minter
-        storage.minters.at(minter).write(approve);
-        // docs:end:write_minter
-    }
-    // docs:end:set_minter
-
     // docs:start:mint_to_public
     #[public]
     fn mint_to_public(to: AztecAddress, amount: Field) {
-        // docs:start:read_minter
-        assert(storage.minters.at(context.msg_sender()).read(), "caller is not minter");
-        // docs:end:read_minter
         let amount = U128::from_integer(amount);
         let new_balance = storage.public_balances.at(to).read().add(amount);
         let supply = storage.total_supply.read().add(amount);
@@ -572,8 +522,6 @@ contract Token {
     /// (e.g. used during token bridging, in AMM liquidity token etc.).
     #[public]
     fn finalize_mint_to_private(amount: Field, hiding_point_slot: Field) {
-        assert(storage.minters.at(context.msg_sender()).read(), "caller is not minter");
-
         _finalize_mint_to_private(amount, hiding_point_slot, &mut context, storage);
     }
     // docs:end:finalize_mint_to_private
@@ -586,8 +534,6 @@ contract Token {
         amount: Field,
         hiding_point_slot: Field,
     ) {
-        // We check the minter permissions as it was not done in `mint_to_private` function.
-        assert(storage.minters.at(from).read(), "caller is not minter");
         _finalize_mint_to_private(amount, hiding_point_slot, &mut context, storage);
     }
     // docs:end:finalize_mint_to_private_unsafe
