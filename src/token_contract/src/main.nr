@@ -613,68 +613,6 @@ contract Token {
         finalization_payload.emit();
     }
 
-    /// We need to use different randomness for the user and for the fee payer notes because if the randomness values
-    /// were the same we could fingerprint the user by doing the following:
-    ///      1) randomness_influence = fee_payer_point - G_npk * fee_payer_npk =
-    ///                              = (G_npk * fee_payer_npk + G_rnd * randomness + G_slot * fee_payer_slot)
-    ///                                - G_npk * fee_payer_npk - G_slot * fee_payer_slot =
-    ///                              = G_rnd * randomness
-    ///      2) user_fingerprint = user_point - randomness_influence =
-    ///                          = (G_npk * user_npk + G_rnd * randomness + G_slot * user_slot) - G_rnd * randomness =
-    ///                          = G_npk * user_npk + G_slot * user_slot
-    ///      3) Then the second time the user would use this fee paying contract we would recover the same fingerprint
-    ///         and link that the 2 transactions were made by the same user. Given that it's expected that only
-    ///         a limited set of fee paying contracts will be used and they will be known, searching for fingerprints
-    ///         by trying different fee payers is a feasible attack.
-    ///
-    /// Note 1: fee_payer_npk is part of the fee_payer address preimage derivation, and is assumed to be known. So
-    //          if we have a known set of fee payer contract addresses getting fee_payer_npk and fee_payer_slot is
-    //          trivial (slot is derived in a `Map<...>` as a hash of balances map slot and a fee payer address).
-    /// Note 2: fee_payer_point and user_point above are public information because they are passed as args to
-    ///         the public `complete_refund(...)` function.
-    // docs:start:setup_refund
-    #[private]
-    fn setup_refund(
-        fee_payer: AztecAddress, // Address of the entity which will receive the fee note.
-        user: AztecAddress, // A user for which we are setting up the fee refund.
-        funded_amount: Field, // The amount the user funded the fee payer with (represents fee limit).
-        nonce: Field, // A nonce to make authwitness unique.
-    ) {
-        // 1. This function is called by fee paying contract (fee_payer) when setting up a refund so we need to support
-        // the authwit flow here and check that the user really permitted fee_payer to set up a refund on their behalf.
-        assert_current_call_valid_authwit(&mut context, user);
-
-        // 3. Deduct the funded amount from the user's balance - this is a maximum fee a user is willing to pay
-        // (called fee limit in aztec spec). The difference between fee limit and the actual tx fee will be refunded
-        // to the user in the `complete_refund(...)` function.
-        let change = subtract_balance(
-            &mut context,
-            storage,
-            user,
-            U128::from_integer(funded_amount),
-            INITIAL_TRANSFER_CALL_MAX_NOTES,
-        );
-        storage.balances.at(user).add(user, change).emit(encode_and_encrypt_note_unconstrained(
-            &mut context,
-            user,
-            user,
-        ));
-
-        // 4. We prepare the partial notes
-        let fee_payer_point_slot =
-            _prepare_private_balance_increase(user, fee_payer, &mut context, storage);
-        let user_point_slot = _prepare_private_balance_increase(user, user, &mut context, storage);
-
-        // 5. Set the public teardown function to `complete_refund(...)`. Public teardown is the only time when a public
-        // function has access to the final transaction fee, which is needed to compute the actual refund amount.
-        context.set_public_teardown_function(
-            context.this_address(),
-            comptime { FunctionSelector::from_signature("complete_refund(Field,Field,Field)") },
-            [fee_payer_point_slot, user_point_slot, funded_amount],
-        );
-    }
-    // docs:end:setup_refund
-
     // TODO(#9375): Having to define the note log length here is very unfortunate as it's basically impossible for
     // users to derive manually. This will however go away once we have a real transient storage since we will not need
     // the public call and instead we would do something like `context.transient_storage_write(slot, payload)` and that
