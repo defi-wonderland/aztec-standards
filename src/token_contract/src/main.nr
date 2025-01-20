@@ -575,37 +575,6 @@ contract Token {
         context.storage_write(slot + aztec::protocol_types::point::POINT_LENGTH as Field, setup_log);
     }
 
-    // TODO(#7728): even though the funded_amount should be a U128, we can't have that type in a contract interface due
-    // to serialization issues.
-    // docs:start:complete_refund
-    #[public]
-    #[internal]
-    fn complete_refund(fee_payer_slot: Field, user_slot: Field, funded_amount: Field) {
-        // TODO(#7728): Remove the next line
-        let funded_amount = U128::from_integer(funded_amount);
-        let tx_fee = U128::from_integer(context.transaction_fee());
-
-        // 1. We check that user funded the fee payer contract with at least the transaction fee.
-        // TODO(#7796): we should try to prevent reverts here
-        assert(funded_amount >= tx_fee, "funded amount not enough to cover tx fee");
-
-        // 2. We compute the refund amount as the difference between funded amount and tx fee.
-        let refund_amount = funded_amount - tx_fee;
-
-        // 3. We construct the note finalization payloads with the correct amounts and hiding points to get the note
-        // hashes and unencrypted logs.
-        let fee_payer_finalization_payload =
-            UintNote::finalization_payload().new(&mut context, fee_payer_slot, tx_fee);
-        let user_finalization_payload =
-            UintNote::finalization_payload().new(&mut context, user_slot, refund_amount);
-
-        // 4. At last we emit the note hashes and the final note logs.
-        fee_payer_finalization_payload.emit();
-        user_finalization_payload.emit();
-        // --> Once the tx is settled user and fee recipient can add the notes to their pixies.
-    }
-    // docs:end:complete_refund
-
     /// Internal ///
     // docs:start:increase_public_balance
     #[public]
