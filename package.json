@@ -15,9 +15,9 @@
     "test:nr": "aztec test"
   },
   "dependencies": {
-    "@aztec/accounts": "0.70.0",
-    "@aztec/aztec.js": "0.70.0",
-    "@aztec/noir-contracts.js": "0.70.0",
+    "@aztec/accounts": "0.71.0",
+    "@aztec/aztec.js": "0.71.0",
+    "@aztec/noir-contracts.js": "0.71.0",
     "@types/node": "22.5.1"
   },
   "devDependencies": {
