@@ -85,7 +85,7 @@ contract Token {
     // docs:start:constructor
     #[public]
     #[initializer]
-    fn constructor(admin: AztecAddress, name: str<31>, symbol: str<31>, decimals: u8) {
+    fn constructor(name: str<31>, symbol: str<31>, decimals: u8) {
         storage.name.initialize(FieldCompressedString::from_string(name));
         storage.symbol.initialize(FieldCompressedString::from_string(symbol));
         // docs:start:initialize_decimals
