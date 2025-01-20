@@ -12,13 +12,18 @@ const setupSandbox = async () => {
 
     const pxe = createPXEClient(PXE_URL);
     await waitForPXE(pxe);
-    return pxe;``
+    return pxe;
 };
 
 describe("Token", () => {
     let pxe: PXE;
     let wallets: AccountWallet[] = [];
     let accounts: CompleteAddress[] = [];
+
+    let alice: AccountWallet;
+    let bob: AccountWallet;
+    let carl: AccountWallet;
+
     let logger: Logger;
 
     beforeAll(async () => {
@@ -30,6 +35,10 @@ describe("Token", () => {
 
         wallets = await getInitialTestAccountsWallets(pxe);
         accounts = wallets.map(w => w.getCompleteAddress())
+
+        alice = wallets[0];
+        bob = wallets[1];
+        carl = wallets[2];
     })
 
     it("Deploys the contract", async () => {
@@ -69,4 +78,41 @@ describe("Token", () => {
 
         expect(receiptAfterMined.contract.instance.address).toEqual(deploymentData.address)
     }, 300_000)
+
+    async function deployToken() {
+        const salt = Fr.random();
+        const contract = await TokenContract.deploy(wallets[0], "PrivateToken", "PT", 18).send().deployed();
+        return contract;
+    }
+
+    it("it mints", async () => {
+        const candidate = new Fr(1)
+        const delegatee = accounts[1].address
+        const random = new Fr(2)
+
+        const contract = await deployToken();
+
+        await contract.withWallet(alice)
+        const tx =await contract.methods.mint_to_public(bob.getAddress(), 1e18).send().wait();
+        const balance = await contract.methods.balance_of_public(bob.getAddress()).simulate();
+        expect(balance).toBe(BigInt(1e18));
+    }, 300_000)
+
+    it("transfers tokens between public accounts", async () => {
+        const contract = await deployToken();
+        
+        // First mint some tokens to alice
+        await contract.withWallet(alice).methods.mint_to_public(alice.getAddress(), 2e18).send().wait();
+        
+        // Transfer 1 token from alice to bob
+        await contract.withWallet(alice).methods.transfer_in_public(alice.getAddress(), bob.getAddress(), 1e18, 0).send().wait();
+
+        // Check balances are correct
+        const aliceBalance = await contract.methods.balance_of_public(alice.getAddress()).simulate();
+        const bobBalance = await contract.methods.balance_of_public(bob.getAddress()).simulate();
+        
+        expect(aliceBalance).toBe(BigInt(1e18));
+        expect(bobBalance).toBe(BigInt(1e18));
+    }, 300_000)
+
 });
