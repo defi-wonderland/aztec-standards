@@ -1,5 +1,4 @@
 [workspace]
 members = [
-"src/easy_private_voting",
 "src/token_contract"
 ]
