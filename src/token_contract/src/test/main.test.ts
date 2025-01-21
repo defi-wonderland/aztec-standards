@@ -1,5 +1,5 @@
 import { TokenContractArtifact, TokenContract } from "../../../artifacts/Token.js"
-import { AccountWallet, CompleteAddress, ContractDeployer, createLogger, Fr, PXE, waitForPXE, TxStatus, createPXEClient, getContractInstanceFromDeployParams, Logger } from "@aztec/aztec.js";
+import { AccountWallet, CompleteAddress, ContractDeployer, createLogger, Fr, PXE, waitForPXE, TxStatus, createPXEClient, getContractInstanceFromDeployParams, Logger, Tx, SentTx, FieldsOf, TxReceipt, Contract } from "@aztec/aztec.js";
 import { getInitialTestAccountsWallets } from "@aztec/accounts/testing"
 import { deployInitialTestAccounts } from '@aztec/accounts/testing';
 
@@ -41,7 +41,7 @@ describe("Token", () => {
         carl = wallets[2];
     })
 
-    it("Deploys the contract", async () => {
+    it("deploys the contract", async () => {
         const salt = Fr.random();
         // const VotingContractArtifact = EasyPrivateVotingContractArtifact
         const [deployerWallet, adminWallet] = wallets; // using first account as deployer and second as contract admin
@@ -81,15 +81,13 @@ describe("Token", () => {
 
     async function deployToken() {
         const salt = Fr.random();
-        const contract = await TokenContract.deploy(wallets[0], "PrivateToken", "PT", 18).send().deployed();
+        const contract = await Contract.deploy(alice, TokenContractArtifact, ["PrivateToken", "PT", 18]).send().deployed();
+        // const contract = await TokenContract.deploy(wallets[0], )
+        console.log("contract deployed", contract.address)
         return contract;
     }
 
-    it("it mints", async () => {
-        const candidate = new Fr(1)
-        const delegatee = accounts[1].address
-        const random = new Fr(2)
-
+    it("mints", async () => {
         const contract = await deployToken();
 
         await contract.withWallet(alice)
@@ -101,7 +99,7 @@ describe("Token", () => {
     it("transfers tokens between public accounts", async () => {
         const contract = await deployToken();
         
-        // First mint some tokens to alice
+        // First mint 2 tokens to alice
         await contract.withWallet(alice).methods.mint_to_public(alice.getAddress(), 2e18).send().wait();
         
         // Transfer 1 token from alice to bob
@@ -114,5 +112,195 @@ describe("Token", () => {
         expect(aliceBalance).toBe(BigInt(1e18));
         expect(bobBalance).toBe(BigInt(1e18));
     }, 300_000)
+
+    it("burns public tokens", async () => {
+        const contract = await deployToken();
+        
+        // First mint 2 tokens to alice
+        await contract.withWallet(alice).methods.mint_to_public(alice.getAddress(), 2e18).send().wait();
+        
+        // Burn 1 token from alice
+        await contract.withWallet(alice).methods.burn_public(alice.getAddress(), 1e18, 0).send().wait();
+
+        // Check balance and total supply are reduced
+        const aliceBalance = await contract.methods.balance_of_public(alice.getAddress()).simulate();
+        const totalSupply = await contract.methods.total_supply().simulate();
+        
+        expect(aliceBalance).toBe(BigInt(1e18));
+        expect(totalSupply).toBe(BigInt(1e18));
+    }, 300_000)
+
+    it("transfers tokens from private to public balance", async () => {
+        const contract = await deployToken();
+        
+        // First mint to private 23 tokens to alice
+        await contract.withWallet(alice).methods.mint_to_private(
+            alice.getAddress(),
+            alice.getAddress(), 
+            2e18
+        ).send().wait();
+        
+        // Transfer 1 token from alice's private balance to public balance
+        await contract.withWallet(alice).methods.transfer_to_public(
+            alice.getAddress(),
+            alice.getAddress(),
+            1e18, 0
+        ).send().wait();
+
+        // Check public balance is correct
+        const alicePublicBalance = await contract.methods.balance_of_public(alice.getAddress()).simulate();
+        expect(alicePublicBalance).toBe(BigInt(1e18));
+
+        // Check total supply hasn't changed
+        const totalSupply = await contract.methods.total_supply().simulate();
+        expect(totalSupply).toBe(BigInt(2e18));
+    }, 300_000)
+
+    it("fails when transferring more tokens than available in private balance", async () => {
+        const contract = await deployToken();
+        
+        // Mint 1 token privately to alice
+        await contract.withWallet(alice).methods.mint_to_private(
+            alice.getAddress(),
+            alice.getAddress(), 
+            1e18
+        ).send().wait();
+        
+        // This fails because of the nonce check
+        await expect(
+            contract.withWallet(alice).methods.transfer_to_public(
+                alice.getAddress(),
+                alice.getAddress(),
+                2e18,
+                BigInt(1)
+            ).send().wait()
+        ).rejects.toThrow(/invalid nonce/);
+
+        // Try to transfer 2 tokens from private to public balance
+        await expect(
+            contract.withWallet(alice).methods.transfer_to_public(
+                alice.getAddress(),
+                alice.getAddress(),
+                2e18,
+                BigInt(0)
+            ).send().wait()
+        ).rejects.toThrow();
+    }, 300_000)
+
+    it("can transfer tokens between private balances", async () => {
+        const contract = await deployToken();
+        
+        // Mint 2 tokens privately to alice
+        await contract.withWallet(alice).methods.mint_to_private(
+            alice.getAddress(),
+            alice.getAddress(),
+            2e18
+        ).send().wait();
+
+        // Transfer 1 token from alice to bob's private balance
+        await contract.withWallet(alice).methods.transfer(
+            bob.getAddress(),
+            1e18
+        ).send().wait();
+
+        // Try to transfer more than available balance
+        await expect(
+            contract.withWallet(alice).methods.transfer(
+                bob.getAddress(),
+                2e18
+            ).send().wait()
+        ).rejects.toThrow(/Balance too low/);
+
+        // Check total supply hasn't changed
+        const totalSupply = await contract.methods.total_supply().simulate();
+        expect(totalSupply).toBe(BigInt(2e18));
+    }, 300_000)
+
+    it("can mint tokens to private balance", async () => {
+        const contract = await deployToken();
+        
+        // Mint 2 tokens privately to alice
+        await contract.withWallet(alice).methods.mint_to_private(
+            alice.getAddress(),
+            alice.getAddress(),
+            2e18
+        ).send().wait();
+
+        // Check total supply increased
+        const totalSupply = await contract.methods.total_supply().simulate();
+        expect(totalSupply).toBe(BigInt(2e18));
+
+        // Public balance should be 0 since we minted privately
+        const alicePublicBalance = await contract.methods.balance_of_public(alice.getAddress()).simulate();
+        expect(alicePublicBalance).toBe(BigInt(0));
+    }, 300_000)
+
+    it("can burn tokens from private balance", async () => {
+        const contract = await deployToken();
+        
+        // Mint 2 tokens privately to alice
+        await contract.withWallet(alice).methods.mint_to_private(
+            alice.getAddress(),
+            alice.getAddress(),
+            2e18
+        ).send().wait();
+
+        // Burn 1 token from alice's private balance
+        await contract.withWallet(alice).methods.burn_private(
+            alice.getAddress(),
+            1e18,
+            0
+        ).send().wait();
+
+        // Try to burn more than available balance
+        await expect(
+            contract.withWallet(alice).methods.burn_private(
+                alice.getAddress(),
+                2e18,
+                0
+            ).send().wait()
+        ).rejects.toThrow(/Balance too low/);
+
+        // Check total supply decreased
+        const totalSupply = await contract.methods.total_supply().simulate();
+        expect(totalSupply).toBe(BigInt(1e18));
+
+        // Public balance should still be 0
+        const alicePublicBalance = await contract.methods.balance_of_public(alice.getAddress()).simulate();
+        expect(alicePublicBalance).toBe(BigInt(0));
+    }, 300_000)
+
+    it("can transfer tokens from public to private balance", async () => {
+        const contract = await deployToken();
+        
+        // Mint 2 tokens publicly to alice
+        await contract.withWallet(alice).methods.mint_to_public(
+            alice.getAddress(),
+            2e18
+        ).send().wait();
+
+        // Transfer 1 token from alice's public balance to private balance
+        await contract.withWallet(alice).methods.transfer_to_private(
+            alice.getAddress(),
+            1e18
+        ).send().wait();
+
+        // Try to transfer more than available public balance
+        // await expect(
+        //     contract.withWallet(alice).methods.transfer_to_private(
+        //         alice.getAddress(),
+        //         2e18
+        //     ).send().wait()
+        // ).rejects.toThrow(/Balance too low/);
+
+        // Check total supply stayed the same
+        const totalSupply = await contract.methods.total_supply().simulate();
+        expect(totalSupply).toBe(BigInt(2e18));
+
+        // Public balance should be reduced by transferred amount
+        const alicePublicBalance = await contract.methods.balance_of_public(alice.getAddress()).simulate();
+        expect(alicePublicBalance).toBe(BigInt(1e18));
+    }, 300_000)
+
 
 });
