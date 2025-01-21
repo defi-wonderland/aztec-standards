@@ -303,4 +303,63 @@ describe("Token", () => {
     }, 300_000)
 
 
+    it.only("asd", async () => {
+        const contract = await deployToken();
+        const c = await Contract.at(contract.address, TokenContractArtifact, alice)
+
+        // await c.withWallet(alice).methods.mint_to_private(
+        //     alice.getAddress(),
+        //     alice.getAddress(),
+        //     5e18
+        // ).send().wait({
+        //     debug: true,
+        // });
+
+        // pxe.addNote()?
+
+        const hidingPointSlot = await contract.withWallet(alice).methods.prepare_private_balance_increase(
+            bob.getAddress(),
+            alice.getAddress(),
+        ).simulate()
+        console.log("hidingPointSlot", hidingPointSlot)
+        const tx: SentTx = await contract.withWallet(alice).methods.prepare_private_balance_increase(
+            bob.getAddress(),
+            alice.getAddress()
+        ).send()
+        // console.log(await tx.getTxHash())
+        // console.log(await tx.getReceipt())
+        // console.log(await tx.getUnencryptedLogs())
+        const r = await tx.wait({debug: true,})
+        console.log("receipt", r)
+        
+        // if (r.debugInfo?.publicDataWrites) {
+        //     for (const write of r.debugInfo.publicDataWrites) {
+        //         console.log("Public data write:", write);
+        //     }
+        // }
+        // const events = await contract.withWallet(alice).wallet.getEncryptedEvents<TokenContract>(
+        //     TokenContract.events.Transfer,
+        //     1,
+        //     10,
+        //     [alice.getCompleteAddress().publicKeys.masterIncomingViewingPublicKey]
+        // )
+        console.log("events", events)
+        // public interactions
+        
+        // Finalize mint of 1 token to bob's private balance using the hiding point
+        // await contract.withWallet(alice).methods.finalize_transfer_to_private(
+        //     5e18,
+        //     hidingPointSlot
+        // ).send().wait({
+        //     debug: true,
+        // });
+
+        await contract.withWallet(alice).methods.finalize_mint_to_private(
+            5e18,
+            hidingPointSlot
+        ).send().wait({
+            debug: true,
+        });
+    }, 300_000)
+
 });
