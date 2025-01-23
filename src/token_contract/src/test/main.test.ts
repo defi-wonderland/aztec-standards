@@ -5,11 +5,6 @@ import { deployInitialTestAccounts } from '@aztec/accounts/testing';
 
 const setupSandbox = async () => {
     const { PXE_URL = 'http://localhost:8080' } = process.env;
-    // TODO: implement reading the DelegationNote from an isolated PXE
-    // 8080: cd ~/.aztec && docker-compose -f ./docker-compose.sandbox.yml up
-    // 8081: aztec start --port 8081 --pxe --pxe.nodeUrl http://host.docker.internal:8080/
-    // const DELEGATEE_PXE_URL = 'http://localhost:8081';
-
     const pxe = createPXEClient(PXE_URL);
     await waitForPXE(pxe);
     return pxe;
@@ -31,7 +26,6 @@ describe("Token", () => {
         logger.info("Aztec-Starter tests running.")
 
         pxe = await setupSandbox();
-        // deployInitialTestAccounts(pxe); // NOTE: run at least once in sandbox to circumvent issue #9384
 
         wallets = await getInitialTestAccountsWallets(pxe);
         accounts = wallets.map(w => w.getCompleteAddress())
