@@ -66,6 +66,14 @@ contract Token {
         amount: Field,
     }
 
+
+    #[derive(Serialize)]
+    #[event]
+    struct PreparePrivateBalanceIncrease {
+        hiding_point_slot: Field,
+    }
+
+
     // docs:start:storage_struct
     #[storage]
     struct Storage<Context> {
@@ -389,7 +397,14 @@ contract Token {
     fn prepare_private_balance_increase(to: AztecAddress, from: AztecAddress) -> Field {
         // TODO(#9887): ideally we'd not have `from` here, but we do need a `from` address to produce a tagging secret
         // with `to`.
-        _prepare_private_balance_increase(from, to, &mut context, storage)
+        let hiding_point_slot = _prepare_private_balance_increase(from, to, &mut context, storage);
+
+        // Emit event with hiding point slot for testing purposes
+        PreparePrivateBalanceIncrease { hiding_point_slot }.emit(
+            encode_and_encrypt_event_unconstrained(&mut context, to, from),
+        );
+
+        hiding_point_slot
     }
     // docs:end:prepare_private_balance_increase
 
