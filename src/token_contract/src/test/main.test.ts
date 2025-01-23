@@ -1,5 +1,5 @@
-import { TokenContractArtifact, TokenContract } from "../../../artifacts/Token.js"
-import { AccountWallet, CompleteAddress, ContractDeployer, createLogger, Fr, PXE, waitForPXE, TxStatus, createPXEClient, getContractInstanceFromDeployParams, Logger, Tx, SentTx, FieldsOf, TxReceipt, Contract } from "@aztec/aztec.js";
+import { TokenContractArtifact, TokenContract, PreparePrivateBalanceIncrease } from "../../../artifacts/Token.js"
+import { AccountWallet, CompleteAddress, ContractDeployer, createLogger, Fr, PXE, waitForPXE, TxStatus, createPXEClient, getContractInstanceFromDeployParams, Logger, Tx, SentTx, FieldsOf, TxReceipt, Contract, computeAuthWitMessageHash, computeInnerAuthWitHash } from "@aztec/aztec.js";
 import { getInitialTestAccountsWallets } from "@aztec/accounts/testing"
 import { deployInitialTestAccounts } from '@aztec/accounts/testing';
 
@@ -80,10 +80,7 @@ describe("Token", () => {
     }, 300_000)
 
     async function deployToken() {
-        const salt = Fr.random();
         const contract = await Contract.deploy(alice, TokenContractArtifact, ["PrivateToken", "PT", 18]).send().deployed();
-        // const contract = await TokenContract.deploy(wallets[0], )
-        console.log("contract deployed", contract.address)
         return contract;
     }
 
@@ -286,12 +283,12 @@ describe("Token", () => {
         ).send().wait();
 
         // Try to transfer more than available public balance
-        // await expect(
-        //     contract.withWallet(alice).methods.transfer_to_private(
-        //         alice.getAddress(),
-        //         2e18
-        //     ).send().wait()
-        // ).rejects.toThrow(/Balance too low/);
+        await expect(
+            contract.withWallet(alice).methods.transfer_to_private(
+                alice.getAddress(),
+                2e18
+            ).send().wait()
+        ).rejects.toThrow(/attempt to subtract with underflow/);
 
         // Check total supply stayed the same
         const totalSupply = await contract.methods.total_supply().simulate();
@@ -302,64 +299,42 @@ describe("Token", () => {
         expect(alicePublicBalance).toBe(BigInt(1e18));
     }, 300_000)
 
-
-    it.only("asd", async () => {
+    
+    it("mint in public, prepare partial note and finalize it", async () => {
         const contract = await deployToken();
-        const c = await Contract.at(contract.address, TokenContractArtifact, alice)
+        await contract.withWallet(alice)
 
-        // await c.withWallet(alice).methods.mint_to_private(
-        //     alice.getAddress(),
-        //     alice.getAddress(),
-        //     5e18
-        // ).send().wait({
-        //     debug: true,
-        // });
+        await contract.methods.mint_to_public(alice.getAddress(), 5e18).send().wait();
 
-        // pxe.addNote()?
-
-        const hidingPointSlot = await contract.withWallet(alice).methods.prepare_private_balance_increase(
-            bob.getAddress(),
-            alice.getAddress(),
-        ).simulate()
-        console.log("hidingPointSlot", hidingPointSlot)
-        const tx: SentTx = await contract.withWallet(alice).methods.prepare_private_balance_increase(
-            bob.getAddress(),
-            alice.getAddress()
-        ).send()
-        // console.log(await tx.getTxHash())
-        // console.log(await tx.getReceipt())
-        // console.log(await tx.getUnencryptedLogs())
-        const r = await tx.wait({debug: true,})
-        console.log("receipt", r)
-        
-        // if (r.debugInfo?.publicDataWrites) {
-        //     for (const write of r.debugInfo.publicDataWrites) {
-        //         console.log("Public data write:", write);
-        //     }
-        // }
-        // const events = await contract.withWallet(alice).wallet.getEncryptedEvents<TokenContract>(
-        //     TokenContract.events.Transfer,
-        //     1,
-        //     10,
-        //     [alice.getCompleteAddress().publicKeys.masterIncomingViewingPublicKey]
-        // )
-        console.log("events", events)
-        // public interactions
-        
-        // Finalize mint of 1 token to bob's private balance using the hiding point
-        // await contract.withWallet(alice).methods.finalize_transfer_to_private(
-        //     5e18,
-        //     hidingPointSlot
-        // ).send().wait({
-        //     debug: true,
-        // });
-
-        await contract.withWallet(alice).methods.finalize_mint_to_private(
-            5e18,
-            hidingPointSlot
-        ).send().wait({
-            debug: true,
-        });
+        // alice has 5 tokens in public
+        expect(await contract.methods.balance_of_public(alice.getAddress()).simulate()).toBe(BigInt(5e18));
+        expect(await contract.methods.balance_of_private(alice.getAddress()).simulate()).toBe(0n);
+        // bob has 0 tokens
+        expect(await contract.methods.balance_of_private(bob.getAddress()).simulate()).toBe(0n);
+        expect(await contract.methods.balance_of_private(bob.getAddress()).simulate()).toBe(0n);
+        // total supply is 5
+        expect(await contract.methods.total_supply().simulate()).toBe(BigInt(5e18));
+        // alice prepares partial note for bob
+        await contract.methods.prepare_private_balance_increase(bob.getAddress(), alice.getAddress()).send().wait()
+        // alice still has 5 tokens in public
+        expect(await contract.methods.balance_of_public(alice.getAddress()).simulate()).toBe(BigInt(5e18));
+        // read bob's encrypted logs
+        const bobEncryptedEvents = await bob.getEncryptedEvents<PreparePrivateBalanceIncrease>(
+            TokenContract.events.PreparePrivateBalanceIncrease,
+            1,
+            100 // todo: add a default value for limit?
+        )
+        // get the latest event
+        const latestEvent = bobEncryptedEvents[bobEncryptedEvents.length - 1]
+        // finalize partial note passing the hiding point slot
+        await contract.methods.finalize_transfer_to_private(5e18, latestEvent.hiding_point_slot).send().wait();
+        // alice now has 0 tokens
+        expect(await contract.methods.balance_of_public(alice.getAddress()).simulate()).toBe(BigInt(0n));
+        // bob has 5 tokens in private
+        expect(await contract.methods.balance_of_public(bob.getAddress()).simulate()).toBe(0n);
+        expect(await contract.methods.balance_of_private(bob.getAddress()).simulate()).toBe(BigInt(5e18));
+        // total supply is still 5
+        expect(await contract.methods.total_supply().simulate()).toBe(BigInt(5e18));
     }, 300_000)
 
 });
