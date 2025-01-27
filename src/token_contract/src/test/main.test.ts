@@ -37,9 +37,7 @@ describe("Token", () => {
 
     it("deploys the contract", async () => {
         const salt = Fr.random();
-        // const VotingContractArtifact = EasyPrivateVotingContractArtifact
-        const [deployerWallet, adminWallet] = wallets; // using first account as deployer and second as contract admin
-        const adminAddress = adminWallet.getCompleteAddress().address;
+        const [deployerWallet] = wallets; // using first account as deployer
 
         const deploymentData = getContractInstanceFromDeployParams(TokenContractArtifact,
             {
@@ -330,5 +328,25 @@ describe("Token", () => {
         // total supply is still 5
         expect(await contract.methods.total_supply().simulate()).toBe(BigInt(5e18));
     }, 300_000)
+
+    it.only("authwitness", async () => {
+        const contract = await deployToken();
+
+        await contract.withWallet(alice).methods.mint_to_public(alice.getAddress(), 1e18).send().wait();
+
+        const nonce = Fr.random()
+        const action = contract.withWallet(carl).methods.transfer_in_public(alice.getAddress(), bob.getAddress(), 1e18, nonce)
+
+        await alice.setPublicAuthWit({
+            caller: carl.getAddress(),
+            action
+        }, true).send().wait()
+
+        await action.send().wait()
+
+        expect(await contract.methods.balance_of_public(alice.getAddress()).simulate()).toBe(0n);
+        expect(await contract.methods.balance_of_public(bob.getAddress()).simulate()).toBe(BigInt(1e18));
+    }, 300_000)
+
 
 });
