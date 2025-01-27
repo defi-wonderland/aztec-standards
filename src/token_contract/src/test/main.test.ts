@@ -329,7 +329,7 @@ describe("Token", () => {
         expect(await contract.methods.total_supply().simulate()).toBe(BigInt(5e18));
     }, 300_000)
 
-    it.only("authwitness", async () => {
+    it.only("public transfer with authwitness", async () => {
         const contract = await deployToken();
 
         await contract.withWallet(alice).methods.mint_to_public(alice.getAddress(), 1e18).send().wait();
@@ -348,5 +348,40 @@ describe("Token", () => {
         expect(await contract.methods.balance_of_public(bob.getAddress()).simulate()).toBe(BigInt(1e18));
     }, 300_000)
 
+    it.only("private transfer with authwitness", async () => {
+        // deploy token contract
+        const contract = await deployToken();
+
+        // setup balances
+        await contract.withWallet(alice).methods.mint_to_public(alice.getAddress(), 1e18).send().wait();
+        await contract.withWallet(alice).methods.transfer_to_private(alice.getAddress(), 1e18).send().wait();
+
+        expect(await contract.methods.balance_of_private(alice.getAddress()).simulate()).toBe(BigInt(1e18));
+
+        // prepare action
+        const nonce = Fr.random()
+        const action = contract.withWallet(carl).methods.transfer_in_private(alice.getAddress(), bob.getAddress(), 1e18, nonce)
+
+        const witness = await alice.createAuthWit({
+            caller: carl.getAddress(),
+            action
+        })
+        await carl.addAuthWitness(witness)
+        const validity = await alice.lookupValidity(alice.getAddress(), {
+            caller: carl.getAddress(),
+            action
+        })
+        expect(validity.isValidInPrivate).toBeTruthy()
+        expect(validity.isValidInPublic).toBeFalsy()
+
+        // set scopesalso
+        // dev: This grants carl access to alice's private notes
+        carl.setScopes([carl.getAddress(), alice.getAddress()])
+
+        await action.send().wait()
+
+        expect(await contract.methods.balance_of_private(alice.getAddress()).simulate()).toBe(0n);
+        expect(await contract.methods.balance_of_private(bob.getAddress()).simulate()).toBe(BigInt(1e18));
+    }, 300_000)
 
 });
