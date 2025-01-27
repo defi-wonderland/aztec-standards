@@ -39,7 +39,7 @@ describe("Token", () => {
         const salt = Fr.random();
         const [deployerWallet] = wallets; // using first account as deployer
 
-        const deploymentData = getContractInstanceFromDeployParams(TokenContractArtifact,
+        const deploymentData = await getContractInstanceFromDeployParams(TokenContractArtifact,
             {
                 constructorArgs: [
                     "PrivateToken", "PT", 18
@@ -311,7 +311,7 @@ describe("Token", () => {
         // alice still has 5 tokens in public
         expect(await contract.methods.balance_of_public(alice.getAddress()).simulate()).toBe(BigInt(5e18));
         // read bob's encrypted logs
-        const bobEncryptedEvents = await bob.getEncryptedEvents<PreparePrivateBalanceIncrease>(
+        const bobEncryptedEvents = await bob.getPrivateEvents<PreparePrivateBalanceIncrease>(
             TokenContract.events.PreparePrivateBalanceIncrease,
             1,
             100 // todo: add a default value for limit?
@@ -366,7 +366,8 @@ describe("Token", () => {
             caller: carl.getAddress(),
             action
         })
-        await carl.addAuthWitness(witness)
+        // await carl.addAuthWitness(witness)
+
         const validity = await alice.lookupValidity(alice.getAddress(), {
             caller: carl.getAddress(),
             action
