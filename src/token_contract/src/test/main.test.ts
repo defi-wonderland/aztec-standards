@@ -33,7 +33,7 @@ describe('Token', () => {
 
   let token: TokenContract;
 
-  const AMOUNT = 1000;
+  const AMOUNT = 1000n;
 
   let logger: Logger;
 
@@ -97,14 +97,14 @@ describe('Token', () => {
     await token.withWallet(alice);
     const tx = await token.methods.mint_to_public(bob.getAddress(), AMOUNT).send().wait();
     const balance = await token.methods.balance_of_public(bob.getAddress()).simulate();
-    expect(balance).toBe(BigInt(AMOUNT));
+    expect(balance).toBe(AMOUNT);
   }, 300_000);
 
   it('transfers tokens between public accounts', async () => {
     // First mint 2 tokens to alice
     await token
       .withWallet(alice)
-      .methods.mint_to_public(alice.getAddress(), AMOUNT * 2)
+      .methods.mint_to_public(alice.getAddress(), AMOUNT * 2n)
       .send()
       .wait();
 
@@ -119,15 +119,15 @@ describe('Token', () => {
     const aliceBalance = await token.methods.balance_of_public(alice.getAddress()).simulate();
     const bobBalance = await token.methods.balance_of_public(bob.getAddress()).simulate();
 
-    expect(aliceBalance).toBe(BigInt(AMOUNT));
-    expect(bobBalance).toBe(BigInt(AMOUNT));
+    expect(aliceBalance).toBe(AMOUNT);
+    expect(bobBalance).toBe(AMOUNT);
   }, 300_000);
 
   it('burns public tokens', async () => {
     // First mint 2 tokens to alice
     await token
       .withWallet(alice)
-      .methods.mint_to_public(alice.getAddress(), AMOUNT * 2)
+      .methods.mint_to_public(alice.getAddress(), AMOUNT * 2n)
       .send()
       .wait();
 
@@ -138,15 +138,15 @@ describe('Token', () => {
     const aliceBalance = await token.methods.balance_of_public(alice.getAddress()).simulate();
     const totalSupply = await token.methods.total_supply().simulate();
 
-    expect(aliceBalance).toBe(BigInt(AMOUNT));
-    expect(totalSupply).toBe(BigInt(AMOUNT));
+    expect(aliceBalance).toBe(AMOUNT);
+    expect(totalSupply).toBe(AMOUNT);
   }, 300_000);
 
   it('transfers tokens from private to public balance', async () => {
     // First mint to private 2 tokens to alice
     await token
       .withWallet(alice)
-      .methods.mint_to_private(alice.getAddress(), alice.getAddress(), AMOUNT * 2)
+      .methods.mint_to_private(alice.getAddress(), alice.getAddress(), AMOUNT * 2n)
       .send()
       .wait();
 
@@ -159,11 +159,11 @@ describe('Token', () => {
 
     // Check public balance is correct
     const alicePublicBalance = await token.methods.balance_of_public(alice.getAddress()).simulate();
-    expect(alicePublicBalance).toBe(BigInt(AMOUNT));
+    expect(alicePublicBalance).toBe(AMOUNT);
 
     // Check total supply hasn't changed
     const totalSupply = await token.methods.total_supply().simulate();
-    expect(totalSupply).toBe(BigInt(AMOUNT * 2));
+    expect(totalSupply).toBe(AMOUNT * 2n);
   }, 300_000);
 
   it('fails when using an invalid nonce', async () => {
@@ -174,7 +174,7 @@ describe('Token', () => {
     await expect(
       token
         .withWallet(alice)
-        .methods.transfer_to_public(alice.getAddress(), alice.getAddress(), AMOUNT * 2, BigInt(1))
+        .methods.transfer_to_public(alice.getAddress(), alice.getAddress(), AMOUNT * 2n, (1))
         .send()
         .wait()
     ).rejects.toThrow(/invalid nonce/);
@@ -188,7 +188,7 @@ describe('Token', () => {
     await expect(
       token
         .withWallet(alice)
-        .methods.transfer_to_public(alice.getAddress(), alice.getAddress(), AMOUNT + 1, BigInt(0))
+        .methods.transfer_to_public(alice.getAddress(), alice.getAddress(), AMOUNT + 1n, (0))
         .send()
         .wait()
     ).rejects.toThrow(/Balance too low/);
@@ -198,7 +198,7 @@ describe('Token', () => {
     // Mint 2 tokens privately to alice
     await token
       .withWallet(alice)
-      .methods.mint_to_private(alice.getAddress(), alice.getAddress(), AMOUNT * 2)
+      .methods.mint_to_private(alice.getAddress(), alice.getAddress(), AMOUNT * 2n)
       .send()
       .wait();
 
@@ -209,27 +209,27 @@ describe('Token', () => {
     await expect(
       token
         .withWallet(alice)
-        .methods.transfer(bob.getAddress(), AMOUNT + 1)
+        .methods.transfer(bob.getAddress(), AMOUNT + 1n)
         .send()
         .wait()
     ).rejects.toThrow(/Balance too low/);
 
     // Check total supply hasn't changed
     const totalSupply = await token.methods.total_supply().simulate();
-    expect(totalSupply).toBe(BigInt(AMOUNT * 2));
+    expect(totalSupply).toBe(AMOUNT * 2n);
   }, 300_000);
 
   it('can mint tokens to private balance', async () => {
     // Mint 2 tokens privately to alice
     await token
       .withWallet(alice)
-      .methods.mint_to_private(alice.getAddress(), alice.getAddress(), AMOUNT * 2)
+      .methods.mint_to_private(alice.getAddress(), alice.getAddress(), AMOUNT * 2n)
       .send()
       .wait();
 
     // Check total supply increased
     const totalSupply = await token.methods.total_supply().simulate();
-    expect(totalSupply).toBe(BigInt(AMOUNT * 2));
+    expect(totalSupply).toBe(AMOUNT * 2n);
 
     // Public balance should be 0 since we minted privately
     const alicePublicBalance = await token.methods.balance_of_public(alice.getAddress()).simulate();
@@ -240,7 +240,7 @@ describe('Token', () => {
     // Mint 2 tokens privately to alice
     await token
       .withWallet(alice)
-      .methods.mint_to_private(alice.getAddress(), alice.getAddress(), AMOUNT * 2)
+      .methods.mint_to_private(alice.getAddress(), alice.getAddress(), AMOUNT * 2n)
       .send()
       .wait();
 
@@ -251,14 +251,14 @@ describe('Token', () => {
     await expect(
       token
         .withWallet(alice)
-        .methods.burn_private(alice.getAddress(), AMOUNT * 2, 0)
+        .methods.burn_private(alice.getAddress(), AMOUNT * 2n, 0)
         .send()
         .wait()
     ).rejects.toThrow(/Balance too low/);
 
     // Check total supply decreased
     const totalSupply = await token.methods.total_supply().simulate();
-    expect(totalSupply).toBe(BigInt(AMOUNT));
+    expect(totalSupply).toBe(AMOUNT);
 
     // Public balance should still be 0
     const alicePublicBalance = await token.methods.balance_of_public(alice.getAddress()).simulate();
@@ -269,7 +269,7 @@ describe('Token', () => {
     // Mint 2 tokens publicly to alice
     await token
       .withWallet(alice)
-      .methods.mint_to_public(alice.getAddress(), AMOUNT * 2)
+      .methods.mint_to_public(alice.getAddress(), AMOUNT * 2n)
       .send()
       .wait();
 
@@ -280,18 +280,18 @@ describe('Token', () => {
     await expect(
       token
         .withWallet(alice)
-        .methods.transfer_to_private(alice.getAddress(), AMOUNT * 2)
+        .methods.transfer_to_private(alice.getAddress(), AMOUNT * 2n)
         .send()
         .wait()
     ).rejects.toThrow(/attempt to subtract with underflow/);
 
     // Check total supply stayed the same
     const totalSupply = await token.methods.total_supply().simulate();
-    expect(totalSupply).toBe(BigInt(AMOUNT * 2));
+    expect(totalSupply).toBe(AMOUNT * 2n);
 
     // Public balance should be reduced by transferred amount
     const alicePublicBalance = await token.methods.balance_of_public(alice.getAddress()).simulate();
-    expect(alicePublicBalance).toBe(BigInt(AMOUNT));
+    expect(alicePublicBalance).toBe(AMOUNT);
   }, 300_000);
 
   it.skip('mint in public, prepare partial note and finalize it', async () => {
@@ -300,13 +300,13 @@ describe('Token', () => {
     await token.methods.mint_to_public(alice.getAddress(), AMOUNT).send().wait();
 
     // alice has tokens in public
-    expect(await token.methods.balance_of_public(alice.getAddress()).simulate()).toBe(BigInt(AMOUNT));
+    expect(await token.methods.balance_of_public(alice.getAddress()).simulate()).toBe(AMOUNT);
     expect(await token.methods.balance_of_private(alice.getAddress()).simulate()).toBe(0n);
     // bob has 0 tokens
     expect(await token.methods.balance_of_private(bob.getAddress()).simulate()).toBe(0n);
     expect(await token.methods.balance_of_private(bob.getAddress()).simulate()).toBe(0n);
 
-    expect(await token.methods.total_supply().simulate()).toBe(BigInt(AMOUNT));
+    expect(await token.methods.total_supply().simulate()).toBe(AMOUNT);
 
     // alice prepares partial note for bob
     const r = await token.methods.prepare_private_balance_increase(bob.getAddress(), alice.getAddress()).send().wait();
@@ -323,7 +323,7 @@ describe('Token', () => {
     console.log('classLogs', classLogs);
 
     // alice still has tokens in public
-    expect(await token.methods.balance_of_public(alice.getAddress()).simulate()).toBe(BigInt(AMOUNT));
+    expect(await token.methods.balance_of_public(alice.getAddress()).simulate()).toBe(AMOUNT);
 
 
 
@@ -340,12 +340,12 @@ describe('Token', () => {
     // await token.methods.finalize_transfer_to_private(AMOUNT, latestEvent.hiding_point_slot).send().wait();
 
     // alice now has no tokens
-    // expect(await token.methods.balance_of_public(alice.getAddress()).simulate()).toBe(BigInt(0n));
+    // expect(await token.methods.balance_of_public(alice.getAddress()).simulate()).toBe(0n);
     // // bob has tokens in private
     // expect(await token.methods.balance_of_public(bob.getAddress()).simulate()).toBe(0n);
-    // expect(await token.methods.balance_of_private(bob.getAddress()).simulate()).toBe(BigInt(AMOUNT));
+    // expect(await token.methods.balance_of_private(bob.getAddress()).simulate()).toBe(AMOUNT);
     // // total supply is still the same
-    // expect(await token.methods.total_supply().simulate()).toBe(BigInt(AMOUNT));
+    // expect(await token.methods.total_supply().simulate()).toBe(AMOUNT);
   }, 300_000);
 
   it('public transfer with authwitness', async () => {
@@ -370,7 +370,7 @@ describe('Token', () => {
     await action.send().wait();
 
     expect(await token.methods.balance_of_public(alice.getAddress()).simulate()).toBe(0n);
-    expect(await token.methods.balance_of_public(bob.getAddress()).simulate()).toBe(BigInt(AMOUNT));
+    expect(await token.methods.balance_of_public(bob.getAddress()).simulate()).toBe(AMOUNT);
   }, 300_000);
 
   it('private transfer with authwitness', async () => {
@@ -378,7 +378,7 @@ describe('Token', () => {
     await token.withWallet(alice).methods.mint_to_public(alice.getAddress(), AMOUNT).send().wait();
     await token.withWallet(alice).methods.transfer_to_private(alice.getAddress(), AMOUNT).send().wait();
 
-    expect(await token.methods.balance_of_private(alice.getAddress()).simulate()).toBe(BigInt(AMOUNT));
+    expect(await token.methods.balance_of_private(alice.getAddress()).simulate()).toBe(AMOUNT);
 
     // prepare action
     const nonce = Fr.random();
@@ -405,6 +405,6 @@ describe('Token', () => {
     await action.send().wait();
 
     expect(await token.methods.balance_of_private(alice.getAddress()).simulate()).toBe(0n);
-    expect(await token.methods.balance_of_private(bob.getAddress()).simulate()).toBe(BigInt(AMOUNT));
+    expect(await token.methods.balance_of_private(bob.getAddress()).simulate()).toBe(AMOUNT);
   }, 300_000);
 });
