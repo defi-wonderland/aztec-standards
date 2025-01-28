@@ -10,9 +10,14 @@
     "clean": "rm -rf ./src/artifacts ./target",
     "codegen": "aztec codegen target --outdir src/artifacts",
     "compile": "aztec-nargo compile",
+    "compile:fresh": "yarn clean && yarn compile && yarn codegen && yarn compile-deps && yarn copy-deps",
     "test": "yarn test:js && yarn test:nr",
     "test:js": "NODE_NO_WARNINGS=1 node --experimental-vm-modules $(yarn bin jest) --no-cache --runInBand --config jest.integration.config.json",
-    "test:nr": "aztec test"
+    "test:nr": "aztec test",
+    "compile-deps": "yarn compile-deps:token",
+    "compile-deps:token": "cd ~/nargo/github.com/AztecProtocol/aztec-packages/aztec-packages-v0.72.1/noir-projects/noir-contracts && aztec-nargo compile --package token_contract",
+    "copy-deps": "yarn copy-deps:token",
+    "copy-deps:token": "cp ~/nargo/github.com/AztecProtocol/aztec-packages/aztec-packages-v0.72.1/noir-projects/noir-contracts/target/token_contract-Token.json ./target/token_contract-Token.json"
   },
   "dependencies": {
     "@aztec/accounts": "0.72.1",
