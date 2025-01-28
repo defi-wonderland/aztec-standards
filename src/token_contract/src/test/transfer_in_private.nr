@@ -1,5 +1,5 @@
 use crate::test::utils;
-use crate::Token;
+use dep::token::Token;
 use dep::authwit::cheatcodes as authwit_cheatcodes;
 
 #[test]

@@ -1,4 +1,5 @@
-use crate::{test::utils, Token};
+use crate::{test::utils};
+use dep::token::Token;
 use dep::aztec::oracle::debug_log;
 
 #[test]

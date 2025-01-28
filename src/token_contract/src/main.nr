@@ -12,7 +12,7 @@ use dep::aztec::macros::aztec;
 // To be read as `caller` calls function at `contract` defined by `selector` with `args`
 // Including a nonce in the message hash ensures that the message can only be used once.
 #[aztec]
-contract Token {
+contract SomeToken {
     // Libs
     use std::meta::derive;
 
@@ -254,7 +254,7 @@ contract Token {
             from,
             from,
         ));
-        Token::at(context.this_address())._increase_public_balance(to, amount).enqueue(&mut context);
+        SomeToken::at(context.this_address())._increase_public_balance(to, amount).enqueue(&mut context);
     }
     // docs:end:transfer_to_public
 
@@ -332,7 +332,7 @@ contract Token {
         account: AztecAddress,
         remaining: U128,
     ) -> PrivateCallInterface<25, U128> {
-        Token::at(context.this_address())._recurse_subtract_balance(account, remaining)
+        SomeToken::at(context.this_address())._recurse_subtract_balance(account, remaining)
     }
 
     #[internal]
@@ -397,7 +397,7 @@ contract Token {
             from,
             from,
         ));
-        Token::at(context.this_address())._reduce_total_supply(amount).enqueue(&mut context);
+        SomeToken::at(context.this_address())._reduce_total_supply(amount).enqueue(&mut context);
     }
     // docs:end:burn_private
 
@@ -407,7 +407,7 @@ contract Token {
     fn transfer_to_private(to: AztecAddress, amount: U128) {
         // `from` is the owner of the public balance from which we'll subtract the `amount`.
         let from = context.msg_sender();
-        let token = Token::at(context.this_address());
+        let token = SomeToken::at(context.this_address());
 
         // We prepare the private balance increase (the partial note).
         let hiding_point_slot = _prepare_private_balance_increase(from, to, &mut context, storage);
@@ -476,7 +476,7 @@ contract Token {
         // We don't need to perform a check that the value overwritten by `_store_point_in_transient_storage_unsafe`
         // is zero because the slot is the x-coordinate of the hiding point and hence we could only overwrite
         // the value in the slot with the same value. This makes usage of the `unsafe` method safe.
-        Token::at(context.this_address())
+        SomeToken::at(context.this_address())
             ._store_payload_in_transient_storage_unsafe(
                 hiding_point_slot,
                 note_setup_payload.hiding_point,
@@ -542,7 +542,7 @@ contract Token {
         to: AztecAddress,
         amount: U128,
     ) {
-        let token = Token::at(context.this_address());
+        let token = SomeToken::at(context.this_address());
 
         // We prepare the partial note to which we'll "send" the minted amount.
         let hiding_point_slot = _prepare_private_balance_increase(from, to, &mut context, storage);

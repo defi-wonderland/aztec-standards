@@ -1,5 +1,5 @@
 use crate::test::utils;
-use crate::Token;
+use dep::token::Token;
 use dep::aztec::test::helpers::cheatcodes;
 
 // It is not possible to deserialize strings in Noir ATM, so name and symbol cannot be checked yet.

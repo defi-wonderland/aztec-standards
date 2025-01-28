@@ -1,4 +1,4 @@
-use crate::Token;
+use dep::token::Token;
 use dep::uint_note::uint_note::UintNote;
 use aztec::{
     oracle::{
@@ -38,7 +38,7 @@ pub unconstrained fn setup(
         18,
     );
     let token_contract =
-        env.deploy_self("Token").with_public_void_initializer(initializer_call_interface);
+        env.deploy("./@token_contract", "Token").with_public_void_initializer(initializer_call_interface);
     let token_contract_address = token_contract.to_address();
     env.advance_block_by(1);
     (&mut env, token_contract_address, owner, recipient)

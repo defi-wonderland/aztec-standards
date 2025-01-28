@@ -1,5 +1,5 @@
 use crate::test::utils;
-use crate::Token;
+use dep::token::Token;
 
 #[test]
 unconstrained fn access_control() {
