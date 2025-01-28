@@ -41,7 +41,6 @@ describe("Token", () => {
 
     beforeEach(async () => {
         token = await deployToken() as TokenContract;
-
     })
 
     it("deploys the contract", async () => {
@@ -94,8 +93,6 @@ describe("Token", () => {
     }, 300_000)
 
     it("transfers tokens between public accounts", async () => {
-        
-        
         // First mint 2 tokens to alice
         await token.withWallet(alice).methods.mint_to_public(alice.getAddress(), AMOUNT * 2).send().wait();
         
@@ -111,8 +108,6 @@ describe("Token", () => {
     }, 300_000)
 
     it("burns public tokens", async () => {
-        
-        
         // First mint 2 tokens to alice
         await token.withWallet(alice).methods.mint_to_public(alice.getAddress(), AMOUNT * 2).send().wait();
         
@@ -128,8 +123,6 @@ describe("Token", () => {
     }, 300_000)
 
     it("transfers tokens from private to public balance", async () => {
-        
-        
         // First mint to private 2 tokens to alice
         await token.withWallet(alice).methods.mint_to_private(
             alice.getAddress(),
@@ -154,7 +147,6 @@ describe("Token", () => {
     }, 300_000)
 
     it("fails when using an invalid nonce", async () => {
-
         // Mint 1 token privately to alice
         await token.withWallet(alice).methods.mint_to_private(
             alice.getAddress(),
@@ -182,7 +174,7 @@ describe("Token", () => {
             AMOUNT
         ).send().wait();
         
-        // Try to transfer 2 tokens from private to public balance
+        // Try to transfer more tokens than available from private to public balance
         await expect(
             token.withWallet(alice).methods.transfer_to_public(
                 alice.getAddress(),
@@ -190,12 +182,10 @@ describe("Token", () => {
                 AMOUNT + 1,
                 BigInt(0)
             ).send().wait()
-        ).rejects.toThrow();
+        ).rejects.toThrow(/Balance too low/);
     }, 300_000)
 
     it("can transfer tokens between private balances", async () => {
-        
-        
         // Mint 2 tokens privately to alice
         await token.withWallet(alice).methods.mint_to_private(
             alice.getAddress(),
@@ -223,8 +213,6 @@ describe("Token", () => {
     }, 300_000)
 
     it("can mint tokens to private balance", async () => {
-        
-        
         // Mint 2 tokens privately to alice
         await token.withWallet(alice).methods.mint_to_private(
             alice.getAddress(),
@@ -242,8 +230,6 @@ describe("Token", () => {
     }, 300_000)
 
     it("can burn tokens from private balance", async () => {
-        
-        
         // Mint 2 tokens privately to alice
         await token.withWallet(alice).methods.mint_to_private(
             alice.getAddress(),
@@ -273,8 +259,6 @@ describe("Token", () => {
     }, 300_000)
 
     it("can transfer tokens from public to private balance", async () => {
-        
-        
         // Mint 2 tokens publicly to alice
         await token.withWallet(alice).methods.mint_to_public(
             alice.getAddress(),
@@ -306,7 +290,6 @@ describe("Token", () => {
 
     
     it("mint in public, prepare partial note and finalize it", async () => {
-        
         await token.withWallet(alice)
 
         await token.methods.mint_to_public(alice.getAddress(), AMOUNT).send().wait();
@@ -344,8 +327,6 @@ describe("Token", () => {
     }, 300_000)
 
     it("public transfer with authwitness", async () => {
-        
-
         await token.withWallet(alice).methods.mint_to_public(alice.getAddress(), AMOUNT).send().wait();
 
         const nonce = Fr.random()
@@ -363,9 +344,6 @@ describe("Token", () => {
     }, 300_000)
 
     it("private transfer with authwitness", async () => {
-        // deploy token contract
-        
-
         // setup balances
         await token.withWallet(alice).methods.mint_to_public(alice.getAddress(), AMOUNT).send().wait();
         await token.withWallet(alice).methods.transfer_to_private(alice.getAddress(), AMOUNT).send().wait();
