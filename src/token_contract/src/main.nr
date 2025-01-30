@@ -330,7 +330,6 @@ contract Token {
             &mut context,
         );
     }
-
     /// Prepares an increase of private balance of `to` (partial note). The increase needs to be finalized by calling
     /// some of the finalization functions (`finalize_transfer_to_private`, `finalize_mint_to_private`).
     /// Returns a hiding point slot.
@@ -458,7 +457,6 @@ contract Token {
             ._finalize_mint_to_private_unsafe(context.msg_sender(), amount, hiding_point_slot)
             .enqueue(&mut context);
     }
-
     /// Finalizes a mint of token `amount` to a private balance of `to`. The mint must be prepared by calling
     /// `prepare_private_balance_increase` first and the resulting
     /// `hiding_point_slot` must be passed as an argument to this function.
