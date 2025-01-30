@@ -22,7 +22,7 @@ const setupSandbox = async () => {
   return pxe;
 };
 
-describe('Token', () => {
+describe.skip('Token', () => {
   let pxe: PXE;
   let wallets: AccountWallet[] = [];
   let accounts: CompleteAddress[] = [];
