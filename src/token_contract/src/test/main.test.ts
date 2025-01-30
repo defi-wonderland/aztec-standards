@@ -309,23 +309,10 @@ describe('Token', () => {
     expect(await token.methods.total_supply().simulate()).toBe(AMOUNT);
 
     // alice prepares partial note for bob
-    const r = await token.methods.prepare_private_balance_increase(bob.getAddress(), alice.getAddress()).send().wait();
-    console.log('r', r);
-
-    const logs = await bob.getPublicLogs({
-        txHash: r.txHash
-    })    
-    console.log('logs', logs);
-
-    const classLogs = await bob.getContractClassLogs({
-        txHash: r.txHash
-    })
-    console.log('classLogs', classLogs);
+    await token.methods.prepare_private_balance_increase(bob.getAddress(), alice.getAddress()).send().wait();
 
     // alice still has tokens in public
     expect(await token.methods.balance_of_public(alice.getAddress()).simulate()).toBe(AMOUNT);
-
-
 
     // TODO: i removed the event, so I need anoter way to figure out the hiding point slot to finalize the note
     // read bob's encrypted logs
@@ -390,7 +377,6 @@ describe('Token', () => {
       caller: carl.getAddress(),
       action,
     });
-    // await carl.addAuthWitness(witness)
 
     const validity = await alice.lookupValidity(alice.getAddress(), {
       caller: carl.getAddress(),
