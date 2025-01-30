@@ -1,5 +1,4 @@
-// docs:start:token_all
-// docs:start:imports
+
 mod types;
 mod test;
 
@@ -38,16 +37,13 @@ contract Token {
 
     use dep::uint_note::uint_note::UintNote;
 
-    // docs:start:import_authwit
     use dep::authwit::auth::{
         assert_current_call_valid_authwit, assert_current_call_valid_authwit_public,
         compute_authwit_nullifier,
     };
-    // docs:end:import_authwit
 
     use crate::types::balance_set::BalanceSet;
 
-    // docs:end::imports
 
     // In the first transfer iteration we are computing a lot of additional information (validating inputs, retrieving
     // keys, etc.), so the gate count is already relatively high. We therefore only read a few notes to keep the happy
@@ -66,26 +62,17 @@ contract Token {
         amount: U128,
     }
 
-    // docs:start:storage_struct
     #[storage]
     struct Storage<Context> {
-        // docs:start:storage_minters
         minter: PublicImmutable<AztecAddress, Context>,
-        // docs:end:storage_minters
-        // docs:start:storage_balances
         balances: Map<AztecAddress, BalanceSet<Context>, Context>,
-        // docs:end:storage_balances
         total_supply: PublicMutable<U128, Context>,
         public_balances: Map<AztecAddress, PublicMutable<U128, Context>, Context>,
         symbol: PublicImmutable<FieldCompressedString, Context>,
         name: PublicImmutable<FieldCompressedString, Context>,
-        // docs:start:storage_decimals
         decimals: PublicImmutable<u8, Context>,
-        // docs:end:storage_decimals
     }
-    // docs:end:storage_struct
 
-    // docs:start:constructor
     #[public]
     #[initializer]
     fn constructor(minter: AztecAddress, name: str<31>, symbol: str<31>, decimals: u8) {
@@ -94,7 +81,6 @@ contract Token {
         storage.symbol.initialize(FieldCompressedString::from_string(symbol));
         storage.decimals.initialize(decimals);
     }
-    // docs:end:constructor
 
     #[public]
     #[view]
@@ -132,44 +118,33 @@ contract Token {
         storage.decimals.read()
     }
 
-    // docs:start:is_minter
     #[public]
     #[view]
     fn get_minter() -> AztecAddress {
         storage.minter.read()
     }
-    // docs:end:is_minter
 
-    // docs:start:total_supply
     #[public]
     #[view]
     fn total_supply() -> U128 {
         storage.total_supply.read()
     }
-    // docs:end:total_supply
 
-    // docs:start:balance_of_public
     #[public]
     #[view]
     fn balance_of_public(owner: AztecAddress) -> U128 {
         storage.public_balances.at(owner).read()
     }
-    // docs:end:balance_of_public
 
-    // docs:start:mint_to_public
     #[public]
     fn mint_to_public(to: AztecAddress, amount: U128) {
-        // docs:start:read_minter
         assert(context.msg_sender() == storage.minter.read(), "caller is not minter");
-        // docs:end:read_minter
         let new_balance = storage.public_balances.at(to).read().add(amount);
         let supply = storage.total_supply.read().add(amount);
         storage.public_balances.at(to).write(new_balance);
         storage.total_supply.write(supply);
     }
-    // docs:end:mint_to_public
 
-    // docs:start:transfer_in_public
     #[public]
     fn transfer_in_public(from: AztecAddress, to: AztecAddress, amount: U128, nonce: Field) {
         if (!from.eq(context.msg_sender())) {
@@ -182,26 +157,20 @@ contract Token {
         let to_balance = storage.public_balances.at(to).read().add(amount);
         storage.public_balances.at(to).write(to_balance);
     }
-    // docs:end:transfer_in_public
 
-    // docs:start:burn_public
     #[public]
     fn burn_public(from: AztecAddress, amount: U128, nonce: Field) {
-        // docs:start:assert_current_call_valid_authwit_public
         if (!from.eq(context.msg_sender())) {
             assert_current_call_valid_authwit_public(&mut context, from);
         } else {
             assert(nonce == 0, "invalid nonce");
         }
-        // docs:end:assert_current_call_valid_authwit_public
         let from_balance = storage.public_balances.at(from).read().sub(amount);
         storage.public_balances.at(from).write(from_balance);
         let new_supply = storage.total_supply.read().sub(amount);
         storage.total_supply.write(new_supply);
     }
-    // docs:end:burn_public
 
-    // docs:start:transfer_to_public
     #[private]
     fn transfer_to_public(from: AztecAddress, to: AztecAddress, amount: U128, nonce: Field) {
         if (!from.eq(context.msg_sender())) {
@@ -217,9 +186,7 @@ contract Token {
         ));
         Token::at(context.this_address())._increase_public_balance(to, amount).enqueue(&mut context);
     }
-    // docs:end:transfer_to_public
 
-    // docs:start:transfer
     #[private]
     fn transfer(to: AztecAddress, amount: U128) {
         let from = context.msg_sender();
@@ -257,7 +224,6 @@ contract Token {
             from,
         ));
     }
-    // docs:end:transfer
 
     #[contract_library_method]
     fn subtract_balance(
@@ -312,40 +278,29 @@ contract Token {
      * Cancel a private authentication witness.
      * @param inner_hash The inner hash of the authwit to cancel.
      */
-    // docs:start:cancel_authwit
     #[private]
     fn cancel_authwit(inner_hash: Field) {
         let on_behalf_of = context.msg_sender();
         let nullifier = compute_authwit_nullifier(on_behalf_of, inner_hash);
         context.push_nullifier(nullifier);
     }
-    // docs:end:cancel_authwit
 
-    // docs:start:transfer_in_private
     #[private]
     fn transfer_in_private(from: AztecAddress, to: AztecAddress, amount: U128, nonce: Field) {
-        // docs:start:assert_current_call_valid_authwit
         if (!from.eq(context.msg_sender())) {
             assert_current_call_valid_authwit(&mut context, from);
         } else {
             assert(nonce == 0, "invalid nonce");
         }
-        // docs:end:assert_current_call_valid_authwit
 
-        // docs:start:increase_private_balance
-        // docs:start:encrypted
         storage.balances.at(from).sub(from, amount).emit(encode_and_encrypt_note(
             &mut context,
             from,
             from,
         ));
-        // docs:end:encrypted
-        // docs:end:increase_private_balance
         storage.balances.at(to).add(to, amount).emit(encode_and_encrypt_note(&mut context, to, from));
     }
-    // docs:end:transfer_in_private
 
-    // docs:start:burn_private
     #[private]
     fn burn_private(from: AztecAddress, amount: U128, nonce: Field) {
         if (!from.eq(context.msg_sender())) {
@@ -360,9 +315,7 @@ contract Token {
         ));
         Token::at(context.this_address())._reduce_total_supply(amount).enqueue(&mut context);
     }
-    // docs:end:burn_private
 
-    // docs:start:transfer_to_private
     // Transfers token `amount` from public balance of message sender to a private balance of `to`.
     #[private]
     fn transfer_to_private(to: AztecAddress, amount: U128) {
@@ -379,9 +332,7 @@ contract Token {
             &mut context,
         );
     }
-    // docs:end:transfer_to_private
 
-    // docs:start:prepare_private_balance_increase
     /// Prepares an increase of private balance of `to` (partial note). The increase needs to be finalized by calling
     /// some of the finalization functions (`finalize_transfer_to_private`, `finalize_mint_to_private`).
     /// Returns a hiding point slot.
@@ -391,7 +342,6 @@ contract Token {
         // with `to`.
         _prepare_private_balance_increase(from, to, &mut context, storage)
     }
-    // docs:end:prepare_private_balance_increase
 
     /// This function exists separately from `prepare_private_balance_increase` solely as an optimization as it allows
     /// us to have it inlined in the `transfer_to_private` function which results in one less kernel iteration.
@@ -448,7 +398,6 @@ contract Token {
         hiding_point_slot
     }
 
-    // docs:start:finalize_transfer_to_private
     /// Finalizes a transfer of token `amount` from public balance of `from` to a private balance of `to`.
     /// The transfer must be prepared by calling `prepare_private_balance_increase` first and the resulting
     /// `hiding_point_slot` must be passed as an argument to this function.
@@ -457,9 +406,7 @@ contract Token {
         let from = context.msg_sender();
         _finalize_transfer_to_private(from, amount, hiding_point_slot, &mut context, storage);
     }
-    // docs:end:finalize_transfer_to_private
 
-    // docs:start:finalize_transfer_to_private_unsafe
     /// This is a wrapper around `_finalize_transfer_to_private` placed here so that a call
     /// to `_finalize_transfer_to_private` can be enqueued. Called unsafe as it does not check `from` (this has to be
     /// done in the calling function).
@@ -472,7 +419,6 @@ contract Token {
     ) {
         _finalize_transfer_to_private(from, amount, hiding_point_slot, &mut context, storage);
     }
-    // docs:end:finalize_transfer_to_private_unsafe
 
     #[contract_library_method]
     fn _finalize_transfer_to_private(
@@ -494,7 +440,6 @@ contract Token {
         finalization_payload.emit();
     }
 
-    // docs:start:mint_to_private
     /// Mints token `amount` to a private balance of `to`. Message sender has to have minter permissions (checked
     /// in the enqueued call).
     #[private]
@@ -515,9 +460,7 @@ contract Token {
             ._finalize_mint_to_private_unsafe(context.msg_sender(), amount, hiding_point_slot)
             .enqueue(&mut context);
     }
-    // docs:end:mint_to_private
 
-    // docs:start:finalize_mint_to_private
     /// Finalizes a mint of token `amount` to a private balance of `to`. The mint must be prepared by calling
     /// `prepare_private_balance_increase` first and the resulting
     /// `hiding_point_slot` must be passed as an argument to this function.
@@ -531,9 +474,7 @@ contract Token {
 
         _finalize_mint_to_private(amount, hiding_point_slot, &mut context, storage);
     }
-    // docs:end:finalize_mint_to_private
 
-    // docs:start:finalize_mint_to_private_unsafe
     #[public]
     #[internal]
     fn _finalize_mint_to_private_unsafe(
@@ -545,7 +486,6 @@ contract Token {
         assert(from == storage.minter.read(), "caller is not minter");
         _finalize_mint_to_private(amount, hiding_point_slot, &mut context, storage);
     }
-    // docs:end:finalize_mint_to_private_unsafe
 
     #[contract_library_method]
     fn _finalize_mint_to_private(
@@ -590,7 +530,6 @@ contract Token {
         storage.public_balances.at(to).write(new_balance);
     }
 
-    // docs:start:reduce_total_supply
     #[public]
     #[internal]
     fn _reduce_total_supply(amount: U128) {
@@ -598,14 +537,10 @@ contract Token {
         let new_supply = storage.total_supply.read().sub(amount);
         storage.total_supply.write(new_supply);
     }
-    // docs:end:reduce_total_supply
 
     /// Unconstrained ///
-    // docs:start:balance_of_private
     pub(crate) unconstrained fn balance_of_private(owner: AztecAddress) -> pub U128 {
         storage.balances.at(owner).balance_of()
     }
-    // docs:end:balance_of_private
 }
 
-// docs:end:token_all

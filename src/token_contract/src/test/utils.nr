@@ -93,7 +93,6 @@ pub unconstrained fn mint_to_private(
     env.advance_block_by(1);
 }
 
-// docs:start:txe_test_read_public
 pub unconstrained fn check_public_balance(
     token_contract_address: AztecAddress,
     address: AztecAddress,
@@ -109,7 +108,6 @@ pub unconstrained fn check_public_balance(
     assert(amount == address_amount, "Public balance is not correct");
     cheatcodes::set_contract_address(current_contract_address);
 }
-// docs:end:txe_test_read_public
 
 pub unconstrained fn get_public_balance(
     token_contract_address: AztecAddress,
@@ -140,7 +138,6 @@ pub unconstrained fn check_total_supply(
     cheatcodes::set_contract_address(current_contract_address);
 }
 
-// docs:start:txe_test_call_unconstrained
 pub unconstrained fn check_private_balance(
     token_contract_address: AztecAddress,
     address: AztecAddress,
@@ -153,7 +150,6 @@ pub unconstrained fn check_private_balance(
     assert(balance_of_private == address_amount, "Private balance is not correct");
     cheatcodes::set_contract_address(current_contract_address);
 }
-// docs:end:txe_test_call_unconstrained
 
 pub unconstrained fn get_private_balance(
     token_contract_address: AztecAddress,
@@ -175,7 +171,6 @@ pub unconstrained fn add_token_note(
     amount: U128,
     note_randomness: Field,
 ) {
-    // docs:start:txe_test_add_note
     let balances_owner_slot =
         derive_storage_slot_in_map(Token::storage_layout().balances.slot, owner);
 
@@ -189,5 +184,4 @@ pub unconstrained fn add_token_note(
         balances_owner_slot,
         token_contract_address,
     );
-    // docs:end:txe_test_add_note
 }
