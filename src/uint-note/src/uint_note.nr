@@ -10,7 +10,6 @@ use dep::aztec::{
     },
 };
 
-// docs:start:UintNote
 #[partial_note(quote {value})]
 pub struct UintNote {
     // The amount of tokens in the note
@@ -19,10 +18,8 @@ pub struct UintNote {
     // Randomness of the note to hide its contents
     randomness: Field,
 }
-// docs:end:UintNote
 
 impl NullifiableNote for UintNote {
-    // docs:start:nullifier
     fn compute_nullifier(
         self,
         context: &mut PrivateContext,
@@ -35,7 +32,6 @@ impl NullifiableNote for UintNote {
             GENERATOR_INDEX__NOTE_NULLIFIER as Field,
         )
     }
-    // docs:end:nullifier
 
     unconstrained fn compute_nullifier_without_context(self) -> Field {
         let note_hash_for_nullify = compute_note_hash_for_nullify(self);
