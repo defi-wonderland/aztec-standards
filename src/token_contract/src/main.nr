@@ -1,4 +1,3 @@
-
 mod types;
 mod test;
 
@@ -43,7 +42,6 @@ contract Token {
     };
 
     use crate::types::balance_set::BalanceSet;
-
 
     // In the first transfer iteration we are computing a lot of additional information (validating inputs, retrieving
     // keys, etc.), so the gate count is already relatively high. We therefore only read a few notes to keep the happy
