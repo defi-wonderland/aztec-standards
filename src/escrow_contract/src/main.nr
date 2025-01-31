@@ -1,8 +1,8 @@
-// Sample escrow contract that stores a balance of a private token on behalf of an owner.
 use dep::aztec::macros::aztec;
 
 #[aztec]
-contract Escrow {
+// Sample escrow contract that stores a balance of a private token on behalf of an owner.
+pub contract Escrow {
     use dep::aztec::{
         encrypted_logs::encrypted_note_emission::encode_and_encrypt_note,
         macros::{functions::{initializer, private}, storage::storage},
@@ -29,7 +29,7 @@ contract Escrow {
         ));
     }
 
-    // Withdraws balance. Requires that msg.sender is the owner.
+    // Withdraws balance. Requires that msg.sender is the owner
     #[private]
     fn withdraw(token: AztecAddress, amount: U128, recipient: AztecAddress) {
         let sender = context.msg_sender();

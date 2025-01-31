@@ -11,12 +11,10 @@ use dep::aztec::{
         address::AztecAddress,
         constants::GENERATOR_INDEX__NOTE_NULLIFIER,
         hash::poseidon2_hash_with_separator,
-        traits::{Packable, Serialize},
+        traits::{Serialize},
     },
 };
 
-// docs:start:address_note_def
-// docs:start:address_note_struct
 // Stores an address
 #[note]
 #[derive(Serialize)]
@@ -25,7 +23,6 @@ pub struct AddressNote {
     owner: AztecAddress,
     randomness: Field,
 }
-// docs:end:address_note_struct
 
 impl NullifiableNote for AddressNote {
     fn compute_nullifier(
@@ -54,14 +51,13 @@ impl NullifiableNote for AddressNote {
 
 impl AddressNote {
     pub fn new(address: AztecAddress, owner: AztecAddress) -> Self {
-        // We use the randomness to preserve the privacy of the note recipient by preventing brute-forcing, so a
-        // malicious sender could use non-random values to make the note less private. But they already know the full
-        // note pre-image anyway, and so the recipient already trusts them to not disclose this information. We can
-        // therefore assume that the sender will cooperate in the random value generation.
+        /** Safety: We use the randomness to preserve the privacy of the note recipient by preventing brute-forcing, so a
+         *  malicious sender could use non-random values to make the note less private. But they already know the full
+         *  note pre-image anyway, and so the recipient already trusts them to not disclose this information. We can
+         *  therefore assume that the sender will cooperate in the random value generation. */
         let randomness = unsafe { random() };
         AddressNote { address, owner, randomness, header: NoteHeader::empty() }
     }
-    // docs:end:address_note_def
 }
 
 impl Eq for AddressNote {
