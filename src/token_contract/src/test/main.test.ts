@@ -60,12 +60,12 @@ describe('Token', () => {
     const [deployerWallet] = wallets; // using first account as deployer
 
     const deploymentData = await getContractInstanceFromDeployParams(TokenContractArtifact, {
-      constructorArgs: ['PrivateToken', 'PT', 18],
+      constructorArgs: [deployerWallet.getAddress(), 'PrivateToken', 'PT', 18],
       salt,
       deployer: deployerWallet.getAddress(),
     });
     const deployer = new ContractDeployer(TokenContractArtifact, deployerWallet);
-    const tx = deployer.deploy('PrivateToken', 'PT', 18).send({ contractAddressSalt: salt });
+    const tx = deployer.deploy(deployerWallet.getAddress(), 'PrivateToken', 'PT', 18).send({ contractAddressSalt: salt });
     const receipt = await tx.getReceipt();
 
     expect(receipt).toEqual(
@@ -89,7 +89,9 @@ describe('Token', () => {
   }, 300_000);
 
   async function deployToken() {
-    const contract = await Contract.deploy(alice, TokenContractArtifact, ['PrivateToken', 'PT', 18]).send().deployed();
+    const [deployerWallet] = wallets; // using first account as deployer
+
+    const contract = await Contract.deploy(alice, TokenContractArtifact, [deployerWallet.getAddress(), 'PrivateToken', 'PT', 18]).send().deployed();
     return contract;
   }
 

@@ -36,7 +36,6 @@ pub contract Escrow {
 
         let note = storage.owner.get_note();
         assert(note.address == sender);
-        // TODO: rm `to_field()` when latest Token version is merged
-        Token::at(token).transfer(recipient, amount.to_field()).call(&mut context);
+        Token::at(token).transfer(recipient, amount).call(&mut context);
     }
 }
