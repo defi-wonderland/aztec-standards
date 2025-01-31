@@ -65,14 +65,16 @@ describe('Token', () => {
       deployer: deployerWallet.getAddress(),
     });
     const deployer = new ContractDeployer(TokenContractArtifact, deployerWallet);
-    const tx = deployer.deploy(deployerWallet.getAddress(), 'PrivateToken', 'PT', 18).send({ contractAddressSalt: salt });
+    const tx = deployer
+      .deploy(deployerWallet.getAddress(), 'PrivateToken', 'PT', 18)
+      .send({ contractAddressSalt: salt });
     const receipt = await tx.getReceipt();
 
     expect(receipt).toEqual(
       expect.objectContaining({
         status: TxStatus.PENDING,
         error: '',
-      })
+      }),
     );
 
     const receiptAfterMined = await tx.wait({ wallet: deployerWallet });
@@ -82,7 +84,7 @@ describe('Token', () => {
     expect(receiptAfterMined).toEqual(
       expect.objectContaining({
         status: TxStatus.SUCCESS,
-      })
+      }),
     );
 
     expect(receiptAfterMined.contract.instance.address).toEqual(deploymentData.address);
@@ -91,7 +93,14 @@ describe('Token', () => {
   async function deployToken() {
     const [deployerWallet] = wallets; // using first account as deployer
 
-    const contract = await Contract.deploy(alice, TokenContractArtifact, [deployerWallet.getAddress(), 'PrivateToken', 'PT', 18]).send().deployed();
+    const contract = await Contract.deploy(alice, TokenContractArtifact, [
+      deployerWallet.getAddress(),
+      'PrivateToken',
+      'PT',
+      18,
+    ])
+      .send()
+      .deployed();
     return contract;
   }
 
@@ -176,9 +185,9 @@ describe('Token', () => {
     await expect(
       token
         .withWallet(alice)
-        .methods.transfer_to_public(alice.getAddress(), alice.getAddress(), AMOUNT * 2n, (1))
+        .methods.transfer_to_public(alice.getAddress(), alice.getAddress(), AMOUNT * 2n, 1)
         .send()
-        .wait()
+        .wait(),
     ).rejects.toThrow(/invalid nonce/);
   }, 300_000);
 
@@ -190,9 +199,9 @@ describe('Token', () => {
     await expect(
       token
         .withWallet(alice)
-        .methods.transfer_to_public(alice.getAddress(), alice.getAddress(), AMOUNT + 1n, (0))
+        .methods.transfer_to_public(alice.getAddress(), alice.getAddress(), AMOUNT + 1n, 0)
         .send()
-        .wait()
+        .wait(),
     ).rejects.toThrow(/Balance too low/);
   }, 300_000);
 
@@ -213,7 +222,7 @@ describe('Token', () => {
         .withWallet(alice)
         .methods.transfer(bob.getAddress(), AMOUNT + 1n)
         .send()
-        .wait()
+        .wait(),
     ).rejects.toThrow(/Balance too low/);
 
     // Check total supply hasn't changed
@@ -255,7 +264,7 @@ describe('Token', () => {
         .withWallet(alice)
         .methods.burn_private(alice.getAddress(), AMOUNT * 2n, 0)
         .send()
-        .wait()
+        .wait(),
     ).rejects.toThrow(/Balance too low/);
 
     // Check total supply decreased
@@ -284,7 +293,7 @@ describe('Token', () => {
         .withWallet(alice)
         .methods.transfer_to_private(alice.getAddress(), AMOUNT * 2n)
         .send()
-        .wait()
+        .wait(),
     ).rejects.toThrow(/attempt to subtract with underflow/);
 
     // Check total supply stayed the same
@@ -351,7 +360,7 @@ describe('Token', () => {
           caller: carl.getAddress(),
           action,
         },
-        true
+        true,
       )
       .send()
       .wait();

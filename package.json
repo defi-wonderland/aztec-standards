@@ -12,7 +12,11 @@
     "compile": "aztec-nargo compile",
     "test": "yarn test:js && yarn test:nr",
     "test:js": "NODE_NO_WARNINGS=1 node --experimental-vm-modules $(yarn bin jest) --no-cache --runInBand --config jest.integration.config.json",
-    "test:nr": "aztec test"
+    "test:nr": "aztec test",
+    "lint:prettier": "prettier '**/*.{js,ts}' --write"
+  },
+  "lint-staged": {
+    "*.ts": "prettier --write -u"
   },
   "dependencies": {
     "@aztec/accounts": "0.72.1",
@@ -24,6 +28,9 @@
     "@types/jest": "29.5.11",
     "@types/mocha": "10.0.6",
     "@types/node": "22.5.1",
+    "husky": "9.1.7",
+    "lint-staged": "15.4.3",
+    "prettier": "3.4.2",
     "jest": "29.7.0",
     "ts-jest": "29.2.5",
     "ts-node": "10.9.2",
