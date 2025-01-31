@@ -1,5 +1,5 @@
 [package]
-name = "escrow_contract"
+name = "cliff_vesting"
 authors = [""]
 compiler_version = ">=1.0.0"
 type = "contract"

@@ -48,6 +48,25 @@ pub contract CliffVesting {
         }
     }
 
+    pub fn filter_note_escrow(
+        notes: [Option<CliffVestingNote>; MAX_NOTE_HASH_READ_REQUESTS_PER_CALL],
+        escrow: AztecAddress,
+    ) -> [Option<CliffVestingNote>; MAX_NOTE_HASH_READ_REQUESTS_PER_CALL] {
+        let mut selected = [Option::none(); MAX_NOTE_HASH_READ_REQUESTS_PER_CALL];
+
+        for i in 0..notes.len() {
+            if notes[i].is_some() {
+                let note = notes[i].unwrap_unchecked();
+                if note.escrow == escrow {
+                    selected[0] = Option::some(note);
+                    selected
+                }
+            }
+        }
+
+        assert(false, "No cliff vesting found for escrow");
+    }
+
     #[private]
     fn create_cliff_vesting(escrow: AztecAddress, receiver: AztecAddress, vesting: U128) {
         let escrow_owner = Escrow::at(escrow).owner();
@@ -63,17 +82,17 @@ pub contract CliffVesting {
         );
 
         // Do we need to check if there is already a cliff vesting created for this escrow?
-        storage.escrows.insert(&mut context, note);
+        let note_insertion = storage.escrows.insert(&mut context, note);
 
         // Emit the note for the sender
-        note.emit(encode_and_encrypt_note(
+        note_insertion.emit(encode_and_encrypt_note(
             &mut context,
             sender,
             sender,
         ));
 
         // Emit the note for the receiver
-        note.emit(encode_and_encrypt_note(
+        note_insertion.emit(encode_and_encrypt_note(
             &mut context,
             receiver,
             sender,
@@ -82,13 +101,11 @@ pub contract CliffVesting {
 
     #[private]
     fn claim(escrow: AztecAddress) {
-        // Should we allow anyone to claim for the receiver?
         let caller = context.msg_sender();
         
         // Find and remove the note
         // There should only be one note per escrow
-        let options = NoteGetterOptions::with_filter(filter_notes_min_sum, subtrahend as Field).limit(1);
-        let notes = self.set.pop_notes(options);
+        let note = find_and_remove_cliff_note(escrow);
             
         assert(note.escrow == escrow, "Invalid escrow address");
         assert(caller == note.receiver, "Only receiver can claim");
@@ -101,12 +118,24 @@ pub contract CliffVesting {
         let caller = context.msg_sender();
         
         // Find and remove the note
-        let note = storage.escrows.remove(&mut context)
-            .expect("No vesting found");
+        // There should only be one note per escrow
+        let note = find_and_remove_cliff_note(escrow);
             
         assert(note.escrow == escrow, "Invalid escrow address");
         assert(caller == note.sender, "Only sender can clawback");
 
         Escrow::at(escrow).withdraw(caller).call(&mut context);
+    }
+
+    #[private]
+    fn find_and_remove_cliff_note(escrow: AztecAddress) -> CliffVestingNote {
+        let options = NoteGetterOptions::with_filter(filter_note_escrow, escrow);
+        let note = self.set.pop_notes(options)[0];
+
+        // We revert if there is no note in the filter so we can probably unwrap directly
+        let unwrapped_note = note.unwrap_unchecked()
+
+        assert(unwrapped_note.escrow == escrow, "Invalid escrow address");
+        unwrapped_note
     }
 }
