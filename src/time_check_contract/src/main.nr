@@ -1,3 +1,6 @@
+// TODO: uncomment when timestamp based tests are implemented
+// mod test;
+
 use dep::aztec::macros::aztec;
 
 #[aztec]
