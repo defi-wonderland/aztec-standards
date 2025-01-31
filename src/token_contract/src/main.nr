@@ -66,13 +66,11 @@ contract Token {
         amount: Field,
     }
 
-
     #[derive(Serialize)]
     #[event]
     struct PreparePrivateBalanceIncrease {
         hiding_point_slot: Field,
     }
-
 
     // docs:start:storage_struct
     #[storage]
