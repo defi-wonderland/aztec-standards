@@ -1,5 +1,6 @@
 [workspace]
 members = [
 "src/token_contract",
-"src/escrow_contract"
+"src/escrow_contract",
+"src/clawback_escrow"
 ]
