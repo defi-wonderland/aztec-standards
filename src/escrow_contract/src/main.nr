@@ -4,13 +4,27 @@ use dep::aztec::macros::aztec;
 // Sample escrow contract that stores a balance of a private token on behalf of an owner.
 pub contract Escrow {
     use dep::aztec::{
-        encrypted_logs::encrypted_note_emission::encode_and_encrypt_note,
-        macros::{functions::{initializer, private}, storage::storage},
+        encrypted_logs::{
+            encrypted_event_emission::encode_and_encrypt_event,
+            encrypted_note_emission::encode_and_encrypt_note,
+        },
+        keys::getters::get_public_keys,
+        macros::{events::event, functions::{initializer, private}, storage::storage},
+        prelude::{AztecAddress, PrivateImmutable},
+        protocol_types::traits::Serialize,
     };
-    use dep::aztec::prelude::{AztecAddress, PrivateImmutable};
 
     use dep::address_note::address_note::AddressNote;
     use dep::token::Token;
+    use std::meta::derive;
+
+    #[derive(Serialize)]
+    #[event]
+    struct PrivacyKeys {
+        // TODO: fetch and add encryption_keys to event
+        // encryption_keys: Field,
+        nullification_keys: Field,
+    }
 
     #[storage]
     struct Storage<Context> {
@@ -27,6 +41,24 @@ pub contract Escrow {
             owner,
             context.msg_sender(),
         ));
+    }
+
+    // Leaks privacy keys of this contract to a recipient
+    #[private]
+    fn leak_keys(to: AztecAddress) {
+        let sender = context.msg_sender();
+        let note = storage.owner.get_note();
+        assert(note.address == sender);
+        // TODO: refactor AddressNote to fulfill our needs
+
+        let owner_npk_m_hash: Field = get_public_keys(context.this_address()).npk_m.hash();
+        let nullification_secret = context.request_nsk_app(owner_npk_m_hash);
+
+        PrivacyKeys {
+            // encryption_keys: encryption_secret,
+            nullification_keys: nullification_secret,
+        }
+            .emit(encode_and_encrypt_event(&mut context, to, context.this_address()))
     }
 
     // Withdraws balance. Requires that msg.sender is the owner
