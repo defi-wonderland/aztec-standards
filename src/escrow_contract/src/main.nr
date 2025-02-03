@@ -5,8 +5,8 @@ use dep::aztec::macros::aztec;
 pub contract Escrow {
     use dep::aztec::{
         encrypted_logs::{
-            encrypted_event_emission::encode_and_encrypt_event,
-            encrypted_note_emission::encode_and_encrypt_note,
+            encrypted_event_emission::encode_and_encrypt_event_unconstrained,
+            encrypted_note_emission::encode_and_encrypt_note_unconstrained,
         },
         keys::getters::get_public_keys,
         macros::{events::event, functions::{initializer, private}, storage::storage},
@@ -36,10 +36,11 @@ pub contract Escrow {
     #[initializer]
     fn constructor(owner: AztecAddress) {
         let mut note = AddressNote::new(owner, owner);
-        storage.owner.initialize(&mut note).emit(encode_and_encrypt_note(
+        storage.owner.initialize(&mut note).emit(encode_and_encrypt_note_unconstrained(
             &mut context,
-            owner,
-            context.msg_sender(),
+            // NOTE: assuming non-factory deployment (msg_sender = Alice)
+            context.msg_sender(), // to: Alice
+            context.this_address(), // from: Escrow
         ));
     }
 
@@ -58,7 +59,7 @@ pub contract Escrow {
             // encryption_keys: encryption_secret,
             nullification_keys: nullification_secret,
         }
-            .emit(encode_and_encrypt_event(&mut context, to, context.this_address()))
+            .emit(encode_and_encrypt_event_unconstrained(&mut context, to, context.this_address()))
     }
 
     // Withdraws balance. Requires that msg.sender is the owner
@@ -68,6 +69,8 @@ pub contract Escrow {
 
         let note = storage.owner.get_note();
         assert(note.address == sender);
-        Token::at(token).transfer(recipient, amount).call(&mut context);
+        Token::at(token).transfer_in_private(context.this_address(), recipient, amount, 0).call(
+            &mut context,
+        );
     }
 }
