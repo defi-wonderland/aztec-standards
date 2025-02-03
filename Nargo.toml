@@ -1,5 +1,6 @@
 [workspace]
 members = [
+"src/for-test/boolean_return",
 "src/token_contract",
 "src/escrow_contract"
 ]
