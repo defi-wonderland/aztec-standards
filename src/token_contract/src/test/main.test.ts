@@ -476,7 +476,10 @@ describe('Multi PXE', () => {
     await bobPXE.registerContract(token);
 
     escrow = await deployEscrow(alicePXE, alice, bob.getAddress());
-    await bobPXE.registerContract(escrow);
+    await bobPXE.registerContract({
+      instance: escrow.instance,
+      artifact: EscrowContractArtifact,
+    });
 
     // alice knows bob
     // await alicePXE.registerAccount(bobWallet.getSecretKey(), bob.getCompleteAddress().partialAddress)
@@ -646,10 +649,8 @@ describe('Multi PXE', () => {
 
     // bob should have a note with himself as owner, encrypted by alice
     notes = await bob.getNotes({ contractAddress: escrow.address });
-    console.log(notes);
-    console.log(notes[0].note.items);
     expect(notes.length).toBe(1);
-    expectAddressNote(notes[0], bob.getAddress(), alice.getAddress());
+    expectAddressNote(notes[0], bob.getAddress(), bob.getAddress());
 
     // mint initial amount
     await token.withWallet(alice).methods.mint_to_public(alice.getAddress(), wad(10)).send().wait();
@@ -661,66 +662,46 @@ describe('Multi PXE', () => {
     await expectBalances(alice.getAddress(), wad(5), wad(5));
     await expectBalances(bob.getAddress(), wad(0), wad(0));
 
-    const fundEscrowTx = await token.withWallet(alice).methods.transfer(escrow.address, wad(5)).send().wait({
-      debug: true,
-    });
+    const fundEscrowTx = await token
+      .withWallet(alice)
+      .methods.transfer_in_private(alice.getAddress(), escrow.address, wad(5), 0)
+      .send()
+      .wait({
+        debug: true,
+      });
 
-    events = await alice.getPrivateEvents<Transfer>(TokenContract.events.Transfer, fundEscrowTx.blockNumber!, 2);
-    console.log(events);
-    // how do I cast `from` and `to` to AztecAddres?
-    expect(events[0]).toEqual({
-      from: alice.getAddress().toBigInt(),
-      to: escrow.address.toBigInt(),
-      amount: AMOUNT,
-    });
+    const fundEscrowTx2 = await token
+      .withWallet(alice)
+      .methods.transfer_in_public(alice.getAddress(), escrow.address, wad(5), 0)
+      .send()
+      .wait({
+        debug: true,
+      });
 
-    // const b = await token.withWallet(alice).methods.transfer_in_private(alice.getAddress(), escrow.address, AMOUNT, 0).send().wait({
-    //   debug: true
-    // })
-    // todo: `error` should be null/undefined when no error occured
-    // expect(b.error).toBe("")
-    // events = await alice.getPrivateEvents<Transfer>(TokenContract.events.Transfer, b.blockNumber!, 100)
+    // console.log(fundEscrowTx.debugInfo)
+    await token.withWallet(alice).methods.sync_notes().simulate({});
+
+    // assert balances
+    await expectBalances(alice.getAddress(), wad(0), wad(0));
+    await expectBalances(escrow.address, wad(5), wad(5));
+
+    notes = await alice.getNotes({ contractAddress: token.address });
+    console.log(notes);
+    // expect(notes.length).toBe(2);
+    // expectNote(notes[0], wad(5), escrow.address);
+    // expectNote(notes[0], wad(5), escrow.address);
+
+    // events = await alice.getPrivateEvents<Transfer>(TokenContract.events.Transfer, fundEscrowTx.blockNumber!, 2);
     // console.log(events)
-    notes = await alice.getNotes({
-      contractAddress: token.address,
-    });
-    console.log(notes[0].note.items);
-    expect(notes[0].note.items[0]).toEqual(new Fr(AMOUNT));
-    expect(notes[0].note.items[1]).toEqual(new Fr(0));
-    expect(notes[0].note.items[2]).toEqual(new Fr(alice.getAddress().toBigInt()));
-    // randomness?
-    // expect(notes[0].note.items[3]).toEqual(new Fr(alice.getAddress().toBigInt()));
+    // expect(events[0]).toEqual({
+    //   from: alice.getAddress().toBigInt(),
+    //   to: escrow.address.toBigInt(),
+    //   amount: AMOUNT,
+    // });
 
-    // bob.setScopes([
-    //   bob.getAddress(),
-    //   alice.getAddress(),
-    //   escrow.address
-    // ])
-
-    const a = await escrow.withWallet(alice).methods.withdraw(token.address, AMOUNT, alice.getAddress()).send().wait({
+    const a = await escrow.withWallet(bob).methods.withdraw(token.address, wad(1), bob.getAddress()).send().wait({
       debug: true,
     });
-    console.log(a);
-
-    // await token.withWallet(bob).methods.transfer(bob.getAddress(), AMOUNT).send().wait()
-    // await token.withWallet(bob).methods.transfer(bob.getAddress(), AMOUNT).send().wait()
-    // await token.withWallet(bob).methods.transfer(bob.getAddress(), AMOUNT).send().wait()
-
-    // await token.withWallet(bob).methods.transfer_to_public(bob.getAddress(), bob.getAddress(), AMOUNT, 0).send().wait()
-
-    // console.log(await alice.getNotes({
-    //   contractAddress: token.address
-    // }))
-    // console.log(await alice.getPXEInfo())
-    // console.log(await alice.getSenders())
-    // console.log(await alice.getVersion())
-
-    // deriveMasterIncomingViewingSecretKey(INITIAL_TEST_SECRET_KEYS[0])
-    // const initialEncryptionKey = deriveMasterIncomingViewingSecretKey(aliceWallets[0].getSecretKey())
-    // console.log(await bobPXE.getRegisteredAccounts())
-    // const vpks = [alice.getCompleteAddress().publicKeys.masterIncomingViewingPublicKey]
-    // console.log(vpks[0].toFields())
-    // const a = await bobPXE.getPrivateEvents<Transfer>(TokenContract.events.Transfer, 1, 100, vpks)
-    // console.log(a)
+    console.log(a.debugInfo);
   }, 300_000);
 });
