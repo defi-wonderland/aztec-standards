@@ -84,11 +84,11 @@ pub contract ClawbackEscrow {
     struct Storage<Context> {
         escrows: PrivateSet<ClawbackEscrowNote, Context>,
     }
-    
+
     #[private]
     fn create_clawback_escrow(escrow: AztecAddress, receiver: AztecAddress, amount: U128) {
         // This will revert if the Clawback Escrow is not the owner of the escrow 
-        // Escrow::at(escrow).leak_keys(receiver);
+        let _ = Escrow::at(escrow).leak_keys(receiver);
 
         let randomness = unsafe { random() };
         let sender = context.msg_sender();
