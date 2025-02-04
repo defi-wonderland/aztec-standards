@@ -516,7 +516,7 @@ describe('Multi PXE', () => {
   };
 
   const expectAddressNote = (note: UniqueNote, address: AztecAddress, owner: AztecAddress) => {
-    console.log('checking address note', address.toBigInt(), owner.toBigInt());
+    console.log('checking address note', address, owner);
     expect(note.note.items[0]).toEqual(new Fr(address.toBigInt()));
     expect(note.note.items[1]).toEqual(new Fr(owner.toBigInt()));
   };
@@ -681,27 +681,18 @@ describe('Multi PXE', () => {
     // console.log(fundEscrowTx.debugInfo)
     await token.withWallet(alice).methods.sync_notes().simulate({});
 
-    // assert balances
+    // assert balances, alice 0 and 0, escrow 5 and 5
     await expectBalances(alice.getAddress(), wad(0), wad(0));
     await expectBalances(escrow.address, wad(5), wad(5));
 
+    // alice should have a note with escrow as owner (why alice can see the escrow's note?)
     notes = await alice.getNotes({ contractAddress: token.address });
-    console.log(notes);
-    // expect(notes.length).toBe(2);
-    // expectNote(notes[0], wad(5), escrow.address);
-    // expectNote(notes[0], wad(5), escrow.address);
+    expect(notes.length).toBe(1);
+    expectNote(notes[0], wad(5), escrow.address);
 
-    // events = await alice.getPrivateEvents<Transfer>(TokenContract.events.Transfer, fundEscrowTx.blockNumber!, 2);
-    // console.log(events)
-    // expect(events[0]).toEqual({
-    //   from: alice.getAddress().toBigInt(),
-    //   to: escrow.address.toBigInt(),
-    //   amount: AMOUNT,
-    // });
-
-    const a = await escrow.withWallet(bob).methods.withdraw(token.address, wad(1), bob.getAddress()).send().wait({
+    const withdrawTx = await escrow.withWallet(bob).methods.withdraw(token.address, 0, bob.getAddress()).send().wait({
       debug: true,
     });
-    console.log(a.debugInfo);
+    console.log(withdrawTx.debugInfo);
   }, 300_000);
 });
