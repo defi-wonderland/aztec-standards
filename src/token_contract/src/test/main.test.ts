@@ -457,6 +457,8 @@ describe.only('Multi PXE', () => {
     alicePXE = await startPXE(0);
     bobPXE = await startPXE(1);
 
+    // todo: assert that the used PXEs are actually separate instances?
+
     aliceWallet = await createAccount(alicePXE);
     bobWallet = await createAccount(bobPXE);
 
@@ -484,8 +486,8 @@ describe.only('Multi PXE', () => {
     });
 
     // alice knows bob
-    // await alicePXE.registerAccount(bobWallet.getSecretKey(), bob.getCompleteAddress().partialAddress);
-    // alicePXE.registerSender(bob.getAddress());
+    await alicePXE.registerAccount(bobWallet.getSecretKey(), bob.getCompleteAddress().partialAddress);
+    alicePXE.registerSender(bob.getAddress());
 
     // bob knows alice
     await bobPXE.registerAccount(aliceWallet.getSecretKey(), alice.getCompleteAddress().partialAddress);
@@ -525,8 +527,12 @@ describe.only('Multi PXE', () => {
 
     let events, notes;
 
-    // move public 5 tokens to private
-    const aliceShieldTx = await token.methods.transfer_to_private(alice.getAddress(), wad(5)).send().wait();
+    // self-transfer public 5 tokens to private
+    const aliceShieldTx = await token
+      .withWallet(alice)
+      .methods.transfer_to_private(alice.getAddress(), wad(5))
+      .send()
+      .wait();
     // await token.methods.sync_notes().simulate({})
 
     // assert balances
@@ -551,8 +557,8 @@ describe.only('Multi PXE', () => {
 
     notes = await alice.getNotes({ txHash: fundBobTx.txHash });
     // console.log(notes)
-    expect(notes.length).toBe(0);
-
+    expect(notes.length).toBe(1);
+    expectNote(notes[0], wad(5), bob.getAddress());
     notes = await bob.getNotes({ txHash: fundBobTx.txHash });
     // console.log(notes)
     expect(notes.length).toBe(1);
@@ -563,7 +569,7 @@ describe.only('Multi PXE', () => {
 
     // assert balances
     await expectBalances(alice.getAddress(), wad(0), wad(5));
-    await expectBalances(bob.getAddress(), wad(0), wad(0));
+    await expectBalances(bob.getAddress(), wad(0), wad(5));
 
     // `transfer`
 
@@ -577,10 +583,10 @@ describe.only('Multi PXE', () => {
     await token.withWallet(bob).methods.sync_notes().simulate({});
 
     // Alice shouldn't have any notes because it not a sender/registered account in her PXE
+    // (but she has because I gave her access to Bob's notes)
     notes = await alice.getNotes({ txHash: fundBobTx2.txHash });
-    // console.log(notes)
-    expect(notes.length).toBe(0);
-    // expectNote(notes[0], wad(5), alice.getAddress())
+    expect(notes.length).toBe(1);
+    expectNote(notes[0], wad(5), bob.getAddress());
 
     // Bob should have a note with himself as owner
     // Q: why noteTypeId is always `Selector<0x00000000>`?
@@ -610,8 +616,8 @@ describe.only('Multi PXE', () => {
     // })
     // console.log(transfer2Tx)
 
-    expect(await token.withWallet(bob).methods.balance_of_public(bob.getAddress()).simulate()).toBe(0n);
-    expect(await token.withWallet(bob).methods.balance_of_private(bob.getAddress()).simulate()).toBe(wad(10));
+    expect(await token.methods.balance_of_public(bob.getAddress()).simulate()).toBe(0n);
+    expect(await token.methods.balance_of_private(bob.getAddress()).simulate()).toBe(wad(10));
   }, 300_000);
 
   it('escrow', async () => {
@@ -621,10 +627,10 @@ describe.only('Multi PXE', () => {
     await escrow.withWallet(alice).methods.sync_notes().simulate({});
     await escrow.withWallet(bob).methods.sync_notes().simulate({});
 
-    // alice should have no notes
+    // alice should have no notes (But it has because I gave it access to Bob's notes)
     notes = await alice.getNotes({ contractAddress: escrow.address });
-    expect(notes.length).toBe(0);
-    // expectAddressNote(notes[0], bob.getAddress(), bob.getAddress());
+    expect(notes.length).toBe(1);
+    expectAddressNote(notes[0], bob.getAddress(), bob.getAddress());
 
     // bob should have a note with himself as owner, encrypted by alice
     notes = await bob.getNotes({ contractAddress: escrow.address });
@@ -634,7 +640,7 @@ describe.only('Multi PXE', () => {
     // mint initial amount
     await token.withWallet(alice).methods.mint_to_public(alice.getAddress(), wad(10)).send().wait();
 
-    await token.methods.transfer_to_private(alice.getAddress(), wad(5)).send().wait();
+    await token.withWallet(alice).methods.transfer_to_private(alice.getAddress(), wad(5)).send().wait();
     await token.withWallet(alice).methods.sync_notes().simulate({});
 
     // assert balances
@@ -689,6 +695,8 @@ describe.only('Multi PXE', () => {
       .wait({
         debug: true,
       });
-    console.log(withdrawTx.debugInfo);
+
+    await expectBalances(escrow.address, wad(5), wad(4));
+    await expectBalances(bob.getAddress(), wad(0), wad(1));
   }, 300_000);
 });
