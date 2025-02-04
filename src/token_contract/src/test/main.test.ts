@@ -27,7 +27,7 @@ import {
 import { EscrowContract, EscrowContractArtifact } from '@aztec/noir-contracts.js/Escrow';
 import { ContractInstanceDeployerContract } from '@aztec/noir-contracts.js/ContractInstanceDeployer';
 
-const startPXE = async (id: number = 1) => {
+const startPXE = async (id: number = 0) => {
   const { PXE_URL = `http://localhost:${8080 + id}` } = process.env;
   const pxe = createPXEClient(PXE_URL);
   await waitForPXE(pxe);
@@ -63,7 +63,7 @@ async function deployEscrow(pxes: PXE[], wallet: Wallet, owner: AztecAddress) {
   return escrowContract;
 }
 
-describe.skip('Token', () => {
+describe('Token', () => {
   let pxe: PXE;
   let wallets: AccountWalletWithSecretKey[] = [];
   let accounts: CompleteAddress[] = [];
@@ -433,7 +433,7 @@ describe.skip('Token', () => {
   }, 300_000);
 });
 
-describe('Multi PXE', () => {
+describe.only('Multi PXE', () => {
   let alicePXE: PXE;
   let bobPXE: PXE;
 
@@ -471,9 +471,6 @@ describe('Multi PXE', () => {
   beforeEach(async () => {
     token = (await deployToken(alice, alice.getAddress())) as TokenContract;
 
-    // remove this
-    await token.withWallet(alice);
-
     await bobPXE.registerContract(token);
 
     escrow = await deployEscrow([alicePXE, bobPXE], alice, bob.getAddress());
@@ -487,8 +484,8 @@ describe('Multi PXE', () => {
     });
 
     // alice knows bob
-    await alicePXE.registerAccount(bobWallet.getSecretKey(), bob.getCompleteAddress().partialAddress);
-    alicePXE.registerSender(bob.getAddress());
+    // await alicePXE.registerAccount(bobWallet.getSecretKey(), bob.getCompleteAddress().partialAddress);
+    // alicePXE.registerSender(bob.getAddress());
 
     // bob knows alice
     await bobPXE.registerAccount(aliceWallet.getSecretKey(), alice.getCompleteAddress().partialAddress);
@@ -498,7 +495,7 @@ describe('Multi PXE', () => {
       bob.getAddress(),
       alice.getAddress(),
       // token.address
-      // escrow.address
+      escrow.address,
     ]);
   });
 
@@ -522,7 +519,7 @@ describe('Multi PXE', () => {
 
   const wad = (n: number = 1) => AMOUNT * BigInt(n);
 
-  it.skip('transfers', async () => {
+  it('transfers', async () => {
     // mint initial amount
     await token.withWallet(alice).methods.mint_to_public(alice.getAddress(), wad(10)).send().wait();
 
@@ -617,7 +614,7 @@ describe('Multi PXE', () => {
     expect(await token.withWallet(bob).methods.balance_of_private(bob.getAddress()).simulate()).toBe(wad(10));
   }, 300_000);
 
-  it.only('escrow', async () => {
+  it('escrow', async () => {
     let events, notes;
 
     // this is here because the note is created in the constructor
@@ -626,8 +623,8 @@ describe('Multi PXE', () => {
 
     // alice should have no notes
     notes = await alice.getNotes({ contractAddress: escrow.address });
-    console.log(notes);
-    expect(notes.length).toBe(1);
+    expect(notes.length).toBe(0);
+    // expectAddressNote(notes[0], bob.getAddress(), bob.getAddress());
 
     // bob should have a note with himself as owner, encrypted by alice
     notes = await bob.getNotes({ contractAddress: escrow.address });
@@ -677,14 +674,11 @@ describe('Multi PXE', () => {
     await escrow.withWallet(bob).methods.sync_notes().simulate({});
 
     // Q: why only alice can see the escrow's notes if both have the escrow registered?
-    notes = await alice.getNotes({
-      owner: escrow.address,
-    });
+    notes = await alice.getNotes({ owner: escrow.address });
     expect(notes.length).toBe(1);
     expectNote(notes[0], wad(5), escrow.address);
-    notes = await bob.getNotes({
-      owner: escrow.address,
-    });
+
+    notes = await bob.getNotes({ owner: escrow.address });
     expect(notes.length).toBe(0);
 
     // withdraw 1 from the escrow
