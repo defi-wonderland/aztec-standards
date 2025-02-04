@@ -19,7 +19,7 @@ pub contract ClawbackEscrow {
     use dep::address_note::address_note::AddressNote;
     use dep::token::Token;
 
-    use crate::escrow_contract::Escrow;
+    use crate::escrow_contract;
 
     #[note]
     #[derive(Serialize)]
