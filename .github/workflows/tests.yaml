@@ -39,7 +39,7 @@ jobs:
   
         - name: Start secondary PXE
           run: |
-            aztec start --port 8081 --pxe --pxe.nodeUrl=http://localhost:8080 &
+            aztec start --port 8081 --pxe --pxe.nodeUrl=http://host-gateway:8080 &
   
         - name: Run tests
           run: script -e -c "NODE_NO_WARNINGS=1 node --experimental-vm-modules $(yarn bin jest) --no-cache --runInBand --config jest.integration.config.json && aztec test"
