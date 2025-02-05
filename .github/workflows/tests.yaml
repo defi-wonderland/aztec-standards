@@ -28,10 +28,6 @@ jobs:
             VERSION=0.72.1 aztec-up
             aztec start --sandbox &
   
-        - name: Start secondary PXE
-          run: |
-            aztec start --port 8081 --pxe --pxe.nodeUrl=http://host.docker.internal:8080 &
-  
         - name: Install project dependencies
           run: yarn
   
@@ -40,6 +36,10 @@ jobs:
   
         - name: Codegen
           run: script -e -c "aztec codegen target --outdir src/artifacts"
+  
+        - name: Start secondary PXE
+          run: |
+            aztec start --port 8081 --pxe --pxe.nodeUrl=http://localhost:8080 &
   
         - name: Run tests
           run: script -e -c "NODE_NO_WARNINGS=1 node --experimental-vm-modules $(yarn bin jest) --no-cache --runInBand --config jest.integration.config.json && aztec test"
