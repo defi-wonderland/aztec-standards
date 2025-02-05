@@ -23,10 +23,13 @@ jobs:
         - name: Update path
           run: echo "/home/runner/.aztec/bin" >> $GITHUB_PATH
   
-        - name: Set Aztec version, start sandbox & secondary PXE
+        - name: Set Aztec version and start sandbox
           run: |
             VERSION=0.72.1 aztec-up
-            aztec start --sandbox & 
+            aztec start --sandbox &
+  
+        - name: Start secondary PXE
+          run: |
             aztec start --port 8081 --pxe --pxe.nodeUrl=http://host.docker.internal:8080 &
   
         - name: Install project dependencies
