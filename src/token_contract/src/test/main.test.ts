@@ -27,15 +27,18 @@ import {
 import { EscrowContract, EscrowContractArtifact } from '@aztec/noir-contracts.js/Escrow';
 import { ContractInstanceDeployerContract } from '@aztec/noir-contracts.js/ContractInstanceDeployer';
 
-const startPXE = async (id: number = 0) => {
-  const { PXE_URL = `http://localhost:${8080 + id}` } = process.env;
-  const pxe = createPXEClient(PXE_URL);
+const createPXE = async (id: number = 0) => {
+  // todo: we should probably define testing fixtures for this kind of configuration
+  const { BASE_PXE_URL = `http://localhost` } = process.env;
+  const url = `${BASE_PXE_URL}:${8080 + id}`;
+  console.log('creating pxe', url);
+  const pxe = createPXEClient(url);
   await waitForPXE(pxe);
   return pxe;
 };
 
 const setupSandbox = async () => {
-  return startPXE();
+  return createPXE();
 };
 
 async function deployToken(deployer: AccountWallet, minter: AztecAddress) {
@@ -454,8 +457,8 @@ describe.only('Multi PXE', () => {
     logger = createLogger('aztec:aztec-starter');
     logger.info('Aztec-Starter tests running.');
 
-    alicePXE = await startPXE(0);
-    bobPXE = await startPXE(1);
+    alicePXE = await createPXE(0);
+    bobPXE = await createPXE(1);
 
     // todo: assert that the used PXEs are actually separate instances?
 

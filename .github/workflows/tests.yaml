@@ -3,10 +3,11 @@ on:
       branches:
         - main
     pull_request:
-  
+
 jobs:
     setup-and-run:
       runs-on: ubuntu-latest
+      timeout-minutes: 10
   
       steps:
         - name: Checkout repository
@@ -23,11 +24,14 @@ jobs:
         - name: Update path
           run: echo "/home/runner/.aztec/bin" >> $GITHUB_PATH
   
-        - name: Set Aztec version and start sandbox
+        - name: Set Aztec version
           run: |
-            VERSION=0.72.1 aztec-up &&
-            cd ~/.aztec && docker-compose --network=host -f ./docker-compose.sandbox.yml up &
-  
+            VERSION=0.72.1 aztec-up
+        
+        - name: Start sandbox
+          run: |
+            docker compose -p sandbox -f ~/.aztec/docker-compose.sandbox.yml -f docker-compose.override.yml up --force-recreate &
+
         - name: Install project dependencies
           run: yarn
   
@@ -36,11 +40,20 @@ jobs:
   
         - name: Codegen
           run: script -e -c "aztec codegen target --outdir src/artifacts"
-  
-        - name: Start secondary PXE
+
+
+        - name: inspectooor
           run: |
-            aztec start --port 8081 --pxe --pxe.nodeUrl=http://172.17.0.1:8080 &
-  
+            docker network ls
+            for container_id in $(docker ps -q); do
+              echo "Inspecting container: $container_id"
+              docker inspect "$container_id"
+            done
+            for network_id in $(docker network ls -q); do
+              echo "Inspecting network: $network_id"
+              docker network inspect "$network_id"
+            done
+
         - name: Run tests
-          run: script -e -c "NODE_NO_WARNINGS=1 node --experimental-vm-modules $(yarn bin jest) --no-cache --runInBand --config jest.integration.config.json"
+          run: script -e -c "LOG_LEVEL=debug BASE_PXE_URL=http://localhost NODE_NO_WARNINGS=1 node --experimental-vm-modules $(yarn bin jest) --no-cache --runInBand --config jest.integration.config.json"
   
