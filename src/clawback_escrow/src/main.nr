@@ -33,6 +33,27 @@ pub contract ClawbackEscrow {
         // randomness: Field 
     }
 
+    impl NullifiableNote for ClawbackEscrowNote {
+        fn compute_nullifier(
+            self,
+            _: &mut PrivateContext,
+            note_hash_for_nullify: Field,
+        ) -> Field {
+            poseidon2_hash_with_separator(
+                [note_hash_for_nullify, self.escrow.to_field()],
+                GENERATOR_INDEX__NOTE_NULLIFIER as Field,
+            )
+        }
+
+        unconstrained fn compute_nullifier_without_context(self) -> Field {
+            let note_hash_for_nullify = compute_note_hash_for_nullify(self);
+            poseidon2_hash_with_separator(
+                [note_hash_for_nullify, self.escrow.to_field()],
+                GENERATOR_INDEX__NOTE_NULLIFIER as Field,
+            )
+        }
+    }
+
     impl Eq for ClawbackEscrowNote {
         fn eq(self: Self, other: Self) -> bool {
             (self.escrow.to_field() == other.escrow.to_field())
