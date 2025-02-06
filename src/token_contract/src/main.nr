@@ -201,17 +201,6 @@ pub contract Token {
         ));
     }
 
-    /**
-     * Cancel a private authentication witness.
-     * @param inner_hash The inner hash of the authwit to cancel.
-     */
-    #[private]
-    fn cancel_authwit(inner_hash: Field) {
-        let on_behalf_of = context.msg_sender();
-        let nullifier = compute_authwit_nullifier(on_behalf_of, inner_hash);
-        context.push_nullifier(nullifier);
-    }
-
     #[private]
     fn transfer_in_private(from: AztecAddress, to: AztecAddress, amount: U128, nonce: Field) {
         if (!from.eq(context.msg_sender())) {
