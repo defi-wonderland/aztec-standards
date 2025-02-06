@@ -1,0 +1,18 @@
+services:
+  alternative-pxe:
+    image: "aztecprotocol/aztec:latest"
+    ports:
+      - "${PXE_PORT:-8081}:${PXE_PORT:-8081}"
+    environment:
+      LOG_LEVEL: '${LOG_LEVEL:-info; verbose: simulator:avm:debug_log}'
+      HOST_WORKDIR: "${PWD}"
+      VERSION: latest
+    volumes:
+      - ./pxe/log:/usr/src/yarn-project/aztec/log:rw
+    # TODO: Use `condition` to start only after the sandbox is healthy
+    depends_on:
+      - ethereum
+      - aztec
+    command: "start --port 8081 --pxe --pxe.nodeUrl=http://aztec:8080"
+    # TODO: If started at the same time it usually takes three attempts to connect to the sandbox's node
+    restart: unless-stopped

@@ -3,13 +3,11 @@ on:
       branches:
         - main
     pull_request:
-      branches:
-        - main
-        - dev
-  
+
 jobs:
     setup-and-run:
       runs-on: ubuntu-latest
+      timeout-minutes: 30
   
       steps:
         - name: Checkout repository
@@ -26,11 +24,14 @@ jobs:
         - name: Update path
           run: echo "/home/runner/.aztec/bin" >> $GITHUB_PATH
   
-        - name: Set Aztec version and start sandbox
+        - name: Set Aztec version
           run: |
             VERSION=0.72.1 aztec-up
-            aztec start --sandbox &
-  
+        
+        - name: Start sandbox
+          run: |
+            docker compose -p sandbox -f ~/.aztec/docker-compose.sandbox.yml -f docker-compose.override.yml up &
+
         - name: Install project dependencies
           run: yarn
   
@@ -39,7 +40,11 @@ jobs:
   
         - name: Codegen
           run: script -e -c "aztec codegen target --outdir src/artifacts"
+
+        - name: Run js tests
+          run: script -e -c "BASE_PXE_URL=http://localhost NODE_NO_WARNINGS=1 node --experimental-vm-modules $(yarn bin jest) --no-cache --runInBand --config jest.integration.config.json"
   
-        - name: Run tests
-          run: script -e -c "NODE_NO_WARNINGS=1 node --experimental-vm-modules $(yarn bin jest) --no-cache --runInBand --config jest.integration.config.json && aztec test"
-  
+        - name: Run nr tests
+          run: |
+            script -e -c "aztec test"
+
