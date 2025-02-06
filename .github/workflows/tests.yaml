@@ -7,7 +7,7 @@ on:
 jobs:
     setup-and-run:
       runs-on: ubuntu-latest
-      timeout-minutes: 10
+      timeout-minutes: 30
   
       steps:
         - name: Checkout repository
@@ -30,7 +30,7 @@ jobs:
         
         - name: Start sandbox
           run: |
-            docker compose -p sandbox -f ~/.aztec/docker-compose.sandbox.yml -f docker-compose.override.yml up --force-recreate &
+            docker compose -p sandbox -f ~/.aztec/docker-compose.sandbox.yml -f docker-compose.override.yml up &
 
         - name: Install project dependencies
           run: yarn
@@ -41,19 +41,10 @@ jobs:
         - name: Codegen
           run: script -e -c "aztec codegen target --outdir src/artifacts"
 
-
-        - name: inspectooor
-          run: |
-            docker network ls
-            for container_id in $(docker ps -q); do
-              echo "Inspecting container: $container_id"
-              docker inspect "$container_id"
-            done
-            for network_id in $(docker network ls -q); do
-              echo "Inspecting network: $network_id"
-              docker network inspect "$network_id"
-            done
-
-        - name: Run tests
-          run: script -e -c "LOG_LEVEL=debug BASE_PXE_URL=http://localhost NODE_NO_WARNINGS=1 node --experimental-vm-modules $(yarn bin jest) --no-cache --runInBand --config jest.integration.config.json"
+        - name: Run js tests
+          run: script -e -c "BASE_PXE_URL=http://localhost NODE_NO_WARNINGS=1 node --experimental-vm-modules $(yarn bin jest) --no-cache --runInBand --config jest.integration.config.json"
   
+        - name: Run nr tests
+          run: |
+            script -e -c "aztec test"
+
