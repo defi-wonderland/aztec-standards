@@ -28,10 +28,9 @@ import { EscrowContract, EscrowContractArtifact } from '@aztec/noir-contracts.js
 import { ContractInstanceDeployerContract } from '@aztec/noir-contracts.js/ContractInstanceDeployer';
 
 const createPXE = async (id: number = 0) => {
-  // todo: we should probably define testing fixtures for this kind of configuration
+  // TODO: we should probably define testing fixtures for this kind of configuration
   const { BASE_PXE_URL = `http://localhost` } = process.env;
   const url = `${BASE_PXE_URL}:${8080 + id}`;
-  console.log('creating pxe', url);
   const pxe = createPXEClient(url);
   await waitForPXE(pxe);
   return pxe;
@@ -436,7 +435,7 @@ describe('Token', () => {
   }, 300_000);
 });
 
-describe.only('Multi PXE', () => {
+describe('Multi PXE', () => {
   let alicePXE: PXE;
   let bobPXE: PXE;
 
@@ -460,7 +459,7 @@ describe.only('Multi PXE', () => {
     alicePXE = await createPXE(0);
     bobPXE = await createPXE(1);
 
-    // todo: assert that the used PXEs are actually separate instances?
+    // TODO: assert that the used PXEs are actually separate instances?
 
     aliceWallet = await createAccount(alicePXE);
     bobWallet = await createAccount(bobPXE);
