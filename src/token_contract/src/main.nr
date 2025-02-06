@@ -17,7 +17,7 @@ pub contract Token {
     use dep::compressed_string::FieldCompressedString;
 
     use dep::aztec::{
-        context::{PrivateCallInterface, PrivateContext},
+        context::PrivateContext,
         encrypted_logs::{
             encrypted_event_emission::encode_and_encrypt_event_unconstrained,
             encrypted_note_emission::{
@@ -42,15 +42,6 @@ pub contract Token {
     };
 
     use crate::types::balance_set::BalanceSet;
-
-    // In the first transfer iteration we are computing a lot of additional information (validating inputs, retrieving
-    // keys, etc.), so the gate count is already relatively high. We therefore only read a few notes to keep the happy
-    // case with few constraints.
-    global INITIAL_TRANSFER_CALL_MAX_NOTES: u32 = 2;
-    // All the recursive call does is nullify notes, meaning the gate count is low, but it is all constant overhead. We
-    // therefore read more notes than in the base case to increase the efficiency of the overhead, since this results in
-    // an overall small circuit regardless.
-    global RECURSIVE_TRANSFER_CALL_MAX_NOTES: u32 = 8;
 
     #[derive(Serialize)]
     #[event]
@@ -189,20 +180,7 @@ pub contract Token {
     fn transfer(to: AztecAddress, amount: U128) {
         let from = context.msg_sender();
 
-        // We reduce `from`'s balance by amount by recursively removing notes over potentially multiple calls. This
-        // method keeps the gate count for each individual call low - reading too many notes at once could result in
-        // circuits in which proving is not feasible.
-        // Since the sum of the amounts in the notes we nullified was potentially larger than amount, we create a new
-        // note for `from` with the change amount, e.g. if `amount` is 10 and two notes are nullified with amounts 8 and
-        // 5, then the change will be 3 (since 8 + 5 - 10 = 3).
-        let change = subtract_balance(
-            &mut context,
-            storage,
-            from,
-            amount,
-            INITIAL_TRANSFER_CALL_MAX_NOTES,
-        );
-        storage.balances.at(from).add(from, change).emit(encode_and_encrypt_note_unconstrained(
+        storage.balances.at(from).sub(from, amount).emit(encode_and_encrypt_note_unconstrained(
             &mut context,
             from,
             from,
@@ -221,55 +199,6 @@ pub contract Token {
             to,
             from,
         ));
-    }
-
-    #[contract_library_method]
-    fn subtract_balance(
-        context: &mut PrivateContext,
-        storage: Storage<&mut PrivateContext>,
-        account: AztecAddress,
-        amount: U128,
-        max_notes: u32,
-    ) -> U128 {
-        let subtracted = storage.balances.at(account).try_sub(amount, max_notes);
-        // Failing to subtract any amount means that the owner was unable to produce more notes that could be nullified.
-        // We could in some cases fail early inside try_sub if we detected that fewer notes than the maximum were
-        // returned and we were still unable to reach the target amount, but that'd make the code more complicated, and
-        // optimizing for the failure scenario is not as important.
-        assert(subtracted > U128::zero(), "Balance too low");
-        if subtracted >= amount {
-            // We have achieved our goal of nullifying notes that add up to more than amount, so we return the change
-            subtracted - amount
-        } else {
-            // try_sub failed to nullify enough notes to reach the target amount, so we compute the amount remaining
-            // and try again.
-            let remaining = amount - subtracted;
-            compute_recurse_subtract_balance_call(*context, account, remaining).call(context)
-        }
-    }
-
-    // TODO(#7729): apply no_predicates to the contract interface method directly instead of having to use a wrapper
-    // like we do here.
-    #[no_predicates]
-    #[contract_library_method]
-    fn compute_recurse_subtract_balance_call(
-        context: PrivateContext,
-        account: AztecAddress,
-        remaining: U128,
-    ) -> PrivateCallInterface<25, U128> {
-        Token::at(context.this_address())._recurse_subtract_balance(account, remaining)
-    }
-
-    #[internal]
-    #[private]
-    fn _recurse_subtract_balance(account: AztecAddress, amount: U128) -> U128 {
-        subtract_balance(
-            &mut context,
-            storage,
-            account,
-            amount,
-            RECURSIVE_TRANSFER_CALL_MAX_NOTES,
-        )
     }
 
     /**
