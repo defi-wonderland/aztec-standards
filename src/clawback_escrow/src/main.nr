@@ -1,4 +1,5 @@
 use dep::aztec::macros::aztec;
+mod test;
 
 #[aztec]
 pub contract ClawbackEscrow {
@@ -28,36 +29,13 @@ pub contract ClawbackEscrow {
         sender: AztecAddress,
         receiver: AztecAddress,
         escrow: AztecAddress,
-        amount: U128,
-        randomness: Field
-    }
-
-    impl NullifiableNote for ClawbackEscrowNote {
-        // docs:start:nullifier
-        fn compute_nullifier(
-            self,
-            _: &mut PrivateContext,
-            note_hash_for_nullify: Field,
-        ) -> Field {
-            poseidon2_hash_with_separator(
-                [note_hash_for_nullify, self.escrow.to_field(), self.randomness],
-                GENERATOR_INDEX__NOTE_NULLIFIER as Field,
-            )
-        }
-
-        // docs:end:nullifier
-        unconstrained fn compute_nullifier_without_context(self) -> Field {
-            let note_hash_for_nullify = compute_note_hash_for_nullify(self);
-            poseidon2_hash_with_separator(
-                [note_hash_for_nullify, self.escrow.to_field(), self.randomness],
-                GENERATOR_INDEX__NOTE_NULLIFIER as Field,
-            )
-        }
+        // We probably need randomness for privacy between participants of the same escrow
+        // randomness: Field 
     }
 
     impl Eq for ClawbackEscrowNote {
         fn eq(self: Self, other: Self) -> bool {
-            (self.escrow.to_field() == other.escrow.to_field()) & (self.randomness == other.randomness)
+            (self.escrow.to_field() == other.escrow.to_field())
         }
     }
 
@@ -66,15 +44,11 @@ pub contract ClawbackEscrow {
             sender: AztecAddress,
             receiver: AztecAddress,
             escrow: AztecAddress,
-            amount: U128,
-            randomness: Field,
         ) -> Self {
             ClawbackEscrowNote { 
                 sender,
                 receiver, 
                 escrow,
-                amount,
-                randomness,
                 header: NoteHeader::empty() 
             }
         }
@@ -86,18 +60,15 @@ pub contract ClawbackEscrow {
     }
 
     #[private]
-    fn create_clawback_escrow(escrow: AztecAddress, receiver: AztecAddress, amount: U128) {
+    fn create_clawback_escrow(escrow: AztecAddress, receiver: AztecAddress) {
         // This will revert if the Clawback Escrow is not the owner of the escrow 
         let _ = Escrow::at(escrow).leak_keys(receiver);
 
-        let randomness = unsafe { random() };
         let sender = context.msg_sender();
         let mut note = ClawbackEscrowNote::new(
             sender, 
             receiver, 
-            escrow, 
-            amount,
-            randomness
+            escrow
         );
         
         // Check that a clawback escrow has not been created for that escrow
@@ -123,40 +94,38 @@ pub contract ClawbackEscrow {
     }
 
     #[private]
-    fn claim(escrow: AztecAddress) {
+    fn claim(escrow: AztecAddress, amount: U128) {
         let caller = context.msg_sender();
         
-        // Find and remove the note
         // There should only be one note per escrow
-        let note = _find_and_remove_clawback_note(storage, escrow);
+        let note = _find_clawback_note(storage, escrow);
             
         assert(note.escrow == escrow, "Invalid escrow address");
         assert(caller == note.receiver, "Only receiver can claim");
 
-        Escrow::at(escrow).withdraw(AztecAddress::zero(), note.amount, note.receiver).call(&mut context);
+        Escrow::at(escrow).withdraw(AztecAddress::zero(), amount, note.receiver).call(&mut context);
     }
 
     #[private]
-    fn clawback(escrow: AztecAddress) {
+    fn clawback(escrow: AztecAddress, amount: U128) {
         let caller = context.msg_sender();
         
-        // Find and remove the note
         // There should only be one note per escrow
-        let note = _find_and_remove_clawback_note(storage, escrow);
+        let note = _find_clawback_note(storage, escrow);
             
         assert(note.escrow == escrow, "Invalid escrow address");
         assert(caller == note.sender, "Only sender can clawback");
 
-        Escrow::at(escrow).withdraw(AztecAddress::zero(), note.amount, caller).call(&mut context);
+        Escrow::at(escrow).withdraw(AztecAddress::zero(), amount, caller).call(&mut context);
     }
    
     #[contract_library_method]
-    fn _find_and_remove_clawback_note(storage: Storage<&mut PrivateContext>, escrow: AztecAddress) -> ClawbackEscrowNote {
+    fn _find_clawback_note(storage: Storage<&mut PrivateContext>, escrow: AztecAddress) -> ClawbackEscrowNote {
         // let options = NoteGetterOptions::with_filter(filter_note_escrow, escrow);
         let options = NoteGetterOptions::new()
             .select(ClawbackEscrowNote::properties().escrow, Comparator.EQ, escrow)
             .set_limit(1);
-        let notes = storage.escrows.pop_notes(options);
+        let notes = storage.escrows.get_notes(options);
 
         // We revert if there is no note in the filter so we can probably unwrap directly
         let unwrapped_note = notes.get_unchecked(0);
