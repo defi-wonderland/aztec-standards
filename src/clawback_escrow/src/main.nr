@@ -115,7 +115,7 @@ pub contract ClawbackEscrow {
     }
 
     #[private]
-    fn claim(escrow: AztecAddress, amount: U128) {
+    fn claim(escrow: AztecAddress, token: AztecAddress, amount: U128) {
         let caller = context.msg_sender();
         
         // There should only be one note per escrow
@@ -124,11 +124,11 @@ pub contract ClawbackEscrow {
         assert(note.escrow == escrow, "Invalid escrow address");
         assert(caller == note.receiver, "Only receiver can claim");
 
-        Escrow::at(escrow).withdraw(AztecAddress::zero(), amount, note.receiver).call(&mut context);
+        Escrow::at(escrow).withdraw(token, amount, note.receiver).call(&mut context);
     }
 
     #[private]
-    fn clawback(escrow: AztecAddress, amount: U128) {
+    fn clawback(escrow: AztecAddress, token: AztecAddress, amount: U128) {
         let caller = context.msg_sender();
         
         // There should only be one note per escrow
@@ -137,7 +137,7 @@ pub contract ClawbackEscrow {
         assert(note.escrow == escrow, "Invalid escrow address");
         assert(caller == note.sender, "Only sender can clawback");
 
-        Escrow::at(escrow).withdraw(AztecAddress::zero(), amount, caller).call(&mut context);
+        Escrow::at(escrow).withdraw(token, amount, caller).call(&mut context);
     }
    
     #[contract_library_method]
