@@ -86,18 +86,6 @@ pub contract Token {
             assert(nonce == 0, "invalid nonce");
         }
 
-        storage.balances.at(from).sub(from, amount).emit(encode_and_encrypt_note(
-            &mut context,
-            from,
-            from,
-        ));
-        Token::at(context.this_address())._increase_public_balance(to, amount).enqueue(&mut context);
-    }
-
-    #[private]
-    fn transfer(to: AztecAddress, amount: U128) {
-        let from = context.msg_sender();
-
         // We reduce `from`'s balance by amount by recursively removing notes over potentially multiple calls. This
         // method keeps the gate count for each individual call low - reading too many notes at once could result in
         // circuits in which proving is not feasible.
@@ -111,25 +99,13 @@ pub contract Token {
             amount,
             INITIAL_TRANSFER_CALL_MAX_NOTES,
         );
-        storage.balances.at(from).add(from, change).emit(encode_and_encrypt_note_unconstrained(
+
+        storage.balances.at(from).add(from, change).emit(encode_and_encrypt_note(
             &mut context,
             from,
             from,
         ));
-        storage.balances.at(to).add(to, amount).emit(encode_and_encrypt_note_unconstrained(
-            &mut context,
-            to,
-            from,
-        ));
-        // We don't constrain encryption of the note log in `transfer` (unlike in `transfer_in_private`) because the transfer
-        // function is only designed to be used in situations where the event is not strictly necessary (e.g. payment to
-        // another person where the payment is considered to be successful when the other party successfully decrypts a
-        // note).
-        Transfer { from, to, amount }.emit(encode_and_encrypt_event_unconstrained(
-            &mut context,
-            to,
-            from,
-        ));
+        Token::at(context.this_address())._increase_public_balance(to, amount).enqueue(&mut context);
     }
 
     /**
@@ -151,7 +127,21 @@ pub contract Token {
             assert(nonce == 0, "invalid nonce");
         }
 
-        storage.balances.at(from).sub(from, amount).emit(encode_and_encrypt_note(
+        // We reduce `from`'s balance by amount by recursively removing notes over potentially multiple calls. This
+        // method keeps the gate count for each individual call low - reading too many notes at once could result in
+        // circuits in which proving is not feasible.
+        // Since the sum of the amounts in the notes we nullified was potentially larger than amount, we create a new
+        // note for `from` with the change amount, e.g. if `amount` is 10 and two notes are nullified with amounts 8 and
+        // 5, then the change will be 3 (since 8 + 5 - 10 = 3).
+        let change = subtract_balance(
+            &mut context,
+            storage,
+            from,
+            amount,
+            INITIAL_TRANSFER_CALL_MAX_NOTES,
+        );
+
+        storage.balances.at(from).add(from, change).emit(encode_and_encrypt_note(
             &mut context,
             from,
             from,
@@ -166,6 +156,7 @@ pub contract Token {
         } else {
             assert(nonce == 0, "invalid nonce");
         }
+
         storage.balances.at(from).sub(from, amount).emit(encode_and_encrypt_note(
             &mut context,
             from,
