@@ -135,9 +135,8 @@ describe('Multi PXE', () => {
   };
 
   const expectNote = (note: UniqueNote, amount: bigint, owner: AztecAddress) => {
-    // 4th element of items is randomness, so we slice the first 3
-    // dev: why the second element is always 0?
-    expect(note.note.items.slice(0, 3)).toStrictEqual([new Fr(amount), new Fr(0), new Fr(owner.toBigInt())]);
+    // 3th element of items is randomness, so we slice the first 2
+    expect(note.note.items.slice(0, 2)).toStrictEqual([new Fr(amount), new Fr(owner.toBigInt())]);
   };
 
   const expectBalances = async (address: AztecAddress, publicBalance: bigint, privateBalance: bigint) => {

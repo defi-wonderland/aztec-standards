@@ -121,8 +121,9 @@ describe('Token - Single PXE', () => {
 
     const receiptAfterMined = await tx.wait({ wallet: deployerWallet });
 
-    expect(await pxe.getContractInstance(deploymentData.address)).toBeDefined();
-    expect(await pxe.isContractPubliclyDeployed(deploymentData.address)).toBeTruthy();
+    const contractMetadata = await pxe.getContractMetadata(deploymentData.address);
+    expect(contractMetadata).toBeDefined();
+    expect(contractMetadata.isContractPubliclyDeployed).toBeTruthy();
     expect(receiptAfterMined).toEqual(
       expect.objectContaining({
         status: TxStatus.SUCCESS,
@@ -375,14 +376,15 @@ describe('Token - Single PXE', () => {
       .withWallet(carl)
       .methods.transfer_in_public(alice.getAddress(), bob.getAddress(), AMOUNT, nonce);
 
-    await alice
-      .setPublicAuthWit(
+    await (
+      await alice.setPublicAuthWit(
         {
           caller: carl.getAddress(),
           action,
         },
         true,
       )
+    )
       .send()
       .wait();
 
@@ -506,9 +508,8 @@ describe('Token - Multi PXE', () => {
   };
 
   const expectNote = (note: UniqueNote, amount: bigint, owner: AztecAddress) => {
-    // 4th element of items is randomness, so we slice the first 3
-    // dev: why the second element is always 0?
-    expect(note.note.items.slice(0, 3)).toStrictEqual([new Fr(amount), new Fr(0), new Fr(owner.toBigInt())]);
+    // 3th element of items is randomness, so we slice the first 2
+    expect(note.note.items.slice(0, 2)).toStrictEqual([new Fr(amount), new Fr(owner.toBigInt())]);
   };
 
   const expectBalances = async (address: AztecAddress, publicBalance: bigint, privateBalance: bigint) => {
