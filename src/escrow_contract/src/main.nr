@@ -4,11 +4,14 @@ use dep::aztec::macros::aztec;
 // Sample escrow contract that stores a balance of a private token on behalf of an owner.
 pub contract Escrow {
     use dep::aztec::{
+        encrypted_logs::log_assembly_strategies::default_aes128::{
+            event::encode_and_encrypt_event_unconstrained,
+            note::{encode_and_encrypt_note, encode_and_encrypt_note_unconstrained},
+        },
         keys::getters::get_public_keys,
         macros::{events::event, functions::{initializer, private}, storage::storage},
         prelude::{AztecAddress, PrivateImmutable},
         protocol_types::traits::Serialize,
-        encrypted_logs::log_assembly_strategies::default_aes128::note::encode_and_encrypt_note,
     };
 
     use dep::address_note::address_note::AddressNote;

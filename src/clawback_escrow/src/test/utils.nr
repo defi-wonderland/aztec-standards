@@ -1,4 +1,5 @@
-
+use dep::escrow_contract::Escrow;
+use dep::token::Token;
 use aztec::{
     oracle::{
         execution::{get_block_number, get_contract_address},
@@ -10,8 +11,6 @@ use aztec::{
     test::helpers::{cheatcodes, test_environment::TestEnvironment},
 };
 use std::test::OracleMock;
-use dep::token::Token;
-use dep::escrow_contract::Escrow;
 
 pub unconstrained fn setup(
     with_account_contracts: bool,
@@ -28,7 +27,7 @@ pub unconstrained fn setup(
         let recipient = env.create_account();
         (owner, recipient)
     };
-    
+
     env.impersonate(owner);
 
     // Deploy token contract
@@ -38,31 +37,32 @@ pub unconstrained fn setup(
         "TT00000000000000000000000000000",
         18,
     );
-    let token_contract =
-        env.deploy("./@token_contract","Token").with_public_void_initializer(initializer_call_interface);
-    
+    let token_contract = env.deploy("./@token_contract", "Token").with_public_void_initializer(
+        initializer_call_interface,
+    );
+
     let token_contract_address = token_contract.to_address();
     env.advance_block_by(1);
 
     // Mint private tokens to owner
     mint_to_private(&mut env, token_contract_address, owner, mint_amount);
-    
+
     // Deploy clawback escrow contract
     let clawback_escrow_contract = env.deploy_self("ClawbackEscrow").without_initializer();
     let clawback_escrow_address = clawback_escrow_contract.to_address();
     env.advance_block_by(1);
 
     // Deploy the escrow
-    let initializer_call_escrow = Escrow::interface().constructor(
-        clawback_escrow_address
+    let initializer_call_escrow = Escrow::interface().constructor(clawback_escrow_address);
+    let escrow_contract = env.deploy("./@escrow_contract", "Escrow").with_private_initializer(
+        initializer_call_escrow,
     );
-    let escrow_contract = env.deploy("./@escrow_contract", "Escrow").with_private_initializer(initializer_call_escrow);
     let escrow_address = escrow_contract.to_address();
     env.advance_block_by(1);
 
     // // Fund the escrow
     // transfer_in_private(&mut env, token_contract_address, escrow_address, mint_amount);
-    
+
     (&mut env, clawback_escrow_address, token_contract_address, owner, recipient)
 }
 
