@@ -123,7 +123,10 @@ describe('Multi PXE', () => {
     bobPXE.registerSender(escrow.address);
     bobPXE.registerSender(alice.getAddress());
 
-    bob.setScopes([token.address, escrow.address]);
+    bob.setScopes([
+      // token.address,
+      // escrow.address,
+    ]);
   });
 
   const expectAddressNote = (note: UniqueNote, address: AztecAddress, owner: AztecAddress) => {
@@ -189,6 +192,8 @@ describe('Multi PXE', () => {
       });
 
     await token.withWallet(alice).methods.sync_notes().simulate({});
+    // NOTE: commenting the following line will make the test fail in "expect(notes.length).toBe(2);"
+    await token.withWallet(bob).methods.sync_notes().simulate({});
 
     // assert balances, alice 0 and 0, escrow 0 and 10
     await expectBalances(alice.getAddress(), wad(0), wad(0));
@@ -208,12 +213,17 @@ describe('Multi PXE', () => {
     expectNote(notes[0], wad(5), escrow.address);
     expectNote(notes[1], wad(5), escrow.address);
 
-    // TODO: why only alice can see the escrow's notes if both have the escrow registered?
     notes = await bob.getNotes({ owner: escrow.address });
-    expect(notes.length).toBe(0);
+    expect(notes.length).toBe(2);
+    expectNote(notes[0], wad(5), escrow.address);
+    expectNote(notes[1], wad(5), escrow.address);
 
-    // withdraw 1 from the escrow
-    return;
+    // withdraw 7 from the escrow
+    /**
+     * NOTE:
+     * - scoping [token, escrow] => Bob's PXE fails with "No public key registered for address {token.address}"
+     * - scoping []              => Bob's PXE fails with "Assertion failed: Failed to get a note 'self.is_some()'"
+     */
     const withdrawTx = await escrow
       .withWallet(bob)
       .methods.withdraw(token.address, wad(7), bob.getAddress())
