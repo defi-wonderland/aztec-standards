@@ -10,6 +10,8 @@
     "clean": "rm -rf ./src/artifacts ./target",
     "codegen": "aztec codegen target --outdir src/artifacts",
     "compile": "aztec-nargo compile",
+    "deploy:escrow": "node --loader ts-node/esm scripts/deploy-escrow.ts",
+    "deploy:token": "node --loader ts-node/esm scripts/deploy-token.ts",
     "start:pxe": "docker compose -f $(dirname $(dirname $(which aztec)))/docker-compose.sandbox.yml -f docker-compose.override.yml up",
     "test": "yarn test:js && yarn test:nr",
     "test:js": "NODE_NO_WARNINGS=1 node --experimental-vm-modules $(yarn bin jest) --no-cache --runInBand --config jest.integration.config.json",
