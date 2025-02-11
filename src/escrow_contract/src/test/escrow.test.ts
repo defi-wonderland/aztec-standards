@@ -78,8 +78,6 @@ describe('Multi PXE', () => {
     alicePXE = await createPXE(0);
     bobPXE = await createPXE(1);
 
-    // TODO: assert that the used PXEs are actually separate instances?
-
     aliceWallet = await createAccount(alicePXE);
     bobWallet = await createAccount(bobPXE);
 
@@ -192,7 +190,6 @@ describe('Multi PXE', () => {
       });
 
     await token.withWallet(alice).methods.sync_notes().simulate({});
-    // NOTE: commenting the following line will make the test fail in "expect(notes.length).toBe(2);"
     await token.withWallet(bob).methods.sync_notes().simulate({});
 
     // assert balances, alice 0 and 0, escrow 0 and 10
