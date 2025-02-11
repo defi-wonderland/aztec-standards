@@ -167,7 +167,7 @@ describe('Multi PXE', () => {
     // mint initial amount
     await token.withWallet(alice).methods.mint_to_public(alice.getAddress(), wad(10)).send().wait();
 
-    await token.withWallet(alice).methods.transfer_to_private(alice.getAddress(), wad(5)).send().wait();
+    await token.withWallet(alice).methods.transfer_to_private(alice.getAddress(), alice.getAddress(), wad(5), 0).send().wait();
     await token.withWallet(alice).methods.sync_notes().simulate({});
 
     // assert balances

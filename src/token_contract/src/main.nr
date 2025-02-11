@@ -167,9 +167,12 @@ pub contract Token {
 
     // Transfers token `amount` from public balance of message sender to a private balance of `to`.
     #[private]
-    fn transfer_to_private(to: AztecAddress, amount: U128) {
-        // `from` is the owner of the public balance from which we'll subtract the `amount`.
-        let from = context.msg_sender();
+    fn transfer_to_private(from: AztecAddress, to: AztecAddress, amount: U128, nonce: Field) {
+        if (!from.eq(context.msg_sender())) {
+            assert_current_call_valid_authwit(&mut context, from);
+        } else {
+            assert(nonce == 0, "invalid nonce");
+        }
         let token = Token::at(context.this_address());
 
         // We prepare the private balance increase (the partial note).

@@ -243,13 +243,13 @@ describe('Token - Single PXE', () => {
       .wait();
 
     // Transfer 1 token from alice to bob's private balance
-    await token.withWallet(alice).methods.transfer(bob.getAddress(), AMOUNT).send().wait();
+    await token.withWallet(alice).methods.transfer_in_private(alice.getAddress(), bob.getAddress(), AMOUNT, 0).send().wait();
 
     // Try to transfer more than available balance
     await expect(
       token
         .withWallet(alice)
-        .methods.transfer(bob.getAddress(), AMOUNT + 1n)
+        .methods.transfer_in_private(alice.getAddress(), bob.getAddress(), AMOUNT + 1n, 0)
         .send()
         .wait(),
     ).rejects.toThrow(/Balance too low/);
@@ -314,13 +314,13 @@ describe('Token - Single PXE', () => {
       .wait();
 
     // Transfer 1 token from alice's public balance to private balance
-    await token.withWallet(alice).methods.transfer_to_private(alice.getAddress(), AMOUNT).send().wait();
+    await token.withWallet(alice).methods.transfer_to_private(alice.getAddress(), alice.getAddress(), AMOUNT, 0).send().wait();
 
     // Try to transfer more than available public balance
     await expect(
       token
         .withWallet(alice)
-        .methods.transfer_to_private(alice.getAddress(), AMOUNT * 2n)
+        .methods.transfer_to_private(alice.getAddress(), alice.getAddress(), AMOUNT * 2n, 0)
         .send()
         .wait(),
     ).rejects.toThrow(/attempt to subtract with underflow/);
@@ -397,7 +397,7 @@ describe('Token - Single PXE', () => {
   it('private transfer with authwitness', async () => {
     // setup balances
     await token.withWallet(alice).methods.mint_to_public(alice.getAddress(), AMOUNT).send().wait();
-    await token.withWallet(alice).methods.transfer_to_private(alice.getAddress(), AMOUNT).send().wait();
+    await token.withWallet(alice).methods.transfer_to_private(alice.getAddress(), alice.getAddress(), AMOUNT, 0).send().wait();
 
     expect(await token.methods.balance_of_private(alice.getAddress()).simulate()).toBe(AMOUNT);
 
@@ -529,7 +529,7 @@ describe('Token - Multi PXE', () => {
     // self-transfer 5 public tokens to private
     const aliceShieldTx = await token
       .withWallet(alice)
-      .methods.transfer_to_private(alice.getAddress(), wad(5))
+      .methods.transfer_to_private(alice.getAddress(), alice.getAddress(), wad(5), 0)
       .send()
       .wait();
     await token.methods.sync_notes().simulate({});
@@ -547,7 +547,7 @@ describe('Token - Multi PXE', () => {
     expect(events.length).toBe(0);
 
     // transfer some private tokens to bob
-    const fundBobTx = await token.withWallet(alice).methods.transfer_to_private(bob.getAddress(), wad(5)).send().wait();
+    const fundBobTx = await token.withWallet(alice).methods.transfer_to_private(alice.getAddress(), bob.getAddress(), wad(5), 0).send().wait();
 
     await token.withWallet(alice).methods.sync_notes().simulate({});
     await token.withWallet(bob).methods.sync_notes().simulate({});
@@ -564,7 +564,7 @@ describe('Token - Multi PXE', () => {
     expect(events.length).toBe(0);
 
     // fund bob again
-    const fundBobTx2 = await token.withWallet(alice).methods.transfer(bob.getAddress(), wad(5)).send().wait({
+    const fundBobTx2 = await token.withWallet(alice).methods.transfer_in_private(alice.getAddress(), bob.getAddress(), wad(5), 0).send().wait({
       debug: true,
     });
 
