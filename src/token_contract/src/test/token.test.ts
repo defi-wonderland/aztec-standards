@@ -18,14 +18,6 @@ import {
   UniqueNote,
 } from '@aztec/aztec.js';
 import { createAccount, getInitialTestAccountsWallets } from '@aztec/accounts/testing';
-import {
-  computePartialAddress,
-  deriveKeys,
-  deriveMasterIncomingViewingSecretKey,
-  derivePublicKeyFromSecretKey,
-} from '@aztec/circuits.js';
-import { EscrowContract, EscrowContractArtifact } from '@aztec/noir-contracts.js/Escrow';
-import { ContractInstanceDeployerContract } from '@aztec/noir-contracts.js/ContractInstanceDeployer';
 
 const createPXE = async (id: number = 0) => {
   // TODO: we should probably define testing fixtures for this kind of configuration
@@ -46,22 +38,6 @@ async function deployToken(deployer: AccountWallet, minter: AztecAddress) {
     .deployed();
   console.log('Token contract deployed at', contract.address);
   return contract;
-}
-
-async function deployEscrow(pxes: PXE[], wallet: Wallet, owner: AztecAddress) {
-  const escrowSecretKey = Fr.random();
-  const escrowPublicKeys = (await deriveKeys(escrowSecretKey)).publicKeys;
-  const escrowDeployment = EscrowContract.deployWithPublicKeys(escrowPublicKeys, wallet, owner);
-  const escrowInstance = await escrowDeployment.getInstance();
-
-  await Promise.all(
-    pxes.map(async (pxe) => pxe.registerAccount(escrowSecretKey, await computePartialAddress(escrowInstance))),
-  );
-
-  const escrowContract = await escrowDeployment.send().deployed();
-  console.log(`Escrow contract deployed at ${escrowContract.address}`);
-
-  return escrowContract;
 }
 
 describe('Token - Single PXE', () => {
@@ -438,10 +414,8 @@ describe('Token - Multi PXE', () => {
 
   let alice: AccountWallet;
   let bob: AccountWallet;
-  let carl: AccountWallet;
 
   let token: TokenContract;
-  let escrow: EscrowContract;
   const AMOUNT = 1000n;
 
   let logger: Logger;
@@ -471,17 +445,8 @@ describe('Token - Multi PXE', () => {
 
     await bobPXE.registerContract(token);
 
-    escrow = await deployEscrow([alicePXE, bobPXE], alice, bob.getAddress());
-    await bobPXE.registerContract({
-      instance: escrow.instance,
-      artifact: EscrowContractArtifact,
-    });
-    await alicePXE.registerContract({
-      instance: escrow.instance,
-      artifact: EscrowContractArtifact,
-    });
-
     // alice knows bob
+    // TODO: review this, alice shouldn't need to register bob's **secrets**!
     await alicePXE.registerAccount(bobWallet.getSecretKey(), bob.getCompleteAddress().partialAddress);
     alicePXE.registerSender(bob.getAddress());
     alice.setScopes([
@@ -497,15 +462,8 @@ describe('Token - Multi PXE', () => {
       bob.getAddress(),
       alice.getAddress(),
       // token.address
-      escrow.address,
     ]);
   });
-
-  const expectAddressNote = (note: UniqueNote, address: AztecAddress, owner: AztecAddress) => {
-    logger.info('checking address note {} {}', [address, owner]);
-    expect(note.note.items[0]).toEqual(new Fr(address.toBigInt()));
-    expect(note.note.items[1]).toEqual(new Fr(owner.toBigInt()));
-  };
 
   const expectNote = (note: UniqueNote, amount: bigint, owner: AztecAddress) => {
     // 3th element of items is randomness, so we slice the first 2
