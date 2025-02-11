@@ -23,8 +23,8 @@ pub unconstrained fn setup(
         let recipient = env.create_account_contract(2);
         (owner, recipient)
     } else {
-        let owner = env.create_account();
-        let recipient = env.create_account();
+        let owner = env.create_account(1);
+        let recipient = env.create_account(2);
         (owner, recipient)
     };
 
@@ -53,15 +53,18 @@ pub unconstrained fn setup(
     env.advance_block_by(1);
 
     // Deploy the escrow
+    let escrow_secret = 42069;
+    let escrow_contract_account = cheatcodes::add_account(escrow_secret);
     let initializer_call_escrow = Escrow::interface().constructor(clawback_escrow_address);
-    let escrow_contract = env.deploy("./@escrow_contract", "Escrow").with_private_initializer(
-        initializer_call_escrow,
-    );
+
+    let escrow_contract = env
+        .deploy_with_public_keys("./@escrow_contract", "Escrow", escrow_secret)
+        .with_private_initializer(initializer_call_escrow);
     let escrow_address = escrow_contract.to_address();
     env.advance_block_by(1);
 
     // // Fund the escrow
-    // transfer_in_private(&mut env, token_contract_address, escrow_address, mint_amount);
+    transfer_in_private(&mut env, token_contract_address, escrow_address, mint_amount);
 
     (&mut env, clawback_escrow_address, token_contract_address, owner, recipient)
 }
