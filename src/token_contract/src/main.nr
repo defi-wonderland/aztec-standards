@@ -19,8 +19,7 @@ pub contract Token {
     use dep::aztec::{
         context::{PrivateCallInterface, PrivateContext},
         encrypted_logs::log_assembly_strategies::default_aes128::{
-            event::encode_and_encrypt_event_unconstrained,
-            note::{encode_and_encrypt_note, encode_and_encrypt_note_unconstrained},
+            note::{encode_and_encrypt_note},
         },
         macros::{
             events::event,
@@ -71,7 +70,7 @@ pub contract Token {
     }
 
     #[private]
-    fn transfer_to_public(from: AztecAddress, to: AztecAddress, amount: U128, nonce: Field) {
+    fn transfer_private_to_public(from: AztecAddress, to: AztecAddress, amount: U128, nonce: Field) {
         if (!from.eq(context.msg_sender())) {
             assert_current_call_valid_authwit(&mut context, from);
         } else {
@@ -137,7 +136,7 @@ pub contract Token {
 
     // Transfers token `amount` from public balance of message sender to a private balance of `to`.
     #[private]
-    fn transfer_to_private(from: AztecAddress, to: AztecAddress, amount: U128, nonce: Field) {
+    fn transfer_public_to_private(from: AztecAddress, to: AztecAddress, amount: U128, nonce: Field) {
         if (!from.eq(context.msg_sender())) {
             assert_current_call_valid_authwit(&mut context, from);
         } else {
@@ -150,12 +149,12 @@ pub contract Token {
 
         // At last we finalize the transfer. Usage of the `unsafe` method here is safe because we set the `from`
         // function argument to a message sender, guaranteeing that he can transfer only his own tokens.
-        token._finalize_transfer_to_private_unsafe(from, amount, hiding_point_slot).enqueue(
+        token._finalize_transfer_public_to_private_unsafe(from, amount, hiding_point_slot).enqueue(
             &mut context,
         );
     }
     /// Prepares an increase of private balance of `to` (partial note). The increase needs to be finalized by calling
-    /// some of the finalization functions (`finalize_transfer_to_private`, `finalize_mint_to_private`).
+    /// some of the finalization functions (`finalize_transfer_public_to_private`, `finalize_mint_to_private`).
     /// Returns a hiding point slot.
     #[private]
     fn prepare_private_balance_increase(to: AztecAddress, from: AztecAddress) -> Field {
@@ -236,13 +235,13 @@ pub contract Token {
     /// The transfer must be prepared by calling `prepare_private_balance_increase` first and the resulting
     /// `hiding_point_slot` must be passed as an argument to this function.
     #[public]
-    fn finalize_transfer_to_private(from: AztecAddress, amount: U128, hiding_point_slot: Field, nonce: Field) {
+    fn finalize_transfer_public_to_private(from: AztecAddress, amount: U128, hiding_point_slot: Field, nonce: Field) {
         if (!from.eq(context.msg_sender())) {
             assert_current_call_valid_authwit_public(&mut context, from);
         } else {
             assert(nonce == 0, "invalid nonce");
         }
-        _finalize_transfer_to_private(from, amount, hiding_point_slot, &mut context, storage);
+        _finalize_transfer_public_to_private(from, amount, hiding_point_slot, &mut context, storage);
     }
 
     #[public]
@@ -304,7 +303,7 @@ pub contract Token {
     /// `hiding_point_slot` must be passed as an argument to this function.
     ///
     /// Note: This function is only an optimization as it could be replaced by a combination of `mint_to_public`
-    /// and `finalize_transfer_to_private`. It is however used very commonly so it makes sense to optimize it
+    /// and `finalize_transfer_public_to_private`. It is however used very commonly so it makes sense to optimize it
     /// (e.g. used during token bridging, in AMM liquidity token etc.).
     #[public]
     fn finalize_mint_to_private(amount: U128, hiding_point_slot: Field) {
@@ -329,17 +328,17 @@ pub contract Token {
         context.storage_write(slot + aztec::protocol_types::point::POINT_LENGTH as Field, setup_log);
     }
 
-    /// This is a wrapper around `_finalize_transfer_to_private` placed here so that a call
-    /// to `_finalize_transfer_to_private` can be enqueued. Called unsafe as it does not check `from` (this has to be
+    /// This is a wrapper around `_finalize_transfer_public_to_private` placed here so that a call
+    /// to `_finalize_transfer_public_to_private` can be enqueued. Called unsafe as it does not check `from` (this has to be
     /// done in the calling function).
     #[public]
     #[internal]
-    fn _finalize_transfer_to_private_unsafe(
+    fn _finalize_transfer_public_to_private_unsafe(
         from: AztecAddress,
         amount: U128,
         hiding_point_slot: Field,
     ) {
-        _finalize_transfer_to_private(from, amount, hiding_point_slot, &mut context, storage);
+        _finalize_transfer_public_to_private(from, amount, hiding_point_slot, &mut context, storage);
     }
 
     /// Internal ///
@@ -371,7 +370,7 @@ pub contract Token {
     }
 
     #[contract_library_method]
-    fn _finalize_transfer_to_private(
+    fn _finalize_transfer_public_to_private(
         from: AztecAddress,
         amount: U128,
         hiding_point_slot: Field,
@@ -453,7 +452,7 @@ pub contract Token {
     }
 
     /// This function exists separately from `prepare_private_balance_increase` solely as an optimization as it allows
-    /// us to have it inlined in the `transfer_to_private` function which results in one less kernel iteration.
+    /// us to have it inlined in the `transfer_public_to_private` function which results in one less kernel iteration.
     ///
     /// TODO(#9180): Consider adding macro support for functions callable both as an entrypoint and as an internal
     /// function.
@@ -483,10 +482,10 @@ pub contract Token {
         // Using the x-coordinate as a hiding point slot is safe against someone else interfering with it because
         // we have a guarantee that the public functions of the transaction are executed right after the private ones
         // and for this reason the protocol guarantees that nobody can front-run us in consuming the hiding point.
-        // This guarantee would break if `finalize_transfer_to_private` was not called in the same transaction. This
+        // This guarantee would break if `finalize_transfer_public_to_private` was not called in the same transaction. This
         // however is not the flow we are currently concerned with. To support the multi-transaction flow we could
         // introduce a `from` function argument, hash the x-coordinate with it and then repeat the hashing in
-        // `finalize_transfer_to_private`.
+        // `finalize_transfer_public_to_private`.
         //
         // We can also be sure that the `hiding_point_slot` will not overwrite any other value in the storage because
         // in our state variables we derive slots using a different hash function from multi scalar multiplication
