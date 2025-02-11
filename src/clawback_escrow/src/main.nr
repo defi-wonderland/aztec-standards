@@ -5,28 +5,19 @@ mod test;
 pub contract ClawbackEscrow {
     use dep::aztec::{
         context::PrivateContext,
-        encrypted_logs::log_assembly_strategies::default_aes128::{
-            event::{encode_and_encrypt_event, encode_and_encrypt_event_unconstrained},
-            note::{encode_and_encrypt_note, encode_and_encrypt_note_unconstrained},
-        },
-        macros::{functions::{initializer, internal, private}, notes::note, storage::storage},
+        encrypted_logs::log_assembly_strategies::default_aes128::note::encode_and_encrypt_note,
+        macros::{functions::private, notes::note, storage::storage},
         note::{
-            note_getter_options::NoteGetterOptions, note_header::NoteHeader,
-            note_interface::NullifiableNote, utils::compute_note_hash_for_nullify,
+            note_header::NoteHeader, note_interface::NullifiableNote,
+            utils::compute_note_hash_for_nullify,
         },
-        oracle::random::random,
         protocol_types::{
-            constants::{GENERATOR_INDEX__NOTE_NULLIFIER, MAX_NOTE_HASH_READ_REQUESTS_PER_CALL},
+            constants::GENERATOR_INDEX__NOTE_NULLIFIER,
             hash::poseidon2_hash_with_separator,
             traits::{Packable, Serialize, ToField},
         },
-        state_vars::PrivateSet,
-        utils::comparison::Comparator,
     };
-    use dep::aztec::prelude::{AztecAddress, PrivateImmutable};
-
-    use dep::address_note::address_note::AddressNote;
-    use dep::token::Token;
+    use dep::aztec::prelude::{AztecAddress, Map, PrivateImmutable};
 
     use dep::escrow_contract::Escrow;
 
@@ -35,11 +26,11 @@ pub contract ClawbackEscrow {
     pub struct ClawbackEscrowNote {
         sender: AztecAddress,
         receiver: AztecAddress,
+        // NOTE: escrow address has randomness in it (acts as privacy salt)
         escrow: AztecAddress,
-        // We probably need randomness for privacy between participants of the same escrow
-        // randomness: Field
     }
 
+    // TODO: why do we need NullifiableNote for PrivateImmutable?
     impl NullifiableNote for ClawbackEscrowNote {
         fn compute_nullifier(self, _: &mut PrivateContext, note_hash_for_nullify: Field) -> Field {
             poseidon2_hash_with_separator(
@@ -57,12 +48,6 @@ pub contract ClawbackEscrow {
         }
     }
 
-    impl Eq for ClawbackEscrowNote {
-        fn eq(self: Self, other: Self) -> bool {
-            (self.escrow.to_field() == other.escrow.to_field())
-        }
-    }
-
     impl ClawbackEscrowNote {
         pub fn new(sender: AztecAddress, receiver: AztecAddress, escrow: AztecAddress) -> Self {
             ClawbackEscrowNote { sender, receiver, escrow, header: NoteHeader::empty() }
@@ -71,7 +56,7 @@ pub contract ClawbackEscrow {
 
     #[storage]
     struct Storage<Context> {
-        escrows: PrivateSet<ClawbackEscrowNote, Context>,
+        escrows: Map<AztecAddress, PrivateImmutable<ClawbackEscrowNote, Context>, Context>,
     }
 
     #[private]
@@ -83,10 +68,11 @@ pub contract ClawbackEscrow {
         let mut note = ClawbackEscrowNote::new(sender, receiver, escrow);
 
         // Check that a clawback escrow has not been created for that escrow
+        // TODO: check that this isn't needed (initialize nullifies the `at(escrow)` storage slot)
         let nullifier = std::hash::pedersen_hash([escrow.to_field()]); // derive nullifier from escrow address
         context.push_nullifier(nullifier);
 
-        let note_insertion = storage.escrows.insert(&mut note);
+        let note_insertion = storage.escrows.at(escrow).initialize(&mut note);
 
         // Emit the note for the sender
         note_insertion.emit(encode_and_encrypt_note(&mut context, sender, sender));
@@ -126,16 +112,8 @@ pub contract ClawbackEscrow {
         storage: Storage<&mut PrivateContext>,
         escrow: AztecAddress,
     ) -> ClawbackEscrowNote {
-        // let options = NoteGetterOptions::with_filter(filter_note_escrow, escrow);
-        let options = NoteGetterOptions::new()
-            .select(ClawbackEscrowNote::properties().escrow, Comparator.EQ, escrow)
-            .set_limit(1);
-        let notes = storage.escrows.get_notes(options);
-
-        // We revert if there is no note in the filter so we can probably unwrap directly
-        let unwrapped_note = notes.get_unchecked(0);
-
-        assert(unwrapped_note.escrow == escrow, "Invalid escrow address");
-        unwrapped_note
+        // TODO: check that it doesn't nullify the PrivateImmutable note
+        let note = storage.escrows.at(escrow).get_note();
+        note
     }
 }
