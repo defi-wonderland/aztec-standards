@@ -1,4 +1,4 @@
-import { TokenContractArtifact, TokenContract, Transfer } from '../../../artifacts/Token.js';
+import { TokenContractArtifact, TokenContract } from '../../../artifacts/Token.js';
 import {
   AccountWallet,
   createLogger,

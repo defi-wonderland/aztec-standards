@@ -1,4 +1,4 @@
-import { TokenContractArtifact, TokenContract, Transfer } from '../../../artifacts/Token.js';
+import { TokenContractArtifact, TokenContract } from '../../../artifacts/Token.js';
 import {
   AccountWallet,
   CompleteAddress,
@@ -542,10 +542,6 @@ describe('Token - Multi PXE', () => {
     expect(notes.length).toBe(1);
     expectNote(notes[0], wad(5), alice.getAddress());
 
-    // `transfer_to_private` does not emit an event
-    events = await alice.getPrivateEvents<Transfer>(TokenContract.events.Transfer, aliceShieldTx.blockNumber!, 2);
-    expect(events.length).toBe(0);
-
     // transfer some private tokens to bob
     const fundBobTx = await token.withWallet(alice).methods.transfer_to_private(alice.getAddress(), bob.getAddress(), wad(5), 0).send().wait();
 
@@ -559,9 +555,6 @@ describe('Token - Multi PXE', () => {
     notes = await bob.getNotes({ txHash: fundBobTx.txHash });
     expect(notes.length).toBe(1);
     expectNote(notes[0], wad(5), bob.getAddress());
-
-    events = await bob.getPrivateEvents<Transfer>(TokenContract.events.Transfer, fundBobTx.blockNumber!, 2);
-    expect(events.length).toBe(0);
 
     // fund bob again
     const fundBobTx2 = await token.withWallet(alice).methods.transfer_in_private(alice.getAddress(), bob.getAddress(), wad(5), 0).send().wait({
@@ -586,14 +579,6 @@ describe('Token - Multi PXE', () => {
     notes = await bob.getNotes({ txHash: fundBobTx2.txHash });
     expect(notes.length).toBe(1);
     expectNote(notes[0], wad(5), bob.getAddress());
-
-    events = await bob.getPrivateEvents<Transfer>(TokenContract.events.Transfer, fundBobTx2.blockNumber!, 2);
-    expect(events.length).toBe(1);
-    expect(events[0]).toEqual({
-      from: alice.getAddress().toBigInt(),
-      to: bob.getAddress().toBigInt(),
-      amount: wad(5),
-    });
 
     // assert alice's balances again
     await expectBalances(alice.getAddress(), wad(0), wad(0));

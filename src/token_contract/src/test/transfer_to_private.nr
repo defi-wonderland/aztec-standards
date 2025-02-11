@@ -37,7 +37,7 @@ unconstrained fn transfer_to_private_external_orchestration() {
         .call(&mut env.private());
 
     // Finalize the transfer of the tokens (message sender owns the tokens in public)
-    Token::at(token_contract_address).finalize_transfer_to_private(amount, hiding_point_slot).call(
+    Token::at(token_contract_address).finalize_transfer_to_private(owner, amount, hiding_point_slot, 0).call(
         &mut env.public(),
     );
 
@@ -50,14 +50,14 @@ unconstrained fn transfer_to_private_external_orchestration() {
 #[test(should_fail_with = "transfer not prepared")]
 unconstrained fn transfer_to_private_transfer_not_prepared() {
     // Setup without account contracts. We are not using authwits here, so dummy accounts are enough
-    let (env, token_contract_address, _, _, amount) =
+    let (env, token_contract_address, owner, _, amount) =
         utils::setup_and_mint_to_public(/* with_account_contracts */ false);
 
     // Transfer was not prepared so we can use random value for the hiding point slot
     let hiding_point_slot = random();
 
     // Try finalizing the transfer without preparing it
-    Token::at(token_contract_address).finalize_transfer_to_private(amount, hiding_point_slot).call(
+    Token::at(token_contract_address).finalize_transfer_to_private(owner, amount, hiding_point_slot, 0).call(
         &mut env.public(),
     );
 }
@@ -77,7 +77,7 @@ unconstrained fn transfer_to_private_failure_not_an_owner() {
 
     // Try transferring someone else's token balance
     env.impersonate(not_owner);
-    Token::at(token_contract_address).finalize_transfer_to_private(amount, hiding_point_slot).call(
+    Token::at(token_contract_address).finalize_transfer_to_private(not_owner, amount, hiding_point_slot, 0).call(
         &mut env.public(),
     );
 }

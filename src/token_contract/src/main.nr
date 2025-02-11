@@ -50,14 +50,6 @@ pub contract Token {
     // an overall small circuit regardless.
     global RECURSIVE_TRANSFER_CALL_MAX_NOTES: u32 = 8;
 
-    #[derive(Serialize)]
-    #[event]
-    struct Transfer {
-        from: AztecAddress,
-        to: AztecAddress,
-        amount: U128,
-    }
-
     #[storage]
     struct Storage<Context> {
         minter: PublicImmutable<AztecAddress, Context>,
@@ -244,8 +236,12 @@ pub contract Token {
     /// The transfer must be prepared by calling `prepare_private_balance_increase` first and the resulting
     /// `hiding_point_slot` must be passed as an argument to this function.
     #[public]
-    fn finalize_transfer_to_private(amount: U128, hiding_point_slot: Field) {
-        let from = context.msg_sender();
+    fn finalize_transfer_to_private(from: AztecAddress, amount: U128, hiding_point_slot: Field, nonce: Field) {
+        if (!from.eq(context.msg_sender())) {
+            assert_current_call_valid_authwit_public(&mut context, from);
+        } else {
+            assert(nonce == 0, "invalid nonce");
+        }
         _finalize_transfer_to_private(from, amount, hiding_point_slot, &mut context, storage);
     }
 
@@ -401,7 +397,7 @@ pub contract Token {
         account: AztecAddress,
         amount: U128,
         max_notes: u32,
-    ) -> PrivateCallInterface<25, U128> {
+    ) -> U128 {
         // We reduce `from`'s balance by amount by recursively removing notes over potentially multiple calls. This
         // method keeps the gate count for each individual call low - reading too many notes at once could result in
         // circuits in which proving is not feasible.
@@ -415,6 +411,8 @@ pub contract Token {
             account,
             account,
         ));
+        
+        change
     }
 
     #[contract_library_method]
