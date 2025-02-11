@@ -85,14 +85,8 @@ pub contract Token {
         } else {
             assert(nonce == 0, "invalid nonce");
         }
-
-        // We reduce `from`'s balance by amount by recursively removing notes over potentially multiple calls. This
-        // method keeps the gate count for each individual call low - reading too many notes at once could result in
-        // circuits in which proving is not feasible.
-        // Since the sum of the amounts in the notes we nullified was potentially larger than amount, we create a new
-        // note for `from` with the change amount, e.g. if `amount` is 10 and two notes are nullified with amounts 8 and
-        // 5, then the change will be 3 (since 8 + 5 - 10 = 3).
-        let change = subtract_balance(
+        
+        _subtract_exact_balance(
             &mut context,
             storage,
             from,
@@ -100,11 +94,6 @@ pub contract Token {
             INITIAL_TRANSFER_CALL_MAX_NOTES,
         );
 
-        storage.balances.at(from).add(from, change).emit(encode_and_encrypt_note(
-            &mut context,
-            from,
-            from,
-        ));
         Token::at(context.this_address())._increase_public_balance(to, amount).enqueue(&mut context);
     }
 
@@ -127,13 +116,7 @@ pub contract Token {
             assert(nonce == 0, "invalid nonce");
         }
 
-        // We reduce `from`'s balance by amount by recursively removing notes over potentially multiple calls. This
-        // method keeps the gate count for each individual call low - reading too many notes at once could result in
-        // circuits in which proving is not feasible.
-        // Since the sum of the amounts in the notes we nullified was potentially larger than amount, we create a new
-        // note for `from` with the change amount, e.g. if `amount` is 10 and two notes are nullified with amounts 8 and
-        // 5, then the change will be 3 (since 8 + 5 - 10 = 3).
-        let change = subtract_balance(
+        _subtract_exact_balance(
             &mut context,
             storage,
             from,
@@ -141,11 +124,6 @@ pub contract Token {
             INITIAL_TRANSFER_CALL_MAX_NOTES,
         );
 
-        storage.balances.at(from).add(from, change).emit(encode_and_encrypt_note(
-            &mut context,
-            from,
-            from,
-        ));
         storage.balances.at(to).add(to, amount).emit(encode_and_encrypt_note(&mut context, to, from));
     }
 
@@ -218,7 +196,7 @@ pub contract Token {
     #[internal]
     #[private]
     fn _recurse_subtract_balance(account: AztecAddress, amount: U128) -> U128 {
-        subtract_balance(
+        _subtract_balance(
             &mut context,
             storage,
             account,
@@ -417,7 +395,30 @@ pub contract Token {
     }
 
     #[contract_library_method]
-    fn subtract_balance(
+    fn _subtract_exact_balance(
+        context: &mut PrivateContext,
+        storage: Storage<&mut PrivateContext>,
+        account: AztecAddress,
+        amount: U128,
+        max_notes: u32,
+    ) -> PrivateCallInterface<25, U128> {
+        // We reduce `from`'s balance by amount by recursively removing notes over potentially multiple calls. This
+        // method keeps the gate count for each individual call low - reading too many notes at once could result in
+        // circuits in which proving is not feasible.
+        // Since the sum of the amounts in the notes we nullified was potentially larger than amount, we create a new
+        // note for `from` with the change amount, e.g. if `amount` is 10 and two notes are nullified with amounts 8 and
+        // 5, then the change will be 3 (since 8 + 5 - 10 = 3).
+        let change = _subtract_balance(context, storage, account, amount, max_notes);
+        
+        storage.balances.at(account).add(account, change).emit(encode_and_encrypt_note(
+            context,
+            account,
+            account,
+        ));
+    }
+
+    #[contract_library_method]
+    fn _subtract_balance(
         context: &mut PrivateContext,
         storage: Storage<&mut PrivateContext>,
         account: AztecAddress,
