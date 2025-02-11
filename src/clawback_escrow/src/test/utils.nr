@@ -64,7 +64,12 @@ pub unconstrained fn setup(
     env.advance_block_by(1);
 
     // // Fund the escrow
-    transfer_in_private(&mut env, token_contract_address, escrow_address, mint_amount);
+    transfer_in_private(
+        &mut env,
+        token_contract_address,
+        escrow_address,
+        mint_amount,
+    );
 
     (&mut env, clawback_escrow_address, token_contract_address, owner, recipient)
 }
