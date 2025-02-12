@@ -119,22 +119,6 @@ pub contract Token {
         ));
     }
 
-    #[private]
-    fn burn_private(from: AztecAddress, amount: U128, nonce: Field) {
-        if (!from.eq(context.msg_sender())) {
-            assert_current_call_valid_authwit(&mut context, from);
-        } else {
-            assert(nonce == 0, "invalid nonce");
-        }
-
-        storage.private_balances.at(from).sub(from, amount).emit(encode_and_encrypt_note(
-            &mut context,
-            from,
-            from,
-        ));
-        Token::at(context.this_address())._reduce_total_supply(amount).enqueue(&mut context);
-    }
-
     // Transfers token `amount` from public balance of message sender to a private balance of `to`.
     #[private]
     fn transfer_public_to_private(
@@ -166,27 +150,6 @@ pub contract Token {
         _prepare_private_balance_increase(from, to, &mut context, storage)
     }
 
-    /// Mints token `amount` to a private balance of `to`. Message sender has to have minter permissions (checked
-    /// in the enqueued call).
-    #[private]
-    fn mint_to_private(
-        from: AztecAddress, // sender of the tag: TODO(#9887): this is not great?
-        to: AztecAddress,
-        amount: U128,
-    ) {
-        let token = Token::at(context.this_address());
-
-        // We prepare the partial note to which we'll "send" the minted amount.
-        let hiding_point_slot = _prepare_private_balance_increase(from, to, &mut context, storage);
-
-        // At last we finalize the mint. Usage of the `unsafe` method here is safe because we set the `from`
-        // function argument to a message sender, guaranteeing that only a message sender with minter permissions
-        // can successfully execute the function.
-        token
-            ._finalize_mint_to_private_unsafe(context.msg_sender(), amount, hiding_point_slot)
-            .enqueue(&mut context);
-    }
-
     #[internal]
     #[private]
     fn _recurse_subtract_balance(account: AztecAddress, amount: U128) -> U128 {
@@ -204,14 +167,6 @@ pub contract Token {
      * ======================================================== */
 
     #[public]
-    fn mint_to_public(to: AztecAddress, amount: U128) {
-        let new_balance = storage.public_balances.at(to).read().add(amount);
-        let supply = storage.total_supply.read().add(amount);
-        storage.public_balances.at(to).write(new_balance);
-        storage.total_supply.write(supply);
-    }
-
-    #[public]
     fn transfer_in_public(from: AztecAddress, to: AztecAddress, amount: U128, nonce: Field) {
         if (!from.eq(context.msg_sender())) {
             assert_current_call_valid_authwit_public(&mut context, from);
@@ -222,19 +177,6 @@ pub contract Token {
         storage.public_balances.at(from).write(from_balance);
         let to_balance = storage.public_balances.at(to).read().add(amount);
         storage.public_balances.at(to).write(to_balance);
-    }
-
-    #[public]
-    fn burn_public(from: AztecAddress, amount: U128, nonce: Field) {
-        if (!from.eq(context.msg_sender())) {
-            assert_current_call_valid_authwit_public(&mut context, from);
-        } else {
-            assert(nonce == 0, "invalid nonce");
-        }
-        let from_balance = storage.public_balances.at(from).read().sub(amount);
-        storage.public_balances.at(from).write(from_balance);
-        let new_supply = storage.total_supply.read().sub(amount);
-        storage.total_supply.write(new_supply);
     }
 
     /// Finalizes a transfer of token `amount` from public balance of `from` to a private balance of `to`.
@@ -271,18 +213,6 @@ pub contract Token {
     #[view]
     fn total_supply() -> U128 {
         storage.total_supply.read()
-    }
-
-    /// Finalizes a mint of token `amount` to a private balance of `to`. The mint must be prepared by calling
-    /// `prepare_private_balance_increase` first and the resulting
-    /// `hiding_point_slot` must be passed as an argument to this function.
-    ///
-    /// Note: This function is only an optimization as it could be replaced by a combination of `mint_to_public`
-    /// and `finalize_transfer_public_to_private`. It is however used very commonly so it makes sense to optimize it
-    /// (e.g. used during token bridging, in AMM liquidity token etc.).
-    #[public]
-    fn finalize_mint_to_private(amount: U128, hiding_point_slot: Field) {
-        _finalize_mint_to_private(amount, hiding_point_slot, &mut context, storage);
     }
 
     // TODO(#9375): Having to define the note log length here is very unfortunate as it's basically impossible for
@@ -326,24 +256,6 @@ pub contract Token {
     fn _increase_public_balance(to: AztecAddress, amount: U128) {
         let new_balance = storage.public_balances.at(to).read().add(amount);
         storage.public_balances.at(to).write(new_balance);
-    }
-
-    #[public]
-    #[internal]
-    fn _reduce_total_supply(amount: U128) {
-        // Only to be called from burn.
-        let new_supply = storage.total_supply.read().sub(amount);
-        storage.total_supply.write(new_supply);
-    }
-
-    #[public]
-    #[internal]
-    fn _finalize_mint_to_private_unsafe(
-        from: AztecAddress,
-        amount: U128,
-        hiding_point_slot: Field,
-    ) {
-        _finalize_mint_to_private(amount, hiding_point_slot, &mut context, storage);
     }
 
     /** ==========================================================
@@ -506,6 +418,66 @@ pub contract Token {
         hiding_point_slot
     }
 
+    /// Unconstrained ///
+    pub(crate) unconstrained fn balance_of_private(owner: AztecAddress) -> pub U128 {
+        storage.private_balances.at(owner).balance_of()
+    }
+
+    /** ==========================================================
+     * ======================= MINTABLE ==========================
+     * ======================================================== */
+
+    /// Mints token `amount` to a private balance of `to`. Message sender has to have minter permissions (checked
+    /// in the enqueued call).
+    #[private]
+    fn mint_to_private(
+        from: AztecAddress, // sender of the tag: TODO(#9887): this is not great?
+        to: AztecAddress,
+        amount: U128,
+    ) {
+        let token = Token::at(context.this_address());
+
+        // We prepare the partial note to which we'll "send" the minted amount.
+        let hiding_point_slot = _prepare_private_balance_increase(from, to, &mut context, storage);
+
+        // At last we finalize the mint. Usage of the `unsafe` method here is safe because we set the `from`
+        // function argument to a message sender, guaranteeing that only a message sender with minter permissions
+        // can successfully execute the function.
+        token
+            ._finalize_mint_to_private_unsafe(context.msg_sender(), amount, hiding_point_slot)
+            .enqueue(&mut context);
+    }
+
+    #[public]
+    fn mint_to_public(to: AztecAddress, amount: U128) {
+        let new_balance = storage.public_balances.at(to).read().add(amount);
+        let supply = storage.total_supply.read().add(amount);
+        storage.public_balances.at(to).write(new_balance);
+        storage.total_supply.write(supply);
+    }
+
+    /// Finalizes a mint of token `amount` to a private balance of `to`. The mint must be prepared by calling
+    /// `prepare_private_balance_increase` first and the resulting
+    /// `hiding_point_slot` must be passed as an argument to this function.
+    ///
+    /// Note: This function is only an optimization as it could be replaced by a combination of `mint_to_public`
+    /// and `finalize_transfer_public_to_private`. It is however used very commonly so it makes sense to optimize it
+    /// (e.g. used during token bridging, in AMM liquidity token etc.).
+    #[public]
+    fn finalize_mint_to_private(amount: U128, hiding_point_slot: Field) {
+        _finalize_mint_to_private(amount, hiding_point_slot, &mut context, storage);
+    }
+
+    #[public]
+    #[internal]
+    fn _finalize_mint_to_private_unsafe(
+        from: AztecAddress,
+        amount: U128,
+        hiding_point_slot: Field,
+    ) {
+        _finalize_mint_to_private(amount, hiding_point_slot, &mut context, storage);
+    }
+
     #[contract_library_method]
     fn _finalize_mint_to_private(
         amount: U128,
@@ -525,9 +497,5 @@ pub contract Token {
         finalization_payload.emit();
     }
 
-    /// Unconstrained ///
-    pub(crate) unconstrained fn balance_of_private(owner: AztecAddress) -> pub U128 {
-        storage.private_balances.at(owner).balance_of()
-    }
 }
 
