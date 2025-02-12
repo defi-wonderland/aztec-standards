@@ -90,7 +90,12 @@ pub contract Token {
     }
 
     #[private]
-    fn transfer_in_private(from: AztecAddress, to: AztecAddress, amount: U128, nonce: Field) {
+    fn transfer_private_to_private(
+        from: AztecAddress,
+        to: AztecAddress,
+        amount: U128,
+        nonce: Field,
+    ) {
         _validate_from_private(from, nonce, &mut context);
 
         _subtract_exact_balance(
@@ -296,7 +301,7 @@ pub contract Token {
         account: AztecAddress,
         amount: U128,
         max_notes: u32,
-    ) -> U128 {
+    ) {
         // We reduce `from`'s balance by amount by recursively removing notes over potentially multiple calls. This
         // method keeps the gate count for each individual call low - reading too many notes at once could result in
         // circuits in which proving is not feasible.
@@ -310,8 +315,6 @@ pub contract Token {
             account,
             account,
         ));
-
-        change
     }
 
     #[contract_library_method]

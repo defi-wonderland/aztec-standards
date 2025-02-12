@@ -173,7 +173,7 @@ describe.skip('Multi PXE', () => {
     // Transfer both in private and public
     const fundEscrowTx = await token
       .withWallet(alice)
-      .methods.transfer_in_private(alice.getAddress(), escrow.address, wad(5), 0)
+      .methods.transfer_private_to_private(alice.getAddress(), escrow.address, wad(5), 0)
       .send()
       .wait({
         debug: true,
