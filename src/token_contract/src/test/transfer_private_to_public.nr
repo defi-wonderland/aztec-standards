@@ -18,7 +18,11 @@ unconstrained fn transfer_private_to_public_on_behalf_of_self() {
         owner,
         mint_amount - transfer_private_to_public_amount,
     );
-    utils::check_public_balance(token_contract_address, owner, transfer_private_to_public_amount);
+    utils::check_public_balance(
+        token_contract_address,
+        owner,
+        transfer_private_to_public_amount,
+    );
 }
 
 #[test]
@@ -27,12 +31,8 @@ unconstrained fn transfer_private_to_public_on_behalf_of_other() {
         utils::setup_and_mint_to_private(/* with_account_contracts */ true);
 
     let transfer_private_to_public_amount = mint_amount / U128::from_integer(10);
-    let transfer_private_to_public_call_interface = Token::at(token_contract_address).transfer_private_to_public(
-        owner,
-        recipient,
-        transfer_private_to_public_amount,
-        0,
-    );
+    let transfer_private_to_public_call_interface = Token::at(token_contract_address)
+        .transfer_private_to_public(owner, recipient, transfer_private_to_public_amount, 0);
     authwit_cheatcodes::add_private_authwit_from_call_interface(
         owner,
         recipient,
@@ -47,7 +47,11 @@ unconstrained fn transfer_private_to_public_on_behalf_of_other() {
         owner,
         mint_amount - transfer_private_to_public_amount,
     );
-    utils::check_public_balance(token_contract_address, recipient, transfer_private_to_public_amount);
+    utils::check_public_balance(
+        token_contract_address,
+        recipient,
+        transfer_private_to_public_amount,
+    );
 }
 
 #[test(should_fail_with = "Balance too low")]
@@ -80,12 +84,8 @@ unconstrained fn transfer_private_to_public_failure_on_behalf_of_other_more_than
         utils::setup_and_mint_to_private(/* with_account_contracts */ true);
 
     let transfer_private_to_public_amount = mint_amount + U128::one();
-    let transfer_private_to_public_call_interface = Token::at(token_contract_address).transfer_private_to_public(
-        owner,
-        recipient,
-        transfer_private_to_public_amount,
-        0,
-    );
+    let transfer_private_to_public_call_interface = Token::at(token_contract_address)
+        .transfer_private_to_public(owner, recipient, transfer_private_to_public_amount, 0);
     authwit_cheatcodes::add_private_authwit_from_call_interface(
         owner,
         recipient,
@@ -103,12 +103,8 @@ unconstrained fn transfer_private_to_public_failure_on_behalf_of_other_invalid_d
         utils::setup_and_mint_to_private(/* with_account_contracts */ true);
 
     let transfer_private_to_public_amount = mint_amount + U128::one();
-    let transfer_private_to_public_call_interface = Token::at(token_contract_address).transfer_private_to_public(
-        owner,
-        recipient,
-        transfer_private_to_public_amount,
-        0,
-    );
+    let transfer_private_to_public_call_interface = Token::at(token_contract_address)
+        .transfer_private_to_public(owner, recipient, transfer_private_to_public_amount, 0);
     authwit_cheatcodes::add_private_authwit_from_call_interface(
         owner,
         owner,
@@ -126,12 +122,8 @@ unconstrained fn transfer_private_to_public_failure_on_behalf_of_other_no_approv
         utils::setup_and_mint_to_private(/* with_account_contracts */ true);
 
     let transfer_private_to_public_amount = mint_amount + U128::one();
-    let transfer_private_to_public_call_interface = Token::at(token_contract_address).transfer_private_to_public(
-        owner,
-        recipient,
-        transfer_private_to_public_amount,
-        0,
-    );
+    let transfer_private_to_public_call_interface = Token::at(token_contract_address)
+        .transfer_private_to_public(owner, recipient, transfer_private_to_public_amount, 0);
     // Impersonate recipient
     env.impersonate(recipient);
     // transfer_private_to_public tokens

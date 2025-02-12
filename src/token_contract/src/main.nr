@@ -18,9 +18,7 @@ pub contract Token {
 
     use dep::aztec::{
         context::{PrivateCallInterface, PrivateContext},
-        encrypted_logs::log_assembly_strategies::default_aes128::{
-            note::{encode_and_encrypt_note},
-        },
+        encrypted_logs::log_assembly_strategies::default_aes128::note::encode_and_encrypt_note,
         macros::{
             events::event,
             functions::{initializer, internal, private, public, view},
@@ -70,13 +68,18 @@ pub contract Token {
     }
 
     #[private]
-    fn transfer_private_to_public(from: AztecAddress, to: AztecAddress, amount: U128, nonce: Field) {
+    fn transfer_private_to_public(
+        from: AztecAddress,
+        to: AztecAddress,
+        amount: U128,
+        nonce: Field,
+    ) {
         if (!from.eq(context.msg_sender())) {
             assert_current_call_valid_authwit(&mut context, from);
         } else {
             assert(nonce == 0, "invalid nonce");
         }
-        
+
         _subtract_exact_balance(
             &mut context,
             storage,
@@ -136,7 +139,12 @@ pub contract Token {
 
     // Transfers token `amount` from public balance of message sender to a private balance of `to`.
     #[private]
-    fn transfer_public_to_private(from: AztecAddress, to: AztecAddress, amount: U128, nonce: Field) {
+    fn transfer_public_to_private(
+        from: AztecAddress,
+        to: AztecAddress,
+        amount: U128,
+        nonce: Field,
+    ) {
         if (!from.eq(context.msg_sender())) {
             assert_current_call_valid_authwit(&mut context, from);
         } else {
@@ -235,13 +243,24 @@ pub contract Token {
     /// The transfer must be prepared by calling `prepare_private_balance_increase` first and the resulting
     /// `hiding_point_slot` must be passed as an argument to this function.
     #[public]
-    fn finalize_transfer_public_to_private(from: AztecAddress, amount: U128, hiding_point_slot: Field, nonce: Field) {
+    fn finalize_transfer_public_to_private(
+        from: AztecAddress,
+        amount: U128,
+        hiding_point_slot: Field,
+        nonce: Field,
+    ) {
         if (!from.eq(context.msg_sender())) {
             assert_current_call_valid_authwit_public(&mut context, from);
         } else {
             assert(nonce == 0, "invalid nonce");
         }
-        _finalize_transfer_public_to_private(from, amount, hiding_point_slot, &mut context, storage);
+        _finalize_transfer_public_to_private(
+            from,
+            amount,
+            hiding_point_slot,
+            &mut context,
+            storage,
+        );
     }
 
     #[public]
@@ -302,7 +321,13 @@ pub contract Token {
         amount: U128,
         hiding_point_slot: Field,
     ) {
-        _finalize_transfer_public_to_private(from, amount, hiding_point_slot, &mut context, storage);
+        _finalize_transfer_public_to_private(
+            from,
+            amount,
+            hiding_point_slot,
+            &mut context,
+            storage,
+        );
     }
 
     /// Internal ///
@@ -368,13 +393,13 @@ pub contract Token {
         // note for `from` with the change amount, e.g. if `amount` is 10 and two notes are nullified with amounts 8 and
         // 5, then the change will be 3 (since 8 + 5 - 10 = 3).
         let change = _subtract_balance(context, storage, account, amount, max_notes);
-        
+
         storage.balances.at(account).add(account, change).emit(encode_and_encrypt_note(
             context,
             account,
             account,
         ));
-        
+
         change
     }
 
