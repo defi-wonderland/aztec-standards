@@ -6,7 +6,7 @@ pub contract Escrow {
     use dep::aztec::{
         encrypted_logs::log_assembly_strategies::default_aes128::{
             event::encode_and_encrypt_event_unconstrained,
-            note::{encode_and_encrypt_note, encode_and_encrypt_note_unconstrained},
+            note::encode_and_encrypt_note_unconstrained,
         },
         keys::getters::get_public_keys,
         macros::{events::event, functions::{initializer, private}, storage::storage},
@@ -16,7 +16,6 @@ pub contract Escrow {
 
     use dep::address_note::address_note::AddressNote;
     use dep::token::Token;
-    use std::meta::derive;
 
     #[derive(Serialize)]
     #[event]
@@ -38,8 +37,8 @@ pub contract Escrow {
         let mut note = AddressNote::new(owner, owner);
         storage.owner.initialize(&mut note).emit(encode_and_encrypt_note_unconstrained(
             &mut context,
-            // NOTE: assuming non-factory deployment (msg_sender = Alice)
-            context.msg_sender(), // to: Alice
+            // NOTE: assuming deployer knows escrow keys (can decrypt the note)
+            context.this_address(), // to: Escrow
             context.this_address(), // from: Escrow
         ));
     }

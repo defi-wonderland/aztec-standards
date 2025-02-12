@@ -1,13 +1,8 @@
 use dep::escrow_contract::Escrow;
 use dep::token::Token;
 use aztec::{
-    oracle::{
-        execution::{get_block_number, get_contract_address},
-        random::random,
-        storage::storage_read,
-    },
-    prelude::{AztecAddress, NoteHeader},
-    protocol_types::storage::map::derive_storage_slot_in_map,
+    oracle::random::random,
+    prelude::AztecAddress,
     test::helpers::{cheatcodes, test_environment::TestEnvironment},
 };
 use std::test::OracleMock;
@@ -63,7 +58,7 @@ pub unconstrained fn setup(
     let escrow_address = escrow_contract.to_address();
     env.advance_block_by(1);
 
-    // // Fund the escrow
+    // Fund the escrow
     transfer_in_private(
         &mut env,
         token_contract_address,
