@@ -1,4 +1,5 @@
 import { TokenContractArtifact, TokenContract } from '../../../artifacts/Token.js';
+import { EscrowContractArtifact, EscrowContract } from '../../../artifacts/Escrow.js';
 import {
   AccountWallet,
   createLogger,
@@ -17,7 +18,6 @@ import {
 } from '@aztec/aztec.js';
 import { createAccount } from '@aztec/accounts/testing';
 import { computePartialAddress, deriveKeys } from '@aztec/circuits.js';
-import { EscrowContract, EscrowContractArtifact } from '@aztec/noir-contracts.js/Escrow';
 
 const createPXE = async (id: number = 0) => {
   // TODO: we should probably define testing fixtures for this kind of configuration
