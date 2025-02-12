@@ -246,42 +246,6 @@ pub contract Token {
 
     #[public]
     #[view]
-    fn public_get_name() -> FieldCompressedString {
-        storage.name.read()
-    }
-
-    #[private]
-    #[view]
-    fn private_get_name() -> FieldCompressedString {
-        storage.name.read()
-    }
-
-    #[public]
-    #[view]
-    fn public_get_symbol() -> pub FieldCompressedString {
-        storage.symbol.read()
-    }
-
-    #[private]
-    #[view]
-    fn private_get_symbol() -> pub FieldCompressedString {
-        storage.symbol.read()
-    }
-
-    #[public]
-    #[view]
-    fn public_get_decimals() -> pub u8 {
-        storage.decimals.read()
-    }
-
-    #[private]
-    #[view]
-    fn private_get_decimals() -> pub u8 {
-        storage.decimals.read()
-    }
-
-    #[public]
-    #[view]
     fn get_minter() -> AztecAddress {
         storage.minter.read()
     }
