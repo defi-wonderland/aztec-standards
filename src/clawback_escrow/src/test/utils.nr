@@ -61,6 +61,7 @@ pub unconstrained fn setup(
     // Fund the escrow
     transfer_in_private(
         &mut env,
+        owner,
         token_contract_address,
         escrow_address,
         mint_amount,
@@ -88,6 +89,7 @@ pub unconstrained fn mint_to_private(
 
 pub unconstrained fn transfer_in_private(
     env: &mut TestEnvironment,
+    from: AztecAddress,
     token_contract_address: AztecAddress,
     recipient: AztecAddress,
     amount: U128,
@@ -95,7 +97,6 @@ pub unconstrained fn transfer_in_private(
     let note_randomness = random();
     let _ = OracleMock::mock("getRandomField").returns(note_randomness);
 
-    let from = recipient; // we are setting from to recipient because of TODO(#9887)
     Token::at(token_contract_address).transfer_in_private(from, recipient, amount, 0).call(
         &mut env.private(),
     );
