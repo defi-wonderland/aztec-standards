@@ -72,11 +72,7 @@ pub contract Token {
         amount: U128,
         nonce: Field,
     ) {
-        if (!from.eq(context.msg_sender())) {
-            assert_current_call_valid_authwit(&mut context, from);
-        } else {
-            assert(nonce == 0, "invalid nonce");
-        }
+        _validate_from_private(from, nonce, &mut context);
 
         _subtract_exact_balance(
             &mut context,
@@ -102,11 +98,7 @@ pub contract Token {
 
     #[private]
     fn transfer_in_private(from: AztecAddress, to: AztecAddress, amount: U128, nonce: Field) {
-        if (!from.eq(context.msg_sender())) {
-            assert_current_call_valid_authwit(&mut context, from);
-        } else {
-            assert(nonce == 0, "invalid nonce");
-        }
+        _validate_from_private(from, nonce, &mut context);
 
         _subtract_exact_balance(
             &mut context,
@@ -147,11 +139,8 @@ pub contract Token {
         amount: U128,
         nonce: Field,
     ) {
-        if (!from.eq(context.msg_sender())) {
-            assert_current_call_valid_authwit(&mut context, from);
-        } else {
-            assert(nonce == 0, "invalid nonce");
-        }
+        _validate_from_private(from, nonce, &mut context);
+
         let token = Token::at(context.this_address());
 
         // We prepare the private balance increase (the partial note).
@@ -347,6 +336,25 @@ pub contract Token {
         hiding_point_slot: Field,
     ) {
         _finalize_mint_to_private(amount, hiding_point_slot, &mut context, storage);
+    }
+
+    // #[contract_library_method]
+    // fn _validate_from_public(from: AztecAddress, nonce: Field, context: PublicContext) {
+    //     if (!from.eq(context.msg_sender())) {
+    //         //  TODO: I cannot pass the &mut context from constrained run to unconstrained runtime
+    //          assert_current_call_valid_authwit_public(&mut context, from);
+    //     } else {
+    //         assert(nonce == 0, "invalid nonce");
+    //     }
+    // }
+
+    #[contract_library_method]
+    fn _validate_from_private(from: AztecAddress, nonce: Field, context: &mut PrivateContext) {
+        if (!from.eq(context.msg_sender())) {
+            assert_current_call_valid_authwit(context, from);
+        } else {
+            assert(nonce == 0, "invalid nonce");
+        }
     }
 
     #[contract_library_method]
