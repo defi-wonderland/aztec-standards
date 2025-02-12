@@ -32,7 +32,6 @@ pub unconstrained fn setup(
 
     // Deploy token contract
     let initializer_call_interface = Token::interface().constructor(
-        owner,
         "TestToken0000000000000000000000",
         "TT00000000000000000000000000000",
         18,
