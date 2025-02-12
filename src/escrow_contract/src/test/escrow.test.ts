@@ -32,10 +32,8 @@ const setupSandbox = async () => {
   return createPXE();
 };
 
-async function deployToken(deployer: AccountWallet, minter: AztecAddress) {
-  const contract = await Contract.deploy(deployer, TokenContractArtifact, [minter, 'PrivateToken', 'PT', 18])
-    .send()
-    .deployed();
+async function deployToken(deployer: AccountWallet) {
+  const contract = await Contract.deploy(deployer, TokenContractArtifact, ['PrivateToken', 'PT', 18]).send().deployed();
   console.log('Token contract deployed at', contract.address);
   return contract;
 }
@@ -94,7 +92,7 @@ describe('Multi PXE', () => {
   });
 
   beforeEach(async () => {
-    token = (await deployToken(alice, alice.getAddress())) as TokenContract;
+    token = (await deployToken(alice)) as TokenContract;
 
     await bobPXE.registerContract(token);
 
@@ -167,7 +165,11 @@ describe('Multi PXE', () => {
     // mint initial amount
     await token.withWallet(alice).methods.mint_to_public(alice.getAddress(), wad(10)).send().wait();
 
-    await token.withWallet(alice).methods.transfer_public_to_private(alice.getAddress(), alice.getAddress(), wad(5), 0).send().wait();
+    await token
+      .withWallet(alice)
+      .methods.transfer_public_to_private(alice.getAddress(), alice.getAddress(), wad(5), 0)
+      .send()
+      .wait();
     await token.withWallet(alice).methods.sync_notes().simulate({});
 
     // assert balances
