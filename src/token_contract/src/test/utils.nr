@@ -172,7 +172,7 @@ pub unconstrained fn add_token_note(
     note_randomness: Field,
 ) {
     let balances_owner_slot =
-        derive_storage_slot_in_map(Token::storage_layout().balances.slot, owner);
+        derive_storage_slot_in_map(Token::storage_layout().private_balances.slot, owner);
 
     env.add_note(
         &mut UintNote {

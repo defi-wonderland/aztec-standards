@@ -49,19 +49,17 @@ pub contract Token {
 
     #[storage]
     struct Storage<Context> {
-        minter: PublicImmutable<AztecAddress, Context>,
-        balances: Map<AztecAddress, BalanceSet<Context>, Context>,
+        name: PublicImmutable<FieldCompressedString, Context>,
+        symbol: PublicImmutable<FieldCompressedString, Context>,
+        decimals: PublicImmutable<u8, Context>,
+        private_balances: Map<AztecAddress, BalanceSet<Context>, Context>,
         total_supply: PublicMutable<U128, Context>,
         public_balances: Map<AztecAddress, PublicMutable<U128, Context>, Context>,
-        symbol: PublicImmutable<FieldCompressedString, Context>,
-        name: PublicImmutable<FieldCompressedString, Context>,
-        decimals: PublicImmutable<u8, Context>,
     }
 
     #[public]
     #[initializer]
     fn constructor(minter: AztecAddress, name: str<31>, symbol: str<31>, decimals: u8) {
-        storage.minter.initialize(minter);
         storage.name.initialize(FieldCompressedString::from_string(name));
         storage.symbol.initialize(FieldCompressedString::from_string(symbol));
         storage.decimals.initialize(decimals);
@@ -118,7 +116,11 @@ pub contract Token {
             INITIAL_TRANSFER_CALL_MAX_NOTES,
         );
 
-        storage.balances.at(to).add(to, amount).emit(encode_and_encrypt_note(&mut context, to, from));
+        storage.private_balances.at(to).add(to, amount).emit(encode_and_encrypt_note(
+            &mut context,
+            to,
+            from,
+        ));
     }
 
     #[private]
@@ -129,7 +131,7 @@ pub contract Token {
             assert(nonce == 0, "invalid nonce");
         }
 
-        storage.balances.at(from).sub(from, amount).emit(encode_and_encrypt_note(
+        storage.private_balances.at(from).sub(from, amount).emit(encode_and_encrypt_note(
             &mut context,
             from,
             from,
@@ -206,7 +208,6 @@ pub contract Token {
 
     #[public]
     fn mint_to_public(to: AztecAddress, amount: U128) {
-        assert(context.msg_sender() == storage.minter.read(), "caller is not minter");
         let new_balance = storage.public_balances.at(to).read().add(amount);
         let supply = storage.total_supply.read().add(amount);
         storage.public_balances.at(to).write(new_balance);
@@ -265,12 +266,6 @@ pub contract Token {
 
     #[public]
     #[view]
-    fn get_minter() -> AztecAddress {
-        storage.minter.read()
-    }
-
-    #[public]
-    #[view]
     fn balance_of_public(owner: AztecAddress) -> U128 {
         storage.public_balances.at(owner).read()
     }
@@ -290,8 +285,6 @@ pub contract Token {
     /// (e.g. used during token bridging, in AMM liquidity token etc.).
     #[public]
     fn finalize_mint_to_private(amount: U128, hiding_point_slot: Field) {
-        assert(context.msg_sender() == storage.minter.read(), "caller is not minter");
-
         _finalize_mint_to_private(amount, hiding_point_slot, &mut context, storage);
     }
 
@@ -353,8 +346,6 @@ pub contract Token {
         amount: U128,
         hiding_point_slot: Field,
     ) {
-        // We check the minter permissions as it was not done in `mint_to_private` function.
-        assert(from == storage.minter.read(), "caller is not minter");
         _finalize_mint_to_private(amount, hiding_point_slot, &mut context, storage);
     }
 
@@ -394,7 +385,7 @@ pub contract Token {
         // 5, then the change will be 3 (since 8 + 5 - 10 = 3).
         let change = _subtract_balance(context, storage, account, amount, max_notes);
 
-        storage.balances.at(account).add(account, change).emit(encode_and_encrypt_note(
+        storage.private_balances.at(account).add(account, change).emit(encode_and_encrypt_note(
             context,
             account,
             account,
@@ -411,7 +402,7 @@ pub contract Token {
         amount: U128,
         max_notes: u32,
     ) -> U128 {
-        let subtracted = storage.balances.at(account).try_sub(amount, max_notes);
+        let subtracted = storage.private_balances.at(account).try_sub(amount, max_notes);
         // Failing to subtract any amount means that the owner was unable to produce more notes that could be nullified.
         // We could in some cases fail early inside try_sub if we detected that fewer notes than the maximum were
         // returned and we were still unable to reach the target amount, but that'd make the code more complicated, and
@@ -452,7 +443,7 @@ pub contract Token {
         context: &mut PrivateContext,
         storage: Storage<&mut PrivateContext>,
     ) -> Field {
-        let to_note_slot = storage.balances.at(to).set.storage_slot;
+        let to_note_slot = storage.private_balances.at(to).set.storage_slot;
 
         // We create a setup payload with unpopulated/zero `amount` for 'to'
         // TODO(#7775): Manually fetching the randomness here is not great. If we decide to include randomness in all
@@ -516,7 +507,7 @@ pub contract Token {
 
     /// Unconstrained ///
     pub(crate) unconstrained fn balance_of_private(owner: AztecAddress) -> pub U128 {
-        storage.balances.at(owner).balance_of()
+        storage.private_balances.at(owner).balance_of()
     }
 }
 
