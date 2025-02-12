@@ -4,8 +4,8 @@
 // mod mint_to_public;
 // mod transfer;
 // mod reading_constants;
-mod transfer_in_private;
-mod transfer_in_public;
+mod transfer_private_to_private;
+mod transfer_public_to_public;
 mod transfer_public_to_private;
 mod transfer_private_to_public;
 mod utils;
