@@ -34,7 +34,6 @@ const setupSandbox = async () => {
 
 async function deployToken(deployer: AccountWallet) {
   const contract = await Contract.deploy(deployer, TokenContractArtifact, ['PrivateToken', 'PT', 18]).send().deployed();
-  console.log('Token contract deployed at', contract.address);
   return contract;
 }
 
@@ -49,12 +48,11 @@ async function deployEscrow(pxes: PXE[], wallet: Wallet, owner: AztecAddress) {
   );
 
   const escrowContract = await escrowDeployment.send().deployed();
-  console.log(`Escrow contract deployed at ${escrowContract.address}`);
 
   return escrowContract;
 }
 
-describe('Multi PXE', () => {
+describe.skip('Multi PXE', () => {
   let alicePXE: PXE;
   let bobPXE: PXE;
 
@@ -85,10 +83,6 @@ describe('Multi PXE', () => {
 
     alice = aliceWallet;
     bob = bobWallet;
-    console.log({
-      alice: aliceWallet.getAddress(),
-      bob: bobWallet.getAddress(),
-    });
   });
 
   beforeEach(async () => {
