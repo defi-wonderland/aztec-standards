@@ -52,7 +52,7 @@ async function deployEscrow(pxes: PXE[], wallet: Wallet, owner: AztecAddress) {
   return escrowContract;
 }
 
-describe.skip('Multi PXE', () => {
+describe('Multi PXE', () => {
   let alicePXE: PXE;
   let bobPXE: PXE;
 
