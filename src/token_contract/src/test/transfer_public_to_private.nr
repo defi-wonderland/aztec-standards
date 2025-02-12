@@ -37,9 +37,9 @@ unconstrained fn transfer_public_to_private_external_orchestration() {
         .call(&mut env.private());
 
     // Finalize the transfer of the tokens (message sender owns the tokens in public)
-    Token::at(token_contract_address).finalize_transfer_public_to_private(owner, amount, hiding_point_slot, 0).call(
-        &mut env.public(),
-    );
+    Token::at(token_contract_address)
+        .finalize_transfer_public_to_private(owner, amount, hiding_point_slot, 0)
+        .call(&mut env.public());
 
     env.advance_block_by(1);
 
@@ -57,9 +57,9 @@ unconstrained fn transfer_public_to_private_transfer_not_prepared() {
     let hiding_point_slot = random();
 
     // Try finalizing the transfer without preparing it
-    Token::at(token_contract_address).finalize_transfer_public_to_private(owner, amount, hiding_point_slot, 0).call(
-        &mut env.public(),
-    );
+    Token::at(token_contract_address)
+        .finalize_transfer_public_to_private(owner, amount, hiding_point_slot, 0)
+        .call(&mut env.public());
 }
 
 #[test(should_fail_with = "Assertion failed: attempt to subtract with underflow 'hi == high'")]
@@ -77,7 +77,7 @@ unconstrained fn transfer_public_to_private_failure_not_an_owner() {
 
     // Try transferring someone else's token balance
     env.impersonate(not_owner);
-    Token::at(token_contract_address).finalize_transfer_public_to_private(not_owner, amount, hiding_point_slot, 0).call(
-        &mut env.public(),
-    );
+    Token::at(token_contract_address)
+        .finalize_transfer_public_to_private(not_owner, amount, hiding_point_slot, 0)
+        .call(&mut env.public());
 }
