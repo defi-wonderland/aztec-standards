@@ -65,6 +65,10 @@ pub contract Token {
         storage.decimals.initialize(decimals);
     }
 
+    /** ==========================================================
+     * ========================= PRIVATE =========================
+     * ======================================================== */
+
     #[private]
     fn transfer_private_to_public(
         from: AztecAddress,
@@ -194,6 +198,10 @@ pub contract Token {
             RECURSIVE_TRANSFER_CALL_MAX_NOTES,
         )
     }
+
+    /** ==========================================================
+     * ========================= PUBLIC ==========================
+     * ======================================================== */
 
     #[public]
     fn mint_to_public(to: AztecAddress, amount: U128) {
@@ -337,6 +345,10 @@ pub contract Token {
     ) {
         _finalize_mint_to_private(amount, hiding_point_slot, &mut context, storage);
     }
+
+    /** ==========================================================
+     * ======================= LIBRARIES =========================
+     * ======================================================== */
 
     // #[contract_library_method]
     // fn _validate_from_public(from: AztecAddress, nonce: Field, context: PublicContext) {
