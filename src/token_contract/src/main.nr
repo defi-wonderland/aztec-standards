@@ -89,17 +89,6 @@ pub contract Token {
         Token::at(context.this_address())._increase_public_balance(to, amount).enqueue(&mut context);
     }
 
-    /**
-     * Cancel a private authentication witness.
-     * @param inner_hash The inner hash of the authwit to cancel.
-     */
-    #[private]
-    fn cancel_authwit(inner_hash: Field) {
-        let on_behalf_of = context.msg_sender();
-        let nullifier = compute_authwit_nullifier(on_behalf_of, inner_hash);
-        context.push_nullifier(nullifier);
-    }
-
     #[private]
     fn transfer_in_private(from: AztecAddress, to: AztecAddress, amount: U128, nonce: Field) {
         _validate_from_private(from, nonce, &mut context);
@@ -250,7 +239,6 @@ pub contract Token {
         );
     }
 
-    /// Internal ///
     #[public]
     #[internal]
     fn _increase_public_balance(to: AztecAddress, amount: U128) {
