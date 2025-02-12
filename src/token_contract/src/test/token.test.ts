@@ -145,7 +145,7 @@ describe('Token - Single PXE', () => {
     // Transfer 1 token from alice to bob
     await token
       .withWallet(alice)
-      .methods.transfer_in_public(alice.getAddress(), bob.getAddress(), AMOUNT, 0)
+      .methods.transfer_public_to_public(alice.getAddress(), bob.getAddress(), AMOUNT, 0)
       .send()
       .wait();
 
@@ -328,7 +328,7 @@ describe('Token - Single PXE', () => {
     const nonce = Fr.random();
     const action = token
       .withWallet(carl)
-      .methods.transfer_in_public(alice.getAddress(), bob.getAddress(), AMOUNT, nonce);
+      .methods.transfer_public_to_public(alice.getAddress(), bob.getAddress(), AMOUNT, nonce);
 
     await (
       await alice.setPublicAuthWit(

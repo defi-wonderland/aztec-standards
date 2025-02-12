@@ -68,7 +68,6 @@ pub contract Token {
     /** ==========================================================
      * ========================= PRIVATE =========================
      * ======================================================== */
-
     #[private]
     fn transfer_private_to_public(
         from: AztecAddress,
@@ -161,7 +160,7 @@ pub contract Token {
      * ======================================================== */
 
     #[public]
-    fn transfer_in_public(from: AztecAddress, to: AztecAddress, amount: U128, nonce: Field) {
+    fn transfer_public_to_public(from: AztecAddress, to: AztecAddress, amount: U128, nonce: Field) {
         if (!from.eq(context.msg_sender())) {
             assert_current_call_valid_authwit_public(&mut context, from);
         } else {

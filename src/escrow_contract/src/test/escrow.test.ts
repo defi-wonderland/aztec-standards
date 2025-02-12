@@ -181,7 +181,7 @@ describe('Multi PXE', () => {
 
     const fundEscrowTx2 = await token
       .withWallet(alice)
-      .methods.transfer_in_public(alice.getAddress(), escrow.address, wad(5), 0)
+      .methods.transfer_public_to_public(alice.getAddress(), escrow.address, wad(5), 0)
       .send()
       .wait({
         debug: true,
