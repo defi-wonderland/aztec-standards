@@ -11,13 +11,15 @@ use dep::aztec::macros::aztec;
 // Including a nonce in the message hash ensures that the message can only be used once.
 #[aztec]
 pub contract Token {
-    // Libs
+
     use dep::compressed_string::FieldCompressedString;
+    use dep::std::ops::{Add, Sub};
 
     use dep::aztec::{
         context::{PrivateCallInterface, PrivateContext},
         encrypted_logs::log_assembly_strategies::default_aes128::note::encode_and_encrypt_note,
         macros::{functions::{initializer, internal, private, public, view}, storage::storage},
+        note::note_interface::PartialNote,
         oracle::random::random,
         prelude::{AztecAddress, Map, PublicContext, PublicImmutable, PublicMutable},
         protocol_types::{point::Point, traits::Serialize},
