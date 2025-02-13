@@ -32,7 +32,6 @@ pub unconstrained fn setup(
 
     // Deploy token contract
     let initializer_call_interface = Token::interface().constructor(
-        owner,
         "TestToken0000000000000000000000",
         "TT00000000000000000000000000000",
         18,
@@ -64,7 +63,7 @@ pub unconstrained fn setup(
     env.advance_block_by(1);
 
     // // Fund the escrow
-    transfer_in_private(
+    transfer_private_to_private(
         &mut env,
         token_contract_address,
         escrow_address,
@@ -91,7 +90,7 @@ pub unconstrained fn mint_to_private(
     env.advance_block_by(1);
 }
 
-pub unconstrained fn transfer_in_private(
+pub unconstrained fn transfer_private_to_private(
     env: &mut TestEnvironment,
     token_contract_address: AztecAddress,
     recipient: AztecAddress,
@@ -101,7 +100,7 @@ pub unconstrained fn transfer_in_private(
     let _ = OracleMock::mock("getRandomField").returns(note_randomness);
 
     let from = recipient; // we are setting from to recipient because of TODO(#9887)
-    Token::at(token_contract_address).transfer_in_private(from, recipient, amount, 0).call(
+    Token::at(token_contract_address).transfer_private_to_private(from, recipient, amount, 0).call(
         &mut env.private(),
     );
 
