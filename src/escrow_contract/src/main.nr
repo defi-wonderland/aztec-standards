@@ -39,7 +39,8 @@ pub contract Escrow {
         storage.owner.initialize(&mut note).emit(encode_and_encrypt_note_unconstrained(
             &mut context,
             // NOTE: assuming non-factory deployment (msg_sender = Alice)
-            context.msg_sender(), // to: Alice
+            // TODO: encrypt for Alice
+            owner, // to: Bob
             context.this_address(), // from: Escrow
         ));
     }

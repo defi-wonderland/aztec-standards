@@ -146,7 +146,6 @@ describe('Multi PXE', () => {
     let events, notes;
 
     // this is here because the note is created in the constructor
-    await escrow.withWallet(alice).methods.sync_notes().simulate({});
     await escrow.withWallet(bob).methods.sync_notes().simulate({});
 
     // alice should have no notes
