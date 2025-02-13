@@ -1,4 +1,5 @@
-import { TokenContractArtifact, TokenContract, Transfer } from '../../../artifacts/Token.js';
+import { TokenContractArtifact, TokenContract } from '../../../artifacts/Token.js';
+import { EscrowContractArtifact, EscrowContract } from '../../../artifacts/Escrow.js';
 import {
   AccountWallet,
   createLogger,
@@ -17,7 +18,6 @@ import {
 } from '@aztec/aztec.js';
 import { createAccount } from '@aztec/accounts/testing';
 import { computePartialAddress, deriveKeys } from '@aztec/circuits.js';
-import { EscrowContract, EscrowContractArtifact } from '@aztec/noir-contracts.js/Escrow';
 
 const createPXE = async (id: number = 0) => {
   // TODO: we should probably define testing fixtures for this kind of configuration
@@ -32,11 +32,8 @@ const setupSandbox = async () => {
   return createPXE();
 };
 
-async function deployToken(deployer: AccountWallet, minter: AztecAddress) {
-  const contract = await Contract.deploy(deployer, TokenContractArtifact, [minter, 'PrivateToken', 'PT', 18])
-    .send()
-    .deployed();
-  console.log('Token contract deployed at', contract.address);
+async function deployToken(deployer: AccountWallet) {
+  const contract = await Contract.deploy(deployer, TokenContractArtifact, ['PrivateToken', 'PT', 18]).send().deployed();
   return contract;
 }
 
@@ -51,7 +48,6 @@ async function deployEscrow(pxes: PXE[], wallet: Wallet, owner: AztecAddress) {
   );
 
   const escrowContract = await escrowDeployment.send().deployed();
-  console.log(`Escrow contract deployed at ${escrowContract.address}`);
 
   return escrowContract;
 }
@@ -87,14 +83,10 @@ describe('Multi PXE', () => {
 
     alice = aliceWallet;
     bob = bobWallet;
-    console.log({
-      alice: aliceWallet.getAddress(),
-      bob: bobWallet.getAddress(),
-    });
   });
 
   beforeEach(async () => {
-    token = (await deployToken(alice, alice.getAddress())) as TokenContract;
+    token = (await deployToken(alice)) as TokenContract;
 
     await bobPXE.registerContract(token);
 
@@ -167,7 +159,11 @@ describe('Multi PXE', () => {
     // mint initial amount
     await token.withWallet(alice).methods.mint_to_public(alice.getAddress(), wad(10)).send().wait();
 
-    await token.withWallet(alice).methods.transfer_to_private(alice.getAddress(), wad(5)).send().wait();
+    await token
+      .withWallet(alice)
+      .methods.transfer_public_to_private(alice.getAddress(), alice.getAddress(), wad(5), 0)
+      .send()
+      .wait();
     await token.withWallet(alice).methods.sync_notes().simulate({});
 
     // assert balances
@@ -177,7 +173,7 @@ describe('Multi PXE', () => {
     // Transfer both in private and public
     const fundEscrowTx = await token
       .withWallet(alice)
-      .methods.transfer_in_private(alice.getAddress(), escrow.address, wad(5), 0)
+      .methods.transfer_private_to_private(alice.getAddress(), escrow.address, wad(5), 0)
       .send()
       .wait({
         debug: true,
@@ -185,7 +181,7 @@ describe('Multi PXE', () => {
 
     const fundEscrowTx2 = await token
       .withWallet(alice)
-      .methods.transfer_in_public(alice.getAddress(), escrow.address, wad(5), 0)
+      .methods.transfer_public_to_public(alice.getAddress(), escrow.address, wad(5), 0)
       .send()
       .wait({
         debug: true,
