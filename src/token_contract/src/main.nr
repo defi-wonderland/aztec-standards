@@ -191,18 +191,6 @@ pub contract Token {
         );
     }
 
-    #[public]
-    #[view]
-    fn balance_of_public(owner: AztecAddress) -> U128 {
-        storage.public_balances.at(owner).read()
-    }
-
-    #[public]
-    #[view]
-    fn total_supply() -> U128 {
-        storage.total_supply.read()
-    }
-
     // TODO(#9375): Having to define the note log length here is very unfortunate as it's basically impossible for
     // users to derive manually. This will however go away once we have a real transient storage since we will not need
     // the public call and instead we would do something like `context.transient_storage_write(slot, payload)` and that
@@ -243,6 +231,22 @@ pub contract Token {
     fn _increase_public_balance(to: AztecAddress, amount: U128) {
         let new_balance = storage.public_balances.at(to).read().add(amount);
         storage.public_balances.at(to).write(new_balance);
+    }
+
+    /** ==========================================================
+     * ====================== VIEW FUNCTIONS =====================
+     * ======================================================== */
+
+    #[public]
+    #[view]
+    fn balance_of_public(owner: AztecAddress) -> U128 {
+        storage.public_balances.at(owner).read()
+    }
+
+    #[public]
+    #[view]
+    fn total_supply() -> U128 {
+        storage.total_supply.read()
     }
 
     /** ==========================================================
@@ -386,7 +390,8 @@ pub contract Token {
         // We don't need to perform a check that the value overwritten by `_store_point_in_transient_storage_unsafe`
         // is zero because the slot is the x-coordinate of the hiding point and hence we could only overwrite
         // the value in the slot with the same value. This makes usage of the `unsafe` method safe.
-        this_token._store_payload_in_transient_storage_unsafe(
+        this_token
+            ._store_payload_in_transient_storage_unsafe(
                 hiding_point_slot,
                 note_setup_payload.hiding_point,
                 setup_log,
@@ -480,4 +485,3 @@ pub contract Token {
     }
 
 }
-
