@@ -1,13 +1,8 @@
 use dep::escrow_contract::Escrow;
 use dep::token::Token;
 use aztec::{
-    oracle::{
-        execution::{get_block_number, get_contract_address},
-        random::random,
-        storage::storage_read,
-    },
-    prelude::{AztecAddress, NoteHeader},
-    protocol_types::storage::map::derive_storage_slot_in_map,
+    oracle::random::random,
+    prelude::AztecAddress,
     test::helpers::{cheatcodes, test_environment::TestEnvironment},
 };
 use std::test::OracleMock;
@@ -32,7 +27,6 @@ pub unconstrained fn setup(
 
     // Deploy token contract
     let initializer_call_interface = Token::interface().constructor(
-        owner,
         "TestToken0000000000000000000000",
         "TT00000000000000000000000000000",
         18,
@@ -102,7 +96,7 @@ pub unconstrained fn transfer_in_private(
     let note_randomness = random();
     let _ = OracleMock::mock("getRandomField").returns(note_randomness);
 
-    Token::at(token_contract_address).transfer_in_private(from, recipient, amount, 0).call(
+    Token::at(token_contract_address).transfer_private_to_private(from, recipient, amount, 0).call(
         &mut env.private(),
     );
 
