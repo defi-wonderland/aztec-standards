@@ -27,7 +27,6 @@ pub unconstrained fn setup(
 
     // Deploy token contract
     let initializer_call_interface = Token::interface().constructor(
-        owner,
         "TestToken0000000000000000000000",
         "TT00000000000000000000000000000",
         18,
@@ -97,7 +96,7 @@ pub unconstrained fn transfer_in_private(
     let note_randomness = random();
     let _ = OracleMock::mock("getRandomField").returns(note_randomness);
 
-    Token::at(token_contract_address).transfer_in_private(from, recipient, amount, 0).call(
+    Token::at(token_contract_address).transfer_private_to_private(from, recipient, amount, 0).call(
         &mut env.private(),
     );
 
