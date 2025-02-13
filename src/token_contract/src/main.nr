@@ -12,18 +12,12 @@ use dep::aztec::macros::aztec;
 #[aztec]
 pub contract Token {
     // Libs
-    use std::meta::derive;
-
     use dep::compressed_string::FieldCompressedString;
 
     use dep::aztec::{
         context::{PrivateCallInterface, PrivateContext},
         encrypted_logs::log_assembly_strategies::default_aes128::note::encode_and_encrypt_note,
-        macros::{
-            events::event,
-            functions::{initializer, internal, private, public, view},
-            storage::storage,
-        },
+        macros::{functions::{initializer, internal, private, public, view}, storage::storage},
         oracle::random::random,
         prelude::{AztecAddress, Map, PublicContext, PublicImmutable, PublicMutable},
         protocol_types::{point::Point, traits::Serialize},
@@ -33,7 +27,6 @@ pub contract Token {
 
     use dep::authwit::auth::{
         assert_current_call_valid_authwit, assert_current_call_valid_authwit_public,
-        compute_authwit_nullifier,
     };
 
     use crate::types::balance_set::BalanceSet;
@@ -125,7 +118,8 @@ pub contract Token {
         let token = Token::at(context.this_address());
 
         // We prepare the private balance increase (the partial note).
-        let hiding_point_slot = _prepare_private_balance_increase(from, to, &mut context, storage);
+        let hiding_point_slot =
+            _prepare_transfer_public_to_private(from, to, &mut context, storage);
 
         // At last we finalize the transfer. Usage of the `unsafe` method here is safe because we set the `from`
         // function argument to a message sender, guaranteeing that he can transfer only his own tokens.
@@ -137,10 +131,10 @@ pub contract Token {
     /// some of the finalization functions (`finalize_transfer_public_to_private`, `finalize_mint_to_private`).
     /// Returns a hiding point slot.
     #[private]
-    fn prepare_private_balance_increase(to: AztecAddress, from: AztecAddress) -> Field {
+    fn prepare_transfer_public_to_private(to: AztecAddress, from: AztecAddress) -> Field {
         // TODO(#9887): ideally we'd not have `from` here, but we do need a `from` address to produce a tagging secret
         // with `to`.
-        _prepare_private_balance_increase(from, to, &mut context, storage)
+        _prepare_transfer_public_to_private(from, to, &mut context, storage)
     }
 
     #[internal]
@@ -173,7 +167,7 @@ pub contract Token {
     }
 
     /// Finalizes a transfer of token `amount` from public balance of `from` to a private balance of `to`.
-    /// The transfer must be prepared by calling `prepare_private_balance_increase` first and the resulting
+    /// The transfer must be prepared by calling `prepare_transfer_public_to_private` first and the resulting
     /// `hiding_point_slot` must be passed as an argument to this function.
     #[public]
     fn finalize_transfer_public_to_private(
@@ -353,13 +347,13 @@ pub contract Token {
         Token::at(context.this_address())._recurse_subtract_balance(account, remaining)
     }
 
-    /// This function exists separately from `prepare_private_balance_increase` solely as an optimization as it allows
+    /// This function exists separately from `prepare_transfer_public_to_private` solely as an optimization as it allows
     /// us to have it inlined in the `transfer_public_to_private` function which results in one less kernel iteration.
     ///
     /// TODO(#9180): Consider adding macro support for functions callable both as an entrypoint and as an internal
     /// function.
     #[contract_library_method]
-    fn _prepare_private_balance_increase(
+    fn _prepare_transfer_public_to_private(
         from: AztecAddress, // sender of the tag: TODO(#9887): this is not great?
         to: AztecAddress,
         context: &mut PrivateContext,
@@ -428,7 +422,8 @@ pub contract Token {
         let token = Token::at(context.this_address());
 
         // We prepare the partial note to which we'll "send" the minted amount.
-        let hiding_point_slot = _prepare_private_balance_increase(from, to, &mut context, storage);
+        let hiding_point_slot =
+            _prepare_transfer_public_to_private(from, to, &mut context, storage);
 
         // At last we finalize the mint. Usage of the `unsafe` method here is safe because we set the `from`
         // function argument to a message sender, guaranteeing that only a message sender with minter permissions
@@ -447,7 +442,7 @@ pub contract Token {
     }
 
     /// Finalizes a mint of token `amount` to a private balance of `to`. The mint must be prepared by calling
-    /// `prepare_private_balance_increase` first and the resulting
+    /// `prepare_transfer_public_to_private` first and the resulting
     /// `hiding_point_slot` must be passed as an argument to this function.
     ///
     /// Note: This function is only an optimization as it could be replaced by a combination of `mint_to_public`

@@ -303,7 +303,7 @@ describe('Token - Single PXE', () => {
     expect(await token.methods.total_supply().simulate()).toBe(AMOUNT);
 
     // alice prepares partial note for bob
-    await token.methods.prepare_private_balance_increase(bob.getAddress(), alice.getAddress()).send().wait({
+    await token.methods.prepare_transfer_public_to_private(bob.getAddress(), alice.getAddress()).send().wait({
       debug: true,
     });
 
