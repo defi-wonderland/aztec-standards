@@ -78,7 +78,8 @@ pub contract Token {
             INITIAL_TRANSFER_CALL_MAX_NOTES,
         );
 
-        Token::at(context.this_address())._increase_public_balance(to, amount).enqueue(&mut context);
+        let this_token = Token::at(context.this_address());
+        this_token._increase_public_balance(to, amount).enqueue(&mut context);
     }
 
     #[private]
@@ -334,7 +335,9 @@ pub contract Token {
         account: AztecAddress,
         remaining: U128,
     ) -> PrivateCallInterface<25, U128> {
-        Token::at(context.this_address())._recurse_subtract_balance(account, remaining)
+        let this_token = Token::at(context.this_address());
+
+        this_token._recurse_subtract_balance(account, remaining)
     }
 
     /// This function exists separately from `prepare_transfer_public_to_private` solely as an optimization as it allows
@@ -378,11 +381,12 @@ pub contract Token {
         // (MSM).
         let hiding_point_slot = note_setup_payload.hiding_point.x;
 
+        let this_token = Token::at(context.this_address());
+
         // We don't need to perform a check that the value overwritten by `_store_point_in_transient_storage_unsafe`
         // is zero because the slot is the x-coordinate of the hiding point and hence we could only overwrite
         // the value in the slot with the same value. This makes usage of the `unsafe` method safe.
-        Token::at(context.this_address())
-            ._store_payload_in_transient_storage_unsafe(
+        this_token._store_payload_in_transient_storage_unsafe(
                 hiding_point_slot,
                 note_setup_payload.hiding_point,
                 setup_log,
@@ -392,7 +396,10 @@ pub contract Token {
         hiding_point_slot
     }
 
-    /// Unconstrained ///
+    /** ==========================================================
+     * ===================== UNCONSTRAINED =======================
+     * ======================================================== */
+
     pub(crate) unconstrained fn balance_of_private(owner: AztecAddress) -> pub U128 {
         storage.private_balances.at(owner).balance_of()
     }
@@ -409,7 +416,7 @@ pub contract Token {
         to: AztecAddress,
         amount: U128,
     ) {
-        let token = Token::at(context.this_address());
+        let this_token = Token::at(context.this_address());
 
         // We prepare the partial note to which we'll "send" the minted amount.
         let hiding_point_slot =
@@ -418,7 +425,7 @@ pub contract Token {
         // At last we finalize the mint. Usage of the `unsafe` method here is safe because we set the `from`
         // function argument to a message sender, guaranteeing that only a message sender with minter permissions
         // can successfully execute the function.
-        token
+        this_token
             ._finalize_mint_to_private_unsafe(context.msg_sender(), amount, hiding_point_slot)
             .enqueue(&mut context);
     }
