@@ -9,8 +9,8 @@ unconstrained fn transfer_private_on_behalf_of_other() {
         utils::setup_and_mint_to_private(/* with_account_contracts */ true);
     // Add authwit
     let transfer_amount = U128::from_integer(1000);
-    let transfer_private_from_call_interface =
-        Token::at(token_contract_address).transfer_in_private(owner, recipient, transfer_amount, 1);
+    let transfer_private_from_call_interface = Token::at(token_contract_address)
+        .transfer_private_to_private(owner, recipient, transfer_amount, 1);
     authwit_cheatcodes::add_private_authwit_from_call_interface(
         owner,
         recipient,
@@ -32,8 +32,8 @@ unconstrained fn transfer_private_failure_on_behalf_of_self_non_zero_nonce() {
         utils::setup_and_mint_to_private(/* with_account_contracts */ false);
     // Add authwit
     let transfer_amount = U128::from_integer(1000);
-    let transfer_private_from_call_interface =
-        Token::at(token_contract_address).transfer_in_private(owner, recipient, transfer_amount, 1);
+    let transfer_private_from_call_interface = Token::at(token_contract_address)
+        .transfer_private_to_private(owner, recipient, transfer_amount, 1);
     authwit_cheatcodes::add_private_authwit_from_call_interface(
         owner,
         recipient,
@@ -50,8 +50,8 @@ unconstrained fn transfer_private_failure_on_behalf_of_more_than_balance() {
         utils::setup_and_mint_to_private(/* with_account_contracts */ true);
     // Add authwit
     let transfer_amount = mint_amount + U128::from_integer(1);
-    let transfer_private_from_call_interface =
-        Token::at(token_contract_address).transfer_in_private(owner, recipient, transfer_amount, 1);
+    let transfer_private_from_call_interface = Token::at(token_contract_address)
+        .transfer_private_to_private(owner, recipient, transfer_amount, 1);
     authwit_cheatcodes::add_private_authwit_from_call_interface(
         owner,
         recipient,
@@ -70,8 +70,8 @@ unconstrained fn transfer_private_failure_on_behalf_of_other_without_approval() 
         utils::setup_and_mint_to_private(/* with_account_contracts */ true);
     // Add authwit
     let transfer_amount = U128::from_integer(1000);
-    let transfer_private_from_call_interface =
-        Token::at(token_contract_address).transfer_in_private(owner, recipient, transfer_amount, 1);
+    let transfer_private_from_call_interface = Token::at(token_contract_address)
+        .transfer_private_to_private(owner, recipient, transfer_amount, 1);
     // Impersonate recipient to perform the call
     env.impersonate(recipient);
     // Transfer tokens
@@ -85,8 +85,8 @@ unconstrained fn transfer_private_failure_on_behalf_of_other_wrong_caller() {
         utils::setup_and_mint_to_private(/* with_account_contracts */ true);
     // Add authwit
     let transfer_amount = U128::from_integer(1000);
-    let transfer_private_from_call_interface =
-        Token::at(token_contract_address).transfer_in_private(owner, recipient, transfer_amount, 1);
+    let transfer_private_from_call_interface = Token::at(token_contract_address)
+        .transfer_private_to_private(owner, recipient, transfer_amount, 1);
     authwit_cheatcodes::add_private_authwit_from_call_interface(
         owner,
         owner,

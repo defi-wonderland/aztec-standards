@@ -32,7 +32,6 @@ pub unconstrained fn setup(
 
     // Deploy token contract
     let initializer_call_interface = Token::interface().constructor(
-        owner,
         "TestToken0000000000000000000000",
         "TT00000000000000000000000000000",
         18,
@@ -172,7 +171,7 @@ pub unconstrained fn add_token_note(
     note_randomness: Field,
 ) {
     let balances_owner_slot =
-        derive_storage_slot_in_map(Token::storage_layout().balances.slot, owner);
+        derive_storage_slot_in_map(Token::storage_layout().private_balances.slot, owner);
 
     env.add_note(
         &mut UintNote {
