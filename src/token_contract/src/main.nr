@@ -248,16 +248,6 @@ pub contract Token {
      * ======================= LIBRARIES =========================
      * ======================================================== */
 
-    // #[contract_library_method]
-    // fn _validate_from_public(from: AztecAddress, nonce: Field, context: PublicContext) {
-    //     if (!from.eq(context.msg_sender())) {
-    //         //  TODO: I cannot pass the &mut context from constrained run to unconstrained runtime
-    //          assert_current_call_valid_authwit_public(&mut context, from);
-    //     } else {
-    //         assert(nonce == 0, "invalid nonce");
-    //     }
-    // }
-
     #[contract_library_method]
     fn _validate_from_private(from: AztecAddress, nonce: Field, context: &mut PrivateContext) {
         if (!from.eq(context.msg_sender())) {
