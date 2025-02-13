@@ -486,4 +486,40 @@ pub contract Token {
         finalization_payload.emit();
     }
 
+    /** ==========================================================
+     * ======================= BURNABLE ==========================
+     * ======================================================== */
+
+    #[private]
+    fn burn_private(from: AztecAddress, amount: U128, nonce: Field) {
+        _validate_from_private(from, nonce, &mut context);
+
+        storage.private_balances.at(from).sub(from, amount).emit(encode_and_encrypt_note(
+            &mut context,
+            from,
+            from,
+        ));
+        Token::at(context.this_address())._reduce_total_supply(amount).enqueue(&mut context);
+    }
+
+    #[public]
+    fn burn_public(from: AztecAddress, amount: U128, nonce: Field) {
+        if (!from.eq(context.msg_sender())) {
+            assert_current_call_valid_authwit_public(&mut context, from);
+        } else {
+            assert(nonce == 0, "invalid nonce");
+        }
+        let from_balance = storage.public_balances.at(from).read().sub(amount);
+        storage.public_balances.at(from).write(from_balance);
+        let new_supply = storage.total_supply.read().sub(amount);
+        storage.total_supply.write(new_supply);
+    }
+
+    #[public]
+    #[internal]
+    fn _reduce_total_supply(amount: U128) {
+        // Only to be called from burn.
+        let new_supply = storage.total_supply.read().sub(amount);
+        storage.total_supply.write(new_supply);
+    }
 }
