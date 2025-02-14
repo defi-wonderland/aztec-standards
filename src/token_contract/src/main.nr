@@ -19,10 +19,10 @@ pub contract Token {
         context::{PrivateCallInterface, PrivateContext},
         encrypted_logs::log_assembly_strategies::default_aes128::note::encode_and_encrypt_note,
         macros::{functions::{initializer, internal, private, public, view}, storage::storage},
-        note::note_interface::PartialNote,
+        note::{note_emission::OuterNoteEmission, note_interface::PartialNote},
         oracle::random::random,
         prelude::{AztecAddress, Map, PublicContext, PublicImmutable, PublicMutable},
-        protocol_types::{point::Point, traits::{Serialize, Hash}},
+        protocol_types::{point::Point, traits::{Hash, Serialize}},
     };
 
     use dep::uint_note::uint_note::UintNote;
@@ -79,7 +79,7 @@ pub contract Token {
             from,
             amount,
             INITIAL_TRANSFER_CALL_MAX_NOTES,
-        );
+        ).emit(encode_and_encrypt_note(&mut context, from, from));
 
         let self = Token::at(context.this_address());
         self._increase_public_balance(to, amount).enqueue(&mut context);
@@ -100,7 +100,7 @@ pub contract Token {
             from,
             amount,
             INITIAL_TRANSFER_CALL_MAX_NOTES,
-        );
+        ).emit(encode_and_encrypt_note(&mut context, from, from));
 
         storage.private_balances.at(to).add(to, amount).emit(encode_and_encrypt_note(
             &mut context,
@@ -292,7 +292,7 @@ pub contract Token {
         account: AztecAddress,
         amount: U128,
         max_notes: u32,
-    ) {
+    ) -> OuterNoteEmission<UintNote> {
         // We reduce `from`'s balance by amount by recursively removing notes over potentially multiple calls. This
         // method keeps the gate count for each individual call low - reading too many notes at once could result in
         // circuits in which proving is not feasible.
@@ -301,11 +301,7 @@ pub contract Token {
         // 5, then the change will be 3 (since 8 + 5 - 10 = 3).
         let change = _subtract_balance(context, storage, account, amount, max_notes);
 
-        storage.private_balances.at(account).add(account, change).emit(encode_and_encrypt_note(
-            context,
-            account,
-            account,
-        ));
+        storage.private_balances.at(account).add(account, change)
     }
 
     #[contract_library_method]
