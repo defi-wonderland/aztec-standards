@@ -512,12 +512,19 @@ pub contract Token {
         let from_balance = storage.public_balances.at(from).read().sub(amount);
         storage.public_balances.at(from).write(from_balance);
         let self = Token::at(context.this_address());
-        self._reduce_total_supply(amount);
+        _reduce_total_supply_(amount, storage);
     }
 
     #[public]
     #[internal]
     fn _reduce_total_supply(amount: U128) {
+        // Only to be called from burn.
+        let new_supply = storage.total_supply.read().sub(amount);
+        storage.total_supply.write(new_supply);
+    }
+
+    #[contract_library_method]
+    fn _reduce_total_supply_(amount: U128, storage: Storage<&mut PublicContext>) {
         // Only to be called from burn.
         let new_supply = storage.total_supply.read().sub(amount);
         storage.total_supply.write(new_supply);
