@@ -79,7 +79,8 @@ pub contract Token {
             from,
             amount,
             INITIAL_TRANSFER_CALL_MAX_NOTES,
-        ).emit(encode_and_encrypt_note(&mut context, from, from));
+        )
+            .emit(encode_and_encrypt_note(&mut context, from, from));
 
         let self = Token::at(context.this_address());
         self._increase_public_balance(to, amount).enqueue(&mut context);
@@ -100,7 +101,8 @@ pub contract Token {
             from,
             amount,
             INITIAL_TRANSFER_CALL_MAX_NOTES,
-        ).emit(encode_and_encrypt_note(&mut context, from, from));
+        )
+            .emit(encode_and_encrypt_note(&mut context, from, from));
 
         storage.private_balances.at(to).add(to, amount).emit(encode_and_encrypt_note(
             &mut context,
@@ -496,7 +498,8 @@ pub contract Token {
             from,
             from,
         ));
-        Token::at(context.this_address())._reduce_total_supply(amount).enqueue(&mut context);
+        let self = Token::at(context.this_address());
+        self._reduce_total_supply(amount).enqueue(&mut context);
     }
 
     #[public]
@@ -508,8 +511,8 @@ pub contract Token {
         }
         let from_balance = storage.public_balances.at(from).read().sub(amount);
         storage.public_balances.at(from).write(from_balance);
-        let new_supply = storage.total_supply.read().sub(amount);
-        storage.total_supply.write(new_supply);
+        let self = Token::at(context.this_address());
+        self._reduce_total_supply(amount);
     }
 
     #[public]
