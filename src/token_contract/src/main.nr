@@ -422,11 +422,11 @@ pub contract Token {
         to: AztecAddress,
         amount: U128,
     ) {
-        let self = Token::at(context.this_address());
-
         // We prepare the partial note to which we'll "send" the minted amount.
         let hiding_point_slot =
             _prepare_transfer_public_to_private(from, to, &mut context, storage);
+
+        let self: Token = Token::at(context.this_address());
 
         // At last we finalize the mint. Usage of the `unsafe` method here is safe because we set the `from`
         // function argument to a message sender, guaranteeing that only a message sender with minter permissions
@@ -512,7 +512,7 @@ pub contract Token {
         let from_balance = storage.public_balances.at(from).read().sub(amount);
         storage.public_balances.at(from).write(from_balance);
         let self = Token::at(context.this_address());
-        _reduce_total_supply_(amount, storage);
+        self._reduce_total_supply(amount).call(&mut context);
     }
 
     #[public]
@@ -523,10 +523,4 @@ pub contract Token {
         storage.total_supply.write(new_supply);
     }
 
-    #[contract_library_method]
-    fn _reduce_total_supply_(amount: U128, storage: Storage<&mut PublicContext>) {
-        // Only to be called from burn.
-        let new_supply = storage.total_supply.read().sub(amount);
-        storage.total_supply.write(new_supply);
-    }
 }
