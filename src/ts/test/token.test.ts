@@ -1,38 +1,21 @@
-import { TokenContractArtifact, TokenContract } from '../../../artifacts/Token.js';
+import { TokenContractArtifact, TokenContract } from '../../artifacts/Token.js';
 import {
   AccountWallet,
   CompleteAddress,
   ContractDeployer,
-  createLogger,
   Fr,
   PXE,
-  waitForPXE,
   TxStatus,
-  createPXEClient,
   getContractInstanceFromDeployParams,
-  Logger,
   Contract,
   AztecAddress,
   AccountWalletWithSecretKey,
-  Wallet,
   UniqueNote,
 } from '@aztec/aztec.js';
 import { createAccount, getInitialTestAccountsWallets } from '@aztec/accounts/testing';
+import { createPXE, logger, setupSandbox } from './utils.js';
 
-const createPXE = async (id: number = 0) => {
-  // TODO: we should probably define testing fixtures for this kind of configuration
-  const { BASE_PXE_URL = `http://localhost` } = process.env;
-  const url = `${BASE_PXE_URL}:${8080 + id}`;
-  const pxe = createPXEClient(url);
-  await waitForPXE(pxe);
-  return pxe;
-};
-
-const setupSandbox = async () => {
-  return createPXE();
-};
-
-async function deployToken(deployer: AccountWallet) {
+export async function deployToken(deployer: AccountWallet) {
   const contract = await Contract.deploy(deployer, TokenContractArtifact, ['PrivateToken', 'PT', 18]).send().deployed();
   return contract;
 }
@@ -50,11 +33,8 @@ describe('Token - Single PXE', () => {
 
   const AMOUNT = 1000n;
 
-  let logger: Logger;
-
   beforeAll(async () => {
-    logger = createLogger('aztec:aztec-starter');
-    logger.info('Aztec-Starter tests running.');
+    logger.info('token contract tests running.');
 
     pxe = await setupSandbox();
 
@@ -425,11 +405,8 @@ describe('Token - Multi PXE', () => {
   let token: TokenContract;
   const AMOUNT = 1000n;
 
-  let logger: Logger;
-
   beforeAll(async () => {
-    logger = createLogger('aztec:aztec-starter');
-    logger.info('Aztec-Starter tests running.');
+    logger.info(`Token -Multi PXE tests running`);
 
     alicePXE = await createPXE(0);
     bobPXE = await createPXE(1);
