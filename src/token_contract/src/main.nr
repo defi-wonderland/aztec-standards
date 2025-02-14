@@ -22,7 +22,7 @@ pub contract Token {
         note::note_interface::PartialNote,
         oracle::random::random,
         prelude::{AztecAddress, Map, PublicContext, PublicImmutable, PublicMutable},
-        protocol_types::{point::Point, traits::Serialize},
+        protocol_types::{point::Point, traits::{Serialize, Hash}},
     };
 
     use dep::uint_note::uint_note::UintNote;
@@ -41,9 +41,6 @@ pub contract Token {
     // therefore read more notes than in the base case to increase the efficiency of the overhead, since this results in
     // an overall small circuit regardless.
     global RECURSIVE_TRANSFER_CALL_MAX_NOTES: u32 = 8;
-
-    global ERROR_INVALID_NONCE: str<13> = "invalid nonce";
-    global ERROR_BALANCE_TOO_LOW: str<15> = "Balance too low";
 
     #[storage]
     struct Storage<Context> {
@@ -66,6 +63,7 @@ pub contract Token {
     /** ==========================================================
      * ========================= PRIVATE =========================
      * ======================================================== */
+
     #[private]
     fn transfer_private_to_public(
         from: AztecAddress,
@@ -263,7 +261,7 @@ pub contract Token {
         if (!from.eq(context.msg_sender())) {
             assert_current_call_valid_authwit(context, from);
         } else {
-            assert(nonce == 0, ERROR_INVALID_NONCE);
+            assert(nonce == 0, "invalid nonce");
         }
     }
 
@@ -323,7 +321,7 @@ pub contract Token {
         // We could in some cases fail early inside try_sub if we detected that fewer notes than the maximum were
         // returned and we were still unable to reach the target amount, but that'd make the code more complicated, and
         // optimizing for the failure scenario is not as important.
-        assert(subtracted > U128::zero(), ERROR_BALANCE_TOO_LOW);
+        assert(subtracted > U128::zero(), "Balance too low");
         if subtracted >= amount {
             // We have achieved our goal of nullifying notes that add up to more than amount, so we return the change
             subtracted - amount
@@ -510,7 +508,7 @@ pub contract Token {
         if (!from.eq(context.msg_sender())) {
             assert_current_call_valid_authwit_public(&mut context, from);
         } else {
-            assert(nonce == 0, ERROR_INVALID_NONCE);
+            assert(nonce == 0, "invalid nonce");
         }
         let from_balance = storage.public_balances.at(from).read().sub(amount);
         storage.public_balances.at(from).write(from_balance);
