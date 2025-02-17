@@ -10,10 +10,9 @@ import {
   Contract,
   AztecAddress,
   AccountWalletWithSecretKey,
-  UniqueNote,
 } from '@aztec/aztec.js';
 import { createAccount, getInitialTestAccountsWallets } from '@aztec/accounts/testing';
-import { createPXE, logger, setupSandbox } from './utils.js';
+import { AMOUNT, createPXE, expectTokenBalances, expectUintNote, logger, setupSandbox, wad } from './utils.js';
 
 export async function deployToken(deployer: AccountWallet) {
   const contract = await Contract.deploy(deployer, TokenContractArtifact, ['PrivateToken', 'PT', 18]).send().deployed();
@@ -31,11 +30,7 @@ describe('Token - Single PXE', () => {
 
   let token: TokenContract;
 
-  const AMOUNT = 1000n;
-
   beforeAll(async () => {
-    logger.info('token contract tests running.');
-
     pxe = await setupSandbox();
 
     wallets = await getInitialTestAccountsWallets(pxe);
@@ -44,6 +39,11 @@ describe('Token - Single PXE', () => {
     alice = wallets[0];
     bob = wallets[1];
     carl = wallets[2];
+
+    console.log({
+      alice: alice.getAddress(),
+      bob: bob.getAddress(),
+    });
   });
 
   beforeEach(async () => {
@@ -403,11 +403,8 @@ describe('Token - Multi PXE', () => {
   let bob: AccountWallet;
 
   let token: TokenContract;
-  const AMOUNT = 1000n;
 
   beforeAll(async () => {
-    logger.info(`Token -Multi PXE tests running`);
-
     alicePXE = await createPXE(0);
     bobPXE = await createPXE(1);
 
@@ -445,19 +442,6 @@ describe('Token - Multi PXE', () => {
     ]);
   });
 
-  const expectNote = (note: UniqueNote, amount: bigint, owner: AztecAddress) => {
-    // 3th element of items is randomness, so we slice the first 2
-    expect(note.note.items.slice(0, 2)).toStrictEqual([new Fr(amount), new Fr(owner.toBigInt())]);
-  };
-
-  const expectBalances = async (address: AztecAddress, publicBalance: bigint, privateBalance: bigint) => {
-    logger.info('checking balances for', address.toString());
-    expect(await token.methods.balance_of_public(address).simulate()).toBe(publicBalance);
-    expect(await token.methods.balance_of_private(address).simulate()).toBe(privateBalance);
-  };
-
-  const wad = (n: number = 1) => AMOUNT * BigInt(n);
-
   it('transfers', async () => {
     let events, notes;
 
@@ -473,12 +457,12 @@ describe('Token - Multi PXE', () => {
     await token.methods.sync_notes().simulate({});
 
     // assert balances
-    await expectBalances(alice.getAddress(), wad(5), wad(5));
+    await expectTokenBalances(token, alice.getAddress(), wad(5), wad(5));
 
     // retrieve notes from last tx
     notes = await alice.getNotes({ txHash: aliceShieldTx.txHash });
     expect(notes.length).toBe(1);
-    expectNote(notes[0], wad(5), alice.getAddress());
+    expectUintNote(notes[0], wad(5), alice.getAddress());
 
     // transfer some private tokens to bob
     const fundBobTx = await token
@@ -492,11 +476,11 @@ describe('Token - Multi PXE', () => {
 
     notes = await alice.getNotes({ txHash: fundBobTx.txHash });
     expect(notes.length).toBe(1);
-    expectNote(notes[0], wad(5), bob.getAddress());
+    expectUintNote(notes[0], wad(5), bob.getAddress());
 
     notes = await bob.getNotes({ txHash: fundBobTx.txHash });
     expect(notes.length).toBe(1);
-    expectNote(notes[0], wad(5), bob.getAddress());
+    expectUintNote(notes[0], wad(5), bob.getAddress());
 
     // fund bob again
     const fundBobTx2 = await token
@@ -511,24 +495,24 @@ describe('Token - Multi PXE', () => {
     await token.withWallet(bob).methods.sync_notes().simulate({});
 
     // assert balances
-    await expectBalances(alice.getAddress(), wad(0), wad(0));
-    await expectBalances(bob.getAddress(), wad(0), wad(10));
+    await expectTokenBalances(token, alice.getAddress(), wad(0), wad(0));
+    await expectTokenBalances(token, bob.getAddress(), wad(0), wad(10));
 
     // Alice shouldn't have any notes because it not a sender/registered account in her PXE
     // (but she has because I gave her access to Bob's notes)
     notes = await alice.getNotes({ txHash: fundBobTx2.txHash });
     expect(notes.length).toBe(1);
-    expectNote(notes[0], wad(5), bob.getAddress());
+    expectUintNote(notes[0], wad(5), bob.getAddress());
 
     // Bob should have a note with himself as owner
     // TODO: why noteTypeId is always `Selector<0x00000000>`?
     notes = await bob.getNotes({ txHash: fundBobTx2.txHash });
     expect(notes.length).toBe(1);
-    expectNote(notes[0], wad(5), bob.getAddress());
+    expectUintNote(notes[0], wad(5), bob.getAddress());
 
     // assert alice's balances again
-    await expectBalances(alice.getAddress(), wad(0), wad(0));
+    await expectTokenBalances(token, alice.getAddress(), wad(0), wad(0));
     // assert bob's balances
-    await expectBalances(bob.getAddress(), wad(0), wad(10));
+    await expectTokenBalances(token, bob.getAddress(), wad(0), wad(10));
   }, 300_000);
 });
