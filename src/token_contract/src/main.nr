@@ -11,16 +11,18 @@ use dep::aztec::macros::aztec;
 // Including a nonce in the message hash ensures that the message can only be used once.
 #[aztec]
 pub contract Token {
-    // Libs
+
     use dep::compressed_string::FieldCompressedString;
+    use dep::std::ops::{Add, Sub};
 
     use dep::aztec::{
         context::{PrivateCallInterface, PrivateContext},
         encrypted_logs::log_assembly_strategies::default_aes128::note::encode_and_encrypt_note,
         macros::{functions::{initializer, internal, private, public, view}, storage::storage},
+        note::{note_emission::OuterNoteEmission, note_interface::PartialNote},
         oracle::random::random,
         prelude::{AztecAddress, Map, PublicContext, PublicImmutable, PublicMutable},
-        protocol_types::{point::Point, traits::Serialize},
+        protocol_types::{point::Point, traits::{Hash, Serialize}},
     };
 
     use dep::uint_note::uint_note::UintNote;
@@ -61,6 +63,7 @@ pub contract Token {
     /** ==========================================================
      * ========================= PRIVATE =========================
      * ======================================================== */
+
     #[private]
     fn transfer_private_to_public(
         from: AztecAddress,
@@ -76,9 +79,11 @@ pub contract Token {
             from,
             amount,
             INITIAL_TRANSFER_CALL_MAX_NOTES,
-        );
+        )
+            .emit(encode_and_encrypt_note(&mut context, from, from));
 
-        Token::at(context.this_address())._increase_public_balance(to, amount).enqueue(&mut context);
+        let self = Token::at(context.this_address());
+        self._increase_public_balance(to, amount).enqueue(&mut context);
     }
 
     #[private]
@@ -96,7 +101,8 @@ pub contract Token {
             from,
             amount,
             INITIAL_TRANSFER_CALL_MAX_NOTES,
-        );
+        )
+            .emit(encode_and_encrypt_note(&mut context, from, from));
 
         storage.private_balances.at(to).add(to, amount).emit(encode_and_encrypt_note(
             &mut context,
@@ -115,7 +121,7 @@ pub contract Token {
     ) {
         _validate_from_private(from, nonce, &mut context);
 
-        let token = Token::at(context.this_address());
+        let self = Token::at(context.this_address());
 
         // We prepare the private balance increase (the partial note).
         let hiding_point_slot =
@@ -123,7 +129,7 @@ pub contract Token {
 
         // At last we finalize the transfer. Usage of the `unsafe` method here is safe because we set the `from`
         // function argument to a message sender, guaranteeing that he can transfer only his own tokens.
-        token._finalize_transfer_public_to_private_unsafe(from, amount, hiding_point_slot).enqueue(
+        self._finalize_transfer_public_to_private_unsafe(from, amount, hiding_point_slot).enqueue(
             &mut context,
         );
     }
@@ -190,18 +196,6 @@ pub contract Token {
         );
     }
 
-    #[public]
-    #[view]
-    fn balance_of_public(owner: AztecAddress) -> U128 {
-        storage.public_balances.at(owner).read()
-    }
-
-    #[public]
-    #[view]
-    fn total_supply() -> U128 {
-        storage.total_supply.read()
-    }
-
     // TODO(#9375): Having to define the note log length here is very unfortunate as it's basically impossible for
     // users to derive manually. This will however go away once we have a real transient storage since we will not need
     // the public call and instead we would do something like `context.transient_storage_write(slot, payload)` and that
@@ -245,18 +239,24 @@ pub contract Token {
     }
 
     /** ==========================================================
-     * ======================= LIBRARIES =========================
+     * ====================== VIEW FUNCTIONS =====================
      * ======================================================== */
 
-    // #[contract_library_method]
-    // fn _validate_from_public(from: AztecAddress, nonce: Field, context: PublicContext) {
-    //     if (!from.eq(context.msg_sender())) {
-    //         //  TODO: I cannot pass the &mut context from constrained run to unconstrained runtime
-    //          assert_current_call_valid_authwit_public(&mut context, from);
-    //     } else {
-    //         assert(nonce == 0, "invalid nonce");
-    //     }
-    // }
+    #[public]
+    #[view]
+    fn balance_of_public(owner: AztecAddress) -> U128 {
+        storage.public_balances.at(owner).read()
+    }
+
+    #[public]
+    #[view]
+    fn total_supply() -> U128 {
+        storage.total_supply.read()
+    }
+
+    /** ==========================================================
+     * ======================= LIBRARIES =========================
+     * ======================================================== */
 
     #[contract_library_method]
     fn _validate_from_private(from: AztecAddress, nonce: Field, context: &mut PrivateContext) {
@@ -294,7 +294,7 @@ pub contract Token {
         account: AztecAddress,
         amount: U128,
         max_notes: u32,
-    ) {
+    ) -> OuterNoteEmission<UintNote> {
         // We reduce `from`'s balance by amount by recursively removing notes over potentially multiple calls. This
         // method keeps the gate count for each individual call low - reading too many notes at once could result in
         // circuits in which proving is not feasible.
@@ -303,11 +303,7 @@ pub contract Token {
         // 5, then the change will be 3 (since 8 + 5 - 10 = 3).
         let change = _subtract_balance(context, storage, account, amount, max_notes);
 
-        storage.private_balances.at(account).add(account, change).emit(encode_and_encrypt_note(
-            context,
-            account,
-            account,
-        ));
+        storage.private_balances.at(account).add(account, change)
     }
 
     #[contract_library_method]
@@ -344,7 +340,9 @@ pub contract Token {
         account: AztecAddress,
         remaining: U128,
     ) -> PrivateCallInterface<25, U128> {
-        Token::at(context.this_address())._recurse_subtract_balance(account, remaining)
+        let self = Token::at(context.this_address());
+
+        self._recurse_subtract_balance(account, remaining)
     }
 
     /// This function exists separately from `prepare_transfer_public_to_private` solely as an optimization as it allows
@@ -388,10 +386,12 @@ pub contract Token {
         // (MSM).
         let hiding_point_slot = note_setup_payload.hiding_point.x;
 
+        let self = Token::at(context.this_address());
+
         // We don't need to perform a check that the value overwritten by `_store_point_in_transient_storage_unsafe`
         // is zero because the slot is the x-coordinate of the hiding point and hence we could only overwrite
         // the value in the slot with the same value. This makes usage of the `unsafe` method safe.
-        Token::at(context.this_address())
+        self
             ._store_payload_in_transient_storage_unsafe(
                 hiding_point_slot,
                 note_setup_payload.hiding_point,
@@ -402,7 +402,10 @@ pub contract Token {
         hiding_point_slot
     }
 
-    /// Unconstrained ///
+    /** ==========================================================
+     * ===================== UNCONSTRAINED =======================
+     * ======================================================== */
+
     pub(crate) unconstrained fn balance_of_private(owner: AztecAddress) -> pub U128 {
         storage.private_balances.at(owner).balance_of()
     }
@@ -419,16 +422,16 @@ pub contract Token {
         to: AztecAddress,
         amount: U128,
     ) {
-        let token = Token::at(context.this_address());
-
         // We prepare the partial note to which we'll "send" the minted amount.
         let hiding_point_slot =
             _prepare_transfer_public_to_private(from, to, &mut context, storage);
 
+        let self: Token = Token::at(context.this_address());
+
         // At last we finalize the mint. Usage of the `unsafe` method here is safe because we set the `from`
         // function argument to a message sender, guaranteeing that only a message sender with minter permissions
         // can successfully execute the function.
-        token
+        self
             ._finalize_mint_to_private_unsafe(context.msg_sender(), amount, hiding_point_slot)
             .enqueue(&mut context);
     }
@@ -482,5 +485,42 @@ pub contract Token {
         finalization_payload.emit();
     }
 
-}
+    /** ==========================================================
+     * ======================= BURNABLE ==========================
+     * ======================================================== */
 
+    #[private]
+    fn burn_private(from: AztecAddress, amount: U128, nonce: Field) {
+        _validate_from_private(from, nonce, &mut context);
+
+        storage.private_balances.at(from).sub(from, amount).emit(encode_and_encrypt_note(
+            &mut context,
+            from,
+            from,
+        ));
+        let self = Token::at(context.this_address());
+        self._reduce_total_supply(amount).enqueue(&mut context);
+    }
+
+    #[public]
+    fn burn_public(from: AztecAddress, amount: U128, nonce: Field) {
+        if (!from.eq(context.msg_sender())) {
+            assert_current_call_valid_authwit_public(&mut context, from);
+        } else {
+            assert(nonce == 0, "invalid nonce");
+        }
+        let from_balance = storage.public_balances.at(from).read().sub(amount);
+        storage.public_balances.at(from).write(from_balance);
+        let self = Token::at(context.this_address());
+        self._reduce_total_supply(amount).call(&mut context);
+    }
+
+    #[public]
+    #[internal]
+    fn _reduce_total_supply(amount: U128) {
+        // Only to be called from burn.
+        let new_supply = storage.total_supply.read().sub(amount);
+        storage.total_supply.write(new_supply);
+    }
+
+}

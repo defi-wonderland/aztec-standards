@@ -11,7 +11,7 @@
     "codegen": "aztec codegen target --outdir src/artifacts",
     "compile": "aztec-nargo compile",
     "start:pxe": "docker compose -f $(dirname $(dirname $(which aztec)))/docker-compose.sandbox.yml -f docker-compose.override.yml up",
-    "test": "yarn test:js && yarn test:nr",
+    "test": "yarn test:nr && yarn test:js",
     "test:js": "NODE_NO_WARNINGS=1 node --experimental-vm-modules $(yarn bin jest) --no-cache --runInBand --config jest.integration.config.json",
     "test:nr": "aztec test",
     "lint:prettier": "prettier '**/*.{js,ts}' --write"
