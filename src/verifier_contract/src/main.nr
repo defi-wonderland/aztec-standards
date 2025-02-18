@@ -1,11 +1,6 @@
 use dep::aztec::macros::aztec;
 
-// Minimal token implementation that supports `AuthWit` accounts.
-// The auth message follows a similar pattern to the cross-chain message and includes a designated caller.
-// The designated caller is ALWAYS used here, and not based on a flag as cross-chain.
-// message hash = H([caller, contract, selector, ...args])
-// To be read as `caller` calls function at `contract` defined by `selector` with `args`
-// Including a nonce in the message hash ensures that the message can only be used once.
+// Verifier implementation with Merkle proof verification
 #[aztec]
 pub contract Verifier {
 
