@@ -24,7 +24,7 @@ pub contract Verifier {
     * ========================= PRIVATE =========================
     * ======================================================== */
     #[private]
-    fn validate_from_private(
+    fn verify_in_private(
         sender: AztecAddress,
         recipient: AztecAddress,
         amount: U128

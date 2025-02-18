@@ -75,7 +75,7 @@ pub contract AuthorizationToken {
         nonce: Field,
     ) {
         _validate_from_private(from, nonce, &mut context);
-        _verify_from_private(from, to, amount, &mut context, storage);
+        _verify_in_private(from, to, amount, &mut context, storage);
 
         _subtract_exact_balance(
             &mut context,
@@ -96,7 +96,7 @@ pub contract AuthorizationToken {
         nonce: Field,
     ) {
         _validate_from_private(from, nonce, &mut context);
-        _verify_from_private(from, to, amount, &mut context, storage);
+        _verify_in_private(from, to, amount, &mut context, storage);
 
         _subtract_exact_balance(
             &mut context,
@@ -122,7 +122,7 @@ pub contract AuthorizationToken {
         nonce: Field,
     ) {
         _validate_from_private(from, nonce, &mut context);
-        _verify_from_private(from, to, amount, &mut context, storage);
+        _verify_in_private(from, to, amount, &mut context, storage);
         
         let token = AuthorizationToken::at(context.this_address());
 
@@ -268,10 +268,10 @@ pub contract AuthorizationToken {
     // }
 
     #[contract_library_method]
-    fn _verify_from_private(from: AztecAddress, to: AztecAddress, amount: U128, context: &mut PrivateContext, storage: Storage<&mut PrivateContext>) {
+    fn _verify_in_private(from: AztecAddress, to: AztecAddress, amount: U128, context: &mut PrivateContext, storage: Storage<&mut PrivateContext>) {
         let verifier = storage.verifier.get_current_value();
         let verifier_contract = Verifier::at(verifier);
-        verifier_contract.validate_from_private(from, to, amount).call(context);
+        verifier_contract.verify_in_private(from, to, amount).call(context);
     }
 
     #[contract_library_method]
