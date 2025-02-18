@@ -402,6 +402,21 @@ pub contract Token {
         hiding_point_slot
     }
 
+    #[public]
+    #[internal]
+    fn _mint_to(to: AztecAddress, amount: U128) {
+        let self = Token::at(context.this_address());
+        self._increase_public_balance(to, amount).call(&mut context);
+        self._increase_total_supply(amount).call(&mut context);
+    }
+
+    #[public]
+    #[internal]
+    fn _increase_total_supply(amount: U128) {
+        let new_supply = storage.total_supply.read().add(amount);
+        storage.total_supply.write(new_supply);
+    }
+
     /** ==========================================================
      * ===================== UNCONSTRAINED =======================
      * ======================================================== */
@@ -438,10 +453,8 @@ pub contract Token {
 
     #[public]
     fn mint_to_public(to: AztecAddress, amount: U128) {
-        let new_balance = storage.public_balances.at(to).read().add(amount);
-        let supply = storage.total_supply.read().add(amount);
-        storage.public_balances.at(to).write(new_balance);
-        storage.total_supply.write(supply);
+        let self = Token::at(context.this_address());
+        self._mint_to(to, amount).call(&mut context);
     }
 
     /// Finalizes a mint of token `amount` to a private balance of `to`. The mint must be prepared by calling
