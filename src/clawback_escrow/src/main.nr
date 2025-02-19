@@ -30,7 +30,7 @@ pub contract ClawbackEscrow {
         sender: AztecAddress,
         receiver: AztecAddress,
         escrow: AztecAddress,
-        // randomness: Field
+        randomness: Field,
     }
 
     impl NullifiableNote for ClawbackEscrowNote {
