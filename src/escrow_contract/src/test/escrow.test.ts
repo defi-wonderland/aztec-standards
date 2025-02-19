@@ -88,8 +88,8 @@ describe('Escrow - Multi PXE', () => {
     });
 
     // bob knows alice and escrow
-    bobPXE.registerSender(escrow.address);
-    bobPXE.registerSender(alice.getAddress());
+    await bobPXE.registerSender(escrow.address);
+    await bobPXE.registerSender(alice.getAddress());
 
     bob.setScopes([bob.getAddress(), escrow.address]);
   });
