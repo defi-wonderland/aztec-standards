@@ -16,7 +16,6 @@ use aztec::{
     protocol_types::storage::map::derive_storage_slot_in_map,
     test::helpers::{cheatcodes, test_environment::TestEnvironment},
 };
-// use protocol_types::address::aztec_address::ToField;
 
 #[test]
 unconstrained fn clawback_create() {
@@ -63,6 +62,28 @@ unconstrained fn clawback_only_sender_can_clawback() {
         .clawback(escrow_contract_address, token_contract_address, mint_amount)
         .call(&mut env.private());
 }
+#[test(should_fail_with = "Rejecting tx for emitting duplicate nullifiers")]
+unconstrained fn only_one_note_per_escrow() {
+    let mint_amount = U128::from_integer(1_000_000_000);
+    let (env, clawback_escrow_contract_address, escrow_contract_address, _, owner, recipient) =
+        utils::setup(true, mint_amount);
+
+    // Create the clawback escrow
+    env.impersonate(owner);
+    ClawbackEscrow::at(clawback_escrow_contract_address)
+        .create_clawback_escrow(escrow_contract_address, recipient)
+        .call(&mut env.private());
+
+    env.advance_block_by(1);
+
+    // Create the clawback escrow
+    env.impersonate(owner);
+    ClawbackEscrow::at(clawback_escrow_contract_address)
+        .create_clawback_escrow(escrow_contract_address, recipient)
+        .call(&mut env.private());
+
+}
+
 
 #[test]
 unconstrained fn sender_clawbacks() {
