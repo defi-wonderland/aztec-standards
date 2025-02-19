@@ -4,11 +4,7 @@ use dep::aztec::macros::aztec;
 #[aztec]
 pub contract MerkleInclussionAuthorizer {
 
-    use dep::aztec::protocol_types::{
-        constants::{
-            MAX_PACKED_PUBLIC_BYTECODE_SIZE_IN_FIELDS,
-        },
-    };
+    use dep::aztec::protocol_types::constants::MAX_PACKED_PUBLIC_BYTECODE_SIZE_IN_FIELDS;
 
     use dep::aztec::{
         macros::{functions::{private, public, view}, storage::storage},
@@ -20,16 +16,13 @@ pub contract MerkleInclussionAuthorizer {
         root_hash: PublicMutable<Field, Context>,
     }
 
-   /** ==========================================================
+    /** ==========================================================
     * ========================= PRIVATE =========================
     * ======================================================== */
     #[private]
-    fn authorize_in_private(
-        sender: AztecAddress,
-        recipient: AztecAddress,
-        amount: U128
-    ) {
-        let merkle_tree_proof: [Field; MAX_PACKED_PUBLIC_BYTECODE_SIZE_IN_FIELDS] = [0; MAX_PACKED_PUBLIC_BYTECODE_SIZE_IN_FIELDS];
+    fn authorize_in_private(sender: AztecAddress, recipient: AztecAddress, amount: U128) {
+        let merkle_tree_proof: [Field; MAX_PACKED_PUBLIC_BYTECODE_SIZE_IN_FIELDS] =
+            [0; MAX_PACKED_PUBLIC_BYTECODE_SIZE_IN_FIELDS];
 
         // TODO: Pop capsule
         // merkle_tree_proof = unsafe { pop_capsule() };
@@ -39,7 +32,7 @@ pub contract MerkleInclussionAuthorizer {
         let is_sender_valid = _verify_merkle_proof(sender, merkle_tree_proof);
 
         assert(is_sender_valid, "Sender is not authorized");
-    }  
+    }
 
     /** ==========================================================
     * ========================= PUBLIC ==========================
@@ -63,7 +56,7 @@ pub contract MerkleInclussionAuthorizer {
     #[contract_library_method]
     fn _verify_merkle_proof(
         address: AztecAddress,
-        proof: [Field; MAX_PACKED_PUBLIC_BYTECODE_SIZE_IN_FIELDS]
+        proof: [Field; MAX_PACKED_PUBLIC_BYTECODE_SIZE_IN_FIELDS],
     ) -> bool {
         // TODO: Use the merkle proof to verify the address is in the merkle tree
         // calculate root hash
@@ -73,5 +66,4 @@ pub contract MerkleInclussionAuthorizer {
         true
     }
 }
-
 

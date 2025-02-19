@@ -85,7 +85,9 @@ pub contract AuthorizationToken {
             INITIAL_TRANSFER_CALL_MAX_NOTES,
         );
 
-        AuthorizationToken::at(context.this_address())._increase_public_balance(to, amount).enqueue(&mut context);
+        AuthorizationToken::at(context.this_address())._increase_public_balance(to, amount).enqueue(
+            &mut context,
+        );
     }
 
     #[private]
@@ -123,7 +125,7 @@ pub contract AuthorizationToken {
     ) {
         _validate_from_private(from, nonce, &mut context);
         _authorize_in_private(from, to, amount, &mut context, storage);
-        
+
         let token = AuthorizationToken::at(context.this_address());
 
         // We prepare the private balance increase (the partial note).
@@ -161,7 +163,7 @@ pub contract AuthorizationToken {
     /** ==========================================================
      * ========================= PUBLIC ==========================
      * ======================================================== */
-     
+
     #[public]
     fn transfer_public_to_public(from: AztecAddress, to: AztecAddress, amount: U128, nonce: Field) {
         if (!from.eq(context.msg_sender())) {
@@ -268,7 +270,13 @@ pub contract AuthorizationToken {
     // }
 
     #[contract_library_method]
-    fn _authorize_in_private(from: AztecAddress, to: AztecAddress, amount: U128, context: &mut PrivateContext, storage: Storage<&mut PrivateContext>) {
+    fn _authorize_in_private(
+        from: AztecAddress,
+        to: AztecAddress,
+        amount: U128,
+        context: &mut PrivateContext,
+        storage: Storage<&mut PrivateContext>,
+    ) {
         let authorizer = storage.authorizer.get_current_value();
         let authorizer_contract = MerkleInclussionAuthorizer::at(authorizer);
         authorizer_contract.authorize_in_private(from, to, amount).call(context);
