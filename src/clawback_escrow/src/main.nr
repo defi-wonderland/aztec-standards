@@ -58,12 +58,8 @@ pub contract ClawbackEscrow {
     }
 
     impl ClawbackEscrowNote {
-        pub fn new(
-            sender: AztecAddress,
-            receiver: AztecAddress,
-            escrow: AztecAddress,
-            randomness: Field,
-        ) -> Self {
+        pub fn new(sender: AztecAddress, receiver: AztecAddress, escrow: AztecAddress) -> Self {
+            let randomness = unsafe { random() };
             ClawbackEscrowNote { sender, receiver, escrow, randomness, header: NoteHeader::empty() }
         }
     }
@@ -83,7 +79,7 @@ pub contract ClawbackEscrow {
         Escrow::at(escrow).leak_keys(receiver).call(&mut context);
 
         let sender = context.msg_sender();
-        let mut note = ClawbackEscrowNote::new(sender, receiver, escrow, unsafe { random() });
+        let mut note = ClawbackEscrowNote::new(sender, receiver, escrow);
 
         // Check that a clawback escrow has not been created for that escrow
         let nullifier = std::hash::pedersen_hash([escrow.to_field()]); // derive nullifier from escrow address
