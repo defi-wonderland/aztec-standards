@@ -5,29 +5,23 @@ mod test;
 pub contract ClawbackEscrow {
     use dep::aztec::{
         context::PrivateContext,
-        encrypted_logs::log_assembly_strategies::default_aes128::{
-            event::{encode_and_encrypt_event, encode_and_encrypt_event_unconstrained},
-            note::{encode_and_encrypt_note, encode_and_encrypt_note_unconstrained},
-        },
-        macros::{functions::{initializer, internal, private}, notes::note, storage::storage},
+        encrypted_logs::log_assembly_strategies::default_aes128::note::encode_and_encrypt_note,
+        macros::{functions::private, notes::note, storage::storage},
         note::{
-            note_getter_options::NoteGetterOptions, note_header::NoteHeader,
-            note_interface::NullifiableNote, utils::compute_note_hash_for_nullify,
+            note_getter_options::NoteGetterOptions,
+            note_header::NoteHeader,
+            note_interface::{NoteProperties, NullifiableNote},
+            utils::compute_note_hash_for_nullify,
         },
-        oracle::random::random,
+        prelude::AztecAddress,
         protocol_types::{
-            constants::{GENERATOR_INDEX__NOTE_NULLIFIER, MAX_NOTE_HASH_READ_REQUESTS_PER_CALL},
+            constants::GENERATOR_INDEX__NOTE_NULLIFIER,
             hash::poseidon2_hash_with_separator,
-            traits::{Packable, Serialize, ToField},
+            traits::{Hash, Packable, Serialize, ToField},
         },
         state_vars::PrivateSet,
         utils::comparison::Comparator,
     };
-    use dep::aztec::prelude::{AztecAddress, PrivateImmutable};
-
-    use dep::address_note::address_note::AddressNote;
-    use dep::token::Token;
-
     use dep::escrow_contract::Escrow;
 
     #[note]
@@ -36,7 +30,6 @@ pub contract ClawbackEscrow {
         sender: AztecAddress,
         receiver: AztecAddress,
         escrow: AztecAddress,
-        // We probably need randomness for privacy between participants of the same escrow
         // randomness: Field
     }
 
@@ -74,10 +67,14 @@ pub contract ClawbackEscrow {
         escrows: PrivateSet<ClawbackEscrowNote, Context>,
     }
 
+    /** ==========================================================
+     * ======================= PRIVATE ===========================
+     * ======================================================== */
+
     #[private]
     fn create_clawback_escrow(escrow: AztecAddress, receiver: AztecAddress) {
         // This will revert if the Clawback Escrow is not the owner of the escrow
-        let _ = Escrow::at(escrow).leak_keys(receiver);
+        Escrow::at(escrow).leak_keys(receiver).call(&mut context);
 
         let sender = context.msg_sender();
         let mut note = ClawbackEscrowNote::new(sender, receiver, escrow);
@@ -121,12 +118,15 @@ pub contract ClawbackEscrow {
         Escrow::at(escrow).withdraw(token, amount, caller).call(&mut context);
     }
 
+    /** ==========================================================
+     * ======================== LIBRARIES ========================
+     * ======================================================== */
+
     #[contract_library_method]
     fn _find_clawback_note(
         storage: Storage<&mut PrivateContext>,
         escrow: AztecAddress,
     ) -> ClawbackEscrowNote {
-        // let options = NoteGetterOptions::with_filter(filter_note_escrow, escrow);
         let options = NoteGetterOptions::new()
             .select(ClawbackEscrowNote::properties().escrow, Comparator.EQ, escrow)
             .set_limit(1);
