@@ -1,8 +1,8 @@
 use dep::aztec::macros::aztec;
 
-// Verifier implementation with Merkle proof verification
+// Authorizer implementation with Merkle proof verification
 #[aztec]
-pub contract Verifier {
+pub contract MerkleInclussionAuthorizer {
 
     use dep::aztec::protocol_types::{
         constants::{
@@ -24,7 +24,7 @@ pub contract Verifier {
     * ========================= PRIVATE =========================
     * ======================================================== */
     #[private]
-    fn verify_in_private(
+    fn authorize_in_private(
         sender: AztecAddress,
         recipient: AztecAddress,
         amount: U128
@@ -33,6 +33,8 @@ pub contract Verifier {
 
         // TODO: Pop capsule
         // merkle_tree_proof = unsafe { pop_capsule() };
+
+        // TODO: Can we have the msg.sig for this method?
 
         let is_sender_valid = _verify_merkle_proof(sender, merkle_tree_proof);
 
@@ -66,7 +68,7 @@ pub contract Verifier {
         // TODO: Use the merkle proof to verify the address is in the merkle tree
         // calculate root hash
         // let _root_hash = ...;
-        // let self = Verifier::at(context.this_address());
+        // let self = MerkleInclussionAuthorizer::at(context.this_address());
         // self.validate_root_hash(_root_hash);
         true
     }

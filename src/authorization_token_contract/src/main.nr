@@ -30,7 +30,7 @@ pub contract AuthorizationToken {
 
     use crate::types::balance_set::BalanceSet;
 
-    use dep::verifier_contract::Verifier;
+    use dep::merkle_inclussion_authorizer_contract::MerkleInclussionAuthorizer;
 
     // In the first transfer iteration we are computing a lot of additional information (validating inputs, retrieving
     // keys, etc.), so the gate count is already relatively high. We therefore only read a few notes to keep the happy
@@ -46,7 +46,7 @@ pub contract AuthorizationToken {
 
     #[storage]
     struct Storage<Context> {
-        verifier: SharedMutable<AztecAddress, CHANGE_AUTHORIZED_DELAY_BLOCKS, Context>,
+        authorizer: SharedMutable<AztecAddress, CHANGE_AUTHORIZED_DELAY_BLOCKS, Context>,
         name: PublicImmutable<FieldCompressedString, Context>,
         symbol: PublicImmutable<FieldCompressedString, Context>,
         decimals: PublicImmutable<u8, Context>,
@@ -57,11 +57,11 @@ pub contract AuthorizationToken {
 
     #[public]
     #[initializer]
-    fn constructor(name: str<31>, symbol: str<31>, decimals: u8, verifier: AztecAddress) {
+    fn constructor(name: str<31>, symbol: str<31>, decimals: u8, authorizer: AztecAddress) {
         storage.name.initialize(FieldCompressedString::from_string(name));
         storage.symbol.initialize(FieldCompressedString::from_string(symbol));
         storage.decimals.initialize(decimals);
-        storage.verifier.schedule_value_change(verifier)
+        storage.authorizer.schedule_value_change(authorizer)
     }
 
     /** ==========================================================
@@ -75,7 +75,7 @@ pub contract AuthorizationToken {
         nonce: Field,
     ) {
         _validate_from_private(from, nonce, &mut context);
-        _verify_in_private(from, to, amount, &mut context, storage);
+        _authorize_in_private(from, to, amount, &mut context, storage);
 
         _subtract_exact_balance(
             &mut context,
@@ -96,7 +96,7 @@ pub contract AuthorizationToken {
         nonce: Field,
     ) {
         _validate_from_private(from, nonce, &mut context);
-        _verify_in_private(from, to, amount, &mut context, storage);
+        _authorize_in_private(from, to, amount, &mut context, storage);
 
         _subtract_exact_balance(
             &mut context,
@@ -122,7 +122,7 @@ pub contract AuthorizationToken {
         nonce: Field,
     ) {
         _validate_from_private(from, nonce, &mut context);
-        _verify_in_private(from, to, amount, &mut context, storage);
+        _authorize_in_private(from, to, amount, &mut context, storage);
         
         let token = AuthorizationToken::at(context.this_address());
 
@@ -268,10 +268,10 @@ pub contract AuthorizationToken {
     // }
 
     #[contract_library_method]
-    fn _verify_in_private(from: AztecAddress, to: AztecAddress, amount: U128, context: &mut PrivateContext, storage: Storage<&mut PrivateContext>) {
-        let verifier = storage.verifier.get_current_value();
-        let verifier_contract = Verifier::at(verifier);
-        verifier_contract.verify_in_private(from, to, amount).call(context);
+    fn _authorize_in_private(from: AztecAddress, to: AztecAddress, amount: U128, context: &mut PrivateContext, storage: Storage<&mut PrivateContext>) {
+        let authorizer = storage.authorizer.get_current_value();
+        let authorizer_contract = MerkleInclussionAuthorizer::at(authorizer);
+        authorizer_contract.authorize_in_private(from, to, amount).call(context);
     }
 
     #[contract_library_method]
