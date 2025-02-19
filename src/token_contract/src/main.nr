@@ -327,22 +327,9 @@ pub contract Token {
             // try_sub failed to nullify enough notes to reach the target amount, so we compute the amount remaining
             // and try again.
             let remaining = amount - subtracted;
-            compute_recurse_subtract_balance_call(*context, account, remaining).call(context)
+            let self = Token::at(context.this_address());
+            self._recurse_subtract_balance(account, remaining).call(context)
         }
-    }
-
-    // TODO(#7729): apply no_predicates to the contract interface method directly instead of having to use a wrapper
-    // like we do here.
-    #[no_predicates]
-    #[contract_library_method]
-    fn compute_recurse_subtract_balance_call(
-        context: PrivateContext,
-        account: AztecAddress,
-        remaining: U128,
-    ) -> PrivateCallInterface<25, U128> {
-        let self = Token::at(context.this_address());
-
-        self._recurse_subtract_balance(account, remaining)
     }
 
     /// This function exists separately from `prepare_transfer_public_to_private` solely as an optimization as it allows
