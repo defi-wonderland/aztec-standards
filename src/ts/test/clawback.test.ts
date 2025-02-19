@@ -19,16 +19,15 @@ import { computePartialAddress, deriveKeys, getContractInstanceFromDeployParams 
 import { createPXE, expectTokenBalances, logger, wad } from './utils.js';
 import { deployToken } from './token.test.js';
 
-async function deployEscrow(pxes: PXE[], deployerWallet: Wallet, owner: AztecAddress): Promise<EscrowContract> {
+async function deployEscrow(pxe: PXE, deployerWallet: Wallet, owner: AztecAddress): Promise<EscrowContract> {
   const escrowSecretKey = Fr.random();
   const escrowPublicKeys = (await deriveKeys(escrowSecretKey)).publicKeys;
   const escrowDeployment = EscrowContract.deployWithPublicKeys(escrowPublicKeys, deployerWallet, owner);
   const escrowInstance = await escrowDeployment.getInstance();
-  await Promise.all(
-    pxes.map(async (pxe) => pxe.registerAccount(escrowSecretKey, await computePartialAddress(escrowInstance))),
-  );
 
-  const contractMetadata = await pxes[0].getContractMetadata(escrowInstance.address);
+  pxe.registerAccount(escrowSecretKey, await computePartialAddress(escrowInstance));
+
+  const contractMetadata = await pxe.getContractMetadata(escrowInstance.address);
   expect(contractMetadata).toBeDefined();
   expect(contractMetadata.isContractPubliclyDeployed).toBeFalsy();
 
@@ -90,7 +89,7 @@ describe.only('Clawback Escrow - Multi PXE', () => {
     token = (await deployToken(alice)) as TokenContract;
     clawback = (await deployClawbackEscrow([alicePXE, bobPXE], alice)) as ClawbackEscrowContract;
     // escrow = await deployEscrow([alicePXE, bobPXE], alice, clawback.address) as EscrowContract;
-    escrow = (await deployEscrow([alicePXE, bobPXE], alice, clawback.address)) as EscrowContract;
+    escrow = (await deployEscrow(alicePXE, alice, clawback.address)) as EscrowContract;
     console.log({
       token: token.address,
       clawback: clawback.address,
@@ -112,7 +111,7 @@ describe.only('Clawback Escrow - Multi PXE', () => {
     await bobPXE.registerSender(clawback.address);
     await bobPXE.registerSender(alice.getAddress());
 
-    bob.setScopes([bob.getAddress(), alice.getAddress(), escrow.address, clawback.address]);
+    bob.setScopes([bob.getAddress(), escrow.address]);
   });
 
   const expectClawbackNote = (note: UniqueNote, sender: AztecAddress, receiver: AztecAddress, escrow: AztecAddress) => {
