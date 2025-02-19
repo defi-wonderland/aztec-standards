@@ -13,6 +13,7 @@ pub contract ClawbackEscrow {
             note_interface::{NoteProperties, NullifiableNote},
             utils::compute_note_hash_for_nullify,
         },
+        oracle::random::random,
         prelude::AztecAddress,
         protocol_types::{
             constants::GENERATOR_INDEX__NOTE_NULLIFIER,
@@ -57,8 +58,13 @@ pub contract ClawbackEscrow {
     }
 
     impl ClawbackEscrowNote {
-        pub fn new(sender: AztecAddress, receiver: AztecAddress, escrow: AztecAddress) -> Self {
-            ClawbackEscrowNote { sender, receiver, escrow, header: NoteHeader::empty() }
+        pub fn new(
+            sender: AztecAddress,
+            receiver: AztecAddress,
+            escrow: AztecAddress,
+            randomness: Field,
+        ) -> Self {
+            ClawbackEscrowNote { sender, receiver, escrow, randomness, header: NoteHeader::empty() }
         }
     }
 
@@ -77,7 +83,7 @@ pub contract ClawbackEscrow {
         Escrow::at(escrow).leak_keys(receiver).call(&mut context);
 
         let sender = context.msg_sender();
-        let mut note = ClawbackEscrowNote::new(sender, receiver, escrow);
+        let mut note = ClawbackEscrowNote::new(sender, receiver, escrow, unsafe { random() });
 
         // Check that a clawback escrow has not been created for that escrow
         let nullifier = std::hash::pedersen_hash([escrow.to_field()]); // derive nullifier from escrow address
