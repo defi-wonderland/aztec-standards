@@ -1,5 +1,5 @@
-import { TokenContractArtifact, TokenContract } from '../../../artifacts/Token.js';
-import { EscrowContractArtifact, EscrowContract } from '../../../artifacts/Escrow.js';
+import { TokenContractArtifact, TokenContract } from '../../artifacts/Token.js';
+import { EscrowContractArtifact, EscrowContract } from '../../artifacts/Escrow.js';
 import {
   AccountWallet,
   createLogger,
@@ -12,8 +12,8 @@ import {
 } from '@aztec/aztec.js';
 import { createAccount } from '@aztec/accounts/testing';
 import { computePartialAddress, deriveKeys } from '@aztec/circuits.js';
-import { createPXE, expectAddressNote, expectTokenBalances, expectUintNote, wad } from '../../../ts/test/utils.js';
-import { deployToken } from '../../../ts/test/token.test.js';
+import { createPXE, expectAddressNote, expectTokenBalances, expectUintNote, wad } from './utils.js';
+import { deployToken } from './token.test.js';
 
 async function deployEscrow(pxes: PXE[], wallet: Wallet, owner: AztecAddress) {
   const escrowSecretKey = Fr.random();

@@ -1,6 +1,6 @@
-import { TokenContractArtifact, TokenContract } from '../../../artifacts/Token.js';
-import { EscrowContractArtifact, EscrowContract, PrivacyKeys } from '../../../artifacts/Escrow.js';
-import { ClawbackEscrowContractArtifact, ClawbackEscrowContract } from '../../../artifacts/ClawbackEscrow.js';
+import { TokenContractArtifact, TokenContract } from '../../artifacts/Token.js';
+import { EscrowContractArtifact, EscrowContract, PrivacyKeys } from '../../artifacts/Escrow.js';
+import { ClawbackEscrowContractArtifact, ClawbackEscrowContract } from '../../artifacts/ClawbackEscrow.js';
 import {
   AccountWallet,
   createLogger,
@@ -16,8 +16,8 @@ import {
 } from '@aztec/aztec.js';
 import { createAccount } from '@aztec/accounts/testing';
 import { computePartialAddress, deriveKeys, getContractInstanceFromDeployParams } from '@aztec/circuits.js';
-import { createPXE, expectTokenBalances, logger, wad } from '../../../ts/test/utils.js';
-import { deployToken } from '../../../ts/test/token.test.js';
+import { createPXE, expectTokenBalances, logger, wad } from './utils.js';
+import { deployToken } from './token.test.js';
 
 async function deployEscrow(pxes: PXE[], deployerWallet: Wallet, owner: AztecAddress): Promise<EscrowContract> {
   const escrowSecretKey = Fr.random();
