@@ -5,7 +5,7 @@ use dep::aztec::macros::aztec;
 pub contract Escrow {
     use dep::aztec::{
         encrypted_logs::log_assembly_strategies::default_aes128::{
-            event::encode_and_encrypt_event_unconstrained, note::encode_and_encrypt_note,
+            event::encode_and_encrypt_event, note::encode_and_encrypt_note,
         },
         keys::getters::get_public_keys,
         macros::{events::event, functions::{initializer, private}, storage::storage},
@@ -34,11 +34,10 @@ pub contract Escrow {
     #[private]
     #[initializer]
     fn constructor(owner: AztecAddress) {
-        let sender = context.msg_sender();
         let mut note = AddressNote::new(owner, owner);
         let note_emission = storage.owner.initialize(&mut note);
-        note_emission.emit(encode_and_encrypt_note(&mut context, owner, context.this_address()));
-        note_emission.emit(encode_and_encrypt_note(&mut context, sender, context.this_address()));
+        let self_address = context.this_address();
+        note_emission.emit(encode_and_encrypt_note(&mut context, self_address, self_address));
     }
 
     /** ==========================================================
@@ -61,13 +60,7 @@ pub contract Escrow {
             nullification_keys: nullification_secret,
         };
 
-        // Safety: unconstrained encryption is valid here it has the same security properties as not depositing funds or having no agreement at all.
-        // Recipient can verify that the leaked keys are correct, and are necessary to evaluate the balance that's deposited in the escrow.
-        leak_event.emit(encode_and_encrypt_event_unconstrained(
-            &mut context,
-            to,
-            context.this_address(),
-        ))
+        leak_event.emit(encode_and_encrypt_event(&mut context, to, context.this_address()))
     }
 
     // Withdraws balance. Requires that msg.sender is the owner
