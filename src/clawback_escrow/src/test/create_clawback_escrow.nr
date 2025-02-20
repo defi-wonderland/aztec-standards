@@ -1,6 +1,6 @@
 use crate::ClawbackEscrow;
-use crate::ClawbackEscrow::ClawbackEscrowNote;
 use crate::test::utils;
+use crate::types::clawback_escrow_note::ClawbackEscrowNote;
 use dep::address_note::address_note::AddressNote;
 use dep::escrow_contract::Escrow;
 use aztec::note::lifecycle::destroy_note;
@@ -81,9 +81,7 @@ unconstrained fn only_one_note_per_escrow() {
     ClawbackEscrow::at(clawback_escrow_contract_address)
         .create_clawback_escrow(escrow_contract_address, recipient)
         .call(&mut env.private());
-
 }
-
 
 #[test]
 unconstrained fn sender_clawbacks() {

@@ -1,68 +1,27 @@
 use dep::aztec::macros::aztec;
 mod test;
-
+mod types;
 #[aztec]
 pub contract ClawbackEscrow {
+    use crate::types::clawback_escrow_note::ClawbackEscrowNote;
     use dep::aztec::{
         context::PrivateContext,
         encrypted_logs::log_assembly_strategies::default_aes128::note::encode_and_encrypt_note,
         macros::{functions::private, notes::note, storage::storage},
         note::{
-            note_getter_options::NoteGetterOptions,
-            note_header::NoteHeader,
-            note_interface::{NoteProperties, NullifiableNote},
-            utils::compute_note_hash_for_nullify,
+            note_getter_options::NoteGetterOptions, note_header::NoteHeader,
+            note_interface::NoteProperties,
         },
         oracle::random::random,
         prelude::AztecAddress,
         protocol_types::{
             constants::GENERATOR_INDEX__NOTE_NULLIFIER,
-            hash::poseidon2_hash_with_separator,
             traits::{Hash, Packable, Serialize, ToField},
         },
         state_vars::PrivateSet,
         utils::comparison::Comparator,
     };
     use dep::escrow_contract::Escrow;
-
-    #[note]
-    #[derive(Serialize)]
-    pub struct ClawbackEscrowNote {
-        sender: AztecAddress,
-        receiver: AztecAddress,
-        escrow: AztecAddress,
-        randomness: Field,
-    }
-
-    impl NullifiableNote for ClawbackEscrowNote {
-        fn compute_nullifier(self, _: &mut PrivateContext, note_hash_for_nullify: Field) -> Field {
-            poseidon2_hash_with_separator(
-                [note_hash_for_nullify, self.escrow.to_field()],
-                GENERATOR_INDEX__NOTE_NULLIFIER as Field,
-            )
-        }
-
-        unconstrained fn compute_nullifier_without_context(self) -> Field {
-            let note_hash_for_nullify = compute_note_hash_for_nullify(self);
-            poseidon2_hash_with_separator(
-                [note_hash_for_nullify, self.escrow.to_field()],
-                GENERATOR_INDEX__NOTE_NULLIFIER as Field,
-            )
-        }
-    }
-
-    impl Eq for ClawbackEscrowNote {
-        fn eq(self: Self, other: Self) -> bool {
-            (self.escrow.to_field() == other.escrow.to_field())
-        }
-    }
-
-    impl ClawbackEscrowNote {
-        pub fn new(sender: AztecAddress, receiver: AztecAddress, escrow: AztecAddress) -> Self {
-            let randomness = unsafe { random() };
-            ClawbackEscrowNote { sender, receiver, escrow, randomness, header: NoteHeader::empty() }
-        }
-    }
 
     #[storage]
     struct Storage<Context> {

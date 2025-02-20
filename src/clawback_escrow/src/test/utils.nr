@@ -1,5 +1,5 @@
 use crate::ClawbackEscrow;
-use crate::ClawbackEscrow::ClawbackEscrowNote;
+use crate::types::clawback_escrow_note::ClawbackEscrowNote;
 use dep::address_note::address_note::AddressNote;
 use dep::escrow_contract::Escrow;
 use dep::token::Token;
