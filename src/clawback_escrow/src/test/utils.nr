@@ -1,9 +1,6 @@
 use crate::ClawbackEscrow;
-use crate::types::clawback_escrow_note::ClawbackEscrowNote;
-use dep::address_note::address_note::AddressNote;
 use dep::escrow_contract::Escrow;
 use dep::token::Token;
-use aztec::note::BoundedVec;
 use aztec::note::lifecycle::destroy_note;
 use aztec::note::note_getter::{MAX_NOTES_PER_PAGE, view_notes};
 use aztec::note::note_viewer_options::NoteViewerOptions;
