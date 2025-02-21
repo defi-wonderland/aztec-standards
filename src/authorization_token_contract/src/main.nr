@@ -171,6 +171,9 @@ pub contract AuthorizationToken {
         } else {
             assert(nonce == 0, "invalid nonce");
         }
+
+        authorize_in_public(from, to, amount);
+
         let from_balance = storage.public_balances.at(from).read().sub(amount);
         storage.public_balances.at(from).write(from_balance);
         let to_balance = storage.public_balances.at(to).read().add(amount);
@@ -192,6 +195,7 @@ pub contract AuthorizationToken {
         } else {
             assert(nonce == 0, "invalid nonce");
         }
+
         _finalize_transfer_public_to_private(
             from,
             amount,
@@ -269,6 +273,15 @@ pub contract AuthorizationToken {
     //     }
     // }
 
+    #[public]
+    fn authorize_in_public(from: AztecAddress, to: AztecAddress, amount: U128) {
+        // // TODO: External calls are incredibly expensive. In future versions, we should avoid making
+        // // external calls and add authorization logic directly to thet token contract.
+        let authorizer = storage.authorizer.get_current_value();
+        let authorizer_contract = MerkleInclussionAuthorizer::at(authorizer);
+        authorizer_contract.authorize_in_public(from, to, amount).call(&mut context);
+    }
+
     #[contract_library_method]
     fn _authorize_in_private(
         from: AztecAddress,
@@ -277,6 +290,8 @@ pub contract AuthorizationToken {
         context: &mut PrivateContext,
         storage: Storage<&mut PrivateContext>,
     ) {
+        // TODO: External calls are incredibly expensive. In future versions, we should avoid making
+        // external calls and add authorization logic directly to thet token contract.
         let authorizer = storage.authorizer.get_current_value();
         let authorizer_contract = MerkleInclussionAuthorizer::at(authorizer);
         authorizer_contract.authorize_in_private(from, to, amount).call(context);

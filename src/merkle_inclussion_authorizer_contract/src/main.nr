@@ -7,13 +7,21 @@ pub contract MerkleInclussionAuthorizer {
     use dep::aztec::protocol_types::constants::MAX_PACKED_PUBLIC_BYTECODE_SIZE_IN_FIELDS;
 
     use dep::aztec::{
-        macros::{functions::{private, public, view}, storage::storage},
-        prelude::{AztecAddress, PublicMutable},
+        macros::{functions::{initializer, private, public, view}, storage::storage},
+        prelude::{AztecAddress, Map, PublicMutable},
     };
 
     #[storage]
     struct Storage<Context> {
+        owner: PublicMutable<AztecAddress, Context>,
         root_hash: PublicMutable<Field, Context>,
+        whitelist: Map<AztecAddress, PublicMutable<bool, Context>, Context>,
+    }
+
+    #[public]
+    #[initializer]
+    fn constructor(_owner: AztecAddress) {
+        storage.owner.write(_owner);
     }
 
     /** ==========================================================
@@ -47,6 +55,25 @@ pub contract MerkleInclussionAuthorizer {
     #[public]
     fn validate_root_hash(_root_hash: Field) {
         assert(_root_hash == storage.root_hash.read(), "Invalid root hash");
+    }
+
+    #[public]
+    fn add_to_whitelist(address: AztecAddress, root_hash: Field) {
+        assert(storage.owner.read() == context.msg_sender(), "Not owner");
+        storage.whitelist.at(address).write(true);
+        storage.root_hash.write(root_hash);
+    }
+
+    #[public]
+    fn remove_from_whitelist(address: AztecAddress, root_hash: Field) {
+        assert(storage.owner.read() == context.msg_sender(), "Not owner");
+        storage.whitelist.at(address).write(false);
+        storage.root_hash.write(root_hash);
+    }
+
+    #[public]
+    fn authorize_in_public(from: AztecAddress, to: AztecAddress, amount: U128) {
+        assert(storage.whitelist.at(from).read(), "Not whitelisted");
     }
 
     /** ==========================================================
