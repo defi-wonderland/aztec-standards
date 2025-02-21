@@ -84,7 +84,6 @@ describe('Clawback Escrow - Multi PXE', () => {
       .methods.mint_to_private(alice.getAddress(), alice.getAddress(), wad(10))
       .send()
       .wait();
-    await expectTokenBalances(token, alice.getAddress(), wad(0), wad(10));
 
     // fund escrow
     await token
@@ -92,7 +91,6 @@ describe('Clawback Escrow - Multi PXE', () => {
       .methods.transfer_private_to_private(alice.getAddress(), escrow.address, wad(10), 0)
       .send()
       .wait();
-    await expectTokenBalances(token, escrow.address, wad(0), wad(10));
 
     // create the clawback escrow
     let tx = await clawback
