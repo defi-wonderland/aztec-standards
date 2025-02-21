@@ -1,6 +1,19 @@
-import { createLogger, Fr, waitForPXE, AztecAddress, UniqueNote, AccountWallet } from '@aztec/aztec.js';
-import { createPXEClient } from '@aztec/aztec.js';
+import {
+  createLogger,
+  Fr,
+  waitForPXE,
+  AztecAddress,
+  UniqueNote,
+  AccountWallet,
+  PXE,
+  Wallet,
+  createPXEClient,
+  AccountWalletWithSecretKey,
+} from '@aztec/aztec.js';
+import { computePartialAddress, deriveKeys } from '@aztec/circuits.js';
 import { TokenContract } from '../../artifacts/Token.js';
+import { EscrowContract } from '../../artifacts/Escrow.js';
+import { ClawbackEscrowContract } from '../../artifacts/ClawbackEscrow.js';
 
 export const logger = createLogger('aztec:aztec-standards');
 
@@ -43,3 +56,30 @@ export const expectTokenBalances = async (
 
 export const AMOUNT = 1000n;
 export const wad = (n: number = 1) => AMOUNT * BigInt(n);
+
+export async function deployEscrow(pxes: PXE[], deployerWallet: Wallet, owner: AztecAddress): Promise<EscrowContract> {
+  const escrowSecretKey = Fr.fromHexString('0x53777');
+  const escrowPublicKeys = (await deriveKeys(escrowSecretKey)).publicKeys;
+  const escrowDeployment = EscrowContract.deployWithPublicKeys(escrowPublicKeys, deployerWallet, owner);
+  const escrowInstance = await escrowDeployment.getInstance();
+
+  await pxes[0].registerAccount(escrowSecretKey, await computePartialAddress(escrowInstance));
+  // TODO: instead of register it here for Bob, we should use the Escrow::PrivacyKeys event (or something else!)
+  await pxes[1].registerAccount(escrowSecretKey, await computePartialAddress(escrowInstance));
+
+  const contractMetadata = await pxes[0].getContractMetadata(escrowInstance.address);
+  expect(contractMetadata).toBeDefined();
+  expect(contractMetadata.isContractPubliclyDeployed).toBeFalsy();
+
+  const escrowContract = await escrowDeployment.send().deployed();
+  logger.info('escrow deployed', escrowContract.address);
+  return escrowContract;
+}
+
+export async function deployClawbackEscrow(pxes: PXE[], deployerWallet: AccountWalletWithSecretKey) {
+  console.log(await deployerWallet.getNodeInfo());
+  const clawbackDeployment = ClawbackEscrowContract.deploy(deployerWallet);
+  const clawbackContract = await clawbackDeployment.send().deployed();
+  logger.info(`clawback address: ${clawbackContract.address}`);
+  return clawbackContract;
+}

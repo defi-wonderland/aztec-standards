@@ -1,59 +1,13 @@
-import { TokenContractArtifact, TokenContract } from '../../artifacts/Token.js';
-import { EscrowContractArtifact, EscrowContract, PrivacyKeys } from '../../artifacts/Escrow.js';
-import { ClawbackEscrowContractArtifact, ClawbackEscrowContract } from '../../artifacts/ClawbackEscrow.js';
-import {
-  AccountWallet,
-  createLogger,
-  Fr,
-  PXE,
-  Logger,
-  AztecAddress,
-  AccountWalletWithSecretKey,
-  Wallet,
-  Note,
-  UniqueNote,
-  ContractDeployer,
-} from '@aztec/aztec.js';
+import { TokenContract } from '../../artifacts/Token.js';
+import { EscrowContract } from '../../artifacts/Escrow.js';
+import { ClawbackEscrowContract } from '../../artifacts/ClawbackEscrow.js';
+import { AccountWallet, Fr, PXE, Logger, AztecAddress, AccountWalletWithSecretKey, UniqueNote } from '@aztec/aztec.js';
+import { computePartialAddress, deriveKeys } from '@aztec/circuits.js';
 import { createAccount } from '@aztec/accounts/testing';
-import { computePartialAddress, deriveKeys, getContractInstanceFromDeployParams } from '@aztec/circuits.js';
-import { createPXE, expectTokenBalances, logger, wad } from './utils.js';
+import { createPXE, deployClawbackEscrow, deployEscrow, expectTokenBalances, logger, wad } from './utils.js';
 import { deployToken } from './token.test.js';
 
-async function deployEscrow(pxe: PXE, deployerWallet: Wallet, owner: AztecAddress): Promise<EscrowContract> {
-  const escrowSecretKey = Fr.random();
-  const escrowPublicKeys = (await deriveKeys(escrowSecretKey)).publicKeys;
-  const escrowDeployment = EscrowContract.deployWithPublicKeys(escrowPublicKeys, deployerWallet, owner);
-  const escrowInstance = await escrowDeployment.getInstance();
-
-  pxe.registerAccount(escrowSecretKey, await computePartialAddress(escrowInstance));
-
-  const contractMetadata = await pxe.getContractMetadata(escrowInstance.address);
-  expect(contractMetadata).toBeDefined();
-  expect(contractMetadata.isContractPubliclyDeployed).toBeFalsy();
-
-  const escrowContract = await escrowDeployment.send().deployed();
-  logger.info('escrow deployed', escrowContract.address);
-  return escrowContract;
-}
-
-async function deployClawbackEscrow(pxes: PXE[], wallet: Wallet) {
-  const clawbackSecretKey = Fr.random();
-  const clawbackPublicKeys = (await deriveKeys(clawbackSecretKey)).publicKeys;
-  const clawbackDeployment = ClawbackEscrowContract.deployWithPublicKeys(clawbackPublicKeys, wallet);
-  const clawbackInstance = await clawbackDeployment.getInstance();
-
-  await Promise.all(
-    pxes.map(async (pxe) => pxe.registerAccount(clawbackSecretKey, await computePartialAddress(clawbackInstance))),
-  );
-
-  const clawbackContract = await clawbackDeployment.send().deployed();
-
-  logger.info(`clawback address: ${clawbackContract.address}`);
-
-  return clawbackContract;
-}
-
-describe.only('Clawback Escrow - Multi PXE', () => {
+describe('Clawback Escrow - Multi PXE', () => {
   let alicePXE: PXE;
   let bobPXE: PXE;
 
@@ -71,7 +25,7 @@ describe.only('Clawback Escrow - Multi PXE', () => {
 
   beforeAll(async () => {
     alicePXE = await createPXE(0);
-    bobPXE = await createPXE(0);
+    bobPXE = await createPXE(1);
 
     aliceWallet = await createAccount(alicePXE);
     bobWallet = await createAccount(bobPXE);
@@ -87,31 +41,31 @@ describe.only('Clawback Escrow - Multi PXE', () => {
 
   beforeEach(async () => {
     token = (await deployToken(alice)) as TokenContract;
-    clawback = (await deployClawbackEscrow([alicePXE, bobPXE], alice)) as ClawbackEscrowContract;
-    // escrow = await deployEscrow([alicePXE, bobPXE], alice, clawback.address) as EscrowContract;
-    escrow = (await deployEscrow(alicePXE, alice, clawback.address)) as EscrowContract;
+    clawback = (await deployClawbackEscrow([alicePXE, bobPXE], aliceWallet)) as ClawbackEscrowContract;
+    escrow = (await deployEscrow([alicePXE, bobPXE], alice, clawback.address)) as EscrowContract;
+
+    // register everything to both PXEs
+    for (const pxe of [alicePXE, bobPXE]) {
+      await pxe.registerContract(token);
+      await pxe.registerContract(clawback);
+      await pxe.registerContract(escrow);
+
+      await pxe.registerSender(clawback.address);
+      await pxe.registerSender(escrow.address);
+      await pxe.registerSender(token.address);
+    }
     console.log({
       token: token.address,
       clawback: clawback.address,
       escrow: escrow.address,
     });
-    // alice and bob know the token contract
-    await alicePXE.registerContract(token);
-    await bobPXE.registerContract(token);
 
-    await alicePXE.registerContract(escrow);
-    await bobPXE.registerContract(escrow);
+    // TODO: For now we share Alice's secret with Bob.
+    await bobPXE.registerAccount(aliceWallet.getSecretKey(), alice.getCompleteAddress().partialAddress);
+    // await bobPXE.registerAccount( alice.getCompleteAddress().partialAddress);
 
-    await alicePXE.registerContract(clawback);
-    await bobPXE.registerContract(clawback);
-
-    await alicePXE.registerSender(clawback.address);
-    await alicePXE.registerSender(escrow.address);
-
-    await bobPXE.registerSender(clawback.address);
-    await bobPXE.registerSender(alice.getAddress());
-
-    bob.setScopes([bob.getAddress(), escrow.address]);
+    // bob.setScopes([bob.getAddress(), alice.getAddress(), escrow.address, clawback.address]);
+    bob.setScopes([bob.getAddress(), alice.getAddress(), clawback.address, escrow.address]);
   });
 
   const expectClawbackNote = (note: UniqueNote, sender: AztecAddress, receiver: AztecAddress, escrow: AztecAddress) => {
@@ -140,7 +94,7 @@ describe.only('Clawback Escrow - Multi PXE', () => {
       .wait();
     await expectTokenBalances(token, escrow.address, wad(0), wad(10));
 
-    // create the clawback escrow:
+    // create the clawback escrow
     let tx = await clawback
       .withWallet(alice)
       .methods.create_clawback_escrow(escrow.address, bob.getAddress())
