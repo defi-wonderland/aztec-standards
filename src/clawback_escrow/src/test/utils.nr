@@ -62,6 +62,19 @@ pub unconstrained fn setup(
     let escrow_address = escrow_contract.to_address();
     env.advance_block_by(1);
 
+    dep::aztec::oracle::debug_log::debug_log_format(
+        "TOKEN ADDRESS: {0}",
+        [token_contract_address.to_field()],
+    );
+    dep::aztec::oracle::debug_log::debug_log_format(
+        "CLAWBACK ADDRESS: {0}",
+        [clawback_escrow_address.to_field()],
+    );
+    dep::aztec::oracle::debug_log::debug_log_format(
+        "ESCROW ADDRESS: {0}",
+        [escrow_address.to_field()],
+    );
+
     // Fund the escrow
     transfer_in_private(
         &mut env,
@@ -101,6 +114,7 @@ pub unconstrained fn transfer_in_private(
     let note_randomness = random();
     let _ = OracleMock::mock("getRandomField").returns(note_randomness);
 
+    env.impersonate(from);
     Token::at(token_contract_address).transfer_private_to_private(from, recipient, amount, 0).call(
         &mut env.private(),
     );
