@@ -12,7 +12,7 @@ import {
 } from '@aztec/aztec.js';
 import { createAccount } from '@aztec/accounts/testing';
 import { computePartialAddress, deriveKeys } from '@aztec/circuits.js';
-import { createPXE, deployEscrow, expectAddressNote, expectTokenBalances, expectUintNote, wad } from './utils.js';
+import { createPXE, deployEscrow, expectAccountNote, expectTokenBalances, expectUintNote, wad } from './utils.js';
 import { deployToken } from './token.test.js';
 
 // async function deployEscrow(pxes: PXE[], wallet: Wallet, owner: AztecAddress) {
@@ -95,7 +95,7 @@ describe('Escrow - Multi PXE', () => {
     // bob should have a note with himself as owner, encrypted by escrow
     notes = await bob.getNotes({ contractAddress: escrow.address });
     expect(notes.length).toBe(1);
-    expectAddressNote(notes[0], bob.getAddress(), bob.getAddress());
+    expectAccountNote(notes[0], bob.getAddress(), bob.getAddress());
 
     // Fund escrow
     await token.withWallet(alice).methods.mint_to_private(alice.getAddress(), escrow.address, wad(10)).send().wait();
