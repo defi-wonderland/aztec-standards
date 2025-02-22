@@ -54,7 +54,8 @@ pub unconstrained fn setup(
     // Deploy the escrow
     let escrow_secret = 42069;
     let escrow_contract_account = cheatcodes::add_account(escrow_secret);
-    let initializer_call_escrow = Escrow::interface().constructor(clawback_escrow_address);
+    let initializer_call_escrow =
+        Escrow::interface().constructor(clawback_escrow_address, escrow_secret);
 
     let escrow_contract = env
         .deploy_with_public_keys("./@escrow_contract", "Escrow", escrow_secret)

@@ -76,6 +76,7 @@ pub contract ClawbackEscrow {
         let note = _find_clawback_note(storage, escrow);
 
         assert(note.escrow == escrow, "Invalid escrow address");
+
         assert(caller == note.sender, "Only sender can clawback");
 
         Escrow::at(escrow).withdraw(token, amount, caller).call(&mut context);

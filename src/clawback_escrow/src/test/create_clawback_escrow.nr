@@ -18,7 +18,7 @@ use aztec::{
 };
 
 #[test]
-unconstrained fn clawback_create() {
+unconstrained fn create_clawback_escrow() {
     let mint_amount = U128::from_integer(1_000_000_000);
     let (env, clawback_escrow_contract_address, escrow_contract_address, token_contract_address, owner, recipient) =
         utils::setup(true, mint_amount);

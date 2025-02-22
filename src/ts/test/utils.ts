@@ -9,11 +9,13 @@ import {
   Wallet,
   createPXEClient,
   AccountWalletWithSecretKey,
+  to2Fields,
 } from '@aztec/aztec.js';
 import { computePartialAddress, deriveKeys } from '@aztec/circuits.js';
 import { TokenContract } from '../../artifacts/Token.js';
 import { EscrowContract } from '../../artifacts/Escrow.js';
-import { ClawbackEscrowContract } from '../../artifacts/ClawbackEscrow.js';
+import { ClawbackEscrowContract, ClawbackEscrowContractArtifact } from '../../artifacts/ClawbackEscrow.js';
+import { createAccount } from '@aztec/accounts/testing';
 
 export const logger = createLogger('aztec:aztec-standards');
 
@@ -58,9 +60,14 @@ export const AMOUNT = 1000n;
 export const wad = (n: number = 1) => AMOUNT * BigInt(n);
 
 export async function deployEscrow(pxes: PXE[], deployerWallet: Wallet, owner: AztecAddress): Promise<EscrowContract> {
-  const escrowSecretKey = Fr.random();
+  const escrowSecretKey = new Fr(53777);
   const escrowPublicKeys = (await deriveKeys(escrowSecretKey)).publicKeys;
-  const escrowDeployment = EscrowContract.deployWithPublicKeys(escrowPublicKeys, deployerWallet, owner);
+  const escrowDeployment = EscrowContract.deployWithPublicKeys(
+    escrowPublicKeys,
+    deployerWallet,
+    owner,
+    escrowSecretKey,
+  );
   const escrowInstance = await escrowDeployment.getInstance();
 
   await pxes[0].registerAccount(escrowSecretKey, await computePartialAddress(escrowInstance));
@@ -71,6 +78,13 @@ export async function deployEscrow(pxes: PXE[], deployerWallet: Wallet, owner: A
 
   const contractMetadata = await pxes[0].getContractMetadata(escrowInstance.address);
   expect(contractMetadata.isContractPubliclyDeployed).toBeTruthy();
+
+  const provenTx = await escrowDeployment.prove({
+    contractAddressSalt: Fr.random(),
+    skipClassRegistration: false,
+    skipPublicDeployment: false,
+    universalDeploy: true,
+  });
 
   logger.info('escrow deployed', escrowContract.address);
   return escrowContract;
