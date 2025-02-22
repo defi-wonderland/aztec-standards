@@ -51,6 +51,8 @@ pub unconstrained fn setup(
     let clawback_escrow_address = clawback_escrow_contract.to_address();
     env.advance_block_by(1);
 
+    dep::aztec::oracle::debug_log::debug_log("Deploying escrow contract");
+
     // Deploy the escrow
     let escrow_secret = 42069;
     let escrow_contract_account = cheatcodes::add_account(escrow_secret);
