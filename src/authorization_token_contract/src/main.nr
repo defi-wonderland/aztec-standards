@@ -1,4 +1,3 @@
-mod types;
 
 use dep::aztec::macros::aztec;
 
@@ -14,12 +13,9 @@ pub contract AuthorizationToken {
     use dep::aztec::{
         context::{PrivateContext},
         macros::{functions::{initializer, internal, private, public}, storage::storage},
-        prelude::{AztecAddress, PublicContext, SharedMutable},
+        prelude::{AztecAddress, SharedMutable},
         protocol_types::{traits::Serialize},
     };
-
-    use dep::uint_note::uint_note::UintNote;
-
 
     use dep::merkle_inclussion_authorizer_contract::MerkleInclussionAuthorizer;
 
