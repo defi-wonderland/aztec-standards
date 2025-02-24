@@ -275,8 +275,8 @@ pub contract AuthorizationToken {
 
     #[public]
     fn authorize_in_public(from: AztecAddress, to: AztecAddress, amount: U128) {
-        // // TODO: External calls are incredibly expensive. In future versions, we should avoid making
-        // // external calls and add authorization logic directly to thet token contract.
+        // TODO: External calls are incredibly expensive. In future versions, we should avoid making
+        // external calls and add authorization logic directly to thet token contract.
         let authorizer = storage.authorizer.get_current_value();
         let authorizer_contract = MerkleInclussionAuthorizer::at(authorizer);
         authorizer_contract.authorize_in_public(from, to, amount).call(&mut context);
