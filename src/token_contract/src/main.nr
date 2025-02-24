@@ -83,7 +83,7 @@ pub contract Token {
             .emit(encode_and_encrypt_note(&mut context, from, from));
 
         let self = Token::at(context.this_address());
-        self._increase_public_balance(to, amount).enqueue(&mut context);
+        self.increase_public_balance(to, amount).enqueue(&mut context);
     }
 
     #[private]
@@ -122,17 +122,15 @@ pub contract Token {
         _validate_from_private(from, nonce, &mut context);
 
         let self = Token::at(context.this_address());
+        self.decrease_public_balance(from, amount).enqueue(&mut context);
 
-        // We prepare the private balance increase (the partial note).
-        let hiding_point_slot =
-            _prepare_transfer_public_to_private(from, to, &mut context, storage);
-
-        // At last we finalize the transfer. Usage of the `unsafe` method here is safe because we set the `from`
-        // function argument to a message sender, guaranteeing that he can transfer only his own tokens.
-        self._finalize_transfer_public_to_private_unsafe(from, amount, hiding_point_slot).enqueue(
+        storage.private_balances.at(to).add(to, amount).emit(encode_and_encrypt_note(
             &mut context,
-        );
+            to,
+            from,
+        ));
     }
+
     /// Prepares an increase of private balance of `to` (partial note). The increase needs to be finalized by calling
     /// some of the finalization functions (`finalize_transfer_public_to_private`, `finalize_mint_to_private`).
     /// Returns a hiding point slot.
@@ -166,10 +164,8 @@ pub contract Token {
         } else {
             assert(nonce == 0, "invalid nonce");
         }
-        let from_balance = storage.public_balances.at(from).read().sub(amount);
-        storage.public_balances.at(from).write(from_balance);
-        let to_balance = storage.public_balances.at(to).read().add(amount);
-        storage.public_balances.at(to).write(to_balance);
+        _decrease_public_balance(storage, from, amount);
+        _increase_public_balance(storage, to, amount);
     }
 
     /// Finalizes a transfer of token `amount` from public balance of `from` to a private balance of `to`.
@@ -203,39 +199,21 @@ pub contract Token {
     // as it is an entrypoint function.
     #[public]
     #[internal]
-    fn _store_payload_in_transient_storage_unsafe(
-        slot: Field,
-        point: Point,
-        setup_log: [Field; 9],
-    ) {
+    fn store_payload_in_storage(slot: Field, point: Point, setup_log: [Field; 9]) {
         context.storage_write(slot, point);
         context.storage_write(slot + aztec::protocol_types::point::POINT_LENGTH as Field, setup_log);
     }
 
-    /// This is a wrapper around `_finalize_transfer_public_to_private` placed here so that a call
-    /// to `_finalize_transfer_public_to_private` can be enqueued. Called unsafe as it does not check `from` (this has to be
-    /// done in the calling function).
     #[public]
     #[internal]
-    fn _finalize_transfer_public_to_private_unsafe(
-        from: AztecAddress,
-        amount: U128,
-        hiding_point_slot: Field,
-    ) {
-        _finalize_transfer_public_to_private(
-            from,
-            amount,
-            hiding_point_slot,
-            &mut context,
-            storage,
-        );
+    fn increase_public_balance(to: AztecAddress, amount: U128) {
+        _increase_public_balance(storage, to, amount);
     }
 
     #[public]
     #[internal]
-    fn _increase_public_balance(to: AztecAddress, amount: U128) {
-        let new_balance = storage.public_balances.at(to).read().add(amount);
-        storage.public_balances.at(to).write(new_balance);
+    fn decrease_public_balance(from: AztecAddress, amount: U128) {
+        _decrease_public_balance(storage, from, amount);
     }
 
     /** ==========================================================
@@ -275,16 +253,8 @@ pub contract Token {
         context: &mut PublicContext,
         storage: Storage<&mut PublicContext>,
     ) {
-        // First we subtract the `amount` from the public balance of `from`
-        let from_balance = storage.public_balances.at(from).read().sub(amount);
-        storage.public_balances.at(from).write(from_balance);
-
-        // Then we finalize the partial note with the `amount`
-        let finalization_payload =
-            UintNote::finalization_payload().new(context, hiding_point_slot, amount);
-
-        // At last we emit the note hash and the final log
-        finalization_payload.emit();
+        _decrease_public_balance(storage, from, amount);
+        _increase_hiding_point_balance(context, hiding_point_slot, amount);
     }
 
     #[contract_library_method]
@@ -379,14 +349,41 @@ pub contract Token {
         // is zero because the slot is the x-coordinate of the hiding point and hence we could only overwrite
         // the value in the slot with the same value. This makes usage of the `unsafe` method safe.
         self
-            ._store_payload_in_transient_storage_unsafe(
-                hiding_point_slot,
-                note_setup_payload.hiding_point,
-                setup_log,
-            )
+            .store_payload_in_storage(hiding_point_slot, note_setup_payload.hiding_point, setup_log)
             .enqueue(context);
 
         hiding_point_slot
+    }
+
+    #[contract_library_method]
+    fn _increase_public_balance(
+        storage: Storage<&mut PublicContext>,
+        to: AztecAddress,
+        amount: U128,
+    ) {
+        let new_balance = storage.public_balances.at(to).read().add(amount);
+        storage.public_balances.at(to).write(new_balance);
+    }
+
+    #[contract_library_method]
+    fn _decrease_public_balance(
+        storage: Storage<&mut PublicContext>,
+        from: AztecAddress,
+        amount: U128,
+    ) {
+        let new_balance = storage.public_balances.at(from).read().sub(amount);
+        storage.public_balances.at(from).write(new_balance);
+    }
+
+    #[contract_library_method]
+    fn _increase_hiding_point_balance(
+        context: &mut PublicContext,
+        hiding_point_slot: Field,
+        amount: U128,
+    ) {
+        let finalization_payload =
+            UintNote::finalization_payload().new(context, hiding_point_slot, amount);
+        finalization_payload.emit();
     }
 
     /** ==========================================================
@@ -425,9 +422,8 @@ pub contract Token {
 
     #[public]
     fn mint_to_public(to: AztecAddress, amount: U128) {
-        let new_balance = storage.public_balances.at(to).read().add(amount);
+        _increase_public_balance(storage, to, amount);
         let supply = storage.total_supply.read().add(amount);
-        storage.public_balances.at(to).write(new_balance);
         storage.total_supply.write(supply);
     }
 
@@ -464,12 +460,7 @@ pub contract Token {
         let supply = storage.total_supply.read().add(amount);
         storage.total_supply.write(supply);
 
-        // Then we finalize the partial note with the `amount`
-        let finalization_payload =
-            UintNote::finalization_payload().new(context, hiding_point_slot, amount);
-
-        // At last we emit the note hash and the final log
-        finalization_payload.emit();
+        _increase_hiding_point_balance(context, hiding_point_slot, amount);
     }
 
     /** ==========================================================
@@ -496,8 +487,7 @@ pub contract Token {
         } else {
             assert(nonce == 0, "invalid nonce");
         }
-        let from_balance = storage.public_balances.at(from).read().sub(amount);
-        storage.public_balances.at(from).write(from_balance);
+        _decrease_public_balance(storage, from, amount);
         let self = Token::at(context.this_address());
         self._reduce_total_supply(amount).call(&mut context);
     }
