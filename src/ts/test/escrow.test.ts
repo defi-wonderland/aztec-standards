@@ -1,34 +1,9 @@
 import { TokenContractArtifact, TokenContract } from '../../artifacts/Token.js';
 import { EscrowContractArtifact, EscrowContract } from '../../artifacts/Escrow.js';
-import {
-  AccountWallet,
-  createLogger,
-  Fr,
-  PXE,
-  Logger,
-  AztecAddress,
-  AccountWalletWithSecretKey,
-  Wallet,
-} from '@aztec/aztec.js';
+import { AccountWallet, PXE, Logger, AccountWalletWithSecretKey } from '@aztec/aztec.js';
 import { createAccount } from '@aztec/accounts/testing';
-import { computePartialAddress, deriveKeys } from '@aztec/circuits.js';
 import { createPXE, deployEscrow, expectAccountNote, expectTokenBalances, expectUintNote, wad } from './utils.js';
 import { deployToken } from './token.test.js';
-
-// async function deployEscrow(pxes: PXE[], wallet: Wallet, owner: AztecAddress) {
-//   const escrowSecretKey = Fr.random();
-//   const escrowPublicKeys = (await deriveKeys(escrowSecretKey)).publicKeys;
-//   const escrowDeployment = EscrowContract.deployWithPublicKeys(escrowPublicKeys, wallet, owner);
-//   const escrowInstance = await escrowDeployment.getInstance();
-
-//   await Promise.all(
-//     pxes.map(async (pxe) => pxe.registerAccount(escrowSecretKey, await computePartialAddress(escrowInstance))),
-//   );
-
-//   const escrowContract = await escrowDeployment.send().deployed();
-
-//   return escrowContract;
-// }
 
 describe('Escrow - Multi PXE', () => {
   let alicePXE: PXE;
