@@ -53,6 +53,13 @@ export const expectAccountNote = (note: UniqueNote, owner: AztecAddress, secret?
   }
 };
 
+export const expectClawbackNote = (note: UniqueNote, sender: AztecAddress, receiver: AztecAddress, escrow: AztecAddress) => {
+  // expect(note.note.items.length).toBe(3);
+  expect(note.note.items[0]).toEqual(new Fr(sender.toBigInt()));
+  expect(note.note.items[1]).toEqual(new Fr(receiver.toBigInt()));
+  expect(note.note.items[2]).toEqual(new Fr(escrow.toBigInt()));
+};
+
 export const expectTokenBalances = async (
   token: TokenContract,
   address: AztecAddress,

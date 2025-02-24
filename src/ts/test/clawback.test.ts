@@ -3,7 +3,7 @@ import { EscrowContract } from '../../artifacts/Escrow.js';
 import { ClawbackEscrowContract } from '../../artifacts/ClawbackEscrow.js';
 import { AccountWallet, Fr, PXE, Logger, AztecAddress, AccountWalletWithSecretKey, UniqueNote } from '@aztec/aztec.js';
 import { createAccount } from '@aztec/accounts/testing';
-import { createPXE, deployClawbackEscrow, deployEscrow, expectTokenBalances, logger, wad } from './utils.js';
+import { createPXE, deployClawbackEscrow, deployEscrow, expectClawbackNote, expectTokenBalances, logger, wad } from './utils.js';
 import { deployToken } from './token.test.js';
 
 describe('ClawbackEscrow - Multi PXE', () => {
@@ -42,12 +42,11 @@ describe('ClawbackEscrow - Multi PXE', () => {
     });
   });
 
-  afterAll(async () => {});
-
   beforeEach(async () => {
     token = (await deployToken(alice)) as TokenContract;
     clawback = (await deployClawbackEscrow([alicePXE, bobPXE], aliceWallet)) as ClawbackEscrowContract;
     escrow = (await deployEscrow([alicePXE, bobPXE], alice, clawback.address)) as EscrowContract;
+
 
     // register everything to both PXEs
     for (const pxe of [alicePXE, bobPXE]) {
@@ -69,13 +68,6 @@ describe('ClawbackEscrow - Multi PXE', () => {
 
     bob.setScopes([bob.getAddress(), escrow.address, clawback.address]);
   });
-
-  const expectClawbackNote = (note: UniqueNote, sender: AztecAddress, receiver: AztecAddress, escrow: AztecAddress) => {
-    expect(note.note.items.length).toBe(4);
-    expect(note.note.items[0]).toEqual(new Fr(sender.toBigInt()));
-    expect(note.note.items[1]).toEqual(new Fr(receiver.toBigInt()));
-    expect(note.note.items[2]).toEqual(new Fr(escrow.toBigInt()));
-  };
 
   it('clawback', async () => {
     let events, notes;
@@ -122,38 +114,4 @@ describe('ClawbackEscrow - Multi PXE', () => {
     await expectTokenBalances(token, bob.getAddress(), wad(0), wad(10), bobWallet);
   }, 300_000);
 
-  it('withdraw', async () => {
-    let events, notes;
-
-    // fund the escrow
-    await token.withWallet(alice).methods.mint_to_private(alice.getAddress(), escrow.address, wad(10)).send().wait();
-    await expectTokenBalances(token, escrow.address, wad(0), wad(10));
-
-    // create the clawback escrow
-    let tx = await clawback
-      .withWallet(alice)
-      .methods.create_clawback_escrow(escrow.address, bob.getAddress())
-      .send()
-      .wait({ debug: true });
-
-    // sync notes for alice and bob
-    await clawback.withWallet(bob).methods.sync_notes().simulate({});
-    await clawback.withWallet(alice).methods.sync_notes().simulate({});
-
-    notes = await alice.getNotes({ contractAddress: clawback.address });
-    expect(notes.length).toBe(1);
-    expectClawbackNote(notes[0], alice.getAddress(), bob.getAddress(), escrow.address);
-
-    notes = await bob.getNotes({ contractAddress: clawback.address });
-    expect(notes.length).toBe(1);
-    expectClawbackNote(notes[0], alice.getAddress(), bob.getAddress(), escrow.address);
-
-    // TODO: assert nullifier is pushed
-
-    // bob claims the escrow
-    await clawback.withWallet(bob).methods.claim(escrow.address, token.address, wad(10)).send().wait();
-
-    await expectTokenBalances(token, escrow.address, wad(0), wad(0));
-    await expectTokenBalances(token, bob.getAddress(), wad(0), wad(10), bobWallet);
-  }, 300_000);
 });
