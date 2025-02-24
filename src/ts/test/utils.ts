@@ -10,12 +10,14 @@ import {
   createPXEClient,
   AccountWalletWithSecretKey,
   to2Fields,
+  FieldLike,
 } from '@aztec/aztec.js';
 import { computePartialAddress, deriveKeys } from '@aztec/circuits.js';
 import { TokenContract } from '../../artifacts/Token.js';
 import { EscrowContract } from '../../artifacts/Escrow.js';
 import { ClawbackEscrowContract, ClawbackEscrowContractArtifact } from '../../artifacts/ClawbackEscrow.js';
 import { createAccount } from '@aztec/accounts/testing';
+import { registerContractClass } from '@aztec/aztec.js/deployment';
 
 export const logger = createLogger('aztec:aztec-standards');
 
@@ -77,12 +79,10 @@ export async function deployEscrow(pxes: PXE[], deployerWallet: Wallet, owner: A
     escrowSecretKey,
   );
   const escrowInstance = await escrowDeployment.getInstance();
-
+  const escrowContract = await escrowDeployment.send().deployed();
   await pxes[0].registerAccount(escrowSecretKey, await computePartialAddress(escrowInstance));
   // TODO: instead of register it here for Bob, we should use the Escrow::PrivacyKeys event (or something else!)
-  await pxes[1].registerAccount(escrowSecretKey, await computePartialAddress(escrowInstance));
-
-  const escrowContract = await escrowDeployment.send().deployed();
+  // await pxes[1].registerAccount(escrowSecretKey, await computePartialAddress(escrowInstance));
 
   const contractMetadata = await pxes[0].getContractMetadata(escrowInstance.address);
   expect(contractMetadata.isContractPubliclyDeployed).toBeTruthy();
