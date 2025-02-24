@@ -17,7 +17,7 @@ pub contract AuthorizationToken {
         protocol_types::{traits::Serialize},
     };
 
-    use dep::merkle_inclussion_authorizer_contract::MerkleInclussionAuthorizer;
+    use dep::merkle_inclusion_authorizer_contract::MerkleInclussionAuthorizer;
 
     // Authorizing a new address has a certain block delay before it goes into effect.
     global CHANGE_AUTHORIZED_DELAY_BLOCKS: u32 = 5;

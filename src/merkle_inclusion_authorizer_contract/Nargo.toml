@@ -1,5 +1,5 @@
 [package]
-name = "merkle_inclussion_authorizer"
+name = "merkle_inclusion_authorizer"
 authors = [""]
 compiler_version = ">=1.0.0"
 type = "contract"
