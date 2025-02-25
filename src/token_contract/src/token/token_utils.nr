@@ -1,16 +1,3 @@
-mod transferrable;
-mod mintable;
-
-pub comptime fn token(m: Module) -> Quoted {
-    let token_body = transferrable::TRANSFERRABLE_CODE;
-    let mintable_body = mintable::MINTABLE_CODE;
-
-    quote {
-        $token_body
-        $mintable_body
-    }
-}
-
 pub mod TokenLib {
     use aztec::{
         context::PrivateContext,
@@ -20,8 +7,9 @@ pub mod TokenLib {
         protocol_types::abis::function_selector::FunctionSelector,
     };
 
-    use crate::types::balance_set::BalanceSet;
+    use balance_set::balance_set::BalanceSet;
     use uint_note::uint_note::UintNote;
+    // TODO: ? use balance_set::balance_set::{BalanceSet, UintNote};
 
     /** ==========================================================
      * ======================= LIBRARIES =========================

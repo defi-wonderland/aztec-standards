@@ -1,1 +1,1 @@
-mod uint_note;
+pub(crate) mod uint_note;

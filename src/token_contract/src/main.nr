@@ -1,9 +1,8 @@
 mod test;
 mod token;
-mod types;
 
-use token::token_utils::token;
 use aztec::macros::aztec;
+use token::macros::token;
 
 #[token]
 #[aztec]
@@ -12,17 +11,17 @@ pub contract Token {
     use compressed_string::FieldCompressedString;
 
     use aztec::{
-        encrypted_logs::log_assembly_strategies::default_aes128::note::encode_and_encrypt_note,
         macros::{functions::{initializer, internal, private, public, view}, storage::storage},
         prelude::{AztecAddress, Map, PublicImmutable, PublicMutable},
-        protocol_types::{
-            point::Point,
-            traits::{Hash, Serialize},
-        },
+        protocol_types::{point::Point, traits::{Hash, Serialize}},
     };
 
-    use crate::types::balance_set::BalanceSet;
-    use crate::token::{token_utils::TokenLib, auth_utils::AuthLib};
+    // encryption library
+    use aztec::encrypted_logs::log_assembly_strategies::default_aes128::note::encode_and_encrypt_note;
+    // note library
+    use balance_set::balance_set::BalanceSet;
+    // token & auth utils
+    use crate::token::{auth_utils::AuthLib, token_utils::TokenLib};
 
     #[storage]
     struct Storage<Context> {
