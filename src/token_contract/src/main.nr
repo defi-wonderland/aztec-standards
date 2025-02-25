@@ -44,4 +44,12 @@ pub contract Token {
         storage.symbol.initialize(FieldCompressedString::from_string(symbol));
         storage.decimals.initialize(decimals);
     }
+
+    /** ==========================================================
+     * ===================== UNCONSTRAINED =======================
+     * ======================================================== */
+
+    pub(crate) unconstrained fn balance_of_private(owner: AztecAddress) -> pub U128 {
+        storage.private_balances.at(owner).balance_of()
+    }
 }
