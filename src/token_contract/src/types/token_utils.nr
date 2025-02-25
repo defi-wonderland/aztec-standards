@@ -1,5 +1,9 @@
 pub comptime fn token(m: Module) -> Quoted {
     let token_body = quote {
+
+        global INITIAL_TRANSFER_CALL_MAX_NOTES: u32 = 2;
+        global RECURSIVE_TRANSFER_CALL_MAX_NOTES: u32 = 8;
+        
         /** ==========================================================
         * ========================= PRIVATE =========================
         * ======================================================== */
@@ -67,13 +71,8 @@ pub comptime fn token(m: Module) -> Quoted {
             );
         }
 
-        /// Prepares an increase of private balance of `to` (partial note). The increase needs to be finalized by calling
-        /// some of the finalization functions (`finalize_transfer_public_to_private`, `finalize_mint_to_private`).
-        /// Returns a hiding point slot.
         #[private]
         fn prepare_transfer_public_to_private(to: AztecAddress, from: AztecAddress) -> Field {
-            // TODO(#9887): ideally we'd not have `from` here, but we do need a `from` address to produce a tagging secret
-            // with `to`.
             TokenLib::_prepare_transfer_public_to_private(
                 from,
                 to,
@@ -219,14 +218,7 @@ pub mod TokenLib {
         amount: U128,
         max_notes: u32,
     ) -> OuterNoteEmission<UintNote> {
-        // We reduce `from`'s balance by amount by recursively removing notes over potentially multiple calls. This
-        // method keeps the gate count for each individual call low - reading too many notes at once could result in
-        // circuits in which proving is not feasible.
-        // Since the sum of the amounts in the notes we nullified was potentially larger than amount, we create a new
-        // note for `from` with the change amount, e.g. if `amount` is 10 and two notes are nullified with amounts 8 and
-        // 5, then the change will be 3 (since 8 + 5 - 10 = 3).
         let change = _subtract_balance(context, private_balances, account, amount, max_notes);
-
         _increase_private_balance(private_balances, account, change)
     }
 
@@ -303,11 +295,6 @@ pub mod TokenLib {
         }
     }
 
-    /// This function exists separately from `prepare_transfer_public_to_private` solely as an optimization as it allows
-    /// us to have it inlined in the `transfer_public_to_private` function which results in one less kernel iteration.
-    ///
-    /// TODO(#9180): Consider adding macro support for functions callable both as an entrypoint and as an internal
-    /// function.
     pub fn _prepare_transfer_public_to_private(
         from: AztecAddress, // sender of the tag: TODO(#9887): this is not great?
         to: AztecAddress,
@@ -317,30 +304,12 @@ pub mod TokenLib {
         let to_note_slot = private_balances.at(to).set.storage_slot;
 
         // We create a setup payload with unpopulated/zero `amount` for 'to'
-        // TODO(#7775): Manually fetching the randomness here is not great. If we decide to include randomness in all
-        // notes we could just inject it in macros.
-
-        // Safety: We use the randomness to preserve the privacy of the note recipient by preventing brute-forcing,
-        // so a malicious sender could use non-random values to make the note less private. But they already know
-        // the full note pre-image anyway, and so the recipient already trusts them to not disclose this
-        // information. We can therefore assume that the sender will cooperate in the random value generation.
         let note_randomness = unsafe { random() };
         let note_setup_payload = UintNote::setup_payload().new(to, note_randomness, to_note_slot);
 
         // We get the keys and encrypt the log of the note
         let setup_log = note_setup_payload.encrypt_log(context, to, from);
 
-        // Using the x-coordinate as a hiding point slot is safe against someone else interfering with it because
-        // we have a guarantee that the public functions of the transaction are executed right after the private ones
-        // and for this reason the protocol guarantees that nobody can front-run us in consuming the hiding point.
-        // This guarantee would break if `finalize_transfer_public_to_private` was not called in the same transaction. This
-        // however is not the flow we are currently concerned with. To support the multi-transaction flow we could
-        // introduce a `from` function argument, hash the x-coordinate with it and then repeat the hashing in
-        // `finalize_transfer_public_to_private`.
-        //
-        // We can also be sure that the `hiding_point_slot` will not overwrite any other value in the storage because
-        // in our state variables we derive slots using a different hash function from multi scalar multiplication
-        // (MSM).
         let hiding_point_slot = note_setup_payload.hiding_point.x;
 
         // We don't need to perform a check that the value overwritten by `_store_point_in_transient_storage_unsafe`

@@ -9,7 +9,6 @@ use dep::aztec::macros::aztec;
 pub contract Token {
 
     use dep::compressed_string::FieldCompressedString;
-    use dep::std::ops::{Add, Sub};
 
     use dep::aztec::{
         encrypted_logs::log_assembly_strategies::default_aes128::note::encode_and_encrypt_note,
@@ -23,9 +22,6 @@ pub contract Token {
 
     use crate::types::balance_set::BalanceSet;
     use crate::types::token_utils::TokenLib;
-
-    global INITIAL_TRANSFER_CALL_MAX_NOTES: u32 = 2;
-    global RECURSIVE_TRANSFER_CALL_MAX_NOTES: u32 = 8;
 
     #[storage]
     struct Storage<Context> {
