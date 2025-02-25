@@ -14,7 +14,7 @@ pub global TRANSFERRABLE_CODE: Quoted = quote {
         amount: U128,
         nonce: Field,
     ) {
-        TokenLib::_validate_from_private(from, nonce, &mut context);
+        AuthLib::_validate_from_private(from, nonce, &mut context);
 
         TokenLib::_decrease_private_balance(
             &mut context,
@@ -25,13 +25,7 @@ pub global TRANSFERRABLE_CODE: Quoted = quote {
         )
             .emit(encode_and_encrypt_note(&mut context, from, from));
 
-        // let self = Token::at(context.this_address());
-        // self.increase_public_balance(to, amount).enqueue(&mut context);
-        context.call_public_function(
-            context.this_address(),
-            FunctionSelector::from_signature("increase_public_balance((Field),(Field,Field))"),
-            [to.to_field(), amount.to_field()],
-        );
+        TokenLib::_private_increase_public_balance(&mut context, to, amount);
     }
 
     #[private]
@@ -41,7 +35,7 @@ pub global TRANSFERRABLE_CODE: Quoted = quote {
         amount: U128,
         nonce: Field,
     ) {
-        TokenLib::_validate_from_private(from, nonce, &mut context);
+        AuthLib::_validate_from_private(from, nonce, &mut context);
 
         TokenLib::_decrease_private_balance(
             &mut context,
@@ -65,15 +59,9 @@ pub global TRANSFERRABLE_CODE: Quoted = quote {
         amount: U128,
         nonce: Field,
     ) {
-        TokenLib::_validate_from_private(from, nonce, &mut context);
+        AuthLib::_validate_from_private(from, nonce, &mut context);
 
-        // let self = Token::at(context.this_address());
-        // self.decrease_public_balance(from, amount).enqueue(&mut context);
-        context.call_public_function(
-            context.this_address(),
-            FunctionSelector::from_signature("decrease_public_balance((Field),(Field,Field))"),
-            [from.to_field(), amount.to_field()],
-        );
+        TokenLib::_private_decrease_public_balance(&mut context, from, amount);
 
         TokenLib::_increase_private_balance(storage.private_balances, to, amount).emit(
             encode_and_encrypt_note(&mut context, to, from),
@@ -108,11 +96,7 @@ pub global TRANSFERRABLE_CODE: Quoted = quote {
 
     #[public]
     fn transfer_public_to_public(from: AztecAddress, to: AztecAddress, amount: U128, nonce: Field) {
-        if (!from.eq(context.msg_sender())) {
-            assert_current_call_valid_authwit_public(&mut context, from);
-        } else {
-            assert(nonce == 0, "invalid nonce");
-        }
+        AuthLib::_validate_from_public(&mut context, from, nonce);
         TokenLib::_decrease_public_balance(storage.public_balances, from, amount);
         TokenLib::_increase_public_balance(storage.public_balances, to, amount);
     }
@@ -127,11 +111,7 @@ pub global TRANSFERRABLE_CODE: Quoted = quote {
         hiding_point_slot: Field,
         nonce: Field,
     ) {
-        if (!from.eq(context.msg_sender())) {
-            assert_current_call_valid_authwit_public(&mut context, from);
-        } else {
-            assert(nonce == 0, "invalid nonce");
-        }
+        AuthLib::_validate_from_public(&mut context, from, nonce);
         TokenLib::_finalize_transfer_public_to_private(
             from,
             amount,

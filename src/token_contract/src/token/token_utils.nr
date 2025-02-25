@@ -20,23 +20,12 @@ pub mod TokenLib {
         protocol_types::abis::function_selector::FunctionSelector,
     };
 
-    use uint_note::uint_note::UintNote;
-
-    use authwit::auth::assert_current_call_valid_authwit;
-
     use crate::types::balance_set::BalanceSet;
+    use uint_note::uint_note::UintNote;
 
     /** ==========================================================
      * ======================= LIBRARIES =========================
      * ======================================================== */
-
-    pub fn _validate_from_private(from: AztecAddress, nonce: Field, context: &mut PrivateContext) {
-        if (!from.eq(context.msg_sender())) {
-            assert_current_call_valid_authwit(context, from);
-        } else {
-            assert(nonce == 0, "invalid nonce");
-        }
-    }
 
     pub fn _finalize_transfer_public_to_private(
         from: AztecAddress,
@@ -133,6 +122,34 @@ pub mod TokenLib {
         }
     }
 
+    pub fn _private_increase_public_balance(
+        context: &mut PrivateContext,
+        to: AztecAddress,
+        amount: U128,
+    ) {
+        // let self = Token::at(context.this_address());
+        // self.increase_public_balance(to, amount).enqueue(&mut context);
+        context.call_public_function(
+            context.this_address(),
+            FunctionSelector::from_signature("increase_public_balance((Field),(Field,Field))"),
+            [to.to_field(), amount.to_field()],
+        );
+    }
+
+    pub fn _private_decrease_public_balance(
+        context: &mut PrivateContext,
+        from: AztecAddress,
+        amount: U128,
+    ) {
+        // let self = Token::at(context.this_address());
+        // self.decrease_public_balance(from, amount).enqueue(&mut context);
+        context.call_public_function(
+            context.this_address(),
+            FunctionSelector::from_signature("decrease_public_balance((Field),(Field,Field))"),
+            [from.to_field(), amount.to_field()],
+        );
+    }
+
     pub fn _finalize_mint_to_private(
         amount: U128,
         hiding_point_slot: Field,
@@ -142,6 +159,23 @@ pub mod TokenLib {
         let new_supply = total_supply.read().add(amount);
         total_supply.write(new_supply);
         _increase_hiding_point_balance(context, hiding_point_slot, amount);
+    }
+
+    pub fn _private_finalize_mint_to_private(
+        context: &mut PrivateContext,
+        amount: U128,
+        hiding_point_slot: Field,
+    ) {
+        // let self: Token = Token::at(context.this_address());
+        // self
+        //     ._finalize_mint_to_private_unsafe(context.msg_sender(), amount, hiding_point_slot)
+        //     .enqueue(&mut context);
+
+        context.call_public_function(
+            context.this_address(),
+            FunctionSelector::from_signature("finalize_mint_to_private((Field,Field),Field)"),
+            [amount.to_field(), hiding_point_slot.to_field()],
+        );
     }
 
     pub fn _prepare_transfer_public_to_private(
@@ -215,5 +249,28 @@ pub mod TokenLib {
         }
 
         result
+    }
+}
+
+pub mod AuthLib {
+    use authwit::auth::{
+        assert_current_call_valid_authwit, assert_current_call_valid_authwit_public,
+    };
+    use aztec::{context::{PrivateContext, PublicContext}, prelude::AztecAddress};
+
+    pub fn _validate_from_private(from: AztecAddress, nonce: Field, context: &mut PrivateContext) {
+        if (!from.eq(context.msg_sender())) {
+            assert_current_call_valid_authwit(context, from);
+        } else {
+            assert(nonce == 0, "invalid nonce");
+        }
+    }
+
+    pub fn _validate_from_public(context: &mut PublicContext, from: AztecAddress, nonce: Field) {
+        if (!from.eq(context.msg_sender())) {
+            // assert_current_call_valid_authwit_public(&mut context, from);
+        } else {
+            assert(nonce == 0, "invalid nonce");
+        }
     }
 }

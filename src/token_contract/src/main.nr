@@ -1,7 +1,8 @@
-mod types;
 mod test;
+mod token;
+mod types;
 
-use crate::types::token_utils::token;
+use token::token_utils::token;
 use aztec::macros::aztec;
 
 #[token]
@@ -15,17 +16,13 @@ pub contract Token {
         macros::{functions::{initializer, internal, private, public, view}, storage::storage},
         prelude::{AztecAddress, Map, PublicImmutable, PublicMutable},
         protocol_types::{
-            abis::function_selector::FunctionSelector,
             point::Point,
             traits::{Hash, Serialize},
         },
     };
 
-    // TODO: move authwit to token_utils ?
-    use authwit::auth::assert_current_call_valid_authwit_public;
-
     use crate::types::balance_set::BalanceSet;
-    use crate::types::token_utils::TokenLib;
+    use crate::token::{token_utils::TokenLib, auth_utils::AuthLib};
 
     #[storage]
     struct Storage<Context> {
