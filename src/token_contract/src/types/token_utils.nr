@@ -28,6 +28,11 @@ pub comptime fn token(m: Module) -> Quoted {
 
             // let self = Token::at(context.this_address());
             // self.increase_public_balance(to, amount).enqueue(&mut context);
+            context.call_public_function(
+                context.this_address(),
+                FunctionSelector::from_signature("increase_public_balance((Field),(Field,Field))"),
+                [to.to_field(), amount.to_field()],
+            );
         }
 
         #[private]
@@ -65,6 +70,11 @@ pub comptime fn token(m: Module) -> Quoted {
 
             // let self = Token::at(context.this_address());
             // self.decrease_public_balance(from, amount).enqueue(&mut context);
+            context.call_public_function(
+                context.this_address(),
+                FunctionSelector::from_signature("decrease_public_balance((Field),(Field,Field))"),
+                [from.to_field(), amount.to_field()],
+            );
 
             TokenLib::_increase_private_balance(storage.private_balances, to, amount).emit(
                 encode_and_encrypt_note(&mut context, to, from),
@@ -168,8 +178,82 @@ pub comptime fn token(m: Module) -> Quoted {
         }
     };
 
+    let mintable_body = quote {
+        /** ==========================================================
+        * ======================= MINTABLE ==========================
+        * ======================================================== */
+
+        /// Mints token `amount` to a private balance of `to`. Message sender has to have minter permissions (checked
+        /// in the enqueued call).
+        #[private]
+        fn mint_to_private(
+            from: AztecAddress, // sender of the tag: TODO(#9887): this is not great?
+            to: AztecAddress,
+            amount: U128,
+        ) {
+            // We prepare the partial note to which we'll "send" the minted amount.
+            let hiding_point_slot = TokenLib::_prepare_transfer_public_to_private(
+                from,
+                to,
+                &mut context,
+                storage.private_balances,
+            );
+
+            // let self: Token = Token::at(context.this_address());
+            // self
+            //     ._finalize_mint_to_private_unsafe(context.msg_sender(), amount, hiding_point_slot)
+            //     .enqueue(&mut context);
+
+            context.call_public_function(
+                context.this_address(),
+                FunctionSelector::from_signature("finalize_mint_to_private((Field,Field),Field)"),
+                [amount.to_field(), hiding_point_slot.to_field()],
+            );
+        }
+
+        #[public]
+        fn mint_to_public(to: AztecAddress, amount: U128) {
+            TokenLib::_increase_public_balance(storage.public_balances, to, amount);
+            let supply = storage.total_supply.read().add(amount);
+            storage.total_supply.write(supply);
+        }
+
+        /// Finalizes a mint of token `amount` to a private balance of `to`. The mint must be prepared by calling
+        /// `prepare_transfer_public_to_private` first and the resulting
+        /// `hiding_point_slot` must be passed as an argument to this function.
+        ///
+        /// Note: This function is only an optimization as it could be replaced by a combination of `mint_to_public`
+        /// and `finalize_transfer_public_to_private`. It is however used very commonly so it makes sense to optimize it
+        /// (e.g. used during token bridging, in AMM liquidity token etc.).
+        #[public]
+        fn finalize_mint_to_private(amount: U128, hiding_point_slot: Field) {
+            TokenLib::_finalize_mint_to_private(
+                amount,
+                hiding_point_slot,
+                &mut context,
+                storage.total_supply,
+            );
+        }
+
+        #[public]
+        #[internal]
+        fn _finalize_mint_to_private_unsafe(
+            from: AztecAddress,
+            amount: U128,
+            hiding_point_slot: Field,
+        ) {
+            TokenLib::_finalize_mint_to_private(
+                amount,
+                hiding_point_slot,
+                &mut context,
+                storage.total_supply,
+            );
+        }
+    };
+
     quote {
         $token_body
+        $mintable_body
     }
 }
 
@@ -178,7 +262,7 @@ pub mod TokenLib {
         context::PrivateContext,
         note::{note_emission::OuterNoteEmission, note_interface::PartialNote},
         oracle::random::random,
-        prelude::{AztecAddress, Map, PublicContext, PublicMutable},
+        prelude::{AztecAddress, Map, Point, PublicContext, PublicMutable},
         protocol_types::abis::function_selector::FunctionSelector,
     };
 
@@ -295,6 +379,17 @@ pub mod TokenLib {
         }
     }
 
+    pub fn _finalize_mint_to_private(
+        amount: U128,
+        hiding_point_slot: Field,
+        context: &mut PublicContext,
+        total_supply: PublicMutable<U128, &mut PublicContext>,
+    ) {
+        let new_supply = total_supply.read().add(amount);
+        total_supply.write(new_supply);
+        _increase_hiding_point_balance(context, hiding_point_slot, amount);
+    }
+
     pub fn _prepare_transfer_public_to_private(
         from: AztecAddress, // sender of the tag: TODO(#9887): this is not great?
         to: AztecAddress,
@@ -321,12 +416,50 @@ pub mod TokenLib {
         //     .store_payload_in_storage(hiding_point_slot, note_setup_payload.hiding_point, setup_log)
         //     .enqueue(context);
 
-        // context.call_public_function(
-        //     context.this_address(),
-        //     FunctionSelector::from_signature("store_payload_in_storage((Field),(Point),(CompressedString))"),
-        //     [hiding_point_slot, note_setup_payload.hiding_point, setup_log],
-        // ).enqueue(context);
+        context.call_public_function(
+            context.this_address(),
+            FunctionSelector::from_signature(
+                "store_payload_in_storage(Field,(Field,Field,Field),(Field,Field,Field,Field,Field,Field,Field,Field,Field))",
+            ),
+            serialize_setup_log(
+                hiding_point_slot,
+                note_setup_payload.hiding_point,
+                setup_log,
+            ),
+        );
 
         hiding_point_slot
+    }
+
+    fn serialize_setup_log(
+        hiding_point_slot: Field,
+        hiding_point: Point,
+        setup_log: [Field; 9],
+    ) -> [Field; 13] {
+        let log_count = 9;
+        let point_count = 3; // TODO: import global POINT_LENGTH
+        let total_size = 1 + point_count + log_count;
+
+        // Initialize result array
+        let mut result = [0 as Field; 13]; // TODO: use total_size
+        let mut index = 0;
+
+        // Add simple fields
+        result[0] = hiding_point_slot;
+
+        // Add point
+        let point_data = hiding_point.serialize();
+        for i in 0..point_count {
+            index += 1;
+            result[index] = point_data[i];
+        }
+
+        // Add log
+        for i in 0..log_count {
+            index += 1;
+            result[index] = setup_log[i];
+        }
+
+        result
     }
 }
