@@ -16,6 +16,7 @@ pub contract MerkleInclusionAuthorizerToken {
 
     // Libs
     use dep::aztec::{
+        context::{PublicContext, PrivateContext},
         macros::{functions::{initializer, internal, private, public, view}, storage::storage},
         prelude::{AztecAddress, PublicMutable, Map},
         protocol_types::{traits::Serialize},
@@ -44,7 +45,7 @@ pub contract MerkleInclusionAuthorizerToken {
         amount: U128,
         nonce: Field,
     ) {
-        authorize_in_private(from, to, amount);
+        _authorize_in_private(from, to, amount, &mut context);
         // ...
     }
 
@@ -55,7 +56,7 @@ pub contract MerkleInclusionAuthorizerToken {
         amount: U128,
         nonce: Field,
     ) {
-        authorize_in_private(from, to, amount);
+        _authorize_in_private(from, to, amount, &mut context);
         // ...
     }
 
@@ -67,7 +68,7 @@ pub contract MerkleInclusionAuthorizerToken {
         amount: U128,
         nonce: Field,
     ) {
-        authorize_in_private(from, to, amount);
+        _authorize_in_private(from, to, amount, &mut context);
         // ...
     }
     /// Prepares an increase of private balance of `to` (partial note). The increase needs to be finalized by calling
@@ -85,7 +86,7 @@ pub contract MerkleInclusionAuthorizerToken {
     #[public]
     fn transfer_public_to_public(from: AztecAddress, to: AztecAddress, amount: U128, nonce: Field) {
         // ...
-        authorize_in_public(from, to, amount);
+        _authorize_in_public(from, to, amount, storage);
         // ...
     }
 
@@ -120,7 +121,7 @@ pub contract MerkleInclusionAuthorizerToken {
      * ======================================================== */
 
     #[contract_library_method]
-    fn authorize_in_private(from: AztecAddress, to: AztecAddress, amount: U128) {
+    fn _authorize_in_private(from: AztecAddress, to: AztecAddress, amount: U128, context: &mut PrivateContext) {
         let merkle_tree_proof: [Field; MAX_PACKED_PUBLIC_BYTECODE_SIZE_IN_FIELDS] =
             [0; MAX_PACKED_PUBLIC_BYTECODE_SIZE_IN_FIELDS];
 
@@ -129,7 +130,7 @@ pub contract MerkleInclusionAuthorizerToken {
 
         // TODO: Can we have the msg.sig for this method?
 
-        let is_from_valid = _verify_merkle_proof(from, merkle_tree_proof);
+        let is_from_valid = _verify_merkle_proof(from, merkle_tree_proof, context);
 
         assert(is_from_valid, "Sender is not authorized");
     }
@@ -159,8 +160,8 @@ pub contract MerkleInclusionAuthorizerToken {
         storage.root_hash.write(root_hash);
     }
 
-    #[public]
-    fn authorize_in_public(from: AztecAddress, to: AztecAddress, amount: U128) {
+    #[contract_library_method]
+    fn _authorize_in_public(from: AztecAddress, to: AztecAddress, amount: U128, storage: Storage<&mut PublicContext>) {
         assert(storage.whitelist.at(from).read(), "Not whitelisted");
     }
 
@@ -172,12 +173,13 @@ pub contract MerkleInclusionAuthorizerToken {
     fn _verify_merkle_proof(
         address: AztecAddress,
         proof: [Field; MAX_PACKED_PUBLIC_BYTECODE_SIZE_IN_FIELDS],
+        context: &mut PrivateContext,
     ) -> bool {
         // TODO: Use the merkle proof to verify the address is in the merkle tree
         // calculate root hash
-        // let _root_hash = ...;
-        // let self = MerkleInclussionAuthorizer::at(context.this_address());
-        // self.validate_root_hash(_root_hash);
+        let _root_hash = 0;
+        let self = MerkleInclusionAuthorizerToken::at(context.this_address());
+        self.validate_root_hash(_root_hash).enqueue(context);
         true
     }
 }
