@@ -1,0 +1,9 @@
+[package]
+name = "balance_set"
+authors = [""]
+compiler_version = ">=1.0.0"
+type = "lib"
+
+[dependencies]
+aztec = { git = "https://github.com/AztecProtocol/aztec-packages/", tag = "aztec-packages-v0.76.3", directory = "noir-projects/aztec-nr/aztec" }
+uint_note = { path = "../uint-note" }
