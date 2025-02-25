@@ -36,9 +36,14 @@ pub contract Token {
     #[public]
     #[initializer]
     fn constructor(name: str<31>, symbol: str<31>, decimals: u8) {
-        storage.name.initialize(FieldCompressedString::from_string(name));
-        storage.symbol.initialize(FieldCompressedString::from_string(symbol));
-        storage.decimals.initialize(decimals);
+        TokenLib::token_constructor(
+            storage.name,
+            storage.symbol,
+            storage.decimals,
+            name,
+            symbol,
+            decimals,
+        );
     }
 
     /** ==========================================================
