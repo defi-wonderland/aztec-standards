@@ -21,9 +21,9 @@ pub mod TokenLib {
         symbol: str<31>,
         decimals: u8,
     ) {
-        name_storage.initialize(FieldCompressedString::from_string(name));
-        symbol_storage.initialize(FieldCompressedString::from_string(symbol));
-        decimals_storage.initialize(decimals);
+        storage_name.initialize(FieldCompressedString::from_string(name));
+        storage_symbol.initialize(FieldCompressedString::from_string(symbol));
+        storage_decimals.initialize(decimals);
     }
 
     /** ==========================================================
@@ -159,8 +159,7 @@ pub mod TokenLib {
         context: &mut PublicContext,
         total_supply: PublicMutable<U128, &mut PublicContext>,
     ) {
-        let new_supply = total_supply.read().add(amount);
-        total_supply.write(new_supply);
+        _increase_total_supply(total_supply, amount);
         _increase_hiding_point_balance(context, hiding_point_slot, amount);
     }
 
@@ -179,6 +178,24 @@ pub mod TokenLib {
             FunctionSelector::from_signature("finalize_mint_to_private((Field,Field),Field)"),
             [amount.to_field(), hiding_point_slot.to_field()],
         );
+    }
+
+    pub fn _increase_total_supply(
+        total_supply: PublicMutable<U128, &mut PublicContext>,
+        amount: U128,
+    ) {
+        let new_supply = total_supply.read().add(amount);
+        total_supply.write(new_supply);
+    }
+
+    pub fn _store_payload_in_storage(
+        slot: Field,
+        point: Point,
+        setup_log: [Field; 9],
+        context: &mut PublicContext,
+    ) {
+        context.storage_write(slot, point);
+        context.storage_write(slot + aztec::protocol_types::point::POINT_LENGTH as Field, setup_log);
     }
 
     pub fn _prepare_transfer_public_to_private(

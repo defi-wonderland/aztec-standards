@@ -18,9 +18,9 @@ pub contract Token {
 
     // encryption library
     use aztec::encrypted_logs::log_assembly_strategies::default_aes128::note::encode_and_encrypt_note;
-    // note library
+    // balance notes library (NOTE: it needs to be same as in the token_utils.nr)
     use balance_set::balance_set::BalanceSet;
-    // token & auth utils
+    // token & auth utils (TODO(#30): +mint-auth utils)
     use crate::token::{auth_utils::AuthLib, token_utils::TokenLib};
 
     #[storage]
@@ -50,6 +50,7 @@ pub contract Token {
      * ===================== UNCONSTRAINED =======================
      * ======================================================== */
 
+    // TODO(#32): unconstrained fns cannot be injected in macros
     pub(crate) unconstrained fn balance_of_private(owner: AztecAddress) -> pub U128 {
         storage.private_balances.at(owner).balance_of()
     }

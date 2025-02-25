@@ -51,7 +51,6 @@ pub global TRANSFERRABLE_CODE: Quoted = quote {
         );
     }
 
-    // Transfers token `amount` from public balance of message sender to a private balance of `to`.
     #[private]
     fn transfer_public_to_private(
         from: AztecAddress,
@@ -124,8 +123,7 @@ pub global TRANSFERRABLE_CODE: Quoted = quote {
     #[public]
     #[internal]
     fn store_payload_in_storage(slot: Field, point: Point, setup_log: [Field; 9]) {
-        context.storage_write(slot, point);
-        context.storage_write(slot + aztec::protocol_types::point::POINT_LENGTH as Field, setup_log);
+        TokenLib::_store_payload_in_storage(slot, point, setup_log, &mut context);
     }
 
     #[public]

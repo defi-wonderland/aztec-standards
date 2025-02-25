@@ -24,8 +24,7 @@ pub global MINTABLE_CODE: Quoted = quote {
     #[public]
     fn mint_to_public(to: AztecAddress, amount: U128) {
         TokenLib::_increase_public_balance(storage.public_balances, to, amount);
-        let supply = storage.total_supply.read().add(amount);
-        storage.total_supply.write(supply);
+        TokenLib::_increase_total_supply(storage.total_supply, amount);
     }
 
     #[public]
