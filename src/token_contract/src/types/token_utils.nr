@@ -1,255 +1,9 @@
+mod transferrable;
+mod mintable;
+
 pub comptime fn token(m: Module) -> Quoted {
-    let token_body = quote {
-
-        global INITIAL_TRANSFER_CALL_MAX_NOTES: u32 = 2;
-        global RECURSIVE_TRANSFER_CALL_MAX_NOTES: u32 = 8;
-        
-        /** ==========================================================
-        * ========================= PRIVATE =========================
-        * ======================================================== */
-
-        #[private]
-        fn transfer_private_to_public(
-            from: AztecAddress,
-            to: AztecAddress,
-            amount: U128,
-            nonce: Field,
-        ) {
-            TokenLib::_validate_from_private(from, nonce, &mut context);
-
-            TokenLib::_subtract_exact_balance(
-                &mut context,
-                storage.private_balances,
-                from,
-                amount,
-                INITIAL_TRANSFER_CALL_MAX_NOTES,
-            )
-                .emit(encode_and_encrypt_note(&mut context, from, from));
-
-            // let self = Token::at(context.this_address());
-            // self.increase_public_balance(to, amount).enqueue(&mut context);
-            context.call_public_function(
-                context.this_address(),
-                FunctionSelector::from_signature("increase_public_balance((Field),(Field,Field))"),
-                [to.to_field(), amount.to_field()],
-            );
-        }
-
-        #[private]
-        fn transfer_private_to_private(
-            from: AztecAddress,
-            to: AztecAddress,
-            amount: U128,
-            nonce: Field,
-        ) {
-            TokenLib::_validate_from_private(from, nonce, &mut context);
-
-            TokenLib::_subtract_exact_balance(
-                &mut context,
-                storage.private_balances,
-                from,
-                amount,
-                INITIAL_TRANSFER_CALL_MAX_NOTES,
-            )
-                .emit(encode_and_encrypt_note(&mut context, from, from));
-
-            TokenLib::_increase_private_balance(storage.private_balances, to, amount).emit(
-                encode_and_encrypt_note(&mut context, to, from),
-            );
-        }
-
-        // Transfers token `amount` from public balance of message sender to a private balance of `to`.
-        #[private]
-        fn transfer_public_to_private(
-            from: AztecAddress,
-            to: AztecAddress,
-            amount: U128,
-            nonce: Field,
-        ) {
-            TokenLib::_validate_from_private(from, nonce, &mut context);
-
-            // let self = Token::at(context.this_address());
-            // self.decrease_public_balance(from, amount).enqueue(&mut context);
-            context.call_public_function(
-                context.this_address(),
-                FunctionSelector::from_signature("decrease_public_balance((Field),(Field,Field))"),
-                [from.to_field(), amount.to_field()],
-            );
-
-            TokenLib::_increase_private_balance(storage.private_balances, to, amount).emit(
-                encode_and_encrypt_note(&mut context, to, from),
-            );
-        }
-
-        #[private]
-        fn prepare_transfer_public_to_private(to: AztecAddress, from: AztecAddress) -> Field {
-            TokenLib::_prepare_transfer_public_to_private(
-                from,
-                to,
-                &mut context,
-                storage.private_balances,
-            )
-        }
-
-        #[internal]
-        #[private]
-        fn _recurse_subtract_balance(account: AztecAddress, amount: U128) -> U128 {
-            TokenLib::_subtract_balance(
-                &mut context,
-                storage.private_balances,
-                account,
-                amount,
-                RECURSIVE_TRANSFER_CALL_MAX_NOTES,
-            )
-        }
-
-        /** ==========================================================
-        * ========================= PUBLIC ==========================
-        * ======================================================== */
-
-        #[public]
-        fn transfer_public_to_public(from: AztecAddress, to: AztecAddress, amount: U128, nonce: Field) {
-            if (!from.eq(context.msg_sender())) {
-                assert_current_call_valid_authwit_public(&mut context, from);
-            } else {
-                assert(nonce == 0, "invalid nonce");
-            }
-            TokenLib::_decrease_public_balance(storage.public_balances, from, amount);
-            TokenLib::_increase_public_balance(storage.public_balances, to, amount);
-        }
-
-        /// Finalizes a transfer of token `amount` from public balance of `from` to a private balance of `to`.
-        /// The transfer must be prepared by calling `prepare_transfer_public_to_private` first and the resulting
-        /// `hiding_point_slot` must be passed as an argument to this function.
-        #[public]
-        fn finalize_transfer_public_to_private(
-            from: AztecAddress,
-            amount: U128,
-            hiding_point_slot: Field,
-            nonce: Field,
-        ) {
-            if (!from.eq(context.msg_sender())) {
-                assert_current_call_valid_authwit_public(&mut context, from);
-            } else {
-                assert(nonce == 0, "invalid nonce");
-            }
-            TokenLib::_finalize_transfer_public_to_private(
-                from,
-                amount,
-                hiding_point_slot,
-                &mut context,
-                storage.public_balances,
-            );
-        }
-
-        #[public]
-        #[internal]
-        fn store_payload_in_storage(slot: Field, point: Point, setup_log: [Field; 9]) {
-            context.storage_write(slot, point);
-            context.storage_write(slot + aztec::protocol_types::point::POINT_LENGTH as Field, setup_log);
-        }
-
-        #[public]
-        #[internal]
-        fn increase_public_balance(to: AztecAddress, amount: U128) {
-            TokenLib::_increase_public_balance(storage.public_balances, to, amount);
-        }
-
-        #[public]
-        #[internal]
-        fn decrease_public_balance(from: AztecAddress, amount: U128) {
-            TokenLib::_decrease_public_balance(storage.public_balances, from, amount);
-        }
-
-        /** ==========================================================
-        * ====================== VIEW FUNCTIONS =====================
-        * ======================================================== */
-
-        #[public]
-        #[view]
-        fn balance_of_public(owner: AztecAddress) -> U128 {
-            storage.public_balances.at(owner).read()
-        }
-
-        #[public]
-        #[view]
-        fn total_supply() -> U128 {
-            storage.total_supply.read()
-        }
-    };
-
-    let mintable_body = quote {
-        /** ==========================================================
-        * ======================= MINTABLE ==========================
-        * ======================================================== */
-
-        /// Mints token `amount` to a private balance of `to`. Message sender has to have minter permissions (checked
-        /// in the enqueued call).
-        #[private]
-        fn mint_to_private(
-            from: AztecAddress, // sender of the tag: TODO(#9887): this is not great?
-            to: AztecAddress,
-            amount: U128,
-        ) {
-            // We prepare the partial note to which we'll "send" the minted amount.
-            let hiding_point_slot = TokenLib::_prepare_transfer_public_to_private(
-                from,
-                to,
-                &mut context,
-                storage.private_balances,
-            );
-
-            // let self: Token = Token::at(context.this_address());
-            // self
-            //     ._finalize_mint_to_private_unsafe(context.msg_sender(), amount, hiding_point_slot)
-            //     .enqueue(&mut context);
-
-            context.call_public_function(
-                context.this_address(),
-                FunctionSelector::from_signature("finalize_mint_to_private((Field,Field),Field)"),
-                [amount.to_field(), hiding_point_slot.to_field()],
-            );
-        }
-
-        #[public]
-        fn mint_to_public(to: AztecAddress, amount: U128) {
-            TokenLib::_increase_public_balance(storage.public_balances, to, amount);
-            let supply = storage.total_supply.read().add(amount);
-            storage.total_supply.write(supply);
-        }
-
-        /// Finalizes a mint of token `amount` to a private balance of `to`. The mint must be prepared by calling
-        /// `prepare_transfer_public_to_private` first and the resulting
-        /// `hiding_point_slot` must be passed as an argument to this function.
-        ///
-        /// Note: This function is only an optimization as it could be replaced by a combination of `mint_to_public`
-        /// and `finalize_transfer_public_to_private`. It is however used very commonly so it makes sense to optimize it
-        /// (e.g. used during token bridging, in AMM liquidity token etc.).
-        #[public]
-        fn finalize_mint_to_private(amount: U128, hiding_point_slot: Field) {
-            TokenLib::_finalize_mint_to_private(
-                amount,
-                hiding_point_slot,
-                &mut context,
-                storage.total_supply,
-            );
-        }
-
-        #[public]
-        #[internal]
-        fn _finalize_mint_to_private_unsafe(
-            from: AztecAddress,
-            amount: U128,
-            hiding_point_slot: Field,
-        ) {
-            TokenLib::_finalize_mint_to_private(
-                amount,
-                hiding_point_slot,
-                &mut context,
-                storage.total_supply,
-            );
-        }
-    };
+    let token_body = transferrable::TRANSFERRABLE_CODE;
+    let mintable_body = mintable::MINTABLE_CODE;
 
     quote {
         $token_body
@@ -295,7 +49,7 @@ pub mod TokenLib {
         _increase_hiding_point_balance(context, hiding_point_slot, amount);
     }
 
-    pub fn _subtract_exact_balance(
+    pub fn _decrease_private_balance(
         context: &mut PrivateContext,
         private_balances: Map<AztecAddress, BalanceSet<&mut PrivateContext>, &mut PrivateContext>,
         account: AztecAddress,
@@ -421,7 +175,7 @@ pub mod TokenLib {
             FunctionSelector::from_signature(
                 "store_payload_in_storage(Field,(Field,Field,Field),(Field,Field,Field,Field,Field,Field,Field,Field,Field))",
             ),
-            serialize_setup_log(
+            serialize_payload_call(
                 hiding_point_slot,
                 note_setup_payload.hiding_point,
                 setup_log,
@@ -431,7 +185,7 @@ pub mod TokenLib {
         hiding_point_slot
     }
 
-    fn serialize_setup_log(
+    fn serialize_payload_call(
         hiding_point_slot: Field,
         hiding_point: Point,
         setup_log: [Field; 9],
