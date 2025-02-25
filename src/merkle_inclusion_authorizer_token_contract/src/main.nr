@@ -2,35 +2,36 @@
 use dep::aztec::macros::aztec;
 
 // Minimal authorization token implementation that supports `AuthWit` accounts.
+// The authorization for transfers is done via a merkle proof of inclusion that is managed by the owner.
+// The owner can add and remove addresses from the whitelist at any time.
 // The auth message follows a similar pattern to the cross-chain message and includes a designated caller.
 // The designated caller is ALWAYS used here, and not based on a flag as cross-chain.
 // message hash = H([caller, contract, selector, ...args])
 // To be read as `caller` calls function at `contract` defined by `selector` with `args`
 // Including a nonce in the message hash ensures that the message can only be used once.
 #[aztec]
-pub contract AuthorizationToken {
+pub contract MerkleInclusionAuthorizerToken {
+
+    use dep::aztec::protocol_types::constants::MAX_PACKED_PUBLIC_BYTECODE_SIZE_IN_FIELDS;
+
     // Libs
     use dep::aztec::{
-        context::{PrivateContext},
-        macros::{functions::{initializer, internal, private, public}, storage::storage},
-        prelude::{AztecAddress, SharedMutable},
+        macros::{functions::{initializer, internal, private, public, view}, storage::storage},
+        prelude::{AztecAddress, PublicMutable, Map},
         protocol_types::{traits::Serialize},
     };
 
-    use dep::merkle_inclusion_authorizer_contract::MerkleInclussionAuthorizer;
-
-    // Authorizing a new address has a certain block delay before it goes into effect.
-    global CHANGE_AUTHORIZED_DELAY_BLOCKS: u32 = 5;
-
     #[storage]
     struct Storage<Context> {
-        authorizer: SharedMutable<AztecAddress, CHANGE_AUTHORIZED_DELAY_BLOCKS, Context>,
+        owner: PublicMutable<AztecAddress, Context>,
+        root_hash: PublicMutable<Field, Context>,
+        whitelist: Map<AztecAddress, PublicMutable<bool, Context>, Context>,
     }
 
     #[public]
     #[initializer]
-    fn constructor(name: str<31>, symbol: str<31>, decimals: u8, authorizer: AztecAddress) {
-        storage.authorizer.schedule_value_change(authorizer)
+    fn constructor(name: str<31>, symbol: str<31>, decimals: u8, owner: AztecAddress) {
+        storage.owner.write(owner);
     }
 
     /** ==========================================================
@@ -43,7 +44,7 @@ pub contract AuthorizationToken {
         amount: U128,
         nonce: Field,
     ) {
-        _authorize_in_private(from, to, amount, &mut context, storage);
+        authorize_in_private(from, to, amount);
         // ...
     }
 
@@ -54,7 +55,7 @@ pub contract AuthorizationToken {
         amount: U128,
         nonce: Field,
     ) {
-        _authorize_in_private(from, to, amount, &mut context, storage);
+        authorize_in_private(from, to, amount);
         // ...
     }
 
@@ -66,7 +67,7 @@ pub contract AuthorizationToken {
         amount: U128,
         nonce: Field,
     ) {
-        _authorize_in_private(from, to, amount, &mut context, storage);
+        authorize_in_private(from, to, amount);
         // ...
     }
     /// Prepares an increase of private balance of `to` (partial note). The increase needs to be finalized by calling
@@ -118,28 +119,66 @@ pub contract AuthorizationToken {
      * ======================= AUTHORIZATION =====================
      * ======================================================== */
 
-    #[public]
-    fn authorize_in_public(from: AztecAddress, to: AztecAddress, amount: U128) {
-        // TODO: External calls are incredibly expensive. In future versions, we should avoid making
-        // external calls and add authorization logic directly to thet token contract.
-        let authorizer = storage.authorizer.get_current_value();
-        let authorizer_contract = MerkleInclussionAuthorizer::at(authorizer);
-        authorizer_contract.authorize_in_public(from, to, amount).call(&mut context);
+    #[contract_library_method]
+    fn authorize_in_private(from: AztecAddress, to: AztecAddress, amount: U128) {
+        let merkle_tree_proof: [Field; MAX_PACKED_PUBLIC_BYTECODE_SIZE_IN_FIELDS] =
+            [0; MAX_PACKED_PUBLIC_BYTECODE_SIZE_IN_FIELDS];
+
+        // TODO: Pop capsule
+        // merkle_tree_proof = unsafe { pop_capsule() };
+
+        // TODO: Can we have the msg.sig for this method?
+
+        let is_from_valid = _verify_merkle_proof(from, merkle_tree_proof);
+
+        assert(is_from_valid, "Sender is not authorized");
     }
 
+    #[public]
+    #[view]
+    fn root_hash() -> Field {
+        storage.root_hash.read()
+    }
+
+    #[public]
+    fn validate_root_hash(_root_hash: Field) {
+        assert(_root_hash == storage.root_hash.read(), "Invalid root hash");
+    }
+
+    #[public]
+    fn add_to_whitelist(address: AztecAddress, root_hash: Field) {
+        assert(storage.owner.read() == context.msg_sender(), "Not owner");
+        storage.whitelist.at(address).write(true);
+        storage.root_hash.write(root_hash);
+    }
+
+    #[public]
+    fn remove_from_whitelist(address: AztecAddress, root_hash: Field) {
+        assert(storage.owner.read() == context.msg_sender(), "Not owner");
+        storage.whitelist.at(address).write(false);
+        storage.root_hash.write(root_hash);
+    }
+
+    #[public]
+    fn authorize_in_public(from: AztecAddress, to: AztecAddress, amount: U128) {
+        assert(storage.whitelist.at(from).read(), "Not whitelisted");
+    }
+
+    /** ==========================================================
+    * ======================= LIBRARIES =========================
+    * ======================================================== */
+
     #[contract_library_method]
-    fn _authorize_in_private(
-        from: AztecAddress,
-        to: AztecAddress,
-        amount: U128,
-        context: &mut PrivateContext,
-        storage: Storage<&mut PrivateContext>,
-    ) {
-        // TODO: External calls are incredibly expensive. In future versions, we should avoid making
-        // external calls and add authorization logic directly to thet token contract.
-        let authorizer = storage.authorizer.get_current_value();
-        let authorizer_contract = MerkleInclussionAuthorizer::at(authorizer);
-        authorizer_contract.authorize_in_private(from, to, amount).call(context);
+    fn _verify_merkle_proof(
+        address: AztecAddress,
+        proof: [Field; MAX_PACKED_PUBLIC_BYTECODE_SIZE_IN_FIELDS],
+    ) -> bool {
+        // TODO: Use the merkle proof to verify the address is in the merkle tree
+        // calculate root hash
+        // let _root_hash = ...;
+        // let self = MerkleInclussionAuthorizer::at(context.this_address());
+        // self.validate_root_hash(_root_hash);
+        true
     }
 }
 
