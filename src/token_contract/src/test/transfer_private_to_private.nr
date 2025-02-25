@@ -1,6 +1,6 @@
 use crate::test::utils;
 use crate::Token;
-use dep::authwit::cheatcodes as authwit_cheatcodes;
+use authwit::cheatcodes as authwit_cheatcodes;
 
 #[test]
 unconstrained fn transfer_private_on_behalf_of_other() {

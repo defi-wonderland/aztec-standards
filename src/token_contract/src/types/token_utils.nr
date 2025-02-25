@@ -258,7 +258,7 @@ pub comptime fn token(m: Module) -> Quoted {
 }
 
 pub mod TokenLib {
-    use dep::aztec::{
+    use aztec::{
         context::PrivateContext,
         note::{note_emission::OuterNoteEmission, note_interface::PartialNote},
         oracle::random::random,
@@ -266,9 +266,9 @@ pub mod TokenLib {
         protocol_types::abis::function_selector::FunctionSelector,
     };
 
-    use dep::uint_note::uint_note::UintNote;
+    use uint_note::uint_note::UintNote;
 
-    use dep::authwit::auth::assert_current_call_valid_authwit;
+    use authwit::auth::assert_current_call_valid_authwit;
 
     use crate::types::balance_set::BalanceSet;
 

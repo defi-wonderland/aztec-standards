@@ -1,7 +1,7 @@
 use crate::test::utils;
 use crate::Token;
-use dep::authwit::cheatcodes as authwit_cheatcodes;
-use dep::aztec::test::helpers::cheatcodes;
+use authwit::cheatcodes as authwit_cheatcodes;
+use aztec::test::helpers::cheatcodes;
 
 #[test]
 unconstrained fn transfer_private() {

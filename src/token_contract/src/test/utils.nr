@@ -1,5 +1,5 @@
 use crate::Token;
-use dep::uint_note::uint_note::UintNote;
+use uint_note::uint_note::UintNote;
 use aztec::{
     oracle::{
         execution::{get_block_number, get_contract_address},

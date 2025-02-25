@@ -2,15 +2,15 @@ mod types;
 mod test;
 
 use crate::types::token_utils::token;
-use dep::aztec::macros::aztec;
+use aztec::macros::aztec;
 
 #[token]
 #[aztec]
 pub contract Token {
 
-    use dep::compressed_string::FieldCompressedString;
+    use compressed_string::FieldCompressedString;
 
-    use dep::aztec::{
+    use aztec::{
         encrypted_logs::log_assembly_strategies::default_aes128::note::encode_and_encrypt_note,
         macros::{functions::{initializer, internal, private, public, view}, storage::storage},
         prelude::{AztecAddress, Map, PublicImmutable, PublicMutable},
@@ -22,7 +22,7 @@ pub contract Token {
     };
 
     // TODO: move authwit to token_utils ?
-    use dep::authwit::auth::assert_current_call_valid_authwit_public;
+    use authwit::auth::assert_current_call_valid_authwit_public;
 
     use crate::types::balance_set::BalanceSet;
     use crate::types::token_utils::TokenLib;
