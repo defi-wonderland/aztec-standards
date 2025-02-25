@@ -1,4 +1,4 @@
-pub comptime fn token_utils(m: Module) -> Quoted {
+pub comptime fn token(m: Module) -> Quoted {
     let token_body = quote {
         /** ==========================================================
         * ========================= PRIVATE =========================

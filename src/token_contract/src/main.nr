@@ -1,10 +1,10 @@
 mod types;
 mod test;
 
-use crate::types::token_utils::token_utils;
+use crate::types::token_utils::token;
 use dep::aztec::macros::aztec;
 
-#[token_utils]
+#[token]
 #[aztec]
 pub contract Token {
 
@@ -43,13 +43,5 @@ pub contract Token {
         storage.name.initialize(FieldCompressedString::from_string(name));
         storage.symbol.initialize(FieldCompressedString::from_string(symbol));
         storage.decimals.initialize(decimals);
-    }
-
-    /** ==========================================================
-     * ===================== UNCONSTRAINED =======================
-     * ======================================================== */
-
-    pub(crate) unconstrained fn balance_of_private(owner: AztecAddress) -> pub U128 {
-        storage.private_balances.at(owner).balance_of()
     }
 }
