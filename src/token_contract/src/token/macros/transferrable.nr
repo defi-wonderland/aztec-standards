@@ -112,11 +112,11 @@ pub global TRANSFERRABLE_CODE: Quoted = quote {
     ) {
         AuthLib::_validate_from_public(&mut context, from, nonce);
         TokenLib::_finalize_transfer_public_to_private(
-            from,
-            amount,
-            hiding_point_slot,
             &mut context,
             storage.public_balances,
+            from,
+            hiding_point_slot,
+            amount,
         );
     }
 
