@@ -199,10 +199,10 @@ pub mod TokenLib {
     }
 
     pub fn _prepare_transfer_public_to_private(
-        from: AztecAddress, // sender of the tag: TODO(#9887): this is not great?
-        to: AztecAddress,
         context: &mut PrivateContext,
         private_balances: Map<AztecAddress, BalanceSet<&mut PrivateContext>, &mut PrivateContext>,
+        from: AztecAddress, // sender of the tag: TODO(#9887): this is not great?
+        to: AztecAddress,
     ) -> Field {
         let to_note_slot = private_balances.at(to).set.storage_slot;
 

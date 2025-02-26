@@ -12,10 +12,10 @@ pub global MINTABLE_CODE: Quoted = quote {
     ) {
         // We prepare the partial note to which we'll "send" the minted amount.
         let hiding_point_slot = TokenLib::_prepare_transfer_public_to_private(
-            from,
-            to,
             &mut context,
             storage.private_balances,
+            from,
+            to,
         );
 
         TokenLib::_private_finalize_mint_to_private(&mut context, hiding_point_slot, amount);
