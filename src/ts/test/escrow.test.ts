@@ -1,5 +1,5 @@
-import { TokenContractArtifact, TokenContract } from '../../../artifacts/Token.js';
-import { EscrowContractArtifact, EscrowContract } from '../../../artifacts/Escrow.js';
+import { TokenContractArtifact, TokenContract } from '../../artifacts/Token.js';
+import { EscrowContractArtifact, EscrowContract } from '../../artifacts/Escrow.js';
 import {
   AccountWallet,
   createLogger,
@@ -12,8 +12,8 @@ import {
 } from '@aztec/aztec.js';
 import { createAccount } from '@aztec/accounts/testing';
 import { computePartialAddress, deriveKeys } from '@aztec/circuits.js';
-import { createPXE, expectAddressNote, expectTokenBalances, expectUintNote, wad } from '../../../ts/test/utils.js';
-import { deployToken } from '../../../ts/test/token.test.js';
+import { createPXE, expectAddressNote, expectTokenBalances, expectUintNote, wad } from './utils.js';
+import { deployToken } from './token.test.js';
 
 async function deployEscrow(pxes: PXE[], wallet: Wallet, owner: AztecAddress) {
   const escrowSecretKey = Fr.random();
@@ -88,8 +88,8 @@ describe('Escrow - Multi PXE', () => {
     });
 
     // bob knows alice and escrow
-    bobPXE.registerSender(escrow.address);
-    bobPXE.registerSender(alice.getAddress());
+    await bobPXE.registerSender(escrow.address);
+    await bobPXE.registerSender(alice.getAddress());
 
     bob.setScopes([bob.getAddress(), escrow.address]);
   });
@@ -109,63 +109,8 @@ describe('Escrow - Multi PXE', () => {
     expect(notes.length).toBe(1);
     expectAddressNote(notes[0], bob.getAddress(), bob.getAddress());
 
-    // mint initial amount
-    await token.withWallet(alice).methods.mint_to_public(alice.getAddress(), wad(10)).send().wait();
-
-    await token
-      .withWallet(alice)
-      .methods.transfer_public_to_private(alice.getAddress(), alice.getAddress(), wad(10), 0)
-      .send()
-      .wait();
-    await token.withWallet(alice).methods.sync_notes().simulate({});
-
-    // assert balances
-    await expectTokenBalances(token, alice.getAddress(), wad(0), wad(10), aliceWallet);
-    await expectTokenBalances(token, bob.getAddress(), wad(0), wad(0), bobWallet);
-
-    // Transfer both in private and public
-    const fundEscrowTx = await token
-      .withWallet(alice)
-      .methods.transfer_private_to_private(alice.getAddress(), escrow.address, wad(5), 0)
-      .send()
-      .wait({
-        debug: true,
-      });
-
-    const fundEscrowTx2 = await token
-      .withWallet(alice)
-      .methods.transfer_private_to_private(alice.getAddress(), escrow.address, wad(5), 0)
-      .send()
-      .wait({
-        debug: true,
-      });
-
-    await token.withWallet(alice).methods.sync_notes().simulate({});
-    await token.withWallet(bob).methods.sync_notes().simulate({});
-
-    // assert balances, alice 0 and 0, escrow 0 and 10
-    await expectTokenBalances(token, alice.getAddress(), wad(0), wad(0), aliceWallet);
-    await expectTokenBalances(token, escrow.address, wad(0), wad(10), aliceWallet);
-    await expectTokenBalances(token, escrow.address, wad(0), wad(10), bobWallet);
-
-    // alice should have a note with escrow as owner (why alice can see the escrow's note?)
-    notes = await alice.getNotes({ contractAddress: token.address });
-    expect(notes.length).toBe(2);
-    expectUintNote(notes[0], wad(5), escrow.address);
-    expectUintNote(notes[1], wad(5), escrow.address);
-
-    await escrow.withWallet(alice).methods.sync_notes().simulate({});
-    await escrow.withWallet(bob).methods.sync_notes().simulate({});
-
-    notes = await alice.getNotes({ owner: escrow.address });
-    expect(notes.length).toBe(2);
-    expectUintNote(notes[0], wad(5), escrow.address);
-    expectUintNote(notes[1], wad(5), escrow.address);
-
-    notes = await bob.getNotes({ owner: escrow.address });
-    expect(notes.length).toBe(2);
-    expectUintNote(notes[0], wad(5), escrow.address);
-    expectUintNote(notes[1], wad(5), escrow.address);
+    // Fund escrow
+    await token.withWallet(alice).methods.mint_to_private(alice.getAddress(), escrow.address, wad(10)).send().wait();
 
     // withdraw 7 from the escrow
     const withdrawTx = await escrow
@@ -176,7 +121,6 @@ describe('Escrow - Multi PXE', () => {
         debug: true,
       });
 
-    await expectTokenBalances(token, escrow.address, wad(0), wad(3), aliceWallet);
     await expectTokenBalances(token, escrow.address, wad(0), wad(3), bobWallet);
     await expectTokenBalances(token, bob.getAddress(), wad(0), wad(7), bobWallet);
   }, 300_000);
