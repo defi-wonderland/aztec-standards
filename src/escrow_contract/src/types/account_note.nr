@@ -39,12 +39,6 @@ impl NullifiableNote for AccountNote {
     }
 }
 
-// impl Eq for AccountNote {
-//     fn eq(self: Self, other: Self) -> bool {
-//         (self.owner.to_field() == other.owner.to_field()) & (self.secret == other.secret)
-//     }
-// }
-
 impl AccountNote {
     pub fn new(owner: AztecAddress, secret: Field) -> Self {
         let randomness = unsafe { random() };
