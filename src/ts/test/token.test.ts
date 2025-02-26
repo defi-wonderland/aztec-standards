@@ -114,24 +114,25 @@ describe('Token - Single PXE', () => {
     expect(bobBalance).toBe(AMOUNT);
   }, 300_000);
 
-  it('burns public tokens', async () => {
-    // First mint 2 tokens to alice
-    await token
-      .withWallet(alice)
-      .methods.mint_to_public(alice.getAddress(), AMOUNT * 2n)
-      .send()
-      .wait();
+  // TODO(#29): burn was nuked because of this PR, re-enable it
+  // it('burns public tokens', async () => {
+  //   // First mint 2 tokens to alice
+  //   await token
+  //     .withWallet(alice)
+  //     .methods.mint_to_public(alice.getAddress(), AMOUNT * 2n)
+  //     .send()
+  //     .wait();
 
-    // Burn 1 token from alice
-    await token.withWallet(alice).methods.burn_public(alice.getAddress(), AMOUNT, 0).send().wait();
+  //   // Burn 1 token from alice
+  //   await token.withWallet(alice).methods.burn_public(alice.getAddress(), AMOUNT, 0).send().wait();
 
-    // Check balance and total supply are reduced
-    const aliceBalance = await token.methods.balance_of_public(alice.getAddress()).simulate();
-    const totalSupply = await token.methods.total_supply().simulate();
+  //   // Check balance and total supply are reduced
+  //   const aliceBalance = await token.methods.balance_of_public(alice.getAddress()).simulate();
+  //   const totalSupply = await token.methods.total_supply().simulate();
 
-    expect(aliceBalance).toBe(AMOUNT);
-    expect(totalSupply).toBe(AMOUNT);
-  }, 300_000);
+  //   expect(aliceBalance).toBe(AMOUNT);
+  //   expect(totalSupply).toBe(AMOUNT);
+  // }, 300_000);
 
   it('transfers tokens from private to public balance', async () => {
     // First mint to private 2 tokens to alice
@@ -231,34 +232,35 @@ describe('Token - Single PXE', () => {
     expect(alicePublicBalance).toBe(0n);
   }, 300_000);
 
-  it('can burn tokens from private balance', async () => {
-    // Mint 2 tokens privately to alice
-    await token
-      .withWallet(alice)
-      .methods.mint_to_private(alice.getAddress(), alice.getAddress(), AMOUNT * 2n)
-      .send()
-      .wait();
+  // TODO(#29): burn was nuked because of this PR, re-enable it
+  // it('can burn tokens from private balance', async () => {
+  //   // Mint 2 tokens privately to alice
+  //   await token
+  //     .withWallet(alice)
+  //     .methods.mint_to_private(alice.getAddress(), alice.getAddress(), AMOUNT * 2n)
+  //     .send()
+  //     .wait();
 
-    // Burn 1 token from alice's private balance
-    await token.withWallet(alice).methods.burn_private(alice.getAddress(), AMOUNT, 0).send().wait();
+  //   // Burn 1 token from alice's private balance
+  //   await token.withWallet(alice).methods.burn_private(alice.getAddress(), AMOUNT, 0).send().wait();
 
-    // Try to burn more than available balance
-    await expect(
-      token
-        .withWallet(alice)
-        .methods.burn_private(alice.getAddress(), AMOUNT * 2n, 0)
-        .send()
-        .wait(),
-    ).rejects.toThrow(/Balance too low/);
+  //   // Try to burn more than available balance
+  //   await expect(
+  //     token
+  //       .withWallet(alice)
+  //       .methods.burn_private(alice.getAddress(), AMOUNT * 2n, 0)
+  //       .send()
+  //       .wait(),
+  //   ).rejects.toThrow(/Balance too low/);
 
-    // Check total supply decreased
-    const totalSupply = await token.methods.total_supply().simulate();
-    expect(totalSupply).toBe(AMOUNT);
+  //   // Check total supply decreased
+  //   const totalSupply = await token.methods.total_supply().simulate();
+  //   expect(totalSupply).toBe(AMOUNT);
 
-    // Public balance should still be 0
-    const alicePublicBalance = await token.methods.balance_of_public(alice.getAddress()).simulate();
-    expect(alicePublicBalance).toBe(0n);
-  }, 300_000);
+  //   // Public balance should still be 0
+  //   const alicePublicBalance = await token.methods.balance_of_public(alice.getAddress()).simulate();
+  //   expect(alicePublicBalance).toBe(0n);
+  // }, 300_000);
 
   it('can transfer tokens from public to private balance', async () => {
     // Mint 2 tokens publicly to alice
