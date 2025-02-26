@@ -1,11 +1,7 @@
-use crate::ClawbackEscrow;
 use dep::escrow_contract::Escrow;
 use dep::token::Token;
-use aztec::note::lifecycle::destroy_note;
-use aztec::note::note_getter::{MAX_NOTES_PER_PAGE, view_notes};
-use aztec::note::note_viewer_options::NoteViewerOptions;
 use aztec::{
-    oracle::{execution::{get_block_number, get_contract_address}, random::random},
+    oracle::{execution::get_contract_address, random::random},
     prelude::AztecAddress,
     test::helpers::{cheatcodes, test_environment::TestEnvironment},
 };

@@ -65,8 +65,6 @@ describe('ClawbackEscrow - Multi PXE', () => {
       clawback: clawback.address,
       escrow: escrow.address,
     });
-
-    bob.setScopes([bob.getAddress(), escrow.address, clawback.address]);
   });
 
   it('clawback', async () => {

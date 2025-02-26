@@ -9,15 +9,12 @@ import {
   Wallet,
   createPXEClient,
   AccountWalletWithSecretKey,
-  to2Fields,
   FieldLike,
 } from '@aztec/aztec.js';
 import { computePartialAddress, deriveKeys } from '@aztec/circuits.js';
 import { TokenContract } from '../../artifacts/Token.js';
 import { EscrowContract } from '../../artifacts/Escrow.js';
-import { ClawbackEscrowContract, ClawbackEscrowContractArtifact } from '../../artifacts/ClawbackEscrow.js';
-import { createAccount } from '@aztec/accounts/testing';
-import { registerContractClass } from '@aztec/aztec.js/deployment';
+import { ClawbackEscrowContract } from '../../artifacts/ClawbackEscrow.js';
 
 export const logger = createLogger('aztec:aztec-standards');
 

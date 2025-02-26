@@ -10,7 +10,7 @@ use dep::aztec::{
     protocol_types::{
         constants::GENERATOR_INDEX__NOTE_NULLIFIER,
         hash::poseidon2_hash_with_separator,
-        traits::{Empty, Packable, Serialize, ToField},
+        traits::{Empty, Packable, Serialize},
     },
 };
 
