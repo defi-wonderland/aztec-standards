@@ -1,4 +1,5 @@
 use dep::aztec::macros::aztec;
+mod test;
 
 #[aztec]
 // Sample escrow contract that stores a balance of a private token on behalf of an owner.
