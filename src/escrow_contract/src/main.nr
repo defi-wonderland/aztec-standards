@@ -50,7 +50,7 @@ pub contract Escrow {
     fn leak_keys(to: AztecAddress) {
         let sender = context.msg_sender();
         let note = storage.owner.get_note();
-        assert(note.address == sender);
+        assert(note.address == sender, "Unauthorized");
         // TODO: refactor AddressNote to fulfill our needs
 
         let owner_npk_m_hash: Field = get_public_keys(context.this_address()).npk_m.hash();
