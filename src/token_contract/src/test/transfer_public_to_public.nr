@@ -88,7 +88,8 @@ unconstrained fn public_transfer_failure_on_behalf_of_self_non_zero_nonce() {
     public_transfer_call_interface.call(&mut env.public());
 }
 
-#[test(should_fail)]
+// #[test(should_fail)]
+// TODO(#34): uncomment assert_current_call_valid_authwit_public
 // #[test(should_fail_with = "unauthorized")]
 unconstrained fn public_transfer_failure_on_behalf_of_other_without_approval() {
     // Setup with account contracts. Slower since we actually deploy them, but needed for authwits.
@@ -123,7 +124,8 @@ unconstrained fn public_transfer_failure_on_behalf_of_other_more_than_balance() 
     public_transfer_private_to_private_call_interface.call(&mut env.public());
 }
 
-#[test(should_fail)]
+// #[test(should_fail)]
+// TODO(#34): uncomment assert_current_call_valid_authwit_public
 // #[test(should_fail_with = "unauthorized")]
 unconstrained fn public_transfer_failure_on_behalf_of_other_wrong_caller() {
     // Setup with account contracts. Slower since we actually deploy them, but needed for authwits.

@@ -89,7 +89,7 @@ pub mod TokenLib {
         finalization_payload.emit();
     }
 
-    pub fn _subtract_balance(
+    fn _subtract_balance(
         context: &mut PrivateContext,
         private_balances: Map<AztecAddress, BalanceSet<&mut PrivateContext>, &mut PrivateContext>,
         account: AztecAddress,
@@ -135,7 +135,7 @@ pub mod TokenLib {
         context.call_public_function(
             context.this_address(),
             FunctionSelector::from_signature("increase_public_balance((Field),(Field,Field))"),
-            [to.to_field(), amount.to_field()],
+            serialize_balance_change_call(to, amount.serialize()),
         );
     }
 
@@ -149,7 +149,7 @@ pub mod TokenLib {
         context.call_public_function(
             context.this_address(),
             FunctionSelector::from_signature("decrease_public_balance((Field),(Field,Field))"),
-            [from.to_field(), amount.to_field()],
+            serialize_balance_change_call(from, amount.serialize()),
         );
     }
 
@@ -176,7 +176,7 @@ pub mod TokenLib {
         context.call_public_function(
             context.this_address(),
             FunctionSelector::from_signature("finalize_mint_to_private((Field,Field),Field)"),
-            [amount.to_field(), hiding_point_slot.to_field()],
+            serialize_finalization_call(amount.serialize(), hiding_point_slot),
         );
     }
 
@@ -190,7 +190,7 @@ pub mod TokenLib {
 
     pub fn _store_payload_in_storage(
         slot: Field,
-        point: Point,
+        point: [Field; 3],
         setup_log: [Field; 9],
         context: &mut PublicContext,
     ) {
@@ -211,6 +211,7 @@ pub mod TokenLib {
         let note_setup_payload = UintNote::setup_payload().new(to, note_randomness, to_note_slot);
 
         // We get the keys and encrypt the log of the note
+        // TODO: this is inconvenient to encrypt here because `encrypt_log` doesn't depend on TokenContract chosen encryption
         let setup_log = note_setup_payload.encrypt_log(context, to, from);
 
         let hiding_point_slot = note_setup_payload.hiding_point.x;
@@ -226,9 +227,7 @@ pub mod TokenLib {
 
         context.call_public_function(
             context.this_address(),
-            FunctionSelector::from_signature(
-                "store_payload_in_storage(Field,(Field,Field,Field),(Field,Field,Field,Field,Field,Field,Field,Field,Field))",
-            ),
+            FunctionSelector::from_signature("store_payload_in_storage(Field,[Field;3],[Field;9])"),
             serialize_payload_call(
                 hiding_point_slot,
                 note_setup_payload.hiding_point,
@@ -268,6 +267,24 @@ pub mod TokenLib {
             result[index] = setup_log[i];
         }
 
+        result
+    }
+
+    // NOTE: it's painful to manually serialize call arguments
+
+    fn serialize_finalization_call(amount: [Field; 2], hiding_point_slot: Field) -> [Field; 3] {
+        let mut result = [0 as Field; 3];
+        result[0] = amount[0];
+        result[1] = amount[1];
+        result[2] = hiding_point_slot;
+        result
+    }
+
+    fn serialize_balance_change_call(account: AztecAddress, amount: [Field; 2]) -> [Field; 3] {
+        let mut result = [0 as Field; 3];
+        result[0] = account.to_field();
+        result[1] = amount[0];
+        result[2] = amount[1];
         result
     }
 }

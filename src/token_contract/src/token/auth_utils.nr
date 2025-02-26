@@ -14,6 +14,7 @@ pub mod AuthLib {
 
     pub fn _validate_from_public(context: &mut PublicContext, from: AztecAddress, nonce: Field) {
         if (!from.eq(context.msg_sender())) {
+            // TODO(#34): uncomment assert_current_call_valid_authwit_public
             // assert_current_call_valid_authwit_public(&mut context, from);
         } else {
             assert(nonce == 0, "invalid nonce");
