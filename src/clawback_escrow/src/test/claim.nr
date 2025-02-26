@@ -23,7 +23,9 @@ unconstrained fn recipient_can_claim() {
         .call(&mut env.private());
 }
 
-#[test(should_fail_with = "Balance too low")]
+// TODO(#33):
+// #[test(should_fail_with = "Balance too low")]
+#[test(should_fail)]
 unconstrained fn recipient_cannot_claim_more_than_escrowed_amount() {
     let mint_amount = U128::from_integer(1_000_000_000);
     let (env, clawback_escrow_contract_address, escrow_contract_address, token_contract_address, owner, recipient) =

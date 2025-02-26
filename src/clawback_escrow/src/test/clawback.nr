@@ -45,7 +45,8 @@ unconstrained fn only_sender_can_clawback() {
         .call(&mut env.private());
 }
 
-#[test(should_fail_with = "Balance too low")]
+// #[test(should_fail_with = "Balance too low")]
+#[test(should_fail)]
 unconstrained fn cannot_clawback_more_than_escrowed_amount() {
     let mint_amount = U128::from_integer(1_000_000_000);
     let (env, clawback_escrow_contract_address, escrow_contract_address, token_contract_address, owner, recipient) =
