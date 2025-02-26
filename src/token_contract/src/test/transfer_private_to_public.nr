@@ -55,6 +55,7 @@ unconstrained fn transfer_private_to_public_on_behalf_of_other() {
 }
 
 #[test(should_fail)]
+// TODO(#33): error logs don't match because of raw calls
 // #[test(should_fail_with = "Balance too low")]
 unconstrained fn transfer_private_to_public_failure_more_than_balance() {
     // Setup without account contracts. We are not using authwits here, so dummy accounts are enough

@@ -11,7 +11,7 @@ pub contract Token {
     use aztec::{
         macros::{functions::{initializer, internal, private, public, view}, storage::storage},
         prelude::{AztecAddress, Map, PublicImmutable, PublicMutable},
-        protocol_types::{point::Point, traits::{Hash, Serialize}},
+        protocol_types::traits::{Hash, Serialize},
     };
 
     // encryption library
@@ -24,10 +24,10 @@ pub contract Token {
     #[storage]
     struct Storage<Context> {
         // TODO: fix "is private and not visible from the current module" warning
+        // TODO: why BalanceSet cannot be imported from TokenLib while FieldCompressedString can?
         name: PublicImmutable<TokenLib::FieldCompressedString, Context>,
         symbol: PublicImmutable<TokenLib::FieldCompressedString, Context>,
         decimals: PublicImmutable<u8, Context>,
-        // TODO: BalanceSet cannot be imported from TokenLib (while FieldCompressedString can!)
         private_balances: Map<AztecAddress, BalanceSet<Context>, Context>,
         total_supply: PublicMutable<U128, Context>,
         public_balances: Map<AztecAddress, PublicMutable<U128, Context>, Context>,

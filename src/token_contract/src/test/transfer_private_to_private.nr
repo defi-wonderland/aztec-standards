@@ -26,6 +26,7 @@ unconstrained fn transfer_private_on_behalf_of_other() {
 }
 
 #[test(should_fail)]
+// TODO(#33): error logs don't match because of raw calls
 // #[test(should_fail_with = "invalid nonce")]
 unconstrained fn transfer_private_failure_on_behalf_of_self_non_zero_nonce() {
     // Setup without account contracts. We are not using authwits here, so dummy accounts are enough

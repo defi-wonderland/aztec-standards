@@ -48,6 +48,7 @@ unconstrained fn transfer_public_to_private_external_orchestration() {
 }
 
 #[test(should_fail)]
+// TODO(#33): error logs don't match because of raw calls
 // #[test(should_fail_with = "transfer not prepared")]
 unconstrained fn transfer_public_to_private_transfer_not_prepared() {
     // Setup without account contracts. We are not using authwits here, so dummy accounts are enough

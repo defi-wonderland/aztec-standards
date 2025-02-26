@@ -56,6 +56,7 @@ unconstrained fn public_transfer_on_behalf_of_other() {
 }
 
 #[test(should_fail)]
+// TODO(#33): error logs don't match because of raw calls
 // #[test(should_fail_with = "attempt to subtract with underflow")]
 unconstrained fn public_transfer_failure_more_than_balance() {
     // Setup without account contracts. We are not using authwits here, so dummy accounts are enough
