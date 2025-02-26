@@ -58,7 +58,7 @@ describe('Escrow - Multi PXE', () => {
   });
 
   it('escrow', async () => {
-    let events, notes;
+    let notes;
 
     // this is here because the note is created in the constructor
     await escrow.withWallet(bob).methods.sync_notes().simulate({});
@@ -70,7 +70,9 @@ describe('Escrow - Multi PXE', () => {
     // bob should have a note with himself as owner, encrypted by escrow
     notes = await bob.getNotes({ contractAddress: escrow.address });
     expect(notes.length).toBe(1);
-    expectAccountNote(notes[0], bob.getAddress(), bob.getAddress());
+
+    // TODO: The escrow's secret is not available here, it should be returned when the contract is deployed
+    expectAccountNote(notes[0], bob.getAddress());
 
     // Fund escrow
     await token.withWallet(alice).methods.mint_to_private(alice.getAddress(), escrow.address, wad(10)).send().wait();
