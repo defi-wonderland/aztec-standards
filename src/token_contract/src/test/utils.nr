@@ -1,5 +1,4 @@
 use crate::Token;
-use dep::uint_note::uint_note::UintNote;
 use aztec::{
     oracle::{
         execution::{get_block_number, get_contract_address},
@@ -11,6 +10,7 @@ use aztec::{
     test::helpers::{cheatcodes, test_environment::TestEnvironment},
 };
 use std::test::OracleMock;
+use uint_note::uint_note::UintNote;
 
 pub unconstrained fn setup(
     with_account_contracts: bool,
