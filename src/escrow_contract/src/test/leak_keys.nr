@@ -13,12 +13,12 @@ unconstrained fn leak_keys_from_owner_to_recipient() {
     leak_keys_call_interface.call(&mut env.private());
     // Check balances
     env.impersonate(owner);
-    let owner_note: utils::call_view_owner_note();
+    let owner_note = utils::call_view_owner_note();
     println(owner_note);
 }
 
-#[test(should_fail_with = "Unauthorized")]
-unconstrained fn test_leak_keys_unauthorized_recipient() {
+#[test]
+unconstrained fn leak_keys_unauthorized_recipient() {
     // Setup without account contracts. We are not using authwits here, so dummy accounts are enough
     let (env, escrow_contract_address, deployer, owner, recipient) = utils::setup(/* with_account_contracts */ true);
     
@@ -26,7 +26,7 @@ unconstrained fn test_leak_keys_unauthorized_recipient() {
     // Impersonate owner to perform the call
     env.impersonate(recipient);
     // Leak escrow keys
-    leak_keys_call_interface.call(&mut env.private());
+    env.assert_private_call_fails(leak_keys_call_interface);
 }
 
 #[test(should_fail_with = "Unauthorized")]
@@ -40,4 +40,3 @@ unconstrained fn leak_keys_unauthorized_deployer() {
     // Leak escrow keys
     leak_keys_call_interface.call(&mut env.private());
 }
-

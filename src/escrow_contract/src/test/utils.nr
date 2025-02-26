@@ -5,15 +5,12 @@ use aztec::{
         random::random,
         storage::storage_read,
     },
-    prelude::{AztecAddress, NoteHeader},
+    prelude::{AztecAddress, NoteViewerOptions},
     protocol_types::storage::map::derive_storage_slot_in_map,
     test::helpers::{cheatcodes, test_environment::TestEnvironment},
     note::{
         lifecycle::{create_note, destroy_note_unsafe},
         note_getter::{get_notes, view_notes},
-        note_getter_options::NoteStatus,
-        note_interface::NoteType,
-        retrieved_note::RetrievedNote,
         constants::MAX_NOTES_PER_PAGE,
     },
 };
@@ -22,7 +19,7 @@ use dep::address_note::address_note::AddressNote;
 
 pub unconstrained fn setup(
     with_account_contracts: bool,
-) -> (&mut TestEnvironment, AztecAddress, AztecAddress, AztecAddress) {
+) -> (&mut TestEnvironment, AztecAddress, AztecAddress, AztecAddress, AztecAddress) {
     // Setup env, generate keys
     let mut env = TestEnvironment::new();
     let (deployer, owner, recipient) = if with_account_contracts {
@@ -50,7 +47,7 @@ pub unconstrained fn setup(
 
 pub unconstrained fn call_view_owner_note() -> pub AddressNote {
     let mut options = NoteViewerOptions::new();
-    let owner_slot: Escrow::storage_layout().owner.slot;
+    let owner_slot = Escrow::storage_layout().owner.slot;
     let notes: BoundedVec<AddressNote, MAX_NOTES_PER_PAGE> = view_notes(owner_slot, options);
 
     notes.get(0)
