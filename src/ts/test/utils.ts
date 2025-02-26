@@ -53,7 +53,12 @@ export const expectAccountNote = (note: UniqueNote, owner: AztecAddress, secret?
   }
 };
 
-export const expectClawbackNote = (note: UniqueNote, sender: AztecAddress, receiver: AztecAddress, escrow: AztecAddress) => {
+export const expectClawbackNote = (
+  note: UniqueNote,
+  sender: AztecAddress,
+  receiver: AztecAddress,
+  escrow: AztecAddress,
+) => {
   // expect(note.note.items.length).toBe(3);
   expect(note.note.items[0]).toEqual(new Fr(sender.toBigInt()));
   expect(note.note.items[1]).toEqual(new Fr(receiver.toBigInt()));
@@ -77,7 +82,7 @@ export const AMOUNT = 1000n;
 export const wad = (n: number = 1) => AMOUNT * BigInt(n);
 
 export async function deployEscrow(pxes: PXE[], deployerWallet: Wallet, owner: AztecAddress): Promise<EscrowContract> {
-  const escrowSecretKey = new Fr(53777);
+  const escrowSecretKey = Fr.random();
   const escrowPublicKeys = (await deriveKeys(escrowSecretKey)).publicKeys;
   const escrowDeployment = EscrowContract.deployWithPublicKeys(
     escrowPublicKeys,
@@ -86,20 +91,17 @@ export async function deployEscrow(pxes: PXE[], deployerWallet: Wallet, owner: A
     escrowSecretKey,
   );
   const escrowInstance = await escrowDeployment.getInstance();
-  const escrowContract = await escrowDeployment.send().deployed();
+
   await pxes[0].registerAccount(escrowSecretKey, await computePartialAddress(escrowInstance));
   // TODO: instead of register it here for Bob, we should use the Escrow::PrivacyKeys event (or something else!)
-  // await pxes[1].registerAccount(escrowSecretKey, await computePartialAddress(escrowInstance));
+  await pxes[1].registerAccount(escrowSecretKey, await computePartialAddress(escrowInstance));
+
+  // TODO: Deployment must happen after Escrow keys are registered, otherwise e2e will fail due being unable to retrieve pub keys
+  const tx = await escrowDeployment.send().wait();
+  const escrowContract = await EscrowContract.at(escrowInstance.address, deployerWallet);
 
   const contractMetadata = await pxes[0].getContractMetadata(escrowInstance.address);
   expect(contractMetadata.isContractPubliclyDeployed).toBeTruthy();
-
-  const provenTx = await escrowDeployment.prove({
-    contractAddressSalt: Fr.random(),
-    skipClassRegistration: false,
-    skipPublicDeployment: false,
-    universalDeploy: true,
-  });
 
   logger.info('escrow deployed', escrowContract.address);
   return escrowContract;
