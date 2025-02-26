@@ -165,8 +165,8 @@ pub mod TokenLib {
 
     pub fn _private_finalize_mint_to_private(
         context: &mut PrivateContext,
-        amount: U128,
         hiding_point_slot: Field,
+        amount: U128,
     ) {
         // let self: Token = Token::at(context.this_address());
         // self

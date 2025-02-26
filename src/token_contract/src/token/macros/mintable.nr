@@ -18,7 +18,7 @@ pub global MINTABLE_CODE: Quoted = quote {
             storage.private_balances,
         );
 
-        TokenLib::_private_finalize_mint_to_private(&mut context, amount, hiding_point_slot);
+        TokenLib::_private_finalize_mint_to_private(&mut context, hiding_point_slot, amount);
     }
 
     #[public]
