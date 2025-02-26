@@ -1,6 +1,7 @@
 use dep::aztec::macros::aztec;
 mod test;
 mod types;
+
 #[aztec]
 pub contract ClawbackEscrow {
     use crate::types::clawback_escrow_note::ClawbackEscrowNote;
