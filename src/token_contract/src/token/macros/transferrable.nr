@@ -68,7 +68,7 @@ pub global TRANSFERRABLE_CODE: Quoted = quote {
     }
 
     #[private]
-    fn prepare_transfer_public_to_private(to: AztecAddress, from: AztecAddress) -> Field {
+    fn prepare_transfer_public_to_private(from: AztecAddress, to: AztecAddress) -> Field {
         TokenLib::_prepare_transfer_public_to_private(
             from,
             to,

@@ -33,7 +33,7 @@ unconstrained fn transfer_public_to_private_external_orchestration() {
 
     // We prepare the transfer
     let hiding_point_slot: Field = Token::at(token_contract_address)
-        .prepare_transfer_public_to_private(recipient, owner)
+        .prepare_transfer_public_to_private(owner, recipient)
         .call(&mut env.private());
 
     // Finalize the transfer of the tokens (message sender owns the tokens in public)
@@ -74,7 +74,7 @@ unconstrained fn transfer_public_to_private_failure_not_an_owner() {
     // as the token balance check is before we use the value but that would made the test less robust against changes
     // in the contract.)
     let hiding_point_slot: Field = Token::at(token_contract_address)
-        .prepare_transfer_public_to_private(not_owner, owner)
+        .prepare_transfer_public_to_private(owner, not_owner)
         .call(&mut env.private());
 
     // Try transferring someone else's token balance
