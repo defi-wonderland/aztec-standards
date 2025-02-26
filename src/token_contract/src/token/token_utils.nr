@@ -238,6 +238,12 @@ pub mod TokenLib {
         hiding_point_slot
     }
 
+    /** ==========================================================
+     * ======================= SERIALIZATION =====================
+     * ======================================================== */
+
+    // NOTE: it's painful to manually serialize call arguments
+
     fn serialize_payload_call(
         hiding_point_slot: Field,
         hiding_point: Point,
@@ -269,8 +275,6 @@ pub mod TokenLib {
 
         result
     }
-
-    // NOTE: it's painful to manually serialize call arguments
 
     fn serialize_finalization_call(amount: [Field; 2], hiding_point_slot: Field) -> [Field; 3] {
         let mut result = [0 as Field; 3];
