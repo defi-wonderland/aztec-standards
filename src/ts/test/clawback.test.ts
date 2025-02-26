@@ -2,7 +2,6 @@ import { TokenContract } from '../../artifacts/Token.js';
 import { EscrowContract } from '../../artifacts/Escrow.js';
 import { ClawbackEscrowContract } from '../../artifacts/ClawbackEscrow.js';
 import { AccountWallet, Fr, PXE, Logger, AztecAddress, AccountWalletWithSecretKey, UniqueNote } from '@aztec/aztec.js';
-import { computePartialAddress, deriveKeys } from '@aztec/circuits.js';
 import { createAccount } from '@aztec/accounts/testing';
 import { createPXE, deployClawbackEscrow, deployEscrow, expectTokenBalances, logger, wad } from './utils.js';
 import { deployToken } from './token.test.js';
@@ -33,6 +32,10 @@ describe('Clawback Escrow - Multi PXE', () => {
     alice = aliceWallet;
     bob = bobWallet;
 
+    await bob.registerSender(alice.getAddress());
+    // TODO: why do I need to register Alice's account?
+    await bob.registerAccount(aliceWallet.getSecretKey(), await alice.getCompleteAddress().partialAddress);
+
     console.log({
       alice: alice.getAddress(),
       bob: bob.getAddress(),
@@ -60,16 +63,11 @@ describe('Clawback Escrow - Multi PXE', () => {
       escrow: escrow.address,
     });
 
-    // TODO: For now we share Alice's secret with Bob.
-    await bobPXE.registerAccount(aliceWallet.getSecretKey(), alice.getCompleteAddress().partialAddress);
-    // await bobPXE.registerAccount( alice.getCompleteAddress().partialAddress);
-
-    // bob.setScopes([bob.getAddress(), alice.getAddress(), escrow.address, clawback.address]);
-    bob.setScopes([bob.getAddress(), alice.getAddress(), clawback.address, escrow.address]);
+    bob.setScopes([bob.getAddress(), escrow.address, clawback.address]);
   });
 
   const expectClawbackNote = (note: UniqueNote, sender: AztecAddress, receiver: AztecAddress, escrow: AztecAddress) => {
-    // expect(note.note.items.length).toBe(3);
+    expect(note.note.items.length).toBe(4);
     expect(note.note.items[0]).toEqual(new Fr(sender.toBigInt()));
     expect(note.note.items[1]).toEqual(new Fr(receiver.toBigInt()));
     expect(note.note.items[2]).toEqual(new Fr(escrow.toBigInt()));
@@ -78,19 +76,9 @@ describe('Clawback Escrow - Multi PXE', () => {
   it('clawback ', async () => {
     let events, notes;
 
-    // mint to alice
-    await token
-      .withWallet(alice)
-      .methods.mint_to_private(alice.getAddress(), alice.getAddress(), wad(10))
-      .send()
-      .wait();
-
-    // fund escrow
-    await token
-      .withWallet(alice)
-      .methods.transfer_private_to_private(alice.getAddress(), escrow.address, wad(10), 0)
-      .send()
-      .wait();
+    // fund the escrow
+    await token.withWallet(alice).methods.mint_to_private(alice.getAddress(), escrow.address, wad(10)).send().wait();
+    await expectTokenBalances(token, escrow.address, wad(0), wad(10));
 
     // create the clawback escrow
     let tx = await clawback
@@ -111,7 +99,7 @@ describe('Clawback Escrow - Multi PXE', () => {
     expect(notes.length).toBe(1);
     expectClawbackNote(notes[0], alice.getAddress(), bob.getAddress(), escrow.address);
 
-    // todo : assert nullifier is pushed
+    // TODO: assert nullifier is pushed
 
     // bob claims the escrow
     await clawback.withWallet(bob).methods.claim(escrow.address, token.address, wad(10)).send().wait();
