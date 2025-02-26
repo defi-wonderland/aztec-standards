@@ -189,10 +189,10 @@ pub mod TokenLib {
     }
 
     pub fn _store_payload_in_storage(
+        context: &mut PublicContext,
         slot: Field,
         point: [Field; 3],
         setup_log: [Field; 9],
-        context: &mut PublicContext,
     ) {
         context.storage_write(slot, point);
         context.storage_write(slot + aztec::protocol_types::point::POINT_LENGTH as Field, setup_log);

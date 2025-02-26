@@ -123,7 +123,7 @@ pub global TRANSFERRABLE_CODE: Quoted = quote {
     #[public]
     #[internal]
     fn store_payload_in_storage(slot: Field, point: [Field; 3], setup_log: [Field; 9]) {
-        TokenLib::_store_payload_in_storage(slot, point, setup_log, &mut context);
+        TokenLib::_store_payload_in_storage(&mut context, slot, point, setup_log);
     }
 
     #[public]
