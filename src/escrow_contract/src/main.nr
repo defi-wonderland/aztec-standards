@@ -42,7 +42,7 @@ pub contract Escrow {
         let note_emission = storage.owner.initialize(&mut note);
         let sender = context.msg_sender();
         let self_address = context.this_address();
-        note_emission.emit(encode_and_encrypt_note(&mut context, self_address, sender));
+        note_emission.emit(encode_and_encrypt_note(&mut context, self_address, self_address));
     }
 
     /** ==========================================================
