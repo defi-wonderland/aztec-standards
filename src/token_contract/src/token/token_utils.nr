@@ -154,10 +154,10 @@ pub mod TokenLib {
     }
 
     pub fn _finalize_mint_to_private(
-        amount: U128,
-        hiding_point_slot: Field,
         context: &mut PublicContext,
         total_supply: PublicMutable<U128, &mut PublicContext>,
+        hiding_point_slot: Field,
+        amount: U128,
     ) {
         _increase_total_supply(total_supply, amount);
         _increase_hiding_point_balance(context, hiding_point_slot, amount);

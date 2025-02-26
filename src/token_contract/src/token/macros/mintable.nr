@@ -30,10 +30,10 @@ pub global MINTABLE_CODE: Quoted = quote {
     #[public]
     fn finalize_mint_to_private(amount: U128, hiding_point_slot: Field) {
         TokenLib::_finalize_mint_to_private(
-            amount,
-            hiding_point_slot,
             &mut context,
             storage.total_supply,
+            hiding_point_slot,
+            amount,
         );
     }
 
@@ -45,10 +45,10 @@ pub global MINTABLE_CODE: Quoted = quote {
         hiding_point_slot: Field,
     ) {
         TokenLib::_finalize_mint_to_private(
-            amount,
-            hiding_point_slot,
             &mut context,
             storage.total_supply,
+            hiding_point_slot,
+            amount,
         );
     }
 };
