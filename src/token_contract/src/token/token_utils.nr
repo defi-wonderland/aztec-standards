@@ -117,7 +117,7 @@ pub mod TokenLib {
                     FunctionSelector::from_signature(
                         "_recurse_subtract_balance((Field),(Field,Field))",
                     ),
-                    serialize_recurse_subtract_balance_call(account, remaining)
+                    serialize_recurse_subtract_balance_call(account, remaining),
                 )
                 .get_preimage();
 
@@ -294,7 +294,10 @@ pub mod TokenLib {
         result
     }
 
-    fn serialize_recurse_subtract_balance_call(account: AztecAddress, remaining: U128) -> [Field; 3] {
+    fn serialize_recurse_subtract_balance_call(
+        account: AztecAddress,
+        remaining: U128,
+    ) -> [Field; 3] {
         let mut result = [0 as Field; 3];
         let serialized_remaining = remaining.serialize();
         result[0] = account.to_field();
