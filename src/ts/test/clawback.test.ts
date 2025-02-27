@@ -65,15 +65,13 @@ describe('ClawbackEscrow - Multi PXE', () => {
       await pxe.registerSender(escrow.address);
       await pxe.registerSender(token.address);
     }
-    bob.setScopes([bob.getAddress(), alice.getAddress(), clawback.address, escrow.address]);
+    bob.setScopes([bob.getAddress(), clawback.address, escrow.address]);
 
     console.log({
       token: token.address,
       clawback: clawback.address,
       escrow: escrow.address,
     });
-
-    bob.setScopes([bob.getAddress(), escrow.address, clawback.address]);
   });
 
   it('clawback ', async () => {
