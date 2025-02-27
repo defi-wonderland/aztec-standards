@@ -15,7 +15,6 @@ pub contract Escrow {
         protocol_types::traits::{Hash, Serialize},
     };
 
-    use dep::address_note::address_note::AddressNote;
     use dep::token::Token;
     use std::meta::derive;
 
