@@ -106,5 +106,5 @@ describe('Clawback Escrow - Multi PXE', () => {
 
     await expectTokenBalances(token, escrow.address, wad(0), wad(0));
     await expectTokenBalances(token, bob.getAddress(), wad(0), wad(10), bobWallet);
-  }, 300_000);
+  });
 });

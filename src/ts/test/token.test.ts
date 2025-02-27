@@ -82,14 +82,14 @@ describe('Token - Single PXE', () => {
     );
 
     expect(receiptAfterMined.contract.instance.address).toEqual(deploymentData.address);
-  }, 300_000);
+  });
 
   it('mints', async () => {
     await token.withWallet(alice);
     const tx = await token.methods.mint_to_public(bob.getAddress(), AMOUNT).send().wait();
     const balance = await token.methods.balance_of_public(bob.getAddress()).simulate();
     expect(balance).toBe(AMOUNT);
-  }, 300_000);
+  });
 
   it('transfers tokens between public accounts', async () => {
     // First mint 2 tokens to alice
@@ -112,7 +112,7 @@ describe('Token - Single PXE', () => {
 
     expect(aliceBalance).toBe(AMOUNT);
     expect(bobBalance).toBe(AMOUNT);
-  }, 300_000);
+  });
 
   // TODO(#29): burn was nuked because of this PR, re-enable it
   // it('burns public tokens', async () => {
@@ -132,7 +132,7 @@ describe('Token - Single PXE', () => {
 
   //   expect(aliceBalance).toBe(AMOUNT);
   //   expect(totalSupply).toBe(AMOUNT);
-  // }, 300_000);
+  // });
 
   it('transfers tokens from private to public balance', async () => {
     // First mint to private 2 tokens to alice
@@ -156,7 +156,7 @@ describe('Token - Single PXE', () => {
     // Check total supply hasn't changed
     const totalSupply = await token.methods.total_supply().simulate();
     expect(totalSupply).toBe(AMOUNT * 2n);
-  }, 300_000);
+  });
 
   it('fails when using an invalid nonce', async () => {
     // Mint 1 token privately to alice
@@ -170,7 +170,7 @@ describe('Token - Single PXE', () => {
         .send()
         .wait(),
     ).rejects.toThrow(/invalid nonce/);
-  }, 300_000);
+  });
 
   it.skip('fails when transferring more tokens than available in private balance', async () => {
     // Mint 1 token privately to alice
@@ -185,7 +185,7 @@ describe('Token - Single PXE', () => {
     //     .send()
     //     .wait(),
     // ).rejects.toThrow(/Balance too low/);
-  }, 300_000);
+  });
 
   it('can transfer tokens between private balances', async () => {
     // Mint 2 tokens privately to alice
@@ -215,7 +215,7 @@ describe('Token - Single PXE', () => {
     // Check total supply hasn't changed
     const totalSupply = await token.methods.total_supply().simulate();
     expect(totalSupply).toBe(AMOUNT * 2n);
-  }, 300_000);
+  });
 
   it('can mint tokens to private balance', async () => {
     // Mint 2 tokens privately to alice
@@ -232,7 +232,7 @@ describe('Token - Single PXE', () => {
     // Public balance should be 0 since we minted privately
     const alicePublicBalance = await token.methods.balance_of_public(alice.getAddress()).simulate();
     expect(alicePublicBalance).toBe(0n);
-  }, 300_000);
+  });
 
   // TODO(#29): burn was nuked because of this PR, re-enable it
   // it('can burn tokens from private balance', async () => {
@@ -262,7 +262,7 @@ describe('Token - Single PXE', () => {
   //   // Public balance should still be 0
   //   const alicePublicBalance = await token.methods.balance_of_public(alice.getAddress()).simulate();
   //   expect(alicePublicBalance).toBe(0n);
-  // }, 300_000);
+  // });
 
   it('can transfer tokens from public to private balance', async () => {
     // Mint 2 tokens publicly to alice
@@ -296,7 +296,7 @@ describe('Token - Single PXE', () => {
     // Public balance should be reduced by transferred amount
     const alicePublicBalance = await token.methods.balance_of_public(alice.getAddress()).simulate();
     expect(alicePublicBalance).toBe(AMOUNT);
-  }, 300_000);
+  });
 
   it.skip('mint in public, prepare partial note and finalize it', async () => {
     await token.withWallet(alice);
@@ -330,7 +330,7 @@ describe('Token - Single PXE', () => {
     // expect(await token.methods.balance_of_private(bob.getAddress()).simulate()).toBe(AMOUNT);
     // // total supply is still the same
     // expect(await token.methods.total_supply().simulate()).toBe(AMOUNT);
-  }, 300_000);
+  });
 
   it('public transfer with authwitness', async () => {
     await token.withWallet(alice).methods.mint_to_public(alice.getAddress(), AMOUNT).send().wait();
@@ -356,7 +356,7 @@ describe('Token - Single PXE', () => {
 
     expect(await token.methods.balance_of_public(alice.getAddress()).simulate()).toBe(0n);
     expect(await token.methods.balance_of_public(bob.getAddress()).simulate()).toBe(AMOUNT);
-  }, 300_000);
+  });
 
   it('private transfer with authwitness', async () => {
     // setup balances
@@ -394,7 +394,7 @@ describe('Token - Single PXE', () => {
 
     expect(await token.methods.balance_of_private(alice.getAddress()).simulate()).toBe(0n);
     expect(await token.methods.balance_of_private(bob.getAddress()).simulate()).toBe(AMOUNT);
-  }, 300_000);
+  });
 });
 
 describe('Token - Multi PXE', () => {
@@ -519,5 +519,5 @@ describe('Token - Multi PXE', () => {
     await expectTokenBalances(token, alice.getAddress(), wad(0), wad(0));
     // assert bob's balances
     await expectTokenBalances(token, bob.getAddress(), wad(0), wad(10));
-  }, 300_000);
+  });
 });

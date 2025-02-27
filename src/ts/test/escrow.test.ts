@@ -123,5 +123,5 @@ describe('Escrow - Multi PXE', () => {
 
     await expectTokenBalances(token, escrow.address, wad(0), wad(3), bobWallet);
     await expectTokenBalances(token, bob.getAddress(), wad(0), wad(7), bobWallet);
-  }, 300_000);
+  });
 });
