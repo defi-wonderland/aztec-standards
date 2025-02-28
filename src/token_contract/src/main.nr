@@ -20,13 +20,15 @@ pub contract Token {
     use balance_set::balance_set::BalanceSet;
     // token & auth utils (TODO(#30): +mint-auth utils)
     use crate::token::{auth_utils::AuthLib, token_utils::TokenLib};
+    // metadata utils
+    use compressed_string::FieldCompressedString;
 
     #[storage]
     struct Storage<Context> {
         // TODO: fix "is private and not visible from the current module" warning
         // TODO: why BalanceSet cannot be imported from TokenLib while FieldCompressedString can?
-        name: PublicImmutable<TokenLib::FieldCompressedString, Context>,
-        symbol: PublicImmutable<TokenLib::FieldCompressedString, Context>,
+        name: PublicImmutable<FieldCompressedString, Context>,
+        symbol: PublicImmutable<FieldCompressedString, Context>,
         decimals: PublicImmutable<u8, Context>,
         private_balances: Map<AztecAddress, BalanceSet<Context>, Context>,
         total_supply: PublicMutable<U128, Context>,
