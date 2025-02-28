@@ -1,7 +1,7 @@
 mod test;
 
 use aztec::macros::aztec;
-use token::token::macros::token;
+use token::macros::token;
 
 #[token]
 #[aztec]
@@ -18,7 +18,7 @@ pub contract Token {
     // balance notes library (NOTE: it needs to be same as in the token_utils.nr)
     use balance_set::balance_set::BalanceSet;
     // token & auth utils (TODO(#30): +mint-auth utils)
-    use token::token::{auth_utils::AuthLib, token_utils::TokenLib};
+    use token::{auth_utils::AuthLib, token_utils::TokenLib};
 
     #[storage]
     struct Storage<Context> {
