@@ -153,6 +153,18 @@ pub mod TokenLib {
         );
     }
 
+    pub fn _private_increase_hiding_point_balance(
+        context: &mut PrivateContext,
+        hiding_point_slot: Field,
+        amount: U128,
+    ) {
+        context.call_public_function(
+            context.this_address(),
+            FunctionSelector::from_signature("increase_hiding_point_balance(Field,(Field,Field))"),
+            serialize_hiding_point_balance_change_call(hiding_point_slot, amount),
+        );
+    }
+
     pub fn _finalize_mint_to_private(
         context: &mut PublicContext,
         total_supply: PublicMutable<U128, &mut PublicContext>,
@@ -289,6 +301,18 @@ pub mod TokenLib {
         result[0] = account.to_field();
         result[1] = amount[0];
         result[2] = amount[1];
+        result
+    }
+
+    fn serialize_hiding_point_balance_change_call(
+        hiding_point_slot: Field,
+        amount: U128,
+    ) -> [Field; 3] {
+        let mut result = [0 as Field; 3];
+        let amount_serialized = amount.serialize();
+        result[0] = hiding_point_slot;
+        result[1] = amount_serialized[0];
+        result[2] = amount_serialized[1];
         result
     }
 }
