@@ -1,5 +1,5 @@
 pub mod token_traits;
-use token_traits::traits::{PrivateTokenOps, PublicTokenOps, TokenBase, TokenSerialization};
+use token_traits::traits::{PrivateTokenOps, PublicTokenOps, TokenBase};
 
 use aztec::{
     context::PrivateContext,
@@ -15,10 +15,10 @@ use uint_note::uint_note::UintNote;
 use compressed_string::FieldCompressedString;
 
 // Implementation struct for TokenLib that implements all the traits
-pub struct TokenLib;
+pub struct TokenLib<Context>;
 
 // Implementation of PublicTokenOps for TokenLib
-impl PublicTokenOps for TokenLib {
+impl PublicTokenOps for TokenLib<&mut PublicContext> {
     fn token_constructor(
         storage_name: PublicImmutable<FieldCompressedString, &mut PublicContext>,
         storage_symbol: PublicImmutable<FieldCompressedString, &mut PublicContext>,
@@ -98,7 +98,7 @@ impl PublicTokenOps for TokenLib {
 }
 
 // Implementation of PrivateTokenOps for TokenLib
-impl PrivateTokenOps for TokenLib {
+impl PrivateTokenOps for TokenLib<&mut PrivateContext> {
     fn increase_private_balance(
         private_balances: Map<AztecAddress, BalanceSet<&mut PrivateContext>, &mut PrivateContext>,
         to: AztecAddress,
@@ -154,7 +154,7 @@ impl PrivateTokenOps for TokenLib {
         context.call_public_function(
             context.this_address(),
             FunctionSelector::from_signature("increase_public_balance((Field),(Field,Field))"),
-            Self::serialize_balance_change_call(to, amount.serialize()),
+            serialize_balance_change_call(to, amount.serialize()),
         );
     }
 
@@ -166,7 +166,7 @@ impl PrivateTokenOps for TokenLib {
         context.call_public_function(
             context.this_address(),
             FunctionSelector::from_signature("decrease_public_balance((Field),(Field,Field))"),
-            Self::serialize_balance_change_call(from, amount.serialize()),
+            serialize_balance_change_call(from, amount.serialize()),
         );
     }
 
@@ -178,7 +178,7 @@ impl PrivateTokenOps for TokenLib {
         context.call_public_function(
             context.this_address(),
             FunctionSelector::from_signature("finalize_mint_to_private((Field,Field),Field)"),
-            Self::serialize_finalization_call(amount.serialize(), hiding_point_slot),
+            serialize_finalization_call(amount.serialize(), hiding_point_slot),
         );
     }
 
@@ -197,7 +197,7 @@ impl PrivateTokenOps for TokenLib {
         context.call_public_function(
             context.this_address(),
             FunctionSelector::from_signature("store_payload_in_storage(Field,[Field;3],[Field;9])"),
-            Self::serialize_payload_call(
+            serialize_payload_call(
                 hiding_point_slot,
                 note_setup_payload.hiding_point,
                 setup_log,
@@ -209,51 +209,49 @@ impl PrivateTokenOps for TokenLib {
 }
 
 // Implementation of TokenBase for TokenLib (just to complete the trait hierarchy)
-impl TokenBase for TokenLib {}
+impl<Context> TokenBase for TokenLib<Context>{}
 
 // Implementation of TokenSerialization for TokenLib
-impl TokenSerialization for TokenLib {
-    fn serialize_payload_call(
-        hiding_point_slot: Field,
-        hiding_point: Point,
-        setup_log: [Field; 9],
-    ) -> [Field; 13] {
-        let log_count = 9;
-        let point_count = 3; // TODO: import global POINT_LENGTH
-        let total_size = 1 + point_count + log_count;
+fn serialize_payload_call(
+    hiding_point_slot: Field,
+    hiding_point: Point,
+    setup_log: [Field; 9],
+) -> [Field; 13] {
+    let log_count = 9;
+    let point_count = 3; // TODO: import global POINT_LENGTH
+    let total_size = 1 + point_count + log_count;
 
-        let mut result = [0 as Field; 13];
-        let mut index = 0;
+    let mut result = [0 as Field; 13];
+    let mut index = 0;
 
-        result[0] = hiding_point_slot;
+    result[0] = hiding_point_slot;
 
-        let point_data = hiding_point.serialize();
-        for i in 0..point_count {
-            index += 1;
-            result[index] = point_data[i];
-        }
-
-        for i in 0..log_count {
-            index += 1;
-            result[index] = setup_log[i];
-        }
-
-        result
+    let point_data = hiding_point.serialize();
+    for i in 0..point_count {
+        index += 1;
+        result[index] = point_data[i];
     }
 
-    fn serialize_finalization_call(amount: [Field; 2], hiding_point_slot: Field) -> [Field; 3] {
-        let mut result = [0 as Field; 3];
-        result[0] = amount[0];
-        result[1] = amount[1];
-        result[2] = hiding_point_slot;
-        result
+    for i in 0..log_count {
+        index += 1;
+        result[index] = setup_log[i];
     }
 
-    fn serialize_balance_change_call(account: AztecAddress, amount: [Field; 2]) -> [Field; 3] {
-        let mut result = [0 as Field; 3];
-        result[0] = account.to_field();
-        result[1] = amount[0];
-        result[2] = amount[1];
-        result
-    }
+    result
+}
+
+fn serialize_finalization_call(amount: [Field; 2], hiding_point_slot: Field) -> [Field; 3] {
+    let mut result = [0 as Field; 3];
+    result[0] = amount[0];
+    result[1] = amount[1];
+    result[2] = hiding_point_slot;
+    result
+}
+
+fn serialize_balance_change_call(account: AztecAddress, amount: [Field; 2]) -> [Field; 3] {
+    let mut result = [0 as Field; 3];
+    result[0] = account.to_field();
+    result[1] = amount[0];
+    result[2] = amount[1];
+    result
 }

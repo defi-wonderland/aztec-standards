@@ -2,7 +2,7 @@ pub mod traits {
     use aztec::{
         context::PrivateContext,
         note::note_emission::OuterNoteEmission,
-        prelude::{AztecAddress, Map, Point, PublicContext, PublicImmutable, PublicMutable},
+        prelude::{AztecAddress, Map, PublicContext, PublicImmutable, PublicMutable},
     };
 
     use balance_set::balance_set::BalanceSet;
@@ -124,18 +124,5 @@ pub mod traits {
             from: AztecAddress,
             to: AztecAddress,
         ) -> Field;
-    }
-
-    // Trait for serialization operations
-    pub trait TokenSerialization {
-        fn serialize_payload_call(
-            hiding_point_slot: Field,
-            hiding_point: Point,
-            setup_log: [Field; 9],
-        ) -> [Field; 13];
-
-        fn serialize_finalization_call(amount: [Field; 2], hiding_point_slot: Field) -> [Field; 3];
-
-        fn serialize_balance_change_call(account: AztecAddress, amount: [Field; 2]) -> [Field; 3];
     }
 }
