@@ -45,7 +45,8 @@ pub contract MerkleInclusionAuthorizerToken {
         amount: U128,
         nonce: Field,
     ) {
-        _authorize_in_private(from, to, amount, &mut context);
+        _authorize_in_private(from, &mut context);
+        _authorize_in_private(to, &mut context);
         // ...
     }
 
@@ -56,7 +57,8 @@ pub contract MerkleInclusionAuthorizerToken {
         amount: U128,
         nonce: Field,
     ) {
-        _authorize_in_private(from, to, amount, &mut context);
+        _authorize_in_private(from, &mut context);
+        _authorize_in_private(to, &mut context);
         // ...
     }
 
@@ -68,15 +70,19 @@ pub contract MerkleInclusionAuthorizerToken {
         amount: U128,
         nonce: Field,
     ) {
-        _authorize_in_private(from, to, amount, &mut context);
+        _authorize_in_private(from, &mut context);
+        _authorize_in_private(to, &mut context);
         // ...
     }
     /// Prepares an increase of private balance of `to` (partial note). The increase needs to be finalized by calling
     /// some of the finalization functions (`finalize_transfer_public_to_private`, `finalize_mint_to_private`).
     /// Returns a hiding point slot.
     #[private]
-    fn prepare_transfer_public_to_private(to: AztecAddress, from: AztecAddress) -> Field {
+    fn prepare_transfer_public_to_private(from: AztecAddress, to: AztecAddress) -> Field {
         // ...
+        _authorize_in_private(from, &mut context);
+        _authorize_in_private(to, &mut context);
+        // ...  
     }
 
     /** ==========================================================
@@ -86,7 +92,8 @@ pub contract MerkleInclusionAuthorizerToken {
     #[public]
     fn transfer_public_to_public(from: AztecAddress, to: AztecAddress, amount: U128, nonce: Field) {
         // ...
-        _authorize_in_public(from, to, amount, storage);
+        _authorize_in_public(from, storage);
+        _authorize_in_public(to, storage);
         // ...
     }
 
@@ -100,6 +107,7 @@ pub contract MerkleInclusionAuthorizerToken {
         hiding_point_slot: Field,
         nonce: Field,
     ) {
+        _authorize_in_public(from, storage);
         // ...
     }
 
@@ -113,6 +121,7 @@ pub contract MerkleInclusionAuthorizerToken {
         amount: U128,
         hiding_point_slot: Field,
     ) {
+        _authorize_in_public(from, storage);
         // ...
     }
 
@@ -121,7 +130,7 @@ pub contract MerkleInclusionAuthorizerToken {
      * ======================================================== */
 
     #[contract_library_method]
-    fn _authorize_in_private(from: AztecAddress, to: AztecAddress, amount: U128, context: &mut PrivateContext) {
+    fn _authorize_in_private(address: AztecAddress, context: &mut PrivateContext) {
         let merkle_tree_proof: [Field; MAX_PACKED_PUBLIC_BYTECODE_SIZE_IN_FIELDS] =
             [0; MAX_PACKED_PUBLIC_BYTECODE_SIZE_IN_FIELDS];
 
@@ -130,7 +139,7 @@ pub contract MerkleInclusionAuthorizerToken {
 
         // TODO: Can we have the msg.sig for this method?
 
-        let is_from_valid = _verify_merkle_proof(from, merkle_tree_proof, context);
+        let is_from_valid = _verify_merkle_proof(address, merkle_tree_proof, context);
 
         assert(is_from_valid, "Sender is not authorized");
     }
@@ -161,8 +170,8 @@ pub contract MerkleInclusionAuthorizerToken {
     }
 
     #[contract_library_method]
-    fn _authorize_in_public(from: AztecAddress, to: AztecAddress, amount: U128, storage: Storage<&mut PublicContext>) {
-        assert(storage.whitelist.at(from).read(), "Not whitelisted");
+    fn _authorize_in_public(address: AztecAddress, storage: Storage<&mut PublicContext>) {
+        assert(storage.whitelist.at(address).read(), "Not whitelisted");
     }
 
     /** ==========================================================
