@@ -29,6 +29,35 @@ pub global TRANSFERRABLE_CODE: Quoted = quote {
     }
 
     #[private]
+    fn transfer_private_to_public_with_hiding_point(
+        from: AztecAddress,
+        to: AztecAddress,
+        amount: U128,
+        nonce: Field,
+    ) -> Field {
+        AuthLib::_validate_from_private(from, nonce, &mut context);
+
+        TokenLib::_decrease_private_balance(
+            &mut context,
+            storage.private_balances,
+            from,
+            amount,
+            INITIAL_TRANSFER_CALL_MAX_NOTES,
+        )
+            .emit(encode_and_encrypt_note(&mut context, from, from));
+
+        TokenLib::_private_increase_public_balance(&mut context, to, amount);
+
+        let hiding_point_slot = TokenLib::_prepare_transfer_public_to_private(
+            &mut context,
+            storage.private_balances,
+            from,
+            to,
+        );
+        hiding_point_slot
+    }
+
+    #[private]
     fn transfer_private_to_private(
         from: AztecAddress,
         to: AztecAddress,
@@ -49,6 +78,27 @@ pub global TRANSFERRABLE_CODE: Quoted = quote {
         TokenLib::_increase_private_balance(storage.private_balances, to, amount).emit(
             encode_and_encrypt_note(&mut context, to, from),
         );
+    }
+
+    #[private]
+    fn transfer_private_to_hiding_point(
+        from: AztecAddress,
+        amount: U128,
+        hiding_point_slot: Field,
+        nonce: Field,
+    ) {
+        AuthLib::_validate_from_private(from, nonce, &mut context);
+        
+        TokenLib::_decrease_private_balance(
+            &mut context,
+            storage.private_balances,
+            from,
+            amount,
+            INITIAL_TRANSFER_CALL_MAX_NOTES,
+        )
+            .emit(encode_and_encrypt_note(&mut context, from, from));
+
+        TokenLib::_private_increase_hiding_point_balance(&mut context, hiding_point_slot, amount);
     }
 
     #[private]
@@ -136,6 +186,19 @@ pub global TRANSFERRABLE_CODE: Quoted = quote {
     #[internal]
     fn decrease_public_balance(from: AztecAddress, amount: U128) {
         TokenLib::_decrease_public_balance(storage.public_balances, from, amount);
+    }
+    
+    #[public]
+    #[internal]
+    fn increase_hiding_point_balance(
+        hiding_point_slot: Field,
+        amount: U128,
+    ) {
+        TokenLib::_increase_hiding_point_balance(
+            &mut context,
+            hiding_point_slot,
+            amount,
+        );
     }
 
     /** ==========================================================
