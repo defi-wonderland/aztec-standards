@@ -1,4 +1,3 @@
-
 use dep::aztec::macros::aztec;
 
 // Minimal authorization token implementation that supports `AuthWit` accounts.
@@ -38,6 +37,7 @@ pub contract MerkleInclusionAuthorizerToken {
     /** ==========================================================
      * ========================= PRIVATE =========================
      * ======================================================== */
+
     #[private]
     fn transfer_private_to_public(
         from: AztecAddress,
@@ -46,7 +46,6 @@ pub contract MerkleInclusionAuthorizerToken {
         nonce: Field,
     ) {
         _authorize_in_private(from, &mut context);
-        _authorize_in_private(to, &mut context);
         // ...
     }
 
@@ -58,7 +57,6 @@ pub contract MerkleInclusionAuthorizerToken {
         nonce: Field,
     ) {
         _authorize_in_private(from, &mut context);
-        _authorize_in_private(to, &mut context);
         // ...
     }
 
@@ -71,7 +69,6 @@ pub contract MerkleInclusionAuthorizerToken {
         nonce: Field,
     ) {
         _authorize_in_private(from, &mut context);
-        _authorize_in_private(to, &mut context);
         // ...
     }
     /// Prepares an increase of private balance of `to` (partial note). The increase needs to be finalized by calling
@@ -81,8 +78,8 @@ pub contract MerkleInclusionAuthorizerToken {
     fn prepare_transfer_public_to_private(from: AztecAddress, to: AztecAddress) -> Field {
         // ...
         _authorize_in_private(from, &mut context);
-        _authorize_in_private(to, &mut context);
         // ...  
+        0
     }
 
     /** ==========================================================
@@ -93,7 +90,6 @@ pub contract MerkleInclusionAuthorizerToken {
     fn transfer_public_to_public(from: AztecAddress, to: AztecAddress, amount: U128, nonce: Field) {
         // ...
         _authorize_in_public(from, storage);
-        _authorize_in_public(to, storage);
         // ...
     }
 
