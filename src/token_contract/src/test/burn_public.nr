@@ -1,7 +1,7 @@
 use crate::test::utils;
 use crate::Token;
-use dep::authwit::cheatcodes as authwit_cheatcodes;
-use dep::aztec::oracle::random::random;
+use authwit::cheatcodes as authwit_cheatcodes;
+use aztec::oracle::random::random;
 
 #[test]
 unconstrained fn burn_public_success() {
@@ -12,6 +12,20 @@ unconstrained fn burn_public_success() {
     // Burn less than balance
     Token::at(token_contract_address).burn_public(owner, burn_amount, 0).call(&mut env.public());
     utils::check_public_balance(token_contract_address, owner, mint_amount - burn_amount);
+}
+
+#[test]
+unconstrained fn burn_public_decrease_total_supply() {
+    let (env, token_contract_address, owner, recipient, mint_amount) =
+        utils::setup_and_mint_to_public(/* with_account_contracts */ false);
+    let burn_amount = mint_amount / U128::from_integer(10);
+
+    utils::check_total_supply(token_contract_address, mint_amount);
+
+    // Burn less than balance
+    Token::at(token_contract_address).burn_public(owner, burn_amount, 0).call(&mut env.public());
+    utils::check_public_balance(token_contract_address, owner, mint_amount - burn_amount);
+    utils::check_total_supply(token_contract_address, mint_amount - burn_amount);
 }
 
 #[test]
