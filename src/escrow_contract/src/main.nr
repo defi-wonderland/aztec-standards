@@ -16,7 +16,6 @@ pub contract Escrow {
         protocol_types::traits::{Hash, Serialize},
     };
 
-    use dep::address_note::address_note::AddressNote;
     use dep::token::Token;
     use std::meta::derive;
 
@@ -55,8 +54,6 @@ pub contract Escrow {
         let sender = context.msg_sender();
         let note = storage.owner.get_note();
         assert(note.owner == sender);
-        // TODO: refactor AddressNote to fulfill our needs
-
         let owner_npk_m_hash = get_public_keys(context.this_address()).npk_m.hash();
         let nullification_secret = context.request_nsk_app(owner_npk_m_hash);
 

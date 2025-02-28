@@ -1,7 +1,7 @@
 import { TokenContract } from '../../artifacts/Token.js';
 import { EscrowContract } from '../../artifacts/Escrow.js';
 import { ClawbackEscrowContract } from '../../artifacts/ClawbackEscrow.js';
-import { AccountWallet, Fr, PXE, Logger, AztecAddress, AccountWalletWithSecretKey, UniqueNote } from '@aztec/aztec.js';
+import { AccountWallet, PXE, Logger, AccountWalletWithSecretKey } from '@aztec/aztec.js';
 import { createAccount } from '@aztec/accounts/testing';
 import {
   createPXE,
@@ -52,28 +52,25 @@ describe('ClawbackEscrow - Multi PXE', () => {
 
   beforeEach(async () => {
     token = (await deployToken(alice)) as TokenContract;
-    clawback = (await deployClawbackEscrow([alicePXE, bobPXE], aliceWallet)) as ClawbackEscrowContract;
+    clawback = (await deployClawbackEscrow(aliceWallet)) as ClawbackEscrowContract;
     escrow = (await deployEscrow([alicePXE, bobPXE], alice, clawback.address)) as EscrowContract;
 
     // register everything to both PXEs
     for (const pxe of [alicePXE, bobPXE]) {
       await pxe.registerContract(token);
       await pxe.registerContract(clawback);
+      // TODO: ideally Bob doesn't know about the escrow yet
       await pxe.registerContract(escrow);
 
-      await pxe.registerSender(clawback.address);
       await pxe.registerSender(escrow.address);
-      await pxe.registerSender(token.address);
     }
-    bob.setScopes([bob.getAddress(), alice.getAddress(), clawback.address, escrow.address]);
+    bob.setScopes([bob.getAddress(), escrow.address]);
 
     console.log({
       token: token.address,
       clawback: clawback.address,
       escrow: escrow.address,
     });
-
-    bob.setScopes([bob.getAddress(), escrow.address, clawback.address]);
   });
 
   it('clawback ', async () => {
