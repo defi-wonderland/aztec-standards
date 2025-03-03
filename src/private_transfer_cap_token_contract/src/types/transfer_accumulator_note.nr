@@ -1,11 +1,11 @@
 use dep::aztec::{
     context::PrivateContext,
+    keys::getters::{get_nsk_app, get_public_keys},
     macros::notes::note,
     note::{
         note_header::NoteHeader, note_interface::NullifiableNote,
         utils::compute_note_hash_for_nullify,
     },
-    keys::getters::{get_nsk_app, get_public_keys},
     oracle::random::random,
     prelude::AztecAddress,
     protocol_types::{
@@ -57,7 +57,13 @@ impl Eq for TransferAccumulatorNote {
 impl TransferAccumulatorNote {
     pub fn new(from: AztecAddress, accumulated: U128, nonce: U128) -> Self {
         let randomness = unsafe { random() };
-        TransferAccumulatorNote { from, accumulated, randomness, nonce, header: NoteHeader::empty() }
+        TransferAccumulatorNote {
+            from,
+            accumulated,
+            randomness,
+            nonce,
+            header: NoteHeader::empty(),
+        }
     }
 }
 
