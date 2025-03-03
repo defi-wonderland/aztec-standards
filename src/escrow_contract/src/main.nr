@@ -1,5 +1,7 @@
 use dep::aztec::macros::aztec;
 
+mod types;
+
 #[aztec]
 // Sample escrow contract that stores a balance of a private token on behalf of an owner.
 pub contract Escrow {
@@ -13,9 +15,10 @@ pub contract Escrow {
         protocol_types::traits::{Hash, Serialize},
     };
 
-    use dep::address_note::address_note::AddressNote;
     use dep::token::Token;
     use std::meta::derive;
+
+    use crate::types::account_note::AccountNote;
 
     #[derive(Serialize)]
     #[event]
@@ -27,14 +30,14 @@ pub contract Escrow {
 
     #[storage]
     struct Storage<Context> {
-        owner: PrivateImmutable<AddressNote, Context>,
+        owner: PrivateImmutable<AccountNote, Context>,
     }
 
     // Creates a new instance of the escrow contract
     #[private]
     #[initializer]
-    fn constructor(owner: AztecAddress) {
-        let mut note = AddressNote::new(owner, owner);
+    fn constructor(owner: AztecAddress, secret: Field) {
+        let mut note = AccountNote::new(owner, secret);
         let note_emission = storage.owner.initialize(&mut note);
         let self_address = context.this_address();
         note_emission.emit(encode_and_encrypt_note(&mut context, self_address, self_address));
@@ -49,9 +52,7 @@ pub contract Escrow {
     fn leak_keys(to: AztecAddress) {
         let sender = context.msg_sender();
         let note = storage.owner.get_note();
-        assert(note.address == sender);
-        // TODO: refactor AddressNote to fulfill our needs
-
+        assert(note.owner == sender);
         let owner_npk_m_hash = get_public_keys(context.this_address()).npk_m.hash();
         let nullification_secret = context.request_nsk_app(owner_npk_m_hash);
 
@@ -69,7 +70,7 @@ pub contract Escrow {
         let sender = context.msg_sender();
 
         let note = storage.owner.get_note();
-        assert(note.address == sender);
+        assert(note.owner == sender);
         Token::at(token)
             .transfer_private_to_private(context.this_address(), recipient, amount, 0)
             .call(&mut context);

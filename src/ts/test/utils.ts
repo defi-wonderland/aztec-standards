@@ -9,6 +9,7 @@ import {
   Wallet,
   createPXEClient,
   AccountWalletWithSecretKey,
+  FieldLike,
 } from '@aztec/aztec.js';
 import { computePartialAddress, deriveKeys } from '@aztec/circuits.js';
 import { TokenContract } from '../../artifacts/Token.js';
@@ -41,6 +42,26 @@ export const expectAddressNote = (note: UniqueNote, address: AztecAddress, owner
   expect(note.note.items[1]).toEqual(new Fr(owner.toBigInt()));
 };
 
+export const expectAccountNote = (note: UniqueNote, owner: AztecAddress, secret?: FieldLike) => {
+  logger.info('checking address note {} {}', [owner, secret]);
+  expect(note.note.items[0]).toEqual(new Fr(owner.toBigInt()));
+  if (secret !== undefined) {
+    expect(note.note.items[1]).toEqual(secret);
+  }
+};
+
+export const expectClawbackNote = (
+  note: UniqueNote,
+  sender: AztecAddress,
+  receiver: AztecAddress,
+  escrow: AztecAddress,
+) => {
+  // expect(note.note.items.length).toBe(3);
+  expect(note.note.items[0]).toEqual(new Fr(sender.toBigInt()));
+  expect(note.note.items[1]).toEqual(new Fr(receiver.toBigInt()));
+  expect(note.note.items[2]).toEqual(new Fr(escrow.toBigInt()));
+};
+
 export const expectTokenBalances = async (
   token: TokenContract,
   address: AztecAddress,
@@ -60,14 +81,21 @@ export const wad = (n: number = 1) => AMOUNT * BigInt(n);
 export async function deployEscrow(pxes: PXE[], deployerWallet: Wallet, owner: AztecAddress): Promise<EscrowContract> {
   const escrowSecretKey = Fr.random();
   const escrowPublicKeys = (await deriveKeys(escrowSecretKey)).publicKeys;
-  const escrowDeployment = EscrowContract.deployWithPublicKeys(escrowPublicKeys, deployerWallet, owner);
+  const escrowDeployment = EscrowContract.deployWithPublicKeys(
+    escrowPublicKeys,
+    deployerWallet,
+    owner,
+    escrowSecretKey,
+  );
   const escrowInstance = await escrowDeployment.getInstance();
 
   await pxes[0].registerAccount(escrowSecretKey, await computePartialAddress(escrowInstance));
   // TODO: instead of register it here for Bob, we should use the Escrow::PrivacyKeys event (or something else!)
   await pxes[1].registerAccount(escrowSecretKey, await computePartialAddress(escrowInstance));
 
-  const escrowContract = await escrowDeployment.send().deployed();
+  // TODO: Deployment must happen after Escrow keys are registered, otherwise e2e will fail due being unable to retrieve pub keys
+  const tx = await escrowDeployment.send().wait();
+  const escrowContract = await EscrowContract.at(escrowInstance.address, deployerWallet);
 
   const contractMetadata = await pxes[0].getContractMetadata(escrowInstance.address);
   expect(contractMetadata.isContractPubliclyDeployed).toBeTruthy();
@@ -76,21 +104,10 @@ export async function deployEscrow(pxes: PXE[], deployerWallet: Wallet, owner: A
   return escrowContract;
 }
 
-export async function deployClawbackEscrow(pxes: PXE[], deployerWallet: AccountWalletWithSecretKey) {
-  // TODO: clawback doesn't need a secret key, but I can't make it without it
-  // const clawbackDeployment = ClawbackEscrowContract.deploy(deployerWallet);
-  // const clawbackContract = await clawbackDeployment.send({}).deployed();
-  // await Promise.all(pxes.map(async (pxe) => pxe.registerContract(clawbackContract)));
-
-  const clawbackSecretKey = Fr.random();
-  const clawbackPublicKeys = (await deriveKeys(clawbackSecretKey)).publicKeys;
-  const clawbackDeployment = ClawbackEscrowContract.deployWithPublicKeys(clawbackPublicKeys, deployerWallet);
-  const clawbackInstance = await clawbackDeployment.getInstance();
+export async function deployClawbackEscrow(deployerWallet: AccountWalletWithSecretKey) {
+  const clawbackDeployment = ClawbackEscrowContract.deploy(deployerWallet);
   const tx = await clawbackDeployment.send().wait();
-  const clawbackContract = await ClawbackEscrowContract.at(clawbackInstance.address, deployerWallet);
-
-  await pxes[0].registerAccount(clawbackSecretKey, await computePartialAddress(clawbackInstance));
-  await pxes[1].registerAccount(clawbackSecretKey, await computePartialAddress(clawbackInstance));
+  const clawbackContract = tx.contract;
 
   logger.info(`clawback address: ${clawbackContract.address}`);
   return clawbackContract;
