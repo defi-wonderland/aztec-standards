@@ -1,5 +1,6 @@
 use crate::ClawbackEscrow;
 use crate::test::utils;
+use dep::token::test::utils as token_utils;
 
 #[test]
 unconstrained fn recipient_can_claim() {
@@ -15,7 +16,11 @@ unconstrained fn recipient_can_claim() {
 
     env.advance_block_by(1);
 
-    utils::check_private_balance(token_contract_address, escrow_contract_address, mint_amount);
+    token_utils::check_private_balance(
+        token_contract_address,
+        escrow_contract_address,
+        mint_amount,
+    );
 
     env.impersonate(recipient);
     ClawbackEscrow::at(clawback_escrow_contract_address)
@@ -38,7 +43,11 @@ unconstrained fn recipient_cannot_claim_more_than_escrowed_amount() {
         .call(&mut env.private());
     env.advance_block_by(1);
 
-    utils::check_private_balance(token_contract_address, escrow_contract_address, mint_amount);
+    token_utils::check_private_balance(
+        token_contract_address,
+        escrow_contract_address,
+        mint_amount,
+    );
 
     env.impersonate(recipient);
     ClawbackEscrow::at(clawback_escrow_contract_address)
@@ -60,14 +69,18 @@ unconstrained fn only_recipient_can_claim() {
 
     env.advance_block_by(1);
 
-    utils::check_private_balance(token_contract_address, escrow_contract_address, mint_amount);
+    token_utils::check_private_balance(
+        token_contract_address,
+        escrow_contract_address,
+        mint_amount,
+    );
 
     env.impersonate(owner);
     ClawbackEscrow::at(clawback_escrow_contract_address)
         .claim(escrow_contract_address, token_contract_address, mint_amount)
         .call(&mut env.private());
 
-    utils::check_private_balance(token_contract_address, recipient, mint_amount);
+    token_utils::check_private_balance(token_contract_address, recipient, mint_amount);
 }
 
 #[test]
@@ -84,7 +97,11 @@ unconstrained fn recipient_can_claim_multiple_times() {
 
     env.advance_block_by(1);
 
-    utils::check_private_balance(token_contract_address, escrow_contract_address, mint_amount);
+    token_utils::check_private_balance(
+        token_contract_address,
+        escrow_contract_address,
+        mint_amount,
+    );
 
     env.impersonate(recipient);
     ClawbackEscrow::at(clawback_escrow_contract_address)
@@ -96,8 +113,8 @@ unconstrained fn recipient_can_claim_multiple_times() {
         .claim(escrow_contract_address, token_contract_address, mint_amount / U128::from_integer(2))
         .call(&mut env.private());
 
-    utils::check_private_balance(token_contract_address, recipient, mint_amount);
-    utils::check_private_balance(
+    token_utils::check_private_balance(token_contract_address, recipient, mint_amount);
+    token_utils::check_private_balance(
         token_contract_address,
         escrow_contract_address,
         U128::from_integer(0),
