@@ -1,6 +1,7 @@
 mod types;
 
 use dep::aztec::macros::aztec;
+use token::macros::token;
 
 // Minimal authorization token implementation that supports `AuthWit` accounts.
 // Transfers have an accumulated transfer cap set by the owner.
@@ -10,23 +11,44 @@ use dep::aztec::macros::aztec;
 // message hash = H([caller, contract, selector, ...args])
 // To be read as `caller` calls function at `contract` defined by `selector` with `args`
 // Including a nonce in the message hash ensures that the message can only be used once.
+#[token]
 #[aztec]
 pub contract PrivateTransferCapToken {
 
+    use crate::types::hook_utils::HookLib;
     use crate::types::transfer_accumulator_note::TransferAccumulatorNote;
+
+    // encryption library
+    // TODO: remember to add this import to the token impl for it to work
+    use aztec::encrypted_logs::log_assembly_strategies::default_aes128::note::encode_and_encrypt_note;
 
     // Libs
     use dep::aztec::{
         context::PrivateContext,
-        macros::{functions::{initializer, internal, private, public}, storage::storage},
-        prelude::{AztecAddress, Map, PrivateMutable, PublicMutable, SharedMutable},
-        protocol_types::traits::Serialize,
+        macros::{functions::{initializer, internal, private, public, view}, storage::storage},
+        prelude::{AztecAddress, Map, PrivateMutable, PublicImmutable, PublicMutable, SharedMutable},
+        protocol_types::{
+            constants::GENERATOR_INDEX__NOTE_NULLIFIER, hash::poseidon2_hash_with_separator,
+            traits::Serialize,
+        },
+        keys::getters::{get_nsk_app, get_public_keys},
     };
+
+    use balance_set::balance_set::BalanceSet;
+
+    use token::{auth_utils::AuthLib, token_utils::TokenLib};
 
     global PRIVATE_TRANSFER_CAP_DELAY_BLOCKS: u32 = 5;
 
     #[storage]
     struct Storage<Context> {
+        name: PublicImmutable<TokenLib::FieldCompressedString, Context>,
+        symbol: PublicImmutable<TokenLib::FieldCompressedString, Context>,
+        decimals: PublicImmutable<u8, Context>,
+        private_balances: Map<AztecAddress, BalanceSet<Context>, Context>,
+        total_supply: PublicMutable<U128, Context>,
+        public_balances: Map<AztecAddress, PublicMutable<U128, Context>, Context>,
+        // Private transfer cap
         owner: PublicMutable<AztecAddress, Context>,
         private_transfer_cap: SharedMutable<U128, PRIVATE_TRANSFER_CAP_DELAY_BLOCKS, Context>,
         transfer_accumulator_map: Map<AztecAddress, PrivateMutable<TransferAccumulatorNote, Context>, Context>,
@@ -43,109 +65,24 @@ pub contract PrivateTransferCapToken {
     ) {
         storage.owner.write(owner);
         storage.private_transfer_cap.schedule_value_change(private_transfer_cap);
-    }
-
-    /** ==========================================================
-     * ========================= PRIVATE =========================
-     * ======================================================== */
-
-    #[private]
-    fn transfer_private_to_public(
-        from: AztecAddress,
-        to: AztecAddress,
-        amount: U128,
-        nonce: Field,
-    ) {
-        _authorize_in_private(from, amount, storage);
-        // ...
-    }
-
-    #[private]
-    fn transfer_private_to_private(
-        from: AztecAddress,
-        to: AztecAddress,
-        amount: U128,
-        nonce: Field,
-    ) {
-        _authorize_in_private(from, amount, storage);
-        // ...
-    }
-
-    // Transfers token `amount` from public balance of message sender to a private balance of `to`.
-    #[private]
-    fn transfer_public_to_private(
-        from: AztecAddress,
-        to: AztecAddress,
-        amount: U128,
-        nonce: Field,
-    ) {
-        _authorize_in_private(from, amount, storage);
-        // ...
-    }
-    /// Prepares an increase of private balance of `to` (partial note). The increase needs to be finalized by calling
-    /// some of the finalization functions (`finalize_transfer_public_to_private`, `finalize_mint_to_private`).
-    /// Returns a hiding point slot.
-    #[private]
-    fn prepare_transfer_public_to_private(from: AztecAddress, to: AztecAddress) -> Field {
-        // ...
-        // TODO: We don't have the amount here, so we can't authorize
-        //_authorize_in_private(from, amount, storage);
-        // ...
-        0
-    }
-
-    /** ==========================================================
-     * ========================= PUBLIC ==========================
-     * ======================================================== */
-
-    // #[public]
-    // fn set_private_transfer_cap(private_transfer_cap: U128) {
-    //     assert_eq(storage.owner.read(), context.msg_sender(), "caller is not owner");
-    //     storage.private_transfer_cap.schedule_value_change(private_transfer_cap);
-    // }
-
-    #[public]
-    fn transfer_public_to_public(from: AztecAddress, to: AztecAddress, amount: U128, nonce: Field) {
-        // ...
-    }
-
-    /// Finalizes a transfer of token `amount` from public balance of `from` to a private balance of `to`.
-    /// The transfer must be prepared by calling `prepare_transfer_public_to_private` first and the resulting
-    /// `hiding_point_slot` must be passed as an argument to this function.
-    #[public]
-    fn finalize_transfer_public_to_private(
-        from: AztecAddress,
-        amount: U128,
-        hiding_point_slot: Field,
-        nonce: Field,
-    ) {
-        // ...
-    }
-
-    /// This is a wrapper around `_finalize_transfer_public_to_private` placed here so that a call
-    /// to `_finalize_transfer_public_to_private` can be enqueued. Called unsafe as it does not check `from` (this has to be
-    /// done in the calling function).
-    #[public]
-    #[internal]
-    fn _finalize_transfer_public_to_private_unsafe(
-        from: AztecAddress,
-        amount: U128,
-        hiding_point_slot: Field,
-    ) {
-        // ...
+        TokenLib::token_constructor(
+            storage.name,
+            storage.symbol,
+            storage.decimals,
+            name,
+            symbol,
+            decimals,
+        );
     }
 
     /** ==========================================================
      * ======================= AUTHORIZATION =====================
      * ======================================================== */
 
-    #[contract_library_method]
-    fn _authorize_in_private(
-        from: AztecAddress,
-        amount: U128,
-        storage: Storage<&mut PrivateContext>,
-    ) {
-        let note = _find_transfer_accumulator_note(storage, from);
+    #[private]
+    #[internal]
+    fn _authorize_in_private(from: AztecAddress, amount: U128) {
+        let note = _find_transfer_accumulator_note(&mut context, storage, from);
 
         let transfer_accumulator = note.accumulated + amount;
         assert(
@@ -155,7 +92,10 @@ pub contract PrivateTransferCapToken {
 
         let mut new_note =
             TransferAccumulatorNote::new(from, transfer_accumulator, note.nonce.add(U128::one()));
-        storage.transfer_accumulator_map.at(from).replace(&mut new_note);
+
+        storage.transfer_accumulator_map.at(from).replace(&mut new_note).emit(
+            encode_and_encrypt_note(&mut context, from, from),
+        );
     }
 
     /** ==========================================================
@@ -164,6 +104,7 @@ pub contract PrivateTransferCapToken {
 
     #[contract_library_method]
     fn _find_transfer_accumulator_note(
+        context: &mut PrivateContext,
         storage: Storage<&mut PrivateContext>,
         from: AztecAddress,
     ) -> TransferAccumulatorNote {
@@ -174,10 +115,23 @@ pub contract PrivateTransferCapToken {
         if note.nonce == U128::zero() {
             // Push nullifier for empty note??
             // How do we know if they are not providing the note?
-            TransferAccumulatorNote::new(from, U128::zero(), U128::zero())
+            _push_first_transfer_nullifier(context, from);
+            let mut emptyNote = TransferAccumulatorNote::new(from, U128::zero(), U128::zero());
+            storage.transfer_accumulator_map.at(from).initialize(&mut emptyNote);
+            emptyNote
         } else {
             note
         }
+    }
+
+    #[contract_library_method]
+    fn _push_first_transfer_nullifier(context: &mut PrivateContext, from: AztecAddress) {
+        let owner_npk_m_hash = get_public_keys(from).npk_m.hash();
+        let secret = context.request_nsk_app(owner_npk_m_hash);
+        context.push_nullifier(poseidon2_hash_with_separator(
+            [secret, from.to_field(), U128::zero().to_field()],
+            GENERATOR_INDEX__NOTE_NULLIFIER as Field,
+        ));
     }
 }
 

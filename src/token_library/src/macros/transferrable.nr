@@ -14,6 +14,7 @@ pub global TRANSFERRABLE_CODE: Quoted = quote {
         amount: U128,
         nonce: Field,
     ) {
+        HookLib::before_private_transfer(&mut context, from, to, amount);
         AuthLib::_validate_from_private(from, nonce, &mut context);
 
         TokenLib::_decrease_private_balance(
@@ -35,6 +36,7 @@ pub global TRANSFERRABLE_CODE: Quoted = quote {
         amount: U128,
         nonce: Field,
     ) {
+        HookLib::before_private_transfer(&mut context, from, to, amount);
         AuthLib::_validate_from_private(from, nonce, &mut context);
 
         TokenLib::_decrease_private_balance(
@@ -58,6 +60,7 @@ pub global TRANSFERRABLE_CODE: Quoted = quote {
         amount: U128,
         nonce: Field,
     ) {
+        HookLib::before_private_transfer(&mut context, from, to, amount);
         AuthLib::_validate_from_private(from, nonce, &mut context);
 
         TokenLib::_private_decrease_public_balance(&mut context, from, amount);
@@ -69,6 +72,8 @@ pub global TRANSFERRABLE_CODE: Quoted = quote {
 
     #[private]
     fn prepare_transfer_public_to_private(from: AztecAddress, to: AztecAddress) -> Field {
+        // TODO: We don't have the amount here. Should we send 0 or remove it?
+        HookLib::before_private_transfer(&mut context, from, to, U128::zero());
         TokenLib::_prepare_transfer_public_to_private(
             &mut context,
             storage.private_balances,
@@ -95,6 +100,7 @@ pub global TRANSFERRABLE_CODE: Quoted = quote {
 
     #[public]
     fn transfer_public_to_public(from: AztecAddress, to: AztecAddress, amount: U128, nonce: Field) {
+        HookLib::before_public_transfer(&mut context, from, to, amount);
         AuthLib::_validate_from_public(&mut context, from, nonce);
         TokenLib::_decrease_public_balance(storage.public_balances, from, amount);
         TokenLib::_increase_public_balance(storage.public_balances, to, amount);
@@ -110,6 +116,7 @@ pub global TRANSFERRABLE_CODE: Quoted = quote {
         hiding_point_slot: Field,
         nonce: Field,
     ) {
+        HookLib::before_public_transfer(&mut context, from, AztecAddress::zero(), amount);
         AuthLib::_validate_from_public(&mut context, from, nonce);
         TokenLib::_finalize_transfer_public_to_private(
             &mut context,
