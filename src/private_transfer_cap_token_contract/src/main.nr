@@ -3,7 +3,7 @@ mod types;
 use dep::aztec::macros::aztec;
 
 // Minimal authorization token implementation that supports `AuthWit` accounts.
-// The authorization for transfers is done via a merkle proof of inclusion that is managed by the owner.
+// Transfers have an accumulated transfer cap set by the owner.
 // The owner can add and remove addresses from the whitelist at any time.
 // The auth message follows a similar pattern to the cross-chain message and includes a designated caller.
 // The designated caller is ALWAYS used here, and not based on a flag as cross-chain.
