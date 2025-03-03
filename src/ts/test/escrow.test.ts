@@ -1,34 +1,9 @@
 import { TokenContractArtifact, TokenContract } from '../../artifacts/Token.js';
 import { EscrowContractArtifact, EscrowContract } from '../../artifacts/Escrow.js';
-import {
-  AccountWallet,
-  createLogger,
-  Fr,
-  PXE,
-  Logger,
-  AztecAddress,
-  AccountWalletWithSecretKey,
-  Wallet,
-} from '@aztec/aztec.js';
+import { AccountWallet, PXE, Logger, AccountWalletWithSecretKey } from '@aztec/aztec.js';
 import { createAccount } from '@aztec/accounts/testing';
-import { computePartialAddress, deriveKeys } from '@aztec/circuits.js';
-import { createPXE, expectAddressNote, expectTokenBalances, expectUintNote, wad } from './utils.js';
+import { createPXE, deployEscrow, expectAccountNote, expectTokenBalances, expectUintNote, wad } from './utils.js';
 import { deployToken } from './token.test.js';
-
-async function deployEscrow(pxes: PXE[], wallet: Wallet, owner: AztecAddress) {
-  const escrowSecretKey = Fr.random();
-  const escrowPublicKeys = (await deriveKeys(escrowSecretKey)).publicKeys;
-  const escrowDeployment = EscrowContract.deployWithPublicKeys(escrowPublicKeys, wallet, owner);
-  const escrowInstance = await escrowDeployment.getInstance();
-
-  await Promise.all(
-    pxes.map(async (pxe) => pxe.registerAccount(escrowSecretKey, await computePartialAddress(escrowInstance))),
-  );
-
-  const escrowContract = await escrowDeployment.send().deployed();
-
-  return escrowContract;
-}
 
 describe('Escrow - Multi PXE', () => {
   let alicePXE: PXE;
@@ -66,26 +41,14 @@ describe('Escrow - Multi PXE', () => {
     token = (await deployToken(alice)) as TokenContract;
 
     // alice and bob know the token contract
-    await alicePXE.registerContract({
-      instance: token.instance,
-      artifact: TokenContractArtifact,
-    });
-    await bobPXE.registerContract({
-      instance: token.instance,
-      artifact: TokenContractArtifact,
-    });
+    await alicePXE.registerContract(token);
+    await bobPXE.registerContract(token);
 
     escrow = await deployEscrow([alicePXE, bobPXE], alice, bob.getAddress());
 
     // alice and bob know the escrow contract
-    await alicePXE.registerContract({
-      instance: escrow.instance,
-      artifact: EscrowContractArtifact,
-    });
-    await bobPXE.registerContract({
-      instance: escrow.instance,
-      artifact: EscrowContractArtifact,
-    });
+    await alicePXE.registerContract(escrow);
+    await bobPXE.registerContract(escrow);
 
     // bob knows alice and escrow
     await bobPXE.registerSender(escrow.address);
@@ -95,7 +58,7 @@ describe('Escrow - Multi PXE', () => {
   });
 
   it('escrow', async () => {
-    let events, notes;
+    let notes;
 
     // this is here because the note is created in the constructor
     await escrow.withWallet(bob).methods.sync_notes().simulate({});
@@ -107,7 +70,9 @@ describe('Escrow - Multi PXE', () => {
     // bob should have a note with himself as owner, encrypted by escrow
     notes = await bob.getNotes({ contractAddress: escrow.address });
     expect(notes.length).toBe(1);
-    expectAddressNote(notes[0], bob.getAddress(), bob.getAddress());
+
+    // TODO: The escrow's secret is not available here, it should be returned when the contract is deployed
+    expectAccountNote(notes[0], bob.getAddress());
 
     // Fund escrow
     await token.withWallet(alice).methods.mint_to_private(alice.getAddress(), escrow.address, wad(10)).send().wait();
