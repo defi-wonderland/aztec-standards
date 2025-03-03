@@ -22,14 +22,9 @@ pub contract PrivateTransferCapToken {
 
     // Libs
     use dep::aztec::{
-        context::PrivateContext,
-        keys::getters::{get_nsk_app, get_public_keys},
         macros::{functions::{initializer, internal, private, public, view}, storage::storage},
         prelude::{AztecAddress, Map, PrivateMutable, PublicImmutable, PublicMutable, SharedMutable},
-        protocol_types::{
-            constants::GENERATOR_INDEX__NOTE_NULLIFIER, hash::poseidon2_hash_with_separator,
-            traits::Serialize,
-        },
+        protocol_types::traits::Serialize,
     };
 
     use balance_set::balance_set::BalanceSet;
@@ -73,104 +68,91 @@ pub contract PrivateTransferCapToken {
         );
     }
 
-    pub mod HookLib {
+    mod HookLib {
+        use crate::types::transfer_accumulator_note::TransferAccumulatorNote;
         use aztec::{
             context::{PrivateContext, PublicContext},
+            keys::getters::{get_nsk_app, get_public_keys},
             prelude::AztecAddress,
-            protocol_types::abis::function_selector::FunctionSelector,
+            protocol_types::{
+                constants::GENERATOR_INDEX__NOTE_NULLIFIER, hash::poseidon2_hash_with_separator,
+            },
         };
+        use aztec::encrypted_logs::log_assembly_strategies::default_aes128::note::encode_and_encrypt_note;
 
-        pub fn before_private_transfer<T>(
+        /** ==========================================================
+         * ======================= AUTHORIZATION =====================
+         * ======================================================== */
+
+        fn before_private_transfer(
             context: &mut PrivateContext,
-            _storage: T,
+            storage: super::Storage<&mut PrivateContext>,
             from: AztecAddress,
             _: AztecAddress,
             amount: U128,
         ) {
-            context.call_private_function(
-                context.this_address(),
-                FunctionSelector::from_signature("_authorize_in_private((Field),(Field,Field))"),
-                serialize_authorize_in_private_call(from, amount.serialize()),
+            let note = _find_transfer_accumulator_note(context, storage, from);
+
+            let transfer_accumulator = note.accumulated + amount;
+            assert(
+                transfer_accumulator <= storage.private_transfer_cap.get_current_value(),
+                "Transfer amount exceeds private transfer cap",
+            );
+
+            let mut new_note = TransferAccumulatorNote::new(
+                from,
+                transfer_accumulator,
+                note.nonce.add(U128::one()),
+            );
+
+            storage.transfer_accumulator_map.at(from).replace(&mut new_note).emit(
+                encode_and_encrypt_note(context, from, from),
             );
         }
 
-        pub fn before_public_transfer<T>(
-            context: &mut PublicContext,
-            _storage: T,
-            from: AztecAddress,
-            to: AztecAddress,
-            amount: U128,
-        ) {}
-
-        fn serialize_authorize_in_private_call(
-            from: AztecAddress,
-            amount: [Field; 2],
-        ) -> [Field; 3] {
-            let mut result = [0 as Field; 3];
-            result[0] = from.to_field();
-            result[1] = amount[0];
-            result[2] = amount[1];
-            result
+        fn before_public_transfer(
+            _context: &mut PublicContext,
+            _storage: super::Storage<&mut PublicContext>,
+            _from: AztecAddress,
+            _to: AztecAddress,
+            _amount: U128,
+        ) {
+            // NOTE: does nothing but is required by the token template
         }
-    }
 
-    /** ==========================================================
-     * ======================= AUTHORIZATION =====================
-     * ======================================================== */
+        /** ==========================================================
+        * ======================= LIBRARIES =========================
+        * ======================================================== */
 
-    #[private]
-    #[internal]
-    fn _authorize_in_private(from: AztecAddress, amount: U128) {
-        let note = _find_transfer_accumulator_note(&mut context, storage, from);
-
-        let transfer_accumulator = note.accumulated + amount;
-        assert(
-            transfer_accumulator <= storage.private_transfer_cap.get_current_value(),
-            "Transfer amount exceeds private transfer cap",
-        );
-
-        let mut new_note =
-            TransferAccumulatorNote::new(from, transfer_accumulator, note.nonce.add(U128::one()));
-
-        storage.transfer_accumulator_map.at(from).replace(&mut new_note).emit(
-            encode_and_encrypt_note(&mut context, from, from),
-        );
-    }
-
-    /** ==========================================================
-    * ======================= LIBRARIES =========================
-    * ======================================================== */
-
-    #[contract_library_method]
-    fn _find_transfer_accumulator_note(
-        context: &mut PrivateContext,
-        storage: Storage<&mut PrivateContext>,
-        from: AztecAddress,
-    ) -> TransferAccumulatorNote {
-        // get_note nullifies the note
-        // what happens if the private mutable was not initialized?
-        let note = storage.transfer_accumulator_map.at(from).get_note().note;
-        // If there is no note, we return an empty one
-        if note.nonce == U128::zero() {
-            // Push nullifier for empty note??
-            // How do we know if they are not providing the note?
-            _push_first_transfer_nullifier(context, from);
-            let mut emptyNote = TransferAccumulatorNote::new(from, U128::zero(), U128::zero());
-            storage.transfer_accumulator_map.at(from).initialize(&mut emptyNote);
-            emptyNote
-        } else {
-            note
+        fn _find_transfer_accumulator_note(
+            context: &mut PrivateContext,
+            storage: super::Storage<&mut PrivateContext>,
+            from: AztecAddress,
+        ) -> TransferAccumulatorNote {
+            // get_note nullifies the note
+            // what happens if the private mutable was not initialized?
+            let note = storage.transfer_accumulator_map.at(from).get_note().note;
+            // If there is no note, we return an empty one
+            if note.nonce == U128::zero() {
+                // Push nullifier for empty note??
+                // How do we know if they are not providing the note?
+                _push_first_transfer_nullifier(context, from);
+                let mut emptyNote = TransferAccumulatorNote::new(from, U128::zero(), U128::zero());
+                storage.transfer_accumulator_map.at(from).initialize(&mut emptyNote);
+                emptyNote
+            } else {
+                note
+            }
         }
-    }
 
-    #[contract_library_method]
-    fn _push_first_transfer_nullifier(context: &mut PrivateContext, from: AztecAddress) {
-        let owner_npk_m_hash = get_public_keys(from).npk_m.hash();
-        let secret = context.request_nsk_app(owner_npk_m_hash);
-        context.push_nullifier(poseidon2_hash_with_separator(
-            [secret, from.to_field(), U128::zero().to_field()],
-            GENERATOR_INDEX__NOTE_NULLIFIER as Field,
-        ));
+        fn _push_first_transfer_nullifier(context: &mut PrivateContext, from: AztecAddress) {
+            let owner_npk_m_hash = get_public_keys(from).npk_m.hash();
+            let secret = context.request_nsk_app(owner_npk_m_hash);
+            context.push_nullifier(poseidon2_hash_with_separator(
+                [secret, from.to_field(), U128::zero().to_field()],
+                GENERATOR_INDEX__NOTE_NULLIFIER as Field,
+            ));
+        }
     }
 }
 
