@@ -72,8 +72,8 @@ pub contract PrivateTransferCapToken {
         use crate::types::transfer_accumulator_note::TransferAccumulatorNote;
         use aztec::{
             context::{PrivateContext, PublicContext},
-            keys::getters::{get_nsk_app, get_public_keys},
-            prelude::AztecAddress,
+            keys::getters::get_public_keys,
+            prelude::{AztecAddress, Map, PrivateMutable},
             protocol_types::{
                 constants::GENERATOR_INDEX__NOTE_NULLIFIER, hash::poseidon2_hash_with_separator,
             },
@@ -88,10 +88,11 @@ pub contract PrivateTransferCapToken {
             context: &mut PrivateContext,
             storage: super::Storage<&mut PrivateContext>,
             from: AztecAddress,
-            _: AztecAddress,
+            _to: AztecAddress,
             amount: U128,
         ) {
-            let note = _find_transfer_accumulator_note(context, storage, from);
+            let note =
+                _find_transfer_accumulator_note(context, storage.transfer_accumulator_map, from);
 
             let transfer_accumulator = note.accumulated + amount;
             assert(
@@ -126,19 +127,19 @@ pub contract PrivateTransferCapToken {
 
         fn _find_transfer_accumulator_note(
             context: &mut PrivateContext,
-            storage: super::Storage<&mut PrivateContext>,
+            transfer_accumulator_map: Map<AztecAddress, PrivateMutable<TransferAccumulatorNote, &mut PrivateContext>, &mut PrivateContext>,
             from: AztecAddress,
         ) -> TransferAccumulatorNote {
             // get_note nullifies the note
             // what happens if the private mutable was not initialized?
-            let note = storage.transfer_accumulator_map.at(from).get_note().note;
+            let note = transfer_accumulator_map.at(from).get_note().note;
             // If there is no note, we return an empty one
             if note.nonce == U128::zero() {
                 // Push nullifier for empty note??
                 // How do we know if they are not providing the note?
                 _push_first_transfer_nullifier(context, from);
                 let mut emptyNote = TransferAccumulatorNote::new(from, U128::zero(), U128::zero());
-                storage.transfer_accumulator_map.at(from).initialize(&mut emptyNote);
+                transfer_accumulator_map.at(from).initialize(&mut emptyNote);
                 emptyNote
             } else {
                 note
