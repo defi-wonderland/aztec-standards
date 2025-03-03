@@ -1,7 +1,6 @@
 use crate::test::utils;
 use crate::Token;
 use authwit::cheatcodes as authwit_cheatcodes;
-use aztec::oracle::random::random;
 use aztec::oracle::debug_log::debug_log;
 
 #[test]
@@ -29,13 +28,13 @@ unconstrained fn transfer_private_to_hiding_point() {
 
     // // Check balances
     utils::check_private_balance(token_contract_address, owner, U128::from_integer(0));
-    utils::check_private_balance (token_contract_address, recipient, transfer_amount);
+    utils::check_private_balance(token_contract_address, recipient, transfer_amount);
 }
 
 #[test]
 unconstrained fn transfer_private_to_hiding_point_on_behalf_of_other() {
     let (env, token_contract_address, owner, recipient, mint_amount) =
-        utils::setup_and_mint_to_private(/* with_account_contracts */ false);
+        utils::setup_and_mint_to_private(/* with_account_contracts */ true);
 
     utils::check_private_balance(token_contract_address, owner, mint_amount);
     utils::check_private_balance(token_contract_address, recipient, U128::from_integer(0));
@@ -65,5 +64,5 @@ unconstrained fn transfer_private_to_hiding_point_on_behalf_of_other() {
 
     // Check balances
     utils::check_private_balance(token_contract_address, owner, U128::from_integer(0));
-    utils::check_private_balance (token_contract_address, recipient, transfer_amount);
+    utils::check_private_balance(token_contract_address, recipient, transfer_amount);
 }
