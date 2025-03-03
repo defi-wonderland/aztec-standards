@@ -15,10 +15,10 @@ pub contract MerkleInclusionAuthorizerToken {
 
     // Libs
     use dep::aztec::{
-        context::{PublicContext, PrivateContext},
+        context::{PrivateContext, PublicContext},
         macros::{functions::{initializer, internal, private, public, view}, storage::storage},
-        prelude::{AztecAddress, PublicMutable, Map},
-        protocol_types::{traits::Serialize},
+        prelude::{AztecAddress, Map, PublicMutable},
+        protocol_types::traits::Serialize,
     };
 
     #[storage]
@@ -78,7 +78,7 @@ pub contract MerkleInclusionAuthorizerToken {
     fn prepare_transfer_public_to_private(from: AztecAddress, to: AztecAddress) -> Field {
         // ...
         _authorize_in_private(from, &mut context);
-        // ...  
+        // ...
         0
     }
 

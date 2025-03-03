@@ -17,10 +17,10 @@ pub contract PrivateTransferCapToken {
 
     // Libs
     use dep::aztec::{
-        context::{PrivateContext},
+        context::PrivateContext,
         macros::{functions::{initializer, internal, private, public}, storage::storage},
-        prelude::{AztecAddress, PublicMutable, SharedMutable, Map, PrivateMutable},
-        protocol_types::{traits::Serialize},
+        prelude::{AztecAddress, Map, PrivateMutable, PublicMutable, SharedMutable},
+        protocol_types::traits::Serialize,
     };
 
     global PRIVATE_TRANSFER_CAP_DELAY_BLOCKS: u32 = 5;
@@ -34,7 +34,13 @@ pub contract PrivateTransferCapToken {
 
     #[public]
     #[initializer]
-    fn constructor(name: str<31>, symbol: str<31>, decimals: u8, owner: AztecAddress, private_transfer_cap: U128) {
+    fn constructor(
+        name: str<31>,
+        symbol: str<31>,
+        decimals: u8,
+        owner: AztecAddress,
+        private_transfer_cap: U128,
+    ) {
         storage.owner.write(owner);
         storage.private_transfer_cap.schedule_value_change(private_transfer_cap);
     }
@@ -84,7 +90,7 @@ pub contract PrivateTransferCapToken {
         // ...
         // TODO: We don't have the amount here, so we can't authorize
         //_authorize_in_private(from, amount, storage);
-        // ...  
+        // ...
         0
     }
 
@@ -134,13 +140,21 @@ pub contract PrivateTransferCapToken {
      * ======================================================== */
 
     #[contract_library_method]
-    fn _authorize_in_private(from: AztecAddress, amount: U128, storage: Storage<&mut PrivateContext>) {
+    fn _authorize_in_private(
+        from: AztecAddress,
+        amount: U128,
+        storage: Storage<&mut PrivateContext>,
+    ) {
         let note = _find_transfer_accumulator_note(storage, from);
 
         let transfer_accumulator = note.accumulated + amount;
-        assert(transfer_accumulator <= storage.private_transfer_cap.get_current_value(), "Transfer amount exceeds private transfer cap");        
-        
-        let mut new_note = TransferAccumulatorNote::new(from, transfer_accumulator, note.nonce.add(U128::one()));
+        assert(
+            transfer_accumulator <= storage.private_transfer_cap.get_current_value(),
+            "Transfer amount exceeds private transfer cap",
+        );
+
+        let mut new_note =
+            TransferAccumulatorNote::new(from, transfer_accumulator, note.nonce.add(U128::one()));
         storage.transfer_accumulator_map.at(from).replace(&mut new_note);
     }
 
