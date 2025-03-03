@@ -18,7 +18,7 @@ use aztec::{
 };
 
 #[test]
-unconstrained fn clawback_create() {
+unconstrained fn create_clawback_escrow() {
     let mint_amount = U128::from_integer(1_000_000_000);
     let (env, clawback_escrow_contract_address, escrow_contract_address, token_contract_address, owner, recipient) =
         utils::setup(true, mint_amount);
@@ -41,29 +41,8 @@ unconstrained fn clawback_create() {
     utils::check_private_balance(token_contract_address, recipient, mint_amount);
 }
 
-#[test(should_fail_with = "Only sender can clawback")]
-unconstrained fn clawback_only_sender_can_clawback() {
-    let mint_amount = U128::from_integer(1_000_000_000);
-    let (env, clawback_escrow_contract_address, escrow_contract_address, token_contract_address, owner, recipient) =
-        utils::setup(true, mint_amount);
-
-    // Create the clawback escrow
-    env.impersonate(owner);
-    ClawbackEscrow::at(clawback_escrow_contract_address)
-        .create_clawback_escrow(escrow_contract_address, recipient)
-        .call(&mut env.private());
-
-    env.advance_block_by(1);
-
-    utils::check_private_balance(token_contract_address, escrow_contract_address, mint_amount);
-
-    env.impersonate(recipient);
-    ClawbackEscrow::at(clawback_escrow_contract_address)
-        .clawback(escrow_contract_address, token_contract_address, mint_amount)
-        .call(&mut env.private());
-}
 #[test(should_fail_with = "Rejecting tx for emitting duplicate nullifiers")]
-unconstrained fn only_one_note_per_escrow() {
+unconstrained fn escrow_can_only_have_one_clawback_escrow() {
     let mint_amount = U128::from_integer(1_000_000_000);
     let (env, clawback_escrow_contract_address, escrow_contract_address, _, owner, recipient) =
         utils::setup(true, mint_amount);
@@ -83,26 +62,3 @@ unconstrained fn only_one_note_per_escrow() {
         .call(&mut env.private());
 }
 
-#[test]
-unconstrained fn sender_clawbacks() {
-    let mint_amount = U128::from_integer(1_000_000_000);
-    let (env, clawback_escrow_contract_address, escrow_contract_address, token_contract_address, owner, recipient) =
-        utils::setup(true, mint_amount);
-
-    // Create the clawback escrow
-    env.impersonate(owner);
-    ClawbackEscrow::at(clawback_escrow_contract_address)
-        .create_clawback_escrow(escrow_contract_address, recipient)
-        .call(&mut env.private());
-
-    env.advance_block_by(1);
-
-    utils::check_private_balance(token_contract_address, escrow_contract_address, mint_amount);
-
-    env.impersonate(owner);
-    ClawbackEscrow::at(clawback_escrow_contract_address)
-        .clawback(escrow_contract_address, token_contract_address, mint_amount)
-        .call(&mut env.private());
-
-    utils::check_private_balance(token_contract_address, owner, mint_amount);
-}
