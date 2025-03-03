@@ -1,15 +1,6 @@
-use crate::ClawbackEscrow;
 use dep::escrow_contract::Escrow;
-use dep::token::Token;
-use aztec::note::lifecycle::destroy_note;
-use aztec::note::note_getter::{MAX_NOTES_PER_PAGE, view_notes};
-use aztec::note::note_viewer_options::NoteViewerOptions;
-use aztec::{
-    oracle::{execution::get_contract_address, random::random},
-    prelude::AztecAddress,
-    test::helpers::{cheatcodes, test_environment::TestEnvironment},
-};
-use std::test::OracleMock;
+use dep::token::test::utils as token_utils;
+use aztec::{prelude::AztecAddress, test::helpers::{cheatcodes, test_environment::TestEnvironment}};
 
 pub unconstrained fn setup(
     with_account_contracts: bool,
@@ -27,23 +18,11 @@ pub unconstrained fn setup(
         (owner, recipient)
     };
 
-    env.impersonate(owner);
-
-    // Deploy token contract
-    let initializer_call_interface = Token::interface().constructor(
-        "TestToken0000000000000000000000",
-        "TT00000000000000000000000000000",
-        18,
-    );
-    let token_contract = env.deploy("./@token_contract", "Token").with_public_void_initializer(
-        initializer_call_interface,
-    );
-
-    let token_contract_address = token_contract.to_address();
-    env.advance_block_by(1);
+    let token_contract_address = token_utils::deploy_token(&mut env, owner);
 
     // Mint private tokens to owner
-    mint_to_private(&mut env, token_contract_address, owner, mint_amount);
+    env.impersonate(owner);
+    token_utils::mint_to_private(&mut env, token_contract_address, owner, mint_amount);
 
     // Deploy clawback escrow contract
     env.impersonate(owner);
@@ -79,7 +58,7 @@ pub unconstrained fn setup(
     );
 
     // Fund the escrow
-    transfer_in_private(
+    token_utils::transfer_in_private(
         &mut env,
         owner,
         token_contract_address,
@@ -88,52 +67,4 @@ pub unconstrained fn setup(
     );
 
     (&mut env, clawback_escrow_address, escrow_address, token_contract_address, owner, recipient)
-}
-
-pub unconstrained fn mint_to_private(
-    env: &mut TestEnvironment,
-    token_contract_address: AztecAddress,
-    recipient: AztecAddress,
-    amount: U128,
-) {
-    let note_randomness = random();
-    let _ = OracleMock::mock("getRandomField").returns(note_randomness);
-
-    let from = recipient; // we are setting from to recipient because of TODO(#9887)
-    Token::at(token_contract_address).mint_to_private(from, recipient, amount).call(
-        &mut env.private(),
-    );
-
-    env.advance_block_by(1);
-}
-
-pub unconstrained fn transfer_in_private(
-    env: &mut TestEnvironment,
-    from: AztecAddress,
-    token_contract_address: AztecAddress,
-    recipient: AztecAddress,
-    amount: U128,
-) {
-    let note_randomness = random();
-    let _ = OracleMock::mock("getRandomField").returns(note_randomness);
-
-    env.impersonate(from);
-    Token::at(token_contract_address).transfer_private_to_private(from, recipient, amount, 0).call(
-        &mut env.private(),
-    );
-
-    env.advance_block_by(1);
-}
-
-pub unconstrained fn check_private_balance(
-    token_contract_address: AztecAddress,
-    address: AztecAddress,
-    address_amount: U128,
-) {
-    let current_contract_address = get_contract_address();
-    cheatcodes::set_contract_address(token_contract_address);
-    // Direct call to unconstrained
-    let balance_of_private = Token::balance_of_private(address);
-    assert(balance_of_private == address_amount, "Private balance is not correct");
-    cheatcodes::set_contract_address(current_contract_address);
 }

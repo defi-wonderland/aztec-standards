@@ -1,21 +1,6 @@
 use crate::ClawbackEscrow;
 use crate::test::utils;
-use crate::types::clawback_escrow_note::ClawbackEscrowNote;
-use dep::address_note::address_note::AddressNote;
-use dep::escrow_contract::Escrow;
-use aztec::note::lifecycle::destroy_note;
-use aztec::note::note_getter::{MAX_NOTES_PER_PAGE, view_notes};
-use aztec::note::note_viewer_options::NoteViewerOptions;
-use aztec::{
-    oracle::{
-        execution::{get_block_number, get_contract_address},
-        random::random,
-        storage::storage_read,
-    },
-    prelude::{AztecAddress, NoteHeader},
-    protocol_types::storage::map::derive_storage_slot_in_map,
-    test::helpers::{cheatcodes, test_environment::TestEnvironment},
-};
+use dep::token::test::utils as token_utils;
 
 #[test]
 unconstrained fn create_clawback_escrow() {
@@ -31,14 +16,18 @@ unconstrained fn create_clawback_escrow() {
 
     env.advance_block_by(1);
 
-    utils::check_private_balance(token_contract_address, escrow_contract_address, mint_amount);
+    token_utils::check_private_balance(
+        token_contract_address,
+        escrow_contract_address,
+        mint_amount,
+    );
 
     env.impersonate(recipient);
     ClawbackEscrow::at(clawback_escrow_contract_address)
         .claim(escrow_contract_address, token_contract_address, mint_amount)
         .call(&mut env.private());
 
-    utils::check_private_balance(token_contract_address, recipient, mint_amount);
+    token_utils::check_private_balance(token_contract_address, recipient, mint_amount);
 }
 
 #[test(should_fail_with = "Rejecting tx for emitting duplicate nullifiers")]

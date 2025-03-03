@@ -1,4 +1,4 @@
-mod test;
+pub mod test;
 
 use aztec::macros::aztec;
 use token::macros::token;

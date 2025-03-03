@@ -27,6 +27,12 @@ pub unconstrained fn setup(
         (owner, recipient)
     };
 
+    let token_contract_address = deploy_token(&mut env, owner);
+
+    (&mut env, token_contract_address, owner, recipient)
+}
+
+pub unconstrained fn deploy_token(env: &mut TestEnvironment, owner: AztecAddress) -> AztecAddress {
     // Start the test in the account contract address
     env.impersonate(owner);
 
@@ -36,11 +42,12 @@ pub unconstrained fn setup(
         "TT00000000000000000000000000000",
         18,
     );
-    let token_contract =
-        env.deploy_self("Token").with_public_void_initializer(initializer_call_interface);
-    let token_contract_address = token_contract.to_address();
+    let token_contract = env.deploy("./@token_contract", "Token").with_public_void_initializer(
+        initializer_call_interface,
+    );
     env.advance_block_by(1);
-    (&mut env, token_contract_address, owner, recipient)
+
+    token_contract.to_address()
 }
 
 pub unconstrained fn setup_and_mint_to_public(
@@ -86,6 +93,24 @@ pub unconstrained fn mint_to_private(
 
     let from = recipient; // we are setting from to recipient because of TODO(#9887)
     Token::at(token_contract_address).mint_to_private(from, recipient, amount).call(
+        &mut env.private(),
+    );
+
+    env.advance_block_by(1);
+}
+
+pub unconstrained fn transfer_in_private(
+    env: &mut TestEnvironment,
+    from: AztecAddress,
+    token_contract_address: AztecAddress,
+    recipient: AztecAddress,
+    amount: U128,
+) {
+    let note_randomness = random();
+    let _ = OracleMock::mock("getRandomField").returns(note_randomness);
+
+    env.impersonate(from);
+    Token::at(token_contract_address).transfer_private_to_private(from, recipient, amount, 0).call(
         &mut env.private(),
     );
 
