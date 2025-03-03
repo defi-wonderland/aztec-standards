@@ -8,6 +8,7 @@ use token::macros::token;
 pub contract Token {
 
     use aztec::{
+        context::PublicContext,
         macros::{functions::{initializer, internal, private, public, view}, storage::storage},
         prelude::{AztecAddress, Map, PublicImmutable, PublicMutable},
         protocol_types::traits::{Hash, Serialize},
@@ -30,6 +31,8 @@ pub contract Token {
         private_balances: Map<AztecAddress, BalanceSet<Context>, Context>,
         total_supply: PublicMutable<U128, Context>,
         public_balances: Map<AztecAddress, PublicMutable<U128, Context>, Context>,
+        // NOTE: adding arbitrary storage slot
+        aux_storage: PublicMutable<U128, Context>,
     }
 
     #[public]
@@ -52,5 +55,13 @@ pub contract Token {
     // TODO(#32): unconstrained fns cannot be injected in macros
     pub(crate) unconstrained fn balance_of_private(owner: AztecAddress) -> pub U128 {
         storage.private_balances.at(owner).balance_of()
+    }
+
+    #[contract_library_method]
+    // NOTE: defining the "arbitrary storage shape"
+    fn get_aux_storage(
+        storage: Storage<&mut PublicContext>,
+    ) -> PublicMutable<U128, &mut PublicContext> {
+        storage.aux_storage
     }
 }

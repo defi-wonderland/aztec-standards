@@ -2,7 +2,7 @@ pub mod AuthLib {
     use authwit::auth::{
         assert_current_call_valid_authwit, assert_current_call_valid_authwit_public,
     };
-    use aztec::{context::{PrivateContext, PublicContext}, prelude::AztecAddress};
+    use aztec::{context::{PrivateContext, PublicContext}, prelude::{AztecAddress, PublicMutable}};
 
     pub fn _validate_from_private(from: AztecAddress, nonce: Field, context: &mut PrivateContext) {
         if (!from.eq(context.msg_sender())) {
@@ -19,5 +19,12 @@ pub mod AuthLib {
         } else {
             assert(nonce == 0, "invalid nonce");
         }
+    }
+
+    pub fn storage_dependant_fn(
+        // NOTE: arbitrary storage shape
+        mut aux_storage: PublicMutable<U128, &mut PublicContext>
+    ) {
+        aux_storage.write(U128::from_integer(1));
     }
 }
