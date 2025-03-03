@@ -4,4 +4,5 @@ members = [
 "src/escrow_contract",
 "src/clawback_escrow",
 "src/merkle_inclusion_authorizer_token_contract",
+"src/private_transfer_cap_token_contract"
 ]
