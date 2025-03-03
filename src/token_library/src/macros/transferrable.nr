@@ -95,6 +95,7 @@ pub global TRANSFERRABLE_CODE: Quoted = quote {
 
     #[public]
     fn transfer_public_to_public(from: AztecAddress, to: AztecAddress, amount: U128, nonce: Field) {
+        StorageUtils::public_storage_dependant_fn(storage);
         AuthLib::_validate_from_public(&mut context, from, nonce);
         TokenLib::_decrease_public_balance(storage.public_balances, from, amount);
         TokenLib::_increase_public_balance(storage.public_balances, to, amount);
