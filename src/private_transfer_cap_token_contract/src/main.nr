@@ -14,8 +14,6 @@ use token::macros::token;
 #[token]
 #[aztec]
 pub contract PrivateTransferCapToken {
-
-    use crate::types::hook_utils::HookLib;
     use crate::types::transfer_accumulator_note::TransferAccumulatorNote;
 
     // encryption library
@@ -25,13 +23,13 @@ pub contract PrivateTransferCapToken {
     // Libs
     use dep::aztec::{
         context::PrivateContext,
+        keys::getters::{get_nsk_app, get_public_keys},
         macros::{functions::{initializer, internal, private, public, view}, storage::storage},
         prelude::{AztecAddress, Map, PrivateMutable, PublicImmutable, PublicMutable, SharedMutable},
         protocol_types::{
             constants::GENERATOR_INDEX__NOTE_NULLIFIER, hash::poseidon2_hash_with_separator,
             traits::Serialize,
         },
-        keys::getters::{get_nsk_app, get_public_keys},
     };
 
     use balance_set::balance_set::BalanceSet;
@@ -73,6 +71,47 @@ pub contract PrivateTransferCapToken {
             symbol,
             decimals,
         );
+    }
+
+    pub mod HookLib {
+        use aztec::{
+            context::{PrivateContext, PublicContext},
+            prelude::AztecAddress,
+            protocol_types::abis::function_selector::FunctionSelector,
+        };
+
+        pub fn before_private_transfer<T>(
+            context: &mut PrivateContext,
+            _storage: T,
+            from: AztecAddress,
+            _: AztecAddress,
+            amount: U128,
+        ) {
+            context.call_private_function(
+                context.this_address(),
+                FunctionSelector::from_signature("_authorize_in_private((Field),(Field,Field))"),
+                serialize_authorize_in_private_call(from, amount.serialize()),
+            );
+        }
+
+        pub fn before_public_transfer<T>(
+            context: &mut PublicContext,
+            _storage: T,
+            from: AztecAddress,
+            to: AztecAddress,
+            amount: U128,
+        ) {}
+
+        fn serialize_authorize_in_private_call(
+            from: AztecAddress,
+            amount: [Field; 2],
+        ) -> [Field; 3] {
+            let mut result = [0 as Field; 3];
+            result[0] = from.to_field();
+            result[1] = amount[0];
+            result[2] = amount[1];
+            result
+        }
     }
 
     /** ==========================================================
