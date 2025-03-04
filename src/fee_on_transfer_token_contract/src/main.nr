@@ -53,8 +53,11 @@ pub contract FeeOnTransferToken {
 
     mod HookLib {
         use super::FEE_PERCENTAGE_BASE;
-        use aztec::{context::{PrivateContext, PublicContext}, prelude::AztecAddress};
-        use aztec::encrypted_logs::log_assembly_strategies::default_aes128::note::encode_and_encrypt_note;
+        use aztec::{
+            context::{PrivateContext, PublicContext},
+            encrypted_logs::log_assembly_strategies::default_aes128::note::encode_and_encrypt_note,
+            prelude::AztecAddress,
+        };
         use token::token_utils::TokenLib;
 
         /** ==========================================================
