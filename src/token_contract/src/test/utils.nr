@@ -26,9 +26,7 @@ pub unconstrained fn setup(
         let recipient = env.create_account(2);
         (owner, recipient)
     };
-    // let owner = env.create_account_contract(1);
-    // let recipient = env.create_account_contract(2);
-    
+
     // Start the test in the account contract address
     env.impersonate(owner);
 
