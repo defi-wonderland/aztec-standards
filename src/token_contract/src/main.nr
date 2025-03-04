@@ -18,7 +18,7 @@ pub contract Token {
     // balance notes library (NOTE: it needs to be same as in the token_utils.nr)
     use balance_set::balance_set::BalanceSet;
     // token & auth utils (TODO(#30): +mint-auth utils)
-    use token::{auth_utils::AuthLib, token_utils::TokenLib};
+    use token::{auth_utils::AuthLib, ownable_utils::OwnableLib, token_utils::TokenLib};
 
     #[storage]
     struct Storage<Context> {
@@ -30,11 +30,13 @@ pub contract Token {
         private_balances: Map<AztecAddress, BalanceSet<Context>, Context>,
         total_supply: PublicMutable<U128, Context>,
         public_balances: Map<AztecAddress, PublicMutable<U128, Context>, Context>,
+        owner: PublicMutable<AztecAddress, Context>,
     }
 
     #[public]
     #[initializer]
     fn constructor(name: str<31>, symbol: str<31>, decimals: u8) {
+        OwnableLib::ownable_constructor(storage.owner, context.msg_sender());
         TokenLib::token_constructor(
             storage.name,
             storage.symbol,

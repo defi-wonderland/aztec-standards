@@ -175,7 +175,7 @@ pub mod TokenLib {
 
         context.call_public_function(
             context.this_address(),
-            FunctionSelector::from_signature("finalize_mint_to_private((Field,Field),Field)"),
+            FunctionSelector::from_signature("_finalize_mint_to_private_unsafe((Field,Field),Field)"),
             serialize_finalization_call(amount.serialize(), hiding_point_slot),
         );
     }

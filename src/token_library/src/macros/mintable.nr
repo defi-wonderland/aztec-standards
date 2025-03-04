@@ -1,5 +1,4 @@
 pub global MINTABLE_CODE: Quoted = quote {
-    // TODO(#30): add authentication using some MintLib
     /** ==========================================================
     * ======================= MINTABLE ==========================
     * ======================================================== */
@@ -10,6 +9,8 @@ pub global MINTABLE_CODE: Quoted = quote {
         to: AztecAddress,
         amount: U128,
     ) {
+        OwnableLib::only_owner_private(&mut context);
+
         // We prepare the partial note to which we'll "send" the minted amount.
         let hiding_point_slot = TokenLib::_prepare_transfer_public_to_private(
             &mut context,
@@ -23,12 +24,16 @@ pub global MINTABLE_CODE: Quoted = quote {
 
     #[public]
     fn mint_to_public(to: AztecAddress, amount: U128) {
+        OwnableLib::only_owner_public(&mut context, storage.owner);
+
         TokenLib::_increase_public_balance(storage.public_balances, to, amount);
         TokenLib::_increase_total_supply(storage.total_supply, amount);
     }
 
     #[public]
     fn finalize_mint_to_private(amount: U128, hiding_point_slot: Field) {
+        OwnableLib::only_owner_public(&mut context, storage.owner);
+
         TokenLib::_finalize_mint_to_private(
             &mut context,
             storage.total_supply,
@@ -40,7 +45,6 @@ pub global MINTABLE_CODE: Quoted = quote {
     #[public]
     #[internal]
     fn _finalize_mint_to_private_unsafe(
-        from: AztecAddress,
         amount: U128,
         hiding_point_slot: Field,
     ) {
