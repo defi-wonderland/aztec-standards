@@ -72,7 +72,7 @@ pub contract PrivateTransferCapToken {
         storage.private_balances.at(owner).balance_of()
     }
 
-    mod HookLib {
+    mod PreTransferLib {
         use crate::types::transfer_accumulator_note::TransferAccumulatorNote;
         use aztec::{
             context::{PrivateContext, PublicContext},

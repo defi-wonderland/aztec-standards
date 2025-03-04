@@ -32,11 +32,7 @@ unconstrained fn private_transfer_less_than_cap() {
     // Check balances
     let mut new_balance = TRANSFER_CAP.add(U128::one()).sub(transfer_amount);
     utils::check_private_balance(token_contract_address, sender, new_balance);
-    utils::check_private_balance(
-        token_contract_address,
-        recipient,
-        transfer_amount,
-    );
+    utils::check_private_balance(token_contract_address, recipient, transfer_amount);
 
     // Transfer more tokens to recipient to reach cap
     utils::transfer_private_to_private(
@@ -67,21 +63,10 @@ unconstrained fn private_transfer_more_than_cap_one_transfer() {
     let mint_amount = TRANSFER_CAP.add(U128::one());
 
     // Mint tokens to sender
-    utils::mint_to_private(
-        env,
-        token_contract_address,
-        sender,
-        mint_amount,
-    );
+    utils::mint_to_private(env, token_contract_address, sender, mint_amount);
 
     // Transfer tokens to recipient
-    utils::transfer_private_to_private(
-        env,
-        token_contract_address,
-        sender,
-        recipient,
-        mint_amount,
-    );
+    utils::transfer_private_to_private(env, token_contract_address, sender, recipient, mint_amount);
 }
 
 #[test(should_fail_with = "Transfer amount exceeds private transfer cap")]
@@ -95,12 +80,7 @@ unconstrained fn private_transfer_more_than_cap_multiple_transfer() {
     let mint_amount = transfer_amount.add(U128::one());
 
     // Mint tokens to sender
-    utils::mint_to_private(
-        env,
-        token_contract_address,
-        sender,
-        mint_amount,
-    );
+    utils::mint_to_private(env, token_contract_address, sender, mint_amount);
 
     // Transfer tokens to recipient
     utils::transfer_private_to_private(
@@ -114,19 +94,9 @@ unconstrained fn private_transfer_more_than_cap_multiple_transfer() {
     // Check balances
     let mut new_balance = mint_amount.sub(transfer_amount);
     utils::check_private_balance(token_contract_address, sender, new_balance);
-    utils::check_private_balance(
-        token_contract_address,
-        recipient,
-        transfer_amount,
-    );
+    utils::check_private_balance(token_contract_address, recipient, transfer_amount);
 
     // Private transfer one token should revert because we are over the cap
-    utils::transfer_private_to_private(
-        env,
-        token_contract_address,
-        sender,
-        recipient,
-        U128::one(),
-    );
+    utils::transfer_private_to_private(env, token_contract_address, sender, recipient, U128::one());
 }
 
