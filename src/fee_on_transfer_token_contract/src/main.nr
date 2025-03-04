@@ -64,7 +64,7 @@ pub contract FeeOnTransferToken {
         fn before_private_transfer(
             context: &mut PrivateContext,
             storage: super::Storage<&mut PrivateContext>,
-            _from: AztecAddress,
+            from: AztecAddress,
             _to: AztecAddress,
             amount: U128,
         ) -> U128 {
@@ -72,7 +72,7 @@ pub contract FeeOnTransferToken {
             let fee_amount = amount * fee / FEE_PERCENTAGE_BASE;
             let owner = storage.owner.read();
             TokenLib::_increase_private_balance(storage.private_balances, owner, fee_amount).emit(
-                encode_and_encrypt_note(context, owner, _from),
+                encode_and_encrypt_note(context, owner, from),
             );
             amount - fee_amount
         }
