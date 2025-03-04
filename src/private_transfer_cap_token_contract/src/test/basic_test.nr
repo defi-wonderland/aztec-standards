@@ -20,12 +20,14 @@ unconstrained fn private_transfer_less_than_cap() {
         TRANSFER_CAP.add(U128::one()),
     );
 
-    // Impersonate sender to perform the call
-    env.impersonate(sender);
-    // Transfer tokens
-    PrivateTransferCapToken::at(token_contract_address)
-        .transfer_private_to_private(sender, recipient, transfer_amount, 0)
-        .call(&mut env.private());
+    // Transfer tokens to recipient
+    utils::transfer_private_to_private(
+        env,
+        token_contract_address,
+        sender,
+        recipient,
+        transfer_amount,
+    );
 
     // Check balances
     let mut new_balance = TRANSFER_CAP.add(U128::one()).sub(transfer_amount);
@@ -36,12 +38,14 @@ unconstrained fn private_transfer_less_than_cap() {
         transfer_amount,
     );
 
-    // Impersonate sender to perform the call
-    env.impersonate(sender);
-    // Transfer a second time
-    PrivateTransferCapToken::at(token_contract_address)
-        .transfer_private_to_private(sender, recipient, transfer_amount, 0)
-        .call(&mut env.private());
+    // Transfer more tokens to recipient to reach cap
+    utils::transfer_private_to_private(
+        env,
+        token_contract_address,
+        sender,
+        recipient,
+        transfer_amount,
+    );
 
     // Check balances
     new_balance -= transfer_amount;
@@ -53,7 +57,7 @@ unconstrained fn private_transfer_less_than_cap() {
     );
 }
 
-#[test(should_fail)]
+#[test(should_fail_with = "Transfer amount exceeds private transfer cap")]
 unconstrained fn private_transfer_more_than_cap_one_transfer() {
     // Setup with account contracts. Slower since we actually deploy them, but needed for authwits.
     let (env, token_contract_address, owner, sender, recipient) = utils::setup(TRANSFER_CAP);
@@ -70,15 +74,17 @@ unconstrained fn private_transfer_more_than_cap_one_transfer() {
         mint_amount,
     );
 
-    // Impersonate sender to perform the call
-    env.impersonate(sender);
-    // Private transfer should revert because we are going over the cap
-    PrivateTransferCapToken::at(token_contract_address)
-        .transfer_private_to_private(sender, recipient, mint_amount, 0)
-        .call(&mut env.private());
+    // Transfer tokens to recipient
+    utils::transfer_private_to_private(
+        env,
+        token_contract_address,
+        sender,
+        recipient,
+        mint_amount,
+    );
 }
 
-#[test(should_fail)]
+#[test(should_fail_with = "Transfer amount exceeds private transfer cap")]
 unconstrained fn private_transfer_more_than_cap_multiple_transfer() {
     // Setup with account contracts. Slower since we actually deploy them, but needed for authwits.
     let (env, token_contract_address, owner, sender, recipient) = utils::setup(TRANSFER_CAP);
@@ -96,12 +102,14 @@ unconstrained fn private_transfer_more_than_cap_multiple_transfer() {
         mint_amount,
     );
 
-    // Impersonate sender to perform the call
-    env.impersonate(sender);
-    // Transfer tokens
-    PrivateTransferCapToken::at(token_contract_address)
-        .transfer_private_to_private(sender, recipient, transfer_amount, 0)
-        .call(&mut env.private());
+    // Transfer tokens to recipient
+    utils::transfer_private_to_private(
+        env,
+        token_contract_address,
+        sender,
+        recipient,
+        transfer_amount,
+    );
 
     // Check balances
     let mut new_balance = mint_amount.sub(transfer_amount);
@@ -112,10 +120,13 @@ unconstrained fn private_transfer_more_than_cap_multiple_transfer() {
         transfer_amount,
     );
 
-    // Private transfer should revert because we are over the cap
-    env.impersonate(sender);
-    PrivateTransferCapToken::at(token_contract_address)
-        .transfer_private_to_private(sender, recipient, U128::one(), 0)
-        .call(&mut env.private());
+    // Private transfer one token should revert because we are over the cap
+    utils::transfer_private_to_private(
+        env,
+        token_contract_address,
+        sender,
+        recipient,
+        U128::one(),
+    );
 }
 

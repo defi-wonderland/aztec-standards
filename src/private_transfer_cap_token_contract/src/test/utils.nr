@@ -98,3 +98,19 @@ pub unconstrained fn check_private_balance(
     assert(balance_of_private == address_amount, "Private balance is not correct");
     cheatcodes::set_contract_address(current_contract_address);
 }
+
+pub unconstrained fn transfer_private_to_private(
+    env: &mut TestEnvironment,
+    token_contract_address: AztecAddress,
+    sender: AztecAddress,
+    recipient: AztecAddress,
+    amount: U128,
+) {
+    // Impersonate sender to perform the call
+    env.impersonate(sender);
+    // Transfer tokens
+    PrivateTransferCapToken::at(token_contract_address)
+        .transfer_private_to_private(sender, recipient, amount, 0)
+        .call(&mut env.private());
+    env.advance_block_by(1);
+}

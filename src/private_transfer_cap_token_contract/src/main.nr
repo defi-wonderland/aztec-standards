@@ -142,7 +142,7 @@ pub contract PrivateTransferCapToken {
             // In case there is a malicious oracle, the nullifier would collide and revert
             let is_initialized = _unsafe_is_note_initialized(priv_mutable);
             // If there is no note, we return an empty one
-            if is_initialized {
+            if !is_initialized {
                 // Push nullifier to make sure that the oracle provides the note if it exists
                 _push_first_transfer_nullifier(context, from);
                 TransferAccumulatorNote::new(from, U128::zero(), U128::zero())
