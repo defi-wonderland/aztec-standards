@@ -35,9 +35,9 @@ pub global TRANSFERRABLE_CODE: Quoted = quote {
         amount: U128,
         nonce: Field,
     ) -> Field {
-        AuthLib::_validate_from_private(from, nonce, &mut context);
+        AuthLib::validate_from_private(&mut context, from, nonce);
 
-        TokenLib::_decrease_private_balance(
+        TokenLib::decrease_private_balance(
             &mut context,
             storage.private_balances,
             from,
@@ -46,9 +46,9 @@ pub global TRANSFERRABLE_CODE: Quoted = quote {
         )
             .emit(encode_and_encrypt_note(&mut context, from, from));
 
-        TokenLib::_private_increase_public_balance(&mut context, to, amount);
+        TokenLib::private_increase_public_balance(&mut context, to, amount);
 
-        let hiding_point_slot = TokenLib::_prepare_transfer_public_to_private(
+        let hiding_point_slot = TokenLib::prepare_transfer_public_to_private(
             &mut context,
             storage.private_balances,
             from,
@@ -87,9 +87,9 @@ pub global TRANSFERRABLE_CODE: Quoted = quote {
         hiding_point_slot: Field,
         nonce: Field,
     ) {
-        AuthLib::_validate_from_private(from, nonce, &mut context);
+        AuthLib::validate_from_private(&mut context, from, nonce);
         
-        TokenLib::_decrease_private_balance(
+        TokenLib::decrease_private_balance(
             &mut context,
             storage.private_balances,
             from,
@@ -98,7 +98,7 @@ pub global TRANSFERRABLE_CODE: Quoted = quote {
         )
             .emit(encode_and_encrypt_note(&mut context, from, from));
 
-        TokenLib::_private_increase_hiding_point_balance(&mut context, hiding_point_slot, amount);
+        TokenLib::private_increase_hiding_point_balance(&mut context, hiding_point_slot, amount);
     }
 
     #[private]
@@ -194,7 +194,7 @@ pub global TRANSFERRABLE_CODE: Quoted = quote {
         hiding_point_slot: Field,
         amount: U128,
     ) {
-        TokenLib::_increase_hiding_point_balance(
+        TokenLib::increase_hiding_point_balance(
             &mut context,
             hiding_point_slot,
             amount,
