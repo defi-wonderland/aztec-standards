@@ -3,5 +3,6 @@ members = [
 "src/token_contract",
 "src/escrow_contract",
 "src/clawback_escrow",
-"src/private_transfer_cap_token_contract"
+"src/private_transfer_cap_token_contract",
+"src/fee_on_transfer_token_contract"
 ]

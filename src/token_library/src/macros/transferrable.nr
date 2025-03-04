@@ -14,19 +14,19 @@ pub global TRANSFERRABLE_CODE: Quoted = quote {
         amount: U128,
         nonce: Field,
     ) {
-        HookLib::before_private_transfer(&mut context, storage, from, to, amount);
+        let mut_amount = HookLib::before_private_transfer(&mut context, storage, from, to, amount);
         AuthLib::_validate_from_private(from, nonce, &mut context);
 
         TokenLib::_decrease_private_balance(
             &mut context,
             storage.private_balances,
             from,
-            amount,
+            mut_amount,
             INITIAL_TRANSFER_CALL_MAX_NOTES,
         )
             .emit(encode_and_encrypt_note(&mut context, from, from));
 
-        TokenLib::_private_increase_public_balance(&mut context, to, amount);
+        TokenLib::_private_increase_public_balance(&mut context, to, mut_amount);
     }
 
     #[private]
@@ -36,19 +36,19 @@ pub global TRANSFERRABLE_CODE: Quoted = quote {
         amount: U128,
         nonce: Field,
     ) {
-        HookLib::before_private_transfer(&mut context, storage, from, to, amount);
+        let mut_amount = HookLib::before_private_transfer(&mut context, storage, from, to, amount);
         AuthLib::_validate_from_private(from, nonce, &mut context);
 
         TokenLib::_decrease_private_balance(
             &mut context,
             storage.private_balances,
             from,
-            amount,
+            mut_amount,
             INITIAL_TRANSFER_CALL_MAX_NOTES,
         )
             .emit(encode_and_encrypt_note(&mut context, from, from));
 
-        TokenLib::_increase_private_balance(storage.private_balances, to, amount).emit(
+        TokenLib::_increase_private_balance(storage.private_balances, to, mut_amount).emit(
             encode_and_encrypt_note(&mut context, to, from),
         );
     }
@@ -60,12 +60,12 @@ pub global TRANSFERRABLE_CODE: Quoted = quote {
         amount: U128,
         nonce: Field,
     ) {
-        HookLib::before_private_transfer(&mut context, storage, from, to, amount);
+        let mut_amount = HookLib::before_private_transfer(&mut context, storage, from, to, amount);
         AuthLib::_validate_from_private(from, nonce, &mut context);
 
-        TokenLib::_private_decrease_public_balance(&mut context, from, amount);
+        TokenLib::_private_decrease_public_balance(&mut context, from, mut_amount);
 
-        TokenLib::_increase_private_balance(storage.private_balances, to, amount).emit(
+        TokenLib::_increase_private_balance(storage.private_balances, to, mut_amount).emit(
             encode_and_encrypt_note(&mut context, to, from),
         );
     }
@@ -73,7 +73,7 @@ pub global TRANSFERRABLE_CODE: Quoted = quote {
     #[private]
     fn prepare_transfer_public_to_private(from: AztecAddress, to: AztecAddress) -> Field {
         // TODO: We don't have the amount here. Should we send 0 or remove it?
-        HookLib::before_private_transfer(&mut context, storage, from, to, U128::zero());
+        let _ =HookLib::before_private_transfer(&mut context, storage, from, to, U128::zero());
         TokenLib::_prepare_transfer_public_to_private(
             &mut context,
             storage.private_balances,
@@ -100,10 +100,10 @@ pub global TRANSFERRABLE_CODE: Quoted = quote {
 
     #[public]
     fn transfer_public_to_public(from: AztecAddress, to: AztecAddress, amount: U128, nonce: Field) {
-        HookLib::before_public_transfer(&mut context, storage, from, to, amount);
+        let mut_amount = HookLib::before_public_transfer(&mut context, storage, from, to, amount);
         AuthLib::_validate_from_public(&mut context, from, nonce);
-        TokenLib::_decrease_public_balance(storage.public_balances, from, amount);
-        TokenLib::_increase_public_balance(storage.public_balances, to, amount);
+        TokenLib::_decrease_public_balance(storage.public_balances, from, mut_amount);
+        TokenLib::_increase_public_balance(storage.public_balances, to, mut_amount);
     }
 
     /// Finalizes a transfer of token `amount` from public balance of `from` to a private balance of `to`.
@@ -116,14 +116,14 @@ pub global TRANSFERRABLE_CODE: Quoted = quote {
         hiding_point_slot: Field,
         nonce: Field,
     ) {
-        HookLib::before_public_transfer(&mut context, storage, from, AztecAddress::zero(), amount);
+        let mut_amount = HookLib::before_public_transfer(&mut context, storage, from, AztecAddress::zero(), amount);
         AuthLib::_validate_from_public(&mut context, from, nonce);
         TokenLib::_finalize_transfer_public_to_private(
             &mut context,
             storage.public_balances,
             from,
             hiding_point_slot,
-            amount,
+            mut_amount,
         );
     }
 
