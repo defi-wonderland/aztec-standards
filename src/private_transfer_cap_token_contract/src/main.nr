@@ -90,7 +90,7 @@ pub contract PrivateTransferCapToken {
             from: AztecAddress,
             _to: AztecAddress,
             amount: U128,
-        ) {
+        ) -> U128 {
             let note =
                 _find_transfer_accumulator_note(context, storage.transfer_accumulator_map, from);
 
@@ -109,6 +109,8 @@ pub contract PrivateTransferCapToken {
             storage.transfer_accumulator_map.at(from).replace(&mut new_note).emit(
                 encode_and_encrypt_note(context, from, from),
             );
+
+            amount
         }
 
         fn before_public_transfer(
@@ -116,9 +118,10 @@ pub contract PrivateTransferCapToken {
             _storage: super::Storage<&mut PublicContext>,
             _from: AztecAddress,
             _to: AztecAddress,
-            _amount: U128,
-        ) {
+            amount: U128,
+        ) -> U128 {
             // NOTE: does nothing but is required by the token template
+            amount
         }
 
         /** ==========================================================

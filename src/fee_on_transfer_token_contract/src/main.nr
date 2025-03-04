@@ -1,3 +1,5 @@
+mod test;
+
 use dep::aztec::macros::aztec;
 use token::macros::token;
 
@@ -31,14 +33,14 @@ pub contract FeeOnTransferToken {
         total_supply: PublicMutable<U128, Context>,
         public_balances: Map<AztecAddress, PublicMutable<U128, Context>, Context>,
         // Private transfer cap
-        owner: SharedMutable<AztecAddress, UPDATE_DELAY_BLOCKS, Context>,
+        owner: PublicImmutable<AztecAddress, Context>,
         fee_on_transfer: SharedMutable<U128, UPDATE_DELAY_BLOCKS, Context>,
     }
 
     #[public]
     #[initializer]
     fn constructor(name: str<31>, symbol: str<31>, decimals: u8, owner: AztecAddress) {
-        storage.owner.schedule_value_change(owner);
+        storage.owner.initialize(owner);
         TokenLib::token_constructor(
             storage.name,
             storage.symbol,
@@ -68,7 +70,7 @@ pub contract FeeOnTransferToken {
         ) -> U128 {
             let fee = storage.fee_on_transfer.get_current_value();
             let fee_amount = amount * fee / FEE_PERCENTAGE_BASE;
-            let owner = storage.owner.get_current_value();
+            let owner = storage.owner.read();
             TokenLib::_increase_private_balance(storage.private_balances, owner, fee_amount).emit(
                 encode_and_encrypt_note(context, owner, _from),
             );
@@ -84,7 +86,7 @@ pub contract FeeOnTransferToken {
         ) -> U128 {
             let fee = storage.fee_on_transfer.get_current_value();
             let fee_amount = amount * fee / FEE_PERCENTAGE_BASE;
-            let owner = storage.owner.get_current_value();
+            let owner = storage.owner.read();
             TokenLib::_increase_public_balance(storage.public_balances, owner, fee_amount);
             amount - fee_amount
         }
@@ -92,9 +94,18 @@ pub contract FeeOnTransferToken {
 
     #[public]
     fn set_fee_on_transfer(amount: U128) {
-        assert(context.msg_sender() == storage.owner.get_current_value(), "Not owner");
+        assert(context.msg_sender() == storage.owner.read(), "Not owner");
         assert(amount <= FEE_PERCENTAGE_BASE, "Fee cannot be greater than 100%");
         storage.fee_on_transfer.schedule_value_change(amount);
+    }
+
+    /** ==========================================================
+     * ===================== UNCONSTRAINED =======================
+     * ======================================================== */
+
+    // TODO(#32): unconstrained fns cannot be injected in macros
+    pub(crate) unconstrained fn balance_of_private(owner: AztecAddress) -> pub U128 {
+        storage.private_balances.at(owner).balance_of()
     }
 }
 
