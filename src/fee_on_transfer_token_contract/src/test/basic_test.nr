@@ -29,6 +29,7 @@ unconstrained fn fee_on_transfer_private() {
 
     // Check balances
     let fee_amount = transfer_amount * FEE_PERCENTAGE / U128::from_integer(100);
+    utils::check_private_balance(token_contract_address, sender, U128::zero());
     utils::check_private_balance(token_contract_address, owner, fee_amount);
     utils::check_private_balance(
         token_contract_address,
@@ -63,6 +64,7 @@ unconstrained fn fee_on_transfer_public() {
 
     // Check balances
     let fee_amount = transfer_amount * FEE_PERCENTAGE / U128::from_integer(100);
+    utils::check_public_balance(token_contract_address, sender, U128::zero());
     utils::check_public_balance(token_contract_address, owner, fee_amount);
     utils::check_public_balance(
         token_contract_address,

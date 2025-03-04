@@ -30,17 +30,6 @@ pub mod TokenLib {
      * ======================= LIBRARIES =========================
      * ======================================================== */
 
-    pub fn _finalize_transfer_public_to_private(
-        context: &mut PublicContext,
-        public_balances: Map<AztecAddress, PublicMutable<U128, &mut PublicContext>, &mut PublicContext>,
-        from: AztecAddress,
-        hiding_point_slot: Field,
-        amount: U128,
-    ) {
-        _decrease_public_balance(public_balances, from, amount);
-        _increase_hiding_point_balance(context, hiding_point_slot, amount);
-    }
-
     pub fn _decrease_private_balance(
         context: &mut PrivateContext,
         private_balances: Map<AztecAddress, BalanceSet<&mut PrivateContext>, &mut PrivateContext>,
