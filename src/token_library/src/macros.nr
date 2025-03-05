@@ -1,14 +1,20 @@
 mod transferrable;
 mod mintable;
 
-use aztec::prelude::AztecAddress;
+use aztec::prelude::{AztecAddress, PublicMutable};
 
-pub comptime fn token(m: Module) {
+pub comptime fn token<Context>(m: Module) {
     let token_body = transferrable::TRANSFERRABLE_CODE;
     let mintable_body = mintable::MINTABLE_CODE;
 
     m.add_item(token_body);
     m.add_item(mintable_body);
+
+    let storage_struct = m.structs().filter(|s| s.name() == quote { Storage })[0];
+    let current_fields = storage_struct.fields_as_written();
+    // TODO add this field to the array
+    let new_fields = current_fields.push_back((quote { new_field }, quote { PublicMutable<U128, Context> }.as_type()));
+    storage_struct.set_fields(new_fields);
 
     assert(is_azrc20(m), "Token must implement AzRC-20");
 }

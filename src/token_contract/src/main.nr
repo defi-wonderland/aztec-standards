@@ -51,6 +51,8 @@ pub contract Token {
 
     // TODO(#32): unconstrained fns cannot be injected in macros
     pub(crate) unconstrained fn balance_of_private(owner: AztecAddress) -> pub U128 {
+        storage.new_field;
+
         storage.private_balances.at(owner).balance_of()
     }
 }
