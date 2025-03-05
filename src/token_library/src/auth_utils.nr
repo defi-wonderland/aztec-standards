@@ -4,7 +4,7 @@ pub mod AuthLib {
     };
     use aztec::{context::{PrivateContext, PublicContext}, prelude::AztecAddress};
 
-    pub fn validate_from_private(context: &mut PrivateContext,from: AztecAddress, nonce: Field) {
+    pub fn validate_from_private(context: &mut PrivateContext, from: AztecAddress, nonce: Field) {
         if (!from.eq(context.msg_sender())) {
             assert_current_call_valid_authwit(context, from);
         } else {

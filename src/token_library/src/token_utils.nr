@@ -7,11 +7,9 @@ pub mod TokenLib {
         protocol_types::abis::function_selector::FunctionSelector,
     };
 
-    use balance_set::balance_set::BalanceSet;
-    use uint_note::uint_note::UintNote;
-    // TODO: ? use balance_set::balance_set::{BalanceSet, UintNote};
-
-    use compressed_string::FieldCompressedString;
+    pub use balance_set::balance_set::BalanceSet;
+    pub use uint_note::uint_note::UintNote;
+    pub use compressed_string::FieldCompressedString;
 
     pub fn token_constructor(
         storage_name: PublicImmutable<FieldCompressedString, &mut PublicContext>,

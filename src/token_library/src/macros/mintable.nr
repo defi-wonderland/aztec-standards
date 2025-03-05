@@ -40,7 +40,7 @@ pub global MINTABLE_CODE: Quoted = quote {
     #[public]
     #[internal]
     fn _finalize_mint_to_private_unsafe(
-        from: AztecAddress,
+        _from: AztecAddress,
         amount: U128,
         hiding_point_slot: Field,
     ) {

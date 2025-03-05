@@ -17,24 +17,26 @@ pub contract FeeOnTransferToken {
         protocol_types::traits::Serialize,
     };
 
-    use balance_set::balance_set::BalanceSet;
-
-    use token::{auth_utils::AuthLib, token_utils::TokenLib};
+    use token::{
+        auth_utils::AuthLib,
+        token_utils::TokenLib::{self, BalanceSet, FieldCompressedString},
+    };
 
     global UPDATE_DELAY_BLOCKS: u32 = 5;
     global FEE_PERCENTAGE_BASE: U128 = U128::from_integer(100);
 
     #[storage]
-    struct Storage<Context> {
-        name: PublicImmutable<TokenLib::FieldCompressedString, Context>,
-        symbol: PublicImmutable<TokenLib::FieldCompressedString, Context>,
+    pub struct Storage<Context> {
+        name: PublicImmutable<FieldCompressedString, Context>,
+        symbol: PublicImmutable<FieldCompressedString, Context>,
         decimals: PublicImmutable<u8, Context>,
         private_balances: Map<AztecAddress, BalanceSet<Context>, Context>,
         total_supply: PublicMutable<U128, Context>,
         public_balances: Map<AztecAddress, PublicMutable<U128, Context>, Context>,
-        // Private transfer cap
-        owner: PublicImmutable<AztecAddress, Context>,
+        // Fee on transfer storage
         fee_on_transfer: SharedMutable<U128, UPDATE_DELAY_BLOCKS, Context>,
+        // Local logic storage
+        owner: PublicImmutable<AztecAddress, Context>,
     }
 
     #[public]
@@ -64,7 +66,7 @@ pub contract FeeOnTransferToken {
          * ========================= FEE LOGIC =======================
          * ======================================================== */
 
-        fn before_private_transfer(
+        pub fn before_private_transfer(
             context: &mut PrivateContext,
             storage: super::Storage<&mut PrivateContext>,
             from: AztecAddress,
@@ -80,7 +82,7 @@ pub contract FeeOnTransferToken {
             amount - fee_amount
         }
 
-        fn before_public_transfer(
+        pub fn before_public_transfer(
             _context: &mut PublicContext,
             storage: super::Storage<&mut PublicContext>,
             _from: AztecAddress,
