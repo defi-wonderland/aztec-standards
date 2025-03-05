@@ -7,11 +7,9 @@ use token::macros::token;
 #[aztec]
 pub contract FeeOnTransferToken {
 
-    // encryption library
-    use aztec::encrypted_logs::log_assembly_strategies::default_aes128::note::encode_and_encrypt_note;
-
     // Libs
     use dep::aztec::{
+        encrypted_logs::log_assembly_strategies::default_aes128::note::encode_and_encrypt_note,
         macros::{functions::{initializer, internal, private, public, view}, storage::storage},
         prelude::{AztecAddress, Map, PublicImmutable, PublicMutable, SharedMutable},
         protocol_types::traits::Serialize,
