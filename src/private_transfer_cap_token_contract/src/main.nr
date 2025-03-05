@@ -1,16 +1,10 @@
 mod types;
+mod test;
 
 use dep::aztec::macros::aztec;
 use token::macros::token;
 
-// Minimal authorization token implementation that supports `AuthWit` accounts.
-// Transfers have an accumulated transfer cap set by the owner.
-// The owner can add and remove addresses from the whitelist at any time.
-// The auth message follows a similar pattern to the cross-chain message and includes a designated caller.
-// The designated caller is ALWAYS used here, and not based on a flag as cross-chain.
-// message hash = H([caller, contract, selector, ...args])
-// To be read as `caller` calls function at `contract` defined by `selector` with `args`
-// Including a nonce in the message hash ensures that the message can only be used once.
+// Authorization token where private transfers have an accumulated transfer cap set by the owner.
 #[token]
 #[aztec]
 pub contract PrivateTransferCapToken {
@@ -45,6 +39,7 @@ pub contract PrivateTransferCapToken {
         owner: PublicMutable<AztecAddress, Context>,
         private_transfer_cap: SharedMutable<U128, PRIVATE_TRANSFER_CAP_DELAY_BLOCKS, Context>,
         transfer_accumulator_map: Map<AztecAddress, PrivateMutable<TransferAccumulatorNote, Context>, Context>,
+        // transfer_accumulator_set: Set<AztecAddress, Context>,
     }
 
     #[public]
@@ -68,11 +63,21 @@ pub contract PrivateTransferCapToken {
         );
     }
 
-    mod HookLib {
+    /** ==========================================================
+     * ===================== UNCONSTRAINED =======================
+     * ======================================================== */
+
+    // TODO(#32): unconstrained fns cannot be injected in macros
+    pub(crate) unconstrained fn balance_of_private(owner: AztecAddress) -> pub U128 {
+        storage.private_balances.at(owner).balance_of()
+    }
+
+    mod PreTransferLib {
         use crate::types::transfer_accumulator_note::TransferAccumulatorNote;
         use aztec::{
             context::{PrivateContext, PublicContext},
             keys::getters::get_public_keys,
+            oracle::notes::check_nullifier_exists,
             prelude::{AztecAddress, Map, PrivateMutable},
             protocol_types::{
                 constants::GENERATOR_INDEX__NOTE_NULLIFIER, hash::poseidon2_hash_with_separator,
@@ -106,7 +111,9 @@ pub contract PrivateTransferCapToken {
                 note.nonce.add(U128::one()),
             );
 
-            storage.transfer_accumulator_map.at(from).replace(&mut new_note).emit(
+            // This leaks privacy when initializing as we are connecting an address (from) with the initialization of the note
+            // Outside players would know that an address interacted with a token privately the first time
+            storage.transfer_accumulator_map.at(from).initialize_or_replace(&mut new_note).emit(
                 encode_and_encrypt_note(context, from, from),
             );
 
@@ -133,29 +140,34 @@ pub contract PrivateTransferCapToken {
             transfer_accumulator_map: Map<AztecAddress, PrivateMutable<TransferAccumulatorNote, &mut PrivateContext>, &mut PrivateContext>,
             from: AztecAddress,
         ) -> TransferAccumulatorNote {
-            // get_note nullifies the note
-            // what happens if the private mutable was not initialized?
-            let note = transfer_accumulator_map.at(from).get_note().note;
+            let priv_mutable = transfer_accumulator_map.at(from);
+            // This is safe as we push a nullifier if the note is not initialized
+            // In case there is a malicious oracle, the nullifier would collide and revert
+            let is_initialized = _unsafe_is_note_initialized(priv_mutable);
             // If there is no note, we return an empty one
-            if note.nonce == U128::zero() {
-                // Push nullifier for empty note??
-                // How do we know if they are not providing the note?
+            if !is_initialized {
+                // Push nullifier to make sure that the oracle provides the note if it exists
                 _push_first_transfer_nullifier(context, from);
-                let mut emptyNote = TransferAccumulatorNote::new(from, U128::zero(), U128::zero());
-                transfer_accumulator_map.at(from).initialize(&mut emptyNote);
-                emptyNote
+                TransferAccumulatorNote::new(from, U128::zero(), U128::zero())
             } else {
+                // get_note nullifies the note
+                let note = priv_mutable.get_note().note;
                 note
             }
+        }
+
+        fn _unsafe_is_note_initialized(
+            priv_mutable: PrivateMutable<TransferAccumulatorNote, &mut PrivateContext>,
+        ) -> bool {
+            let is_initialized =
+                unsafe { check_nullifier_exists(priv_mutable.compute_initialization_nullifier()) };
+            is_initialized
         }
 
         fn _push_first_transfer_nullifier(context: &mut PrivateContext, from: AztecAddress) {
             let owner_npk_m_hash = get_public_keys(from).npk_m.hash();
             let secret = context.request_nsk_app(owner_npk_m_hash);
-            context.push_nullifier(poseidon2_hash_with_separator(
-                [secret, from.to_field(), U128::zero().to_field()],
-                GENERATOR_INDEX__NOTE_NULLIFIER as Field,
-            ));
+            context.push_nullifier(secret);
         }
     }
 }

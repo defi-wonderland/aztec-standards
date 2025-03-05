@@ -51,7 +51,7 @@ pub contract FeeOnTransferToken {
         );
     }
 
-    mod HookLib {
+    mod PreTransferLib {
         use super::FEE_PERCENTAGE_BASE;
         use aztec::{
             context::{PrivateContext, PublicContext},
@@ -74,7 +74,7 @@ pub contract FeeOnTransferToken {
             let fee = storage.fee_on_transfer.get_current_value();
             let fee_amount = amount * fee / FEE_PERCENTAGE_BASE;
             let owner = storage.owner.read();
-            TokenLib::_increase_private_balance(storage.private_balances, owner, fee_amount).emit(
+            TokenLib::increase_private_balance(storage.private_balances, owner, fee_amount).emit(
                 encode_and_encrypt_note(context, owner, from),
             );
             amount - fee_amount
@@ -90,7 +90,7 @@ pub contract FeeOnTransferToken {
             let fee = storage.fee_on_transfer.get_current_value();
             let fee_amount = amount * fee / FEE_PERCENTAGE_BASE;
             let owner = storage.owner.read();
-            TokenLib::_increase_public_balance(storage.public_balances, owner, fee_amount);
+            TokenLib::increase_public_balance(storage.public_balances, owner, fee_amount);
             amount - fee_amount
         }
     }

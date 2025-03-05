@@ -30,18 +30,29 @@ pub mod TokenLib {
      * ======================= LIBRARIES =========================
      * ======================================================== */
 
-    pub fn _decrease_private_balance(
+    pub fn finalize_transfer_public_to_private(
+        context: &mut PublicContext,
+        public_balances: Map<AztecAddress, PublicMutable<U128, &mut PublicContext>, &mut PublicContext>,
+        from: AztecAddress,
+        hiding_point_slot: Field,
+        amount: U128,
+    ) {
+        decrease_public_balance(public_balances, from, amount);
+        increase_hiding_point_balance(context, hiding_point_slot, amount);
+    }
+
+    pub fn decrease_private_balance(
         context: &mut PrivateContext,
         private_balances: Map<AztecAddress, BalanceSet<&mut PrivateContext>, &mut PrivateContext>,
         account: AztecAddress,
         amount: U128,
         max_notes: u32,
     ) -> OuterNoteEmission<UintNote> {
-        let change = _subtract_balance(context, private_balances, account, amount, max_notes);
-        _increase_private_balance(private_balances, account, change)
+        let change = subtract_balance(context, private_balances, account, amount, max_notes);
+        increase_private_balance(private_balances, account, change)
     }
 
-    pub fn _increase_private_balance(
+    pub fn increase_private_balance(
         private_balances: Map<AztecAddress, BalanceSet<&mut PrivateContext>, &mut PrivateContext>,
         to: AztecAddress,
         amount: U128,
@@ -49,7 +60,7 @@ pub mod TokenLib {
         private_balances.at(to).add(to, amount)
     }
 
-    pub fn _increase_public_balance(
+    pub fn increase_public_balance(
         public_balances: Map<AztecAddress, PublicMutable<U128, &mut PublicContext>, &mut PublicContext>,
         to: AztecAddress,
         amount: U128,
@@ -58,7 +69,7 @@ pub mod TokenLib {
         public_balances.at(to).write(new_balance);
     }
 
-    pub fn _decrease_public_balance(
+    pub fn decrease_public_balance(
         public_balances: Map<AztecAddress, PublicMutable<U128, &mut PublicContext>, &mut PublicContext>,
         from: AztecAddress,
         amount: U128,
@@ -67,7 +78,7 @@ pub mod TokenLib {
         public_balances.at(from).write(new_balance);
     }
 
-    pub fn _increase_hiding_point_balance(
+    pub fn increase_hiding_point_balance(
         context: &mut PublicContext,
         hiding_point_slot: Field,
         amount: U128,
@@ -78,7 +89,7 @@ pub mod TokenLib {
         finalization_payload.emit();
     }
 
-    fn _subtract_balance(
+    pub fn subtract_balance(
         context: &mut PrivateContext,
         private_balances: Map<AztecAddress, BalanceSet<&mut PrivateContext>, &mut PrivateContext>,
         account: AztecAddress,
@@ -114,7 +125,7 @@ pub mod TokenLib {
         }
     }
 
-    pub fn _private_increase_public_balance(
+    pub fn private_increase_public_balance(
         context: &mut PrivateContext,
         to: AztecAddress,
         amount: U128,
@@ -128,7 +139,7 @@ pub mod TokenLib {
         );
     }
 
-    pub fn _private_decrease_public_balance(
+    pub fn private_decrease_public_balance(
         context: &mut PrivateContext,
         from: AztecAddress,
         amount: U128,
@@ -142,17 +153,29 @@ pub mod TokenLib {
         );
     }
 
-    pub fn _finalize_mint_to_private(
+    pub fn private_increase_hiding_point_balance(
+        context: &mut PrivateContext,
+        hiding_point_slot: Field,
+        amount: U128,
+    ) {
+        context.call_public_function(
+            context.this_address(),
+            FunctionSelector::from_signature("increase_hiding_point_balance(Field,(Field,Field))"),
+            serialize_hiding_point_balance_change_call(hiding_point_slot, amount),
+        );
+    }
+
+    pub fn finalize_mint_to_private(
         context: &mut PublicContext,
         total_supply: PublicMutable<U128, &mut PublicContext>,
         hiding_point_slot: Field,
         amount: U128,
     ) {
-        _increase_total_supply(total_supply, amount);
-        _increase_hiding_point_balance(context, hiding_point_slot, amount);
+        increase_total_supply(total_supply, amount);
+        increase_hiding_point_balance(context, hiding_point_slot, amount);
     }
 
-    pub fn _private_finalize_mint_to_private(
+    pub fn private_finalize_mint_to_private(
         context: &mut PrivateContext,
         hiding_point_slot: Field,
         amount: U128,
@@ -169,7 +192,7 @@ pub mod TokenLib {
         );
     }
 
-    pub fn _increase_total_supply(
+    pub fn increase_total_supply(
         total_supply: PublicMutable<U128, &mut PublicContext>,
         amount: U128,
     ) {
@@ -177,7 +200,7 @@ pub mod TokenLib {
         total_supply.write(new_supply);
     }
 
-    pub fn _store_payload_in_storage(
+    pub fn store_payload_in_storage(
         context: &mut PublicContext,
         slot: Field,
         point: [Field; 3],
@@ -187,7 +210,7 @@ pub mod TokenLib {
         context.storage_write(slot + aztec::protocol_types::point::POINT_LENGTH as Field, setup_log);
     }
 
-    pub fn _prepare_transfer_public_to_private(
+    pub fn prepare_transfer_public_to_private(
         context: &mut PrivateContext,
         private_balances: Map<AztecAddress, BalanceSet<&mut PrivateContext>, &mut PrivateContext>,
         from: AztecAddress, // sender of the tag: TODO(#9887): this is not great?
@@ -278,6 +301,18 @@ pub mod TokenLib {
         result[0] = account.to_field();
         result[1] = amount[0];
         result[2] = amount[1];
+        result
+    }
+
+    fn serialize_hiding_point_balance_change_call(
+        hiding_point_slot: Field,
+        amount: U128,
+    ) -> [Field; 3] {
+        let mut result = [0 as Field; 3];
+        let amount_serialized = amount.serialize();
+        result[0] = hiding_point_slot;
+        result[1] = amount_serialized[0];
+        result[2] = amount_serialized[1];
         result
     }
 }

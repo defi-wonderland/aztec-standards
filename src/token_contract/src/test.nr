@@ -7,4 +7,6 @@ mod transfer_private_to_private;
 mod transfer_public_to_public;
 mod transfer_public_to_private;
 mod transfer_private_to_public;
+mod transfer_private_to_hiding_point;
+mod transfer_private_to_public_with_hiding_point;
 mod utils;
