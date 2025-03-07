@@ -1,16 +1,13 @@
-// use crate::test::utils;
-// use dep::aztec::oracle::{execution::get_block_number, storage::storage_read};
-// use dep::aztec::protocol_types::storage::map::derive_storage_slot_in_map;
-// use dep::address_note::address_note::AddressNote;
-// use crate::Escrow;
+use crate::test::utils;
+use crate::types::account_note::AccountNote;
 
-// #[test]
-// unconstrained fn constructor_state_variables() {
-//     let (env, escrow_contract_address, deployer, owner, recipient) = utils::setup(/* with_account_contracts */ true);
+#[test]
+unconstrained fn constructor_storage() {
+    let (env, escrow_address, owner, recipient, escrow_secret) = utils::setup(/* with_account_contracts */ true);
 
-//     let block_number = get_block_number();
-//     let owner_slot = Escrow::storage_layout().owner.slot;
-//     let owner_storage_value: AddressNote = storage_read(escrow_contract_address, owner_slot, block_number);
-//     // println(owner_storage_value);
-//     // assert(owner_storage_value == owner, "Vote ended should be false");
-// }
+    env.impersonate(escrow_address);
+    let owner_note: AccountNote = utils::call_view_owner_note();
+
+    assert(owner_note.owner == owner, "Incorrect owner");
+    assert(owner_note.secret == escrow_secret, "Incorrect secret");
+}
