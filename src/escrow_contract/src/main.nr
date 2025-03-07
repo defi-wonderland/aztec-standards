@@ -3,6 +3,8 @@ mod test;
 
 mod types;
 
+mod types;
+
 #[aztec]
 // Sample escrow contract that stores a balance of a private token on behalf of an owner.
 pub contract Escrow {
