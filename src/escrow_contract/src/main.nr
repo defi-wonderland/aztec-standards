@@ -1,8 +1,5 @@
 use dep::aztec::macros::aztec;
 mod test;
-
-mod types;
-
 mod types;
 
 #[aztec]
@@ -64,7 +61,7 @@ pub contract Escrow {
             nullification_keys: nullification_secret,
         };
 
-        leak_event.emit(encode_and_encrypt_event(&mut context, to, context.this_address()))
+        leak_event.emit(encode_and_encrypt_event(&mut context, to, context.this_address()));
     }
 
     // Withdraws balance. Requires that msg.sender is the owner
