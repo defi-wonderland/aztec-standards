@@ -67,7 +67,6 @@ pub unconstrained fn setup_and_mint(
     env.advance_block_by(1);
 
     // Mint private tokens to escrow contract
-    // we are setting from to recipient because of TODO(#9887)
     Token::at(token_address).mint_to_private(escrow_address, escrow_address, mint_amount).call(
         &mut env.private(),
     );
