@@ -55,7 +55,7 @@ pub contract Escrow {
     fn leak_keys(to: AztecAddress) {
         let sender = context.msg_sender();
         let note = storage.owner.get_note();
-        assert(note.owner == sender);
+        assert(note.owner == sender, "Unauthorized");
         let owner_npk_m_hash = get_public_keys(context.this_address()).npk_m.hash();
         let nullification_secret = context.request_nsk_app(owner_npk_m_hash);
 
@@ -73,7 +73,7 @@ pub contract Escrow {
         let sender = context.msg_sender();
 
         let note = storage.owner.get_note();
-        assert(note.owner == sender);
+        assert(note.owner == sender, "Unauthorized");
         Token::at(token)
             .transfer_private_to_private(context.this_address(), recipient, amount, 0)
             .call(&mut context);
