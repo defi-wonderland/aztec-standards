@@ -1,5 +1,6 @@
 use crate::test::utils;
 use crate::Escrow;
+use dep::token::test::utils as token_utils;
 
 #[test]
 unconstrained fn withdraw_from_owner_to_recipient() {
@@ -10,8 +11,8 @@ unconstrained fn withdraw_from_owner_to_recipient() {
     let withdraw_call_interface = Escrow::at(escrow_address).withdraw(token_address, mint_amount, recipient);
     withdraw_call_interface.call(&mut env.private());
 
-    utils::check_private_balance(token_address, recipient, mint_amount);
-    utils::check_private_balance(token_address, escrow_address, U128::from_integer(0));
+    token_utils::check_private_balance(token_address, recipient, mint_amount);
+    token_utils::check_private_balance(token_address, escrow_address, U128::from_integer(0));
 }
 
 #[test]
@@ -24,15 +25,15 @@ unconstrained fn withdraw_twice() {
     let withdraw_call_interface = Escrow::at(escrow_address).withdraw(token_address, half_amount, recipient);
     withdraw_call_interface.call(&mut env.private());
 
-    utils::check_private_balance(token_address, recipient, half_amount);
-    utils::check_private_balance(token_address, escrow_address, half_amount);
+    token_utils::check_private_balance(token_address, recipient, half_amount);
+    token_utils::check_private_balance(token_address, escrow_address, half_amount);
 
     // Second withdrawal
     let withdraw_call_interface = Escrow::at(escrow_address).withdraw(token_address, half_amount, recipient);
     withdraw_call_interface.call(&mut env.private());
 
-    utils::check_private_balance(token_address, recipient, mint_amount);
-    utils::check_private_balance(token_address, escrow_address, U128::from_integer(0));
+    token_utils::check_private_balance(token_address, recipient, mint_amount);
+    token_utils::check_private_balance(token_address, escrow_address, U128::from_integer(0));
 }
 
 #[test]
@@ -46,17 +47,17 @@ unconstrained fn withdraw_to_multiple_recipients() {
     let withdraw_call_interface = Escrow::at(escrow_address).withdraw(token_address, half_amount, recipient1);
     withdraw_call_interface.call(&mut env.private());
 
-    utils::check_private_balance(token_address, recipient1, half_amount);
-    utils::check_private_balance(token_address, escrow_address, half_amount);
+    token_utils::check_private_balance(token_address, recipient1, half_amount);
+    token_utils::check_private_balance(token_address, escrow_address, half_amount);
 
     // Second withdrawal
     let recipient2 = owner;
     let withdraw_call_interface = Escrow::at(escrow_address).withdraw(token_address, half_amount, recipient2);
     withdraw_call_interface.call(&mut env.private());
 
-    utils::check_private_balance(token_address, recipient1, half_amount);
-    utils::check_private_balance(token_address, recipient2, half_amount);
-    utils::check_private_balance(token_address, escrow_address, U128::from_integer(0));
+    token_utils::check_private_balance(token_address, recipient1, half_amount);
+    token_utils::check_private_balance(token_address, recipient2, half_amount);
+    token_utils::check_private_balance(token_address, escrow_address, U128::from_integer(0));
 }
 
 #[test(should_fail_with = "Unauthorized")]
