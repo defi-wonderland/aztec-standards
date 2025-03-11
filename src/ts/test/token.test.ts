@@ -8,15 +8,14 @@ import {
   TxStatus,
   getContractInstanceFromDeployParams,
   Contract,
-  AztecAddress,
   AccountWalletWithSecretKey,
 } from '@aztec/aztec.js';
 import { createAccount, getInitialTestAccountsWallets } from '@aztec/accounts/testing';
-import { AMOUNT, createPXE, expectTokenBalances, expectUintNote, logger, setupSandbox, wad } from './utils.js';
+import { AMOUNT, createPXE, expectTokenBalances, expectUintNote, setupSandbox, wad } from './utils.js';
 
 export async function deployToken(deployer: AccountWallet) {
   const contract = await Contract.deploy(deployer, TokenContractArtifact, ['PrivateToken', 'PT', 18]).send().deployed();
-  return contract;
+  return contract as TokenContract;
 }
 
 describe('Token - Single PXE', () => {
