@@ -9,6 +9,7 @@ pub contract Escrow {
         encrypted_logs::log_assembly_strategies::default_aes128::{
             event::encode_and_encrypt_event, note::encode_and_encrypt_note,
         },
+        event::event_interface::EventInterface,
         keys::getters::get_public_keys,
         macros::{events::event, functions::{initializer, private}, storage::storage},
         prelude::{AztecAddress, PrivateImmutable},
@@ -22,10 +23,9 @@ pub contract Escrow {
 
     #[derive(Serialize)]
     #[event]
-    struct PrivacyKeys {
-        // TODO: fetch and add encryption_keys to event
-        // encryption_keys: Field,
-        nullification_keys: Field,
+    struct EscrowKeys {
+        nullification_secret: Field,
+        escrow_secret: Field,
     }
 
     #[storage]
@@ -47,21 +47,19 @@ pub contract Escrow {
      * ======================= PRIVATE ===========================
      * ======================================================== */
 
-    // Leaks privacy keys of this contract to a recipient
+    // Leaks secret keys of this contract to a recipient
     #[private]
     fn leak_keys(to: AztecAddress) {
         let sender = context.msg_sender();
         let note = storage.owner.get_note();
         assert(note.owner == sender);
-        let owner_npk_m_hash = get_public_keys(context.this_address()).npk_m.hash();
-        let nullification_secret = context.request_nsk_app(owner_npk_m_hash);
+        let self_npk_m_hash = get_public_keys(context.this_address()).npk_m.hash();
+        let nullification_secret = context.request_nsk_app(self_npk_m_hash);
 
-        let leak_event = PrivacyKeys {
-            // encryption_keys: encryption_secret,
-            nullification_keys: nullification_secret,
-        };
+        let leak_event =
+            EscrowKeys { nullification_secret: nullification_secret, escrow_secret: note.secret };
 
-        leak_event.emit(encode_and_encrypt_event(&mut context, to, context.this_address()))
+        leak_event.emit(encode_and_encrypt_event(&mut context, to, context.this_address()));
     }
 
     // Withdraws balance. Requires that msg.sender is the owner
