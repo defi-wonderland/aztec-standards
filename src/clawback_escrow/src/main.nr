@@ -29,8 +29,7 @@ pub contract ClawbackEscrow {
     #[private]
     fn create_clawback_escrow(escrow: AztecAddress, receiver: AztecAddress) {
         // This will revert if the Clawback Escrow is not the owner of the escrow
-        // TODO: temporary disable leaking keys
-        // Escrow::at(escrow).leak_keys(receiver).call(&mut context);
+        Escrow::at(escrow).leak_keys(receiver).call(&mut context);
 
         let sender = context.msg_sender();
         let mut note = ClawbackEscrowNote::new(sender, receiver, escrow);
