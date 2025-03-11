@@ -1,7 +1,7 @@
 import { TokenContract } from '../../artifacts/Token.js';
-import { EscrowContract } from '../../artifacts/Escrow.js';
+import { EscrowContract, EscrowKeys } from '../../artifacts/Escrow.js';
 import { ClawbackEscrowContract } from '../../artifacts/ClawbackEscrow.js';
-import { AccountWallet, PXE, Logger, AccountWalletWithSecretKey } from '@aztec/aztec.js';
+import { AccountWallet, PXE, Logger, AccountWalletWithSecretKey, Fr } from '@aztec/aztec.js';
 import { createAccount } from '@aztec/accounts/testing';
 import {
   createPXE,
@@ -51,20 +51,18 @@ describe('ClawbackEscrow - Multi PXE', () => {
   });
 
   beforeEach(async () => {
-    token = (await deployToken(alice)) as TokenContract;
-    clawback = (await deployClawbackEscrow(aliceWallet)) as ClawbackEscrowContract;
-    escrow = (await deployEscrow([alicePXE, bobPXE], alice, clawback.address)) as EscrowContract;
+    token = await deployToken(alice);
+    clawback = await deployClawbackEscrow(aliceWallet);
+    escrow = await deployEscrow(alice, clawback.address);
 
-    // register everything to both PXEs
+    // Token and Clawback is known to both PXEs
     for (const pxe of [alicePXE, bobPXE]) {
       await pxe.registerContract(token);
       await pxe.registerContract(clawback);
-      // TODO: ideally Bob doesn't know about the escrow yet
-      await pxe.registerContract(escrow);
-
-      await pxe.registerSender(escrow.address);
     }
-    bob.setScopes([bob.getAddress(), escrow.address]);
+
+    // Alice must have access to the escrow's notes, otherwise it won't be able to retrieve the AccountNote
+    alice.setScopes([alice.getAddress(), escrow.address]);
 
     console.log({
       token: token.address,
@@ -73,7 +71,7 @@ describe('ClawbackEscrow - Multi PXE', () => {
     });
   });
 
-  it('clawback ', async () => {
+  it('clawback', async () => {
     let events, notes;
 
     // fund the escrow
@@ -87,19 +85,37 @@ describe('ClawbackEscrow - Multi PXE', () => {
       .send()
       .wait({ debug: true });
 
-    // sync notes for alice and bob
+    // Alice and Bob sync notes in ClawbackEscrow
     await clawback.withWallet(bob).methods.sync_notes().simulate({});
     await clawback.withWallet(alice).methods.sync_notes().simulate({});
 
-    notes = await alice.getNotes({ contractAddress: clawback.address });
+    // Check that the clawback note is accessible to Alice and Bob
+    notes = await alice.getNotes({ txHash: tx.txHash });
     expect(notes.length).toBe(1);
     expectClawbackNote(notes[0], alice.getAddress(), bob.getAddress(), escrow.address);
 
-    notes = await bob.getNotes({ contractAddress: clawback.address });
+    notes = await bob.getNotes({ txHash: tx.txHash });
     expect(notes.length).toBe(1);
     expectClawbackNote(notes[0], alice.getAddress(), bob.getAddress(), escrow.address);
+
+    // Bob should have received a private event with the escrow's secret keys
+    events = await bob.getPrivateEvents<EscrowKeys>(EscrowContract.events.EscrowKeys, tx.blockNumber!, 10);
+    expect(events.length).toBe(1);
+    let escrowSecreKeyEvent = events[0];
+    // TODO: could we compute these values in advance to properly check the event's contents?
+    expect(escrowSecreKeyEvent.escrow_secret).toBeDefined();
+    expect(escrowSecreKeyEvent.nullification_secret).toBeDefined();
+
+    // Bob is now aware of the escrow, so we can register it
+    let escrowSecretKey = Fr.fromString(escrowSecreKeyEvent.escrow_secret.toString());
+    await bob.registerAccount(escrowSecretKey, await escrow.partialAddress);
+    bob.setScopes([bob.getAddress(), escrow.address]);
+    await bob.registerContract(escrow);
 
     // TODO: assert nullifier is pushed
+
+    // Bob syncs notes
+    await escrow.withWallet(bob).methods.sync_notes().simulate({});
 
     // bob claims the escrow
     await clawback.withWallet(bob).methods.claim(escrow.address, token.address, wad(10)).send().wait();

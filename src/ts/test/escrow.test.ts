@@ -44,7 +44,7 @@ describe('Escrow - Multi PXE', () => {
     await alicePXE.registerContract(token);
     await bobPXE.registerContract(token);
 
-    escrow = await deployEscrow([alicePXE, bobPXE], alice, bob.getAddress());
+    escrow = await deployEscrow(alice, bob.getAddress());
 
     // alice and bob know the escrow contract
     await alicePXE.registerContract(escrow);
