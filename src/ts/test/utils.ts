@@ -43,7 +43,7 @@ export const expectAddressNote = (note: UniqueNote, address: AztecAddress, owner
 };
 
 export const expectAccountNote = (note: UniqueNote, owner: AztecAddress, secret?: FieldLike) => {
-  logger.info('checking address note {} {}', [owner, secret]);
+  logger.info('checking account note {} {}', [owner, secret]);
   expect(note.note.items[0]).toEqual(new Fr(owner.toBigInt()));
   if (secret !== undefined) {
     expect(note.note.items[1]).toEqual(secret);
@@ -56,7 +56,6 @@ export const expectClawbackNote = (
   receiver: AztecAddress,
   escrow: AztecAddress,
 ) => {
-  // expect(note.note.items.length).toBe(3);
   expect(note.note.items[0]).toEqual(new Fr(sender.toBigInt()));
   expect(note.note.items[1]).toEqual(new Fr(receiver.toBigInt()));
   expect(note.note.items[2]).toEqual(new Fr(escrow.toBigInt()));
@@ -78,7 +77,7 @@ export const expectTokenBalances = async (
 export const AMOUNT = 1000n;
 export const wad = (n: number = 1) => AMOUNT * BigInt(n);
 
-export async function deployEscrow(pxes: PXE[], deployerWallet: Wallet, owner: AztecAddress): Promise<EscrowContract> {
+export async function deployEscrow(deployerWallet: Wallet, owner: AztecAddress): Promise<EscrowContract> {
   const escrowSecretKey = Fr.random();
   const escrowPublicKeys = (await deriveKeys(escrowSecretKey)).publicKeys;
   const escrowDeployment = EscrowContract.deployWithPublicKeys(
@@ -89,15 +88,14 @@ export async function deployEscrow(pxes: PXE[], deployerWallet: Wallet, owner: A
   );
   const escrowInstance = await escrowDeployment.getInstance();
 
-  await pxes[0].registerAccount(escrowSecretKey, await computePartialAddress(escrowInstance));
-  // TODO: instead of register it here for Bob, we should use the Escrow::PrivacyKeys event (or something else!)
-  await pxes[1].registerAccount(escrowSecretKey, await computePartialAddress(escrowInstance));
+  // Deployment must happen after Escrow keys are registered, otherwise e2e will fail due being unable to retrieve pub keys
+  await deployerWallet.registerAccount(escrowSecretKey, await computePartialAddress(escrowInstance));
+  await deployerWallet.registerSender(escrowInstance.address);
 
-  // TODO: Deployment must happen after Escrow keys are registered, otherwise e2e will fail due being unable to retrieve pub keys
   const tx = await escrowDeployment.send().wait();
   const escrowContract = await EscrowContract.at(escrowInstance.address, deployerWallet);
 
-  const contractMetadata = await pxes[0].getContractMetadata(escrowInstance.address);
+  const contractMetadata = await deployerWallet.getContractMetadata(escrowInstance.address);
   expect(contractMetadata.isContractPubliclyDeployed).toBeTruthy();
 
   logger.info('escrow deployed', escrowContract.address);
