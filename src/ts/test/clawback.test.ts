@@ -14,7 +14,7 @@ import {
 } from './utils.js';
 import { deployToken } from './token.test.js';
 
-describe('ClawbackEscrow - Multi PXE', () => {
+describe('Clawback - Multi PXE', () => {
   let alicePXE: PXE;
   let bobPXE: PXE;
 
