@@ -1,6 +1,6 @@
 import { TokenContractArtifact, TokenContract } from '../../artifacts/Token.js';
-import { EscrowContractArtifact, EscrowContract } from '../../artifacts/Escrow.js';
-import { AccountWallet, PXE, Logger, AccountWalletWithSecretKey } from '@aztec/aztec.js';
+import { EscrowContractArtifact, EscrowContract, EscrowKeys } from '../../artifacts/Escrow.js';
+import { AccountWallet, PXE, Logger, AccountWalletWithSecretKey, Fr, FunctionSelector } from '@aztec/aztec.js';
 import { createAccount } from '@aztec/accounts/testing';
 import { createPXE, deployEscrow, expectAccountNote, expectTokenBalances, expectUintNote, wad } from './utils.js';
 import { deployToken } from './token.test.js';
@@ -38,13 +38,12 @@ describe('Escrow - Multi PXE', () => {
   });
 
   beforeEach(async () => {
-    token = (await deployToken(alice)) as TokenContract;
+    token = await deployToken(alice);
+    escrow = await deployEscrow(alice, bob.getAddress());
 
     // alice and bob know the token contract
     await alicePXE.registerContract(token);
     await bobPXE.registerContract(token);
-
-    escrow = await deployEscrow(alice, bob.getAddress());
 
     // alice and bob know the escrow contract
     await alicePXE.registerContract(escrow);
@@ -59,23 +58,31 @@ describe('Escrow - Multi PXE', () => {
 
   it('escrow', async () => {
     let notes;
-
-    // this is here because the note is created in the constructor
-    await escrow.withWallet(bob).methods.sync_notes().simulate({});
-
-    // alice should have no notes
-    notes = await alice.getNotes({ contractAddress: escrow.address });
-    expect(notes.length).toBe(0);
-
-    // bob should have a note with himself as owner, encrypted by escrow
-    notes = await bob.getNotes({ contractAddress: escrow.address });
-    expect(notes.length).toBe(1);
-
-    // TODO: The escrow's secret is not available here, it should be returned when the contract is deployed
-    expectAccountNote(notes[0], bob.getAddress());
-
     // Fund escrow
     await token.withWallet(alice).methods.mint_to_private(alice.getAddress(), escrow.address, wad(10)).send().wait();
+
+    // make alice sync the notes and retrieve the AccountNote stored in the Escrow, which contains the escrow secret
+    alice.setScopes([alice.getAddress(), escrow.address]);
+    await escrow.withWallet(alice).methods.sync_notes().simulate({});
+    notes = await alice.getNotes({ owner: escrow.address });
+    expectAccountNote(notes[0], bob.getAddress());
+    const accountNote = notes[0];
+
+    // Only the escrow's owner call `leak_keys`, but Bob doesn't have the escrow's account registered yet
+    // so we obtain the escrow secret from the AccountNote (retrieved above by alice) and register it in Bob's PXE.
+    const escrowSecretKey = accountNote.note.items[1];
+    await bob.registerAccount(escrowSecretKey, await escrow.partialAddress);
+    bob.setScopes([bob.getAddress(), escrow.address]);
+
+    // now Bob (escrow's owner) can leak the escrow's secret keys to himself
+    const leakTx = await escrow.withWallet(bob).methods.leak_keys(bob.getAddress()).send().wait();
+
+    // Bob should now have received private log with the escrow's secret keys in the leakTx
+    const events = await bob.getPrivateEvents<EscrowKeys>(EscrowContract.events.EscrowKeys, leakTx.blockNumber!, 10);
+    expect(events.length).toBe(1);
+    let escrowSecreKeyEvent = events[0];
+    // check the secret retrieved from the AccountNote matches the secret leaked in the private log
+    expect(Fr.fromString(escrowSecreKeyEvent.escrow_secret.toString())).toStrictEqual(escrowSecretKey);
 
     // withdraw 7 from the escrow
     const withdrawTx = await escrow
