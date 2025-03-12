@@ -28,8 +28,8 @@ pub contract Token {
         symbol: PublicImmutable<TokenLib::FieldCompressedString, Context>,
         decimals: PublicImmutable<u8, Context>,
         private_balances: Map<AztecAddress, BalanceSet<Context>, Context>,
-        total_supply: PublicMutable<U128, Context>,
-        public_balances: Map<AztecAddress, PublicMutable<U128, Context>, Context>,
+        total_supply: PublicMutable<u128, Context>,
+        public_balances: Map<AztecAddress, PublicMutable<u128, Context>, Context>,
     }
 
     #[public]
@@ -50,7 +50,7 @@ pub contract Token {
      * ======================================================== */
 
     // TODO(#32): unconstrained fns cannot be injected in macros
-    pub(crate) unconstrained fn balance_of_private(owner: AztecAddress) -> pub U128 {
+    pub(crate) unconstrained fn balance_of_private(owner: AztecAddress) -> pub u128 {
         storage.private_balances.at(owner).balance_of()
     }
 }

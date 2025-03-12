@@ -8,7 +8,7 @@ pub global MINTABLE_CODE: Quoted = quote {
     fn mint_to_private(
         from: AztecAddress, // sender of the tag: TODO(#9887): this is not great?
         to: AztecAddress,
-        amount: U128,
+        amount: u128,
     ) {
         // We prepare the partial note to which we'll "send" the minted amount.
         let hiding_point_slot = TokenLib::prepare_transfer_public_to_private(
@@ -22,13 +22,13 @@ pub global MINTABLE_CODE: Quoted = quote {
     }
 
     #[public]
-    fn mint_to_public(to: AztecAddress, amount: U128) {
+    fn mint_to_public(to: AztecAddress, amount: u128) {
         TokenLib::increase_public_balance(storage.public_balances, to, amount);
         TokenLib::increase_total_supply(storage.total_supply, amount);
     }
 
     #[public]
-    fn finalize_mint_to_private(amount: U128, hiding_point_slot: Field) {
+    fn finalize_mint_to_private(amount: u128, hiding_point_slot: Field) {
         TokenLib::finalize_mint_to_private(
             &mut context,
             storage.total_supply,
@@ -41,7 +41,7 @@ pub global MINTABLE_CODE: Quoted = quote {
     #[internal]
     fn _finalize_mint_to_private_unsafe(
         from: AztecAddress,
-        amount: U128,
+        amount: u128,
         hiding_point_slot: Field,
     ) {
         TokenLib::finalize_mint_to_private(
@@ -58,7 +58,7 @@ pub global MINTABLE_CODE: Quoted = quote {
     //  * ======================================================== */
 
     // #[private]
-    // fn burn_private(from: AztecAddress, amount: U128, nonce: Field) {
+    // fn burn_private(from: AztecAddress, amount: u128, nonce: Field) {
     //     _validate_from_private(from, nonce, &mut context);
 
     //     storage.private_balances.at(from).sub(from, amount).emit(encode_and_encrypt_note(
@@ -71,7 +71,7 @@ pub global MINTABLE_CODE: Quoted = quote {
     // }
 
     // #[public]
-    // fn burn_public(from: AztecAddress, amount: U128, nonce: Field) {
+    // fn burn_public(from: AztecAddress, amount: u128, nonce: Field) {
     //     if (!from.eq(context.msg_sender())) {
     //         assert_current_call_valid_authwit_public(&mut context, from);
     //     } else {
@@ -84,7 +84,7 @@ pub global MINTABLE_CODE: Quoted = quote {
 
     // #[public]
     // #[internal]
-    // fn _reduce_total_supply(amount: U128) {
+    // fn _reduce_total_supply(amount: u128) {
     //     // Only to be called from burn.
     //     let new_supply = storage.total_supply.read().sub(amount);
     //     storage.total_supply.write(new_supply);

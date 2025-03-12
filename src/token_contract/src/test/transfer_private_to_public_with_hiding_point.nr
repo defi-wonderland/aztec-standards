@@ -9,7 +9,7 @@ unconstrained fn transfer_private_to_public_with_hiding_point() {
         utils::setup_and_mint_to_private(false);
 
     utils::check_private_balance(token_contract_address, owner, mint_amount);
-    utils::check_private_balance(token_contract_address, recipient, U128::from_integer(0));
+    utils::check_private_balance(token_contract_address, recipient, 0);
 
     // Transfer tokens
     let transfer_amount = mint_amount;
@@ -20,7 +20,7 @@ unconstrained fn transfer_private_to_public_with_hiding_point() {
     env.advance_block_by(1);
 
     // Check balances
-    utils::check_private_balance(token_contract_address, owner, U128::from_integer(0));
+    utils::check_private_balance(token_contract_address, owner, 0);
     utils::check_public_balance(token_contract_address, recipient, transfer_amount);
 }
 
@@ -30,7 +30,7 @@ unconstrained fn transfer_private_to_public_with_hiding_point_and_non_zero_nonce
         utils::setup_and_mint_to_private(false);
 
     utils::check_private_balance(token_contract_address, owner, mint_amount);
-    utils::check_private_balance(token_contract_address, recipient, U128::from_integer(0));
+    utils::check_private_balance(token_contract_address, recipient, 0);
 
     // Transfer tokens
     let transfer_amount = mint_amount;
@@ -47,7 +47,7 @@ unconstrained fn transfer_private_to_public_with_hiding_point_on_behalf_of_other
         utils::setup_and_mint_to_private(true);
 
     utils::check_private_balance(token_contract_address, owner, mint_amount);
-    utils::check_private_balance(token_contract_address, recipient, U128::from_integer(0));
+    utils::check_private_balance(token_contract_address, recipient, 0);
 
     // Transfer tokens
     let transfer_amount = mint_amount;
@@ -68,7 +68,7 @@ unconstrained fn transfer_private_to_public_with_hiding_point_on_behalf_of_other
     env.advance_block_by(1);
 
     // Check balances
-    utils::check_private_balance(token_contract_address, owner, U128::from_integer(0));
+    utils::check_private_balance(token_contract_address, owner, 0);
     utils::check_public_balance(token_contract_address, recipient, transfer_amount);
 }
 
@@ -78,7 +78,7 @@ unconstrained fn transfer_private_to_public_with_hiding_point_and_finalize() {
         utils::setup_and_mint_to_private(false);
 
     utils::check_private_balance(token_contract_address, owner, mint_amount);
-    utils::check_private_balance(token_contract_address, recipient, U128::from_integer(0));
+    utils::check_private_balance(token_contract_address, recipient, 0);
 
     // Transfer tokens
     let transfer_amount = mint_amount;
@@ -99,8 +99,8 @@ unconstrained fn transfer_private_to_public_with_hiding_point_and_finalize() {
     env.advance_block_by(1);
 
     // Check balances
-    utils::check_private_balance(token_contract_address, owner, U128::from_integer(0));
-    utils::check_public_balance(token_contract_address, recipient, U128::from_integer(0));
+    utils::check_private_balance(token_contract_address, owner, 0);
+    utils::check_public_balance(token_contract_address, recipient, 0);
     utils::check_private_balance(token_contract_address, recipient, transfer_amount);
 }
 
@@ -110,7 +110,7 @@ unconstrained fn transfer_private_to_public_with_hiding_point_and_finalize_with_
         utils::setup_and_mint_to_private(false);
 
     utils::check_private_balance(token_contract_address, owner, mint_amount);
-    utils::check_private_balance(token_contract_address, recipient, U128::from_integer(0));
+    utils::check_private_balance(token_contract_address, recipient, 0);
 
     // Transfer tokens
     let transfer_amount = mint_amount;
@@ -136,7 +136,7 @@ unconstrained fn transfer_private_to_public_with_hiding_point_and_finalize_with_
         utils::setup_and_mint_to_private(false);
 
     utils::check_private_balance(token_contract_address, owner, mint_amount);
-    utils::check_private_balance(token_contract_address, recipient, U128::from_integer(0));
+    utils::check_private_balance(token_contract_address, recipient, 0);
 
     // Transfer tokens
     let transfer_amount = mint_amount;

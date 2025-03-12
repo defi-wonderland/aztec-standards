@@ -11,7 +11,7 @@ pub global TRANSFERRABLE_CODE: Quoted = quote {
     fn transfer_private_to_public(
         from: AztecAddress,
         to: AztecAddress,
-        amount: U128,
+        amount: u128,
         nonce: Field,
     ) {
         AuthLib::validate_from_private(&mut context, from, nonce);
@@ -32,7 +32,7 @@ pub global TRANSFERRABLE_CODE: Quoted = quote {
     fn transfer_private_to_public_with_hiding_point(
         from: AztecAddress,
         to: AztecAddress,
-        amount: U128,
+        amount: u128,
         nonce: Field,
     ) -> Field {
         AuthLib::validate_from_private(&mut context, from, nonce);
@@ -61,7 +61,7 @@ pub global TRANSFERRABLE_CODE: Quoted = quote {
     fn transfer_private_to_private(
         from: AztecAddress,
         to: AztecAddress,
-        amount: U128,
+        amount: u128,
         nonce: Field,
     ) {
         AuthLib::validate_from_private(&mut context, from, nonce);
@@ -83,7 +83,7 @@ pub global TRANSFERRABLE_CODE: Quoted = quote {
     #[private]
     fn transfer_private_to_hiding_point(
         from: AztecAddress,
-        amount: U128,
+        amount: u128,
         hiding_point_slot: Field,
         nonce: Field,
     ) {
@@ -105,7 +105,7 @@ pub global TRANSFERRABLE_CODE: Quoted = quote {
     fn transfer_public_to_private(
         from: AztecAddress,
         to: AztecAddress,
-        amount: U128,
+        amount: u128,
         nonce: Field,
     ) {
         AuthLib::validate_from_private(&mut context, from, nonce);
@@ -129,7 +129,7 @@ pub global TRANSFERRABLE_CODE: Quoted = quote {
 
     #[internal]
     #[private]
-    fn _recurse_subtract_balance(account: AztecAddress, amount: U128) -> U128 {
+    fn _recurse_subtract_balance(account: AztecAddress, amount: u128) -> u128 {
         TokenLib::subtract_balance(
             &mut context,
             storage.private_balances,
@@ -144,7 +144,7 @@ pub global TRANSFERRABLE_CODE: Quoted = quote {
     * ======================================================== */
 
     #[public]
-    fn transfer_public_to_public(from: AztecAddress, to: AztecAddress, amount: U128, nonce: Field) {
+    fn transfer_public_to_public(from: AztecAddress, to: AztecAddress, amount: u128, nonce: Field) {
         AuthLib::validate_from_public(&mut context, from, nonce);
         TokenLib::decrease_public_balance(storage.public_balances, from, amount);
         TokenLib::increase_public_balance(storage.public_balances, to, amount);
@@ -156,7 +156,7 @@ pub global TRANSFERRABLE_CODE: Quoted = quote {
     #[public]
     fn finalize_transfer_public_to_private(
         from: AztecAddress,
-        amount: U128,
+        amount: u128,
         hiding_point_slot: Field,
         nonce: Field,
     ) {
@@ -178,13 +178,13 @@ pub global TRANSFERRABLE_CODE: Quoted = quote {
 
     #[public]
     #[internal]
-    fn increase_public_balance(to: AztecAddress, amount: U128) {
+    fn increase_public_balance(to: AztecAddress, amount: u128) {
         TokenLib::increase_public_balance(storage.public_balances, to, amount);
     }
 
     #[public]
     #[internal]
-    fn decrease_public_balance(from: AztecAddress, amount: U128) {
+    fn decrease_public_balance(from: AztecAddress, amount: u128) {
         TokenLib::decrease_public_balance(storage.public_balances, from, amount);
     }
     
@@ -192,7 +192,7 @@ pub global TRANSFERRABLE_CODE: Quoted = quote {
     #[internal]
     fn increase_hiding_point_balance(
         hiding_point_slot: Field,
-        amount: U128,
+        amount: u128,
     ) {
         TokenLib::increase_hiding_point_balance(
             &mut context,
@@ -207,13 +207,13 @@ pub global TRANSFERRABLE_CODE: Quoted = quote {
 
     #[public]
     #[view]
-    fn balance_of_public(owner: AztecAddress) -> U128 {
+    fn balance_of_public(owner: AztecAddress) -> u128 {
         storage.public_balances.at(owner).read()
     }
 
     #[public]
     #[view]
-    fn total_supply() -> U128 {
+    fn total_supply() -> u128 {
         storage.total_supply.read()
     }
     

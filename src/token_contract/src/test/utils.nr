@@ -5,7 +5,7 @@ use aztec::{
         random::random,
         storage::storage_read,
     },
-    prelude::{AztecAddress, NoteHeader},
+    prelude::{AztecAddress},
     protocol_types::storage::map::derive_storage_slot_in_map,
     test::helpers::{cheatcodes, test_environment::TestEnvironment},
 };
@@ -45,10 +45,10 @@ pub unconstrained fn setup(
 
 pub unconstrained fn setup_and_mint_to_public(
     with_account_contracts: bool,
-) -> (&mut TestEnvironment, AztecAddress, AztecAddress, AztecAddress, U128) {
+) -> (&mut TestEnvironment, AztecAddress, AztecAddress, AztecAddress, u128) {
     // Setup
     let (env, token_contract_address, owner, recipient) = setup(with_account_contracts);
-    let mint_amount = U128::from_integer(10000);
+    let mint_amount: u128 = 10000;
     // Mint some tokens
     Token::at(token_contract_address).mint_to_public(owner, mint_amount).call(&mut env.public());
 
@@ -57,8 +57,8 @@ pub unconstrained fn setup_and_mint_to_public(
 
 pub unconstrained fn setup_and_mint_amount_to_private(
     with_account_contracts: bool,
-    mint_amount: U128,
-) -> (&mut TestEnvironment, AztecAddress, AztecAddress, AztecAddress, U128) {
+    mint_amount: u128,
+) -> (&mut TestEnvironment, AztecAddress, AztecAddress, AztecAddress, u128) {
     // Setup the tokens and mint public balance
     let (env, token_contract_address, owner, recipient) = setup(with_account_contracts);
 
@@ -70,8 +70,8 @@ pub unconstrained fn setup_and_mint_amount_to_private(
 
 pub unconstrained fn setup_and_mint_to_private(
     with_account_contracts: bool,
-) -> (&mut TestEnvironment, AztecAddress, AztecAddress, AztecAddress, U128) {
-    let mint_amount = U128::from_integer(10000);
+) -> (&mut TestEnvironment, AztecAddress, AztecAddress, AztecAddress, u128) {
+    let mint_amount: u128 = 10000;
     setup_and_mint_amount_to_private(with_account_contracts, mint_amount)
 }
 
@@ -79,7 +79,7 @@ pub unconstrained fn mint_to_private(
     env: &mut TestEnvironment,
     token_contract_address: AztecAddress,
     recipient: AztecAddress,
-    amount: U128,
+    amount: u128,
 ) {
     let note_randomness = random();
     let _ = OracleMock::mock("getRandomField").returns(note_randomness);
@@ -95,7 +95,7 @@ pub unconstrained fn mint_to_private(
 pub unconstrained fn check_public_balance(
     token_contract_address: AztecAddress,
     address: AztecAddress,
-    address_amount: U128,
+    address_amount: u128,
 ) {
     let current_contract_address = get_contract_address();
     cheatcodes::set_contract_address(token_contract_address);
@@ -103,7 +103,7 @@ pub unconstrained fn check_public_balance(
 
     let balances_slot = Token::storage_layout().public_balances.slot;
     let address_slot = derive_storage_slot_in_map(balances_slot, address);
-    let amount: U128 = storage_read(token_contract_address, address_slot, block_number);
+    let amount: u128 = storage_read(token_contract_address, address_slot, block_number);
     assert(amount == address_amount, "Public balance is not correct");
     cheatcodes::set_contract_address(current_contract_address);
 }
@@ -111,28 +111,28 @@ pub unconstrained fn check_public_balance(
 pub unconstrained fn get_public_balance(
     token_contract_address: AztecAddress,
     address: AztecAddress,
-) -> U128 {
+) -> u128 {
     let current_contract_address = get_contract_address();
     cheatcodes::set_contract_address(token_contract_address);
     let block_number = get_block_number();
 
     let balances_slot = Token::storage_layout().public_balances.slot;
     let address_slot = derive_storage_slot_in_map(balances_slot, address);
-    let amount: U128 = storage_read(token_contract_address, address_slot, block_number);
+    let amount: u128 = storage_read(token_contract_address, address_slot, block_number);
     cheatcodes::set_contract_address(current_contract_address);
     amount
 }
 
 pub unconstrained fn check_total_supply(
     token_contract_address: AztecAddress,
-    expected_total_supply: U128,
+    expected_total_supply: u128,
 ) {
     let current_contract_address = get_contract_address();
     cheatcodes::set_contract_address(token_contract_address);
     let block_number = get_block_number();
 
     let total_supply_slot = Token::storage_layout().total_supply.slot;
-    let total_supply: U128 = storage_read(token_contract_address, total_supply_slot, block_number);
+    let total_supply: u128 = storage_read(token_contract_address, total_supply_slot, block_number);
     assert(total_supply == expected_total_supply, "Total supply is not correct");
     cheatcodes::set_contract_address(current_contract_address);
 }
@@ -140,7 +140,7 @@ pub unconstrained fn check_total_supply(
 pub unconstrained fn check_private_balance(
     token_contract_address: AztecAddress,
     address: AztecAddress,
-    address_amount: U128,
+    address_amount: u128,
 ) {
     let current_contract_address = get_contract_address();
     cheatcodes::set_contract_address(token_contract_address);
@@ -153,7 +153,7 @@ pub unconstrained fn check_private_balance(
 pub unconstrained fn get_private_balance(
     token_contract_address: AztecAddress,
     address: AztecAddress,
-) -> U128 {
+) -> u128 {
     let current_contract_address = get_contract_address();
     cheatcodes::set_contract_address(token_contract_address);
     // Direct call to unconstrained
@@ -167,18 +167,17 @@ pub unconstrained fn add_token_note(
     env: &mut TestEnvironment,
     token_contract_address: AztecAddress,
     owner: AztecAddress,
-    amount: U128,
+    amount: u128,
     note_randomness: Field,
 ) {
     let balances_owner_slot =
         derive_storage_slot_in_map(Token::storage_layout().private_balances.slot, owner);
 
     env.add_note(
-        &mut UintNote {
+        UintNote {
             value: amount,
             owner: owner,
             randomness: note_randomness,
-            header: NoteHeader::empty(),
         },
         balances_owner_slot,
         token_contract_address,

@@ -49,7 +49,7 @@ pub contract ClawbackEscrow {
     }
 
     #[private]
-    fn claim(escrow: AztecAddress, token: AztecAddress, amount: U128) {
+    fn claim(escrow: AztecAddress, token: AztecAddress, amount: u128) {
         let caller = context.msg_sender();
 
         // There should only be one note per escrow
@@ -62,7 +62,7 @@ pub contract ClawbackEscrow {
     }
 
     #[private]
-    fn clawback(escrow: AztecAddress, token: AztecAddress, amount: U128) {
+    fn clawback(escrow: AztecAddress, token: AztecAddress, amount: u128) {
         let caller = context.msg_sender();
 
         // There should only be one note per escrow

@@ -49,7 +49,7 @@ pub unconstrained fn setup(
 
 pub unconstrained fn setup_and_mint(
     with_account_contracts: bool,
-    mint_amount: U128,
+    mint_amount: u128,
 ) -> (&mut TestEnvironment, AztecAddress, AztecAddress, AztecAddress, AztecAddress, Field) {
     let (env, escrow_address, owner, recipient, escrow_secret) = setup(with_account_contracts);
     
@@ -93,7 +93,7 @@ pub unconstrained fn call_view_owner_note() -> pub AccountNote {
 pub unconstrained fn check_private_balance(
     token_contract_address: AztecAddress,
     address: AztecAddress,
-    address_amount: U128,
+    address_amount: u128,
 ) {
     let current_contract_address = get_contract_address();
     cheatcodes::set_contract_address(token_contract_address);

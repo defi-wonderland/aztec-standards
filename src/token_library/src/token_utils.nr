@@ -4,7 +4,7 @@ pub mod TokenLib {
         note::{note_emission::OuterNoteEmission, note_interface::PartialNote},
         oracle::random::random,
         prelude::{AztecAddress, Map, Point, PublicContext, PublicImmutable, PublicMutable},
-        protocol_types::abis::function_selector::FunctionSelector,
+        protocol_types::{abis::function_selector::FunctionSelector, traits::{ToField, Serialize}},
     };
 
     use balance_set::balance_set::BalanceSet;
@@ -32,10 +32,10 @@ pub mod TokenLib {
 
     pub fn finalize_transfer_public_to_private(
         context: &mut PublicContext,
-        public_balances: Map<AztecAddress, PublicMutable<U128, &mut PublicContext>, &mut PublicContext>,
+        public_balances: Map<AztecAddress, PublicMutable<u128, &mut PublicContext>, &mut PublicContext>,
         from: AztecAddress,
         hiding_point_slot: Field,
-        amount: U128,
+        amount: u128,
     ) {
         decrease_public_balance(public_balances, from, amount);
         increase_hiding_point_balance(context, hiding_point_slot, amount);
@@ -45,7 +45,7 @@ pub mod TokenLib {
         context: &mut PrivateContext,
         private_balances: Map<AztecAddress, BalanceSet<&mut PrivateContext>, &mut PrivateContext>,
         account: AztecAddress,
-        amount: U128,
+        amount: u128,
         max_notes: u32,
     ) -> OuterNoteEmission<UintNote> {
         let change = subtract_balance(context, private_balances, account, amount, max_notes);
@@ -55,33 +55,33 @@ pub mod TokenLib {
     pub fn increase_private_balance(
         private_balances: Map<AztecAddress, BalanceSet<&mut PrivateContext>, &mut PrivateContext>,
         to: AztecAddress,
-        amount: U128,
+        amount: u128,
     ) -> OuterNoteEmission<UintNote> {
         private_balances.at(to).add(to, amount)
     }
 
     pub fn increase_public_balance(
-        public_balances: Map<AztecAddress, PublicMutable<U128, &mut PublicContext>, &mut PublicContext>,
+        public_balances: Map<AztecAddress, PublicMutable<u128, &mut PublicContext>, &mut PublicContext>,
         to: AztecAddress,
-        amount: U128,
+        amount: u128,
     ) {
-        let new_balance = public_balances.at(to).read().add(amount);
+        let new_balance = public_balances.at(to).read() + amount;
         public_balances.at(to).write(new_balance);
     }
 
     pub fn decrease_public_balance(
-        public_balances: Map<AztecAddress, PublicMutable<U128, &mut PublicContext>, &mut PublicContext>,
+        public_balances: Map<AztecAddress, PublicMutable<u128, &mut PublicContext>, &mut PublicContext>,
         from: AztecAddress,
-        amount: U128,
+        amount: u128,
     ) {
-        let new_balance = public_balances.at(from).read().sub(amount);
+        let new_balance = public_balances.at(from).read() - amount;
         public_balances.at(from).write(new_balance);
     }
 
     pub fn increase_hiding_point_balance(
         context: &mut PublicContext,
         hiding_point_slot: Field,
-        amount: U128,
+        amount: u128,
     ) {
         let finalization_payload =
             UintNote::finalization_payload().new(context, hiding_point_slot, amount);
@@ -93,12 +93,12 @@ pub mod TokenLib {
         context: &mut PrivateContext,
         private_balances: Map<AztecAddress, BalanceSet<&mut PrivateContext>, &mut PrivateContext>,
         account: AztecAddress,
-        amount: U128,
+        amount: u128,
         max_notes: u32,
-    ) -> U128 {
+    ) -> u128 {
         let subtracted = private_balances.at(account).try_sub(amount, max_notes);
         // Failing to subtract any amount means that the owner was unable to produce more notes that could be nullified.
-        assert(subtracted > U128::zero(), "Balance too low");
+        assert(subtracted > 0, "Balance too low");
         if subtracted >= amount {
             // We have achieved our goal of nullifying notes that add up to more than amount, so we return the change.
             subtracted - amount
@@ -121,14 +121,14 @@ pub mod TokenLib {
                 )
                 .get_preimage();
 
-            U128::from_integer(result)
+            result as u128 // TODO: test this works
         }
     }
 
     pub fn private_increase_public_balance(
         context: &mut PrivateContext,
         to: AztecAddress,
-        amount: U128,
+        amount: u128,
     ) {
         // let self = Token::at(context.this_address());
         // self.increase_public_balance(to, amount).enqueue(&mut context);
@@ -142,7 +142,7 @@ pub mod TokenLib {
     pub fn private_decrease_public_balance(
         context: &mut PrivateContext,
         from: AztecAddress,
-        amount: U128,
+        amount: u128,
     ) {
         // let self = Token::at(context.this_address());
         // self.decrease_public_balance(from, amount).enqueue(&mut context);
@@ -156,7 +156,7 @@ pub mod TokenLib {
     pub fn private_increase_hiding_point_balance(
         context: &mut PrivateContext,
         hiding_point_slot: Field,
-        amount: U128,
+        amount: u128,
     ) {
         context.call_public_function(
             context.this_address(),
@@ -167,9 +167,9 @@ pub mod TokenLib {
 
     pub fn finalize_mint_to_private(
         context: &mut PublicContext,
-        total_supply: PublicMutable<U128, &mut PublicContext>,
+        total_supply: PublicMutable<u128, &mut PublicContext>,
         hiding_point_slot: Field,
-        amount: U128,
+        amount: u128,
     ) {
         increase_total_supply(total_supply, amount);
         increase_hiding_point_balance(context, hiding_point_slot, amount);
@@ -178,7 +178,7 @@ pub mod TokenLib {
     pub fn private_finalize_mint_to_private(
         context: &mut PrivateContext,
         hiding_point_slot: Field,
-        amount: U128,
+        amount: u128,
     ) {
         // let self: Token = Token::at(context.this_address());
         // self
@@ -193,10 +193,10 @@ pub mod TokenLib {
     }
 
     pub fn increase_total_supply(
-        total_supply: PublicMutable<U128, &mut PublicContext>,
-        amount: U128,
+        total_supply: PublicMutable<u128, &mut PublicContext>,
+        amount: u128,
     ) {
-        let new_supply = total_supply.read().add(amount);
+        let new_supply = total_supply.read() + amount;
         total_supply.write(new_supply);
     }
 
@@ -288,31 +288,28 @@ pub mod TokenLib {
         result
     }
 
-    fn serialize_finalization_call(amount: [Field; 2], hiding_point_slot: Field) -> [Field; 3] {
-        let mut result = [0 as Field; 3];
+    fn serialize_finalization_call(amount: [Field; 1], hiding_point_slot: Field) -> [Field; 2] {
+        let mut result = [0 as Field; 2];
         result[0] = amount[0];
-        result[1] = amount[1];
-        result[2] = hiding_point_slot;
+        result[1] = hiding_point_slot;
         result
     }
 
-    fn serialize_balance_change_call(account: AztecAddress, amount: [Field; 2]) -> [Field; 3] {
-        let mut result = [0 as Field; 3];
+    fn serialize_balance_change_call(account: AztecAddress, amount: [Field; 1]) -> [Field; 2] {
+        let mut result = [0 as Field; 2];
         result[0] = account.to_field();
         result[1] = amount[0];
-        result[2] = amount[1];
         result
     }
 
     fn serialize_hiding_point_balance_change_call(
         hiding_point_slot: Field,
-        amount: U128,
-    ) -> [Field; 3] {
-        let mut result = [0 as Field; 3];
+        amount: u128,
+    ) -> [Field; 2] {
+        let mut result = [0 as Field; 2];
         let amount_serialized = amount.serialize();
         result[0] = hiding_point_slot;
         result[1] = amount_serialized[0];
-        result[2] = amount_serialized[1];
         result
     }
 }

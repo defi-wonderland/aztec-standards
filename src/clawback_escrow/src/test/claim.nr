@@ -3,7 +3,7 @@ use crate::test::utils;
 
 #[test]
 unconstrained fn recipient_can_claim() {
-    let mint_amount = U128::from_integer(1_000_000_000);
+    let mint_amount = u128::from_integer(1_000_000_000);
     let (env, clawback_escrow_contract_address, escrow_contract_address, token_contract_address, owner, recipient) =
         utils::setup(true, mint_amount);
 
@@ -27,7 +27,7 @@ unconstrained fn recipient_can_claim() {
 // #[test(should_fail_with = "Balance too low")]
 #[test(should_fail)]
 unconstrained fn recipient_cannot_claim_more_than_escrowed_amount() {
-    let mint_amount = U128::from_integer(1_000_000_000);
+    let mint_amount = u128::from_integer(1_000_000_000);
     let (env, clawback_escrow_contract_address, escrow_contract_address, token_contract_address, owner, recipient) =
         utils::setup(true, mint_amount);
 
@@ -42,13 +42,13 @@ unconstrained fn recipient_cannot_claim_more_than_escrowed_amount() {
 
     env.impersonate(recipient);
     ClawbackEscrow::at(clawback_escrow_contract_address)
-        .claim(escrow_contract_address, token_contract_address, mint_amount + U128::from_integer(1))
+        .claim(escrow_contract_address, token_contract_address, mint_amount + u128::from_integer(1))
         .call(&mut env.private());
 }
 
 #[test(should_fail_with = "Only receiver can claim")]
 unconstrained fn only_recipient_can_claim() {
-    let mint_amount = U128::from_integer(1_000_000_000);
+    let mint_amount = u128::from_integer(1_000_000_000);
     let (env, clawback_escrow_contract_address, escrow_contract_address, token_contract_address, owner, recipient) =
         utils::setup(true, mint_amount);
 
@@ -72,7 +72,7 @@ unconstrained fn only_recipient_can_claim() {
 
 #[test]
 unconstrained fn recipient_can_claim_multiple_times() {
-    let mint_amount = U128::from_integer(1_000_000_000);
+    let mint_amount = u128::from_integer(1_000_000_000);
     let (env, clawback_escrow_contract_address, escrow_contract_address, token_contract_address, owner, recipient) =
         utils::setup(true, mint_amount);
 
@@ -88,18 +88,18 @@ unconstrained fn recipient_can_claim_multiple_times() {
 
     env.impersonate(recipient);
     ClawbackEscrow::at(clawback_escrow_contract_address)
-        .claim(escrow_contract_address, token_contract_address, mint_amount / U128::from_integer(2))
+        .claim(escrow_contract_address, token_contract_address, mint_amount / u128::from_integer(2))
         .call(&mut env.private());
 
     env.impersonate(recipient);
     ClawbackEscrow::at(clawback_escrow_contract_address)
-        .claim(escrow_contract_address, token_contract_address, mint_amount / U128::from_integer(2))
+        .claim(escrow_contract_address, token_contract_address, mint_amount / u128::from_integer(2))
         .call(&mut env.private());
 
     utils::check_private_balance(token_contract_address, recipient, mint_amount);
     utils::check_private_balance(
         token_contract_address,
         escrow_contract_address,
-        U128::from_integer(0),
+        u128::from_integer(0),
     );
 }

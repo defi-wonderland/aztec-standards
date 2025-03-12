@@ -19,7 +19,7 @@ use aztec::{
 
 #[test]
 unconstrained fn create_clawback_escrow() {
-    let mint_amount = U128::from_integer(1_000_000_000);
+    let mint_amount = u128::from_integer(1_000_000_000);
     let (env, clawback_escrow_contract_address, escrow_contract_address, token_contract_address, owner, recipient) =
         utils::setup(true, mint_amount);
 
@@ -43,7 +43,7 @@ unconstrained fn create_clawback_escrow() {
 
 #[test(should_fail_with = "Rejecting tx for emitting duplicate nullifiers")]
 unconstrained fn escrow_can_only_have_one_clawback_escrow() {
-    let mint_amount = U128::from_integer(1_000_000_000);
+    let mint_amount = u128::from_integer(1_000_000_000);
     let (env, clawback_escrow_contract_address, escrow_contract_address, _, owner, recipient) =
         utils::setup(true, mint_amount);
 

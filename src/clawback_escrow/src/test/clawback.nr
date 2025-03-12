@@ -3,7 +3,7 @@ use crate::test::utils;
 
 #[test]
 unconstrained fn sender_can_clawback() {
-    let mint_amount = U128::from_integer(1_000_000_000);
+    let mint_amount = u128::from_integer(1_000_000_000);
     let (env, clawback_escrow_contract_address, escrow_contract_address, token_contract_address, owner, recipient) =
         utils::setup(true, mint_amount);
 
@@ -25,7 +25,7 @@ unconstrained fn sender_can_clawback() {
 
 #[test(should_fail_with = "Only sender can clawback")]
 unconstrained fn only_sender_can_clawback() {
-    let mint_amount = U128::from_integer(1_000_000_000);
+    let mint_amount = u128::from_integer(1_000_000_000);
     let (env, clawback_escrow_contract_address, escrow_contract_address, token_contract_address, owner, recipient) =
         utils::setup(true, mint_amount);
 
@@ -48,7 +48,7 @@ unconstrained fn only_sender_can_clawback() {
 // #[test(should_fail_with = "Balance too low")]
 #[test(should_fail)]
 unconstrained fn cannot_clawback_more_than_escrowed_amount() {
-    let mint_amount = U128::from_integer(1_000_000_000);
+    let mint_amount = u128::from_integer(1_000_000_000);
     let (env, clawback_escrow_contract_address, escrow_contract_address, token_contract_address, owner, recipient) =
         utils::setup(true, mint_amount);
 
@@ -67,14 +67,14 @@ unconstrained fn cannot_clawback_more_than_escrowed_amount() {
         .clawback(
             escrow_contract_address,
             token_contract_address,
-            mint_amount + U128::from_integer(1),
+            mint_amount + u128::from_integer(1),
         )
         .call(&mut env.private());
 }
 
 #[test]
 unconstrained fn can_clawback_multiple_times() {
-    let mint_amount = U128::from_integer(1_000_000_000);
+    let mint_amount = u128::from_integer(1_000_000_000);
     let (env, clawback_escrow_contract_address, escrow_contract_address, token_contract_address, owner, recipient) =
         utils::setup(true, mint_amount);
 
@@ -93,7 +93,7 @@ unconstrained fn can_clawback_multiple_times() {
         .clawback(
             escrow_contract_address,
             token_contract_address,
-            mint_amount / U128::from_integer(2),
+            mint_amount / u128::from_integer(2),
         )
         .call(&mut env.private());
 
@@ -102,7 +102,7 @@ unconstrained fn can_clawback_multiple_times() {
         .clawback(
             escrow_contract_address,
             token_contract_address,
-            mint_amount / U128::from_integer(2),
+            mint_amount / u128::from_integer(2),
         )
         .call(&mut env.private());
 }

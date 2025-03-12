@@ -13,7 +13,7 @@ use std::test::OracleMock;
 
 pub unconstrained fn setup(
     with_account_contracts: bool,
-    mint_amount: U128,
+    mint_amount: u128,
 ) -> (&mut TestEnvironment, AztecAddress, AztecAddress, AztecAddress, AztecAddress, AztecAddress) {
     // Setup env, generate keys
     let mut env = TestEnvironment::new();
@@ -94,7 +94,7 @@ pub unconstrained fn mint_to_private(
     env: &mut TestEnvironment,
     token_contract_address: AztecAddress,
     recipient: AztecAddress,
-    amount: U128,
+    amount: u128,
 ) {
     let note_randomness = random();
     let _ = OracleMock::mock("getRandomField").returns(note_randomness);
@@ -112,7 +112,7 @@ pub unconstrained fn transfer_in_private(
     from: AztecAddress,
     token_contract_address: AztecAddress,
     recipient: AztecAddress,
-    amount: U128,
+    amount: u128,
 ) {
     let note_randomness = random();
     let _ = OracleMock::mock("getRandomField").returns(note_randomness);
@@ -128,7 +128,7 @@ pub unconstrained fn transfer_in_private(
 pub unconstrained fn check_private_balance(
     token_contract_address: AztecAddress,
     address: AztecAddress,
-    address_amount: U128,
+    address_amount: u128,
 ) {
     let current_contract_address = get_contract_address();
     cheatcodes::set_contract_address(token_contract_address);
