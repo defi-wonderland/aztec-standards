@@ -1,11 +1,12 @@
 use crate::Token;
 use aztec::{
+    note::{constants::MAX_NOTES_PER_PAGE, note_getter::view_notes},
     oracle::{
         execution::{get_block_number, get_contract_address},
         random::random,
         storage::storage_read,
     },
-    prelude::{AztecAddress, NoteHeader},
+    prelude::{AztecAddress, NoteHeader, NoteViewerOptions},
     protocol_types::storage::map::derive_storage_slot_in_map,
     test::helpers::{cheatcodes, test_environment::TestEnvironment},
 };
@@ -183,4 +184,16 @@ pub unconstrained fn add_token_note(
         balances_owner_slot,
         token_contract_address,
     );
+}
+
+pub unconstrained fn get_private_balance_notes(
+    account: AztecAddress,
+    offset: u32,
+) -> BoundedVec<UintNote, MAX_NOTES_PER_PAGE> {
+    let mut options = NoteViewerOptions::new();
+    let private_balances_slot = Token::storage_layout().private_balances.slot;
+    let private_balance_slot = derive_storage_slot_in_map(private_balances_slot, account);
+    let notes: BoundedVec<UintNote, MAX_NOTES_PER_PAGE> =
+        view_notes(private_balance_slot, options.set_offset(offset));
+    notes
 }
