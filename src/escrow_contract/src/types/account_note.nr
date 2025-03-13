@@ -1,6 +1,6 @@
 use dep::aztec::{
     macros::notes::note,
-    note::{note_interface::NoteHash},
+    note::note_interface::NoteHash,
     oracle::random::random,
     prelude::AztecAddress,
     protocol_types::{

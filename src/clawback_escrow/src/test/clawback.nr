@@ -64,11 +64,7 @@ unconstrained fn cannot_clawback_more_than_escrowed_amount() {
 
     env.impersonate(owner);
     ClawbackEscrow::at(clawback_escrow_contract_address)
-        .clawback(
-            escrow_contract_address,
-            token_contract_address,
-            mint_amount + 1,
-        )
+        .clawback(escrow_contract_address, token_contract_address, mint_amount + 1)
         .call(&mut env.private());
 }
 
@@ -90,19 +86,11 @@ unconstrained fn can_clawback_multiple_times() {
 
     env.impersonate(owner);
     ClawbackEscrow::at(clawback_escrow_contract_address)
-        .clawback(
-            escrow_contract_address,
-            token_contract_address,
-            mint_amount / 2,
-        )
+        .clawback(escrow_contract_address, token_contract_address, mint_amount / 2)
         .call(&mut env.private());
 
     env.impersonate(owner);
     ClawbackEscrow::at(clawback_escrow_contract_address)
-        .clawback(
-            escrow_contract_address,
-            token_contract_address,
-            mint_amount / 2,
-        )
+        .clawback(escrow_contract_address, token_contract_address, mint_amount / 2)
         .call(&mut env.private());
 }

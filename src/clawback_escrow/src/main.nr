@@ -92,7 +92,7 @@ pub contract ClawbackEscrow {
 
         // We revert if there is no note in the filter so we can probably unwrap directly
         let unwrapped_note: ClawbackEscrowNote = notes.get_unchecked(0).note;
-        
+
         assert(unwrapped_note.escrow == escrow, "Invalid escrow address");
         unwrapped_note
     }

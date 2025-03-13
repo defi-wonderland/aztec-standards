@@ -3,15 +3,11 @@ use crate::test::utils;
 use crate::types::clawback_escrow_note::ClawbackEscrowNote;
 use dep::address_note::address_note::AddressNote;
 use dep::escrow_contract::Escrow;
-use aztec::note::note_getter::{MAX_NOTES_PER_PAGE};
+use aztec::note::note_getter::MAX_NOTES_PER_PAGE;
 use aztec::note::note_viewer_options::NoteViewerOptions;
 use aztec::{
-    oracle::{
-        execution::{get_contract_address},
-        random::random,
-        storage::storage_read,
-    },
-    prelude::{AztecAddress},
+    oracle::{execution::get_contract_address, random::random, storage::storage_read},
+    prelude::AztecAddress,
     protocol_types::storage::map::derive_storage_slot_in_map,
     test::helpers::{cheatcodes, test_environment::TestEnvironment},
 };

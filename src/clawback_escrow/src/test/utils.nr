@@ -7,8 +7,8 @@ use aztec::note::note_viewer_options::NoteViewerOptions;
 use aztec::{
     oracle::{execution::get_contract_address, random::random},
     prelude::AztecAddress,
-    test::helpers::{cheatcodes, test_environment::TestEnvironment},
     protocol_types::traits::ToField,
+    test::helpers::{cheatcodes, test_environment::TestEnvironment},
 };
 use std::test::OracleMock;
 

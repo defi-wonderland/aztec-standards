@@ -97,9 +97,5 @@ unconstrained fn recipient_can_claim_multiple_times() {
         .call(&mut env.private());
 
     utils::check_private_balance(token_contract_address, recipient, mint_amount);
-    utils::check_private_balance(
-        token_contract_address,
-        escrow_contract_address,
-        0,
-    );
+    utils::check_private_balance(token_contract_address, escrow_contract_address, 0);
 }

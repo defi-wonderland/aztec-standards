@@ -1,17 +1,14 @@
 use dep::aztec::{
     context::PrivateContext,
     macros::notes::custom_note,
-    note::{
-        note_interface::NoteHash,
-        utils::compute_note_hash_for_nullify,
-    },
+    note::{note_interface::NoteHash, utils::compute_note_hash_for_nullify},
     oracle::random::random,
     prelude::AztecAddress,
     protocol_types::{
         constants::{GENERATOR_INDEX__NOTE_HASH, GENERATOR_INDEX__NOTE_NULLIFIER},
         hash::poseidon2_hash_with_separator,
         traits::{Empty, Packable, Serialize, ToField},
-        utils::arrays::array_concat
+        utils::arrays::array_concat,
     },
 };
 
@@ -54,6 +51,6 @@ impl Eq for ClawbackEscrowNote {
 impl ClawbackEscrowNote {
     pub fn new(sender: AztecAddress, receiver: AztecAddress, escrow: AztecAddress) -> Self {
         let randomness = unsafe { random() };
-        ClawbackEscrowNote { sender, receiver, escrow, randomness}
+        ClawbackEscrowNote { sender, receiver, escrow, randomness }
     }
 }
