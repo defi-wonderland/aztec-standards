@@ -39,7 +39,7 @@ pub contract ClawbackEscrow {
         let nullifier = std::hash::pedersen_hash([escrow.to_field()]); // derive nullifier from escrow address
         context.push_nullifier(nullifier);
 
-        let note_insertion = storage.escrows.insert(&mut note);
+        let note_insertion = storage.escrows.insert(note);
 
         // Emit the note for the sender
         note_insertion.emit(encode_and_encrypt_note(&mut context, sender, sender));
@@ -87,11 +87,12 @@ pub contract ClawbackEscrow {
         let options = NoteGetterOptions::new()
             .select(ClawbackEscrowNote::properties().escrow, Comparator.EQ, escrow)
             .set_limit(1);
+
         let notes = storage.escrows.get_notes(options);
 
         // We revert if there is no note in the filter so we can probably unwrap directly
-        let unwrapped_note = notes.get_unchecked(0);
-
+        let unwrapped_note: ClawbackEscrowNote = notes.get_unchecked(0).note;
+        
         assert(unwrapped_note.escrow == escrow, "Invalid escrow address");
         unwrapped_note
     }

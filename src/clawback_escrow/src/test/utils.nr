@@ -8,6 +8,7 @@ use aztec::{
     oracle::{execution::get_contract_address, random::random},
     prelude::AztecAddress,
     test::helpers::{cheatcodes, test_environment::TestEnvironment},
+    protocol_types::traits::ToField,
 };
 use std::test::OracleMock;
 

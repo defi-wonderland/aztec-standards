@@ -2,15 +2,11 @@ use crate::Escrow;
 use crate::types::account_note::AccountNote;
 use dep::token::Token;
 use aztec::{
-    oracle::{
-        execution::{get_contract_address},
-    },
+    note::{constants::MAX_NOTES_PER_PAGE, note_getter::view_notes},
+    oracle::execution::get_contract_address,
     prelude::{AztecAddress, NoteViewerOptions},
+    protocol_types::traits::ToField,
     test::helpers::{cheatcodes, test_environment::TestEnvironment},
-    note::{
-        note_getter::{view_notes},
-        constants::MAX_NOTES_PER_PAGE,
-    },
 };
 use std::test::OracleMock;
 
@@ -34,8 +30,7 @@ pub unconstrained fn setup(
     // Deploy escrow contract
     let escrow_secret = 42069;
     let escrow_contract_account = cheatcodes::add_account(escrow_secret);
-    let initializer_call_escrow =
-        Escrow::interface().constructor(owner, escrow_secret);
+    let initializer_call_escrow = Escrow::interface().constructor(owner, escrow_secret);
 
     let escrow_contract = env
         .deploy_self_with_public_keys("Escrow", escrow_secret)
@@ -52,7 +47,7 @@ pub unconstrained fn setup_and_mint(
     mint_amount: u128,
 ) -> (&mut TestEnvironment, AztecAddress, AztecAddress, AztecAddress, AztecAddress, Field) {
     let (env, escrow_address, owner, recipient, escrow_secret) = setup(with_account_contracts);
-    
+
     // Deploy token contract
     let initializer_call_interface = Token::interface().constructor(
         "TestToken0000000000000000000000",

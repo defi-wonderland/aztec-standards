@@ -9,6 +9,7 @@ pub contract Escrow {
         encrypted_logs::log_assembly_strategies::default_aes128::{
             event::encode_and_encrypt_event, note::encode_and_encrypt_note,
         },
+        event::event_interface::EventInterface,
         keys::getters::get_public_keys,
         macros::{events::event, functions::{initializer, private}, storage::storage},
         prelude::{AztecAddress, PrivateImmutable},
@@ -38,7 +39,7 @@ pub contract Escrow {
     #[initializer]
     fn constructor(owner: AztecAddress, secret: Field) {
         let mut note = AccountNote::new(owner, secret);
-        let note_emission = storage.owner.initialize(&mut note);
+        let note_emission = storage.owner.initialize(note);
         let self_address = context.this_address();
         note_emission.emit(encode_and_encrypt_note(&mut context, self_address, self_address));
     }

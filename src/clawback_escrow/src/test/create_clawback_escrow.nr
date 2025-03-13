@@ -3,23 +3,22 @@ use crate::test::utils;
 use crate::types::clawback_escrow_note::ClawbackEscrowNote;
 use dep::address_note::address_note::AddressNote;
 use dep::escrow_contract::Escrow;
-use aztec::note::lifecycle::destroy_note;
-use aztec::note::note_getter::{MAX_NOTES_PER_PAGE, view_notes};
+use aztec::note::note_getter::{MAX_NOTES_PER_PAGE};
 use aztec::note::note_viewer_options::NoteViewerOptions;
 use aztec::{
     oracle::{
-        execution::{get_block_number, get_contract_address},
+        execution::{get_contract_address},
         random::random,
         storage::storage_read,
     },
-    prelude::{AztecAddress, NoteHeader},
+    prelude::{AztecAddress},
     protocol_types::storage::map::derive_storage_slot_in_map,
     test::helpers::{cheatcodes, test_environment::TestEnvironment},
 };
 
 #[test]
 unconstrained fn create_clawback_escrow() {
-    let mint_amount = u128::from_integer(1_000_000_000);
+    let mint_amount: u128 = 1_000_000_000;
     let (env, clawback_escrow_contract_address, escrow_contract_address, token_contract_address, owner, recipient) =
         utils::setup(true, mint_amount);
 
@@ -43,7 +42,7 @@ unconstrained fn create_clawback_escrow() {
 
 #[test(should_fail_with = "Rejecting tx for emitting duplicate nullifiers")]
 unconstrained fn escrow_can_only_have_one_clawback_escrow() {
-    let mint_amount = u128::from_integer(1_000_000_000);
+    let mint_amount: u128 = 1_000_000_000;
     let (env, clawback_escrow_contract_address, escrow_contract_address, _, owner, recipient) =
         utils::setup(true, mint_amount);
 
@@ -61,4 +60,3 @@ unconstrained fn escrow_can_only_have_one_clawback_escrow() {
         .create_clawback_escrow(escrow_contract_address, recipient)
         .call(&mut env.private());
 }
-
