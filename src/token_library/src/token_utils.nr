@@ -111,17 +111,17 @@ pub mod TokenLib {
             // let self = Token::at(context.this_address());
             // self._recurse_subtract_balance(account, remaining).call(context)
 
-            let result: Field = context
+            let result: U128 = context
                 .call_private_function(
                     context.this_address(),
                     FunctionSelector::from_signature(
                         "_recurse_subtract_balance((Field),(Field,Field))",
                     ),
-                    [account.to_field(), remaining.to_field()],
+                    serialize_recurse_subtract_balance_call(account, remaining),
                 )
                 .get_preimage();
 
-            U128::from_integer(result)
+            result
         }
     }
 
@@ -135,7 +135,7 @@ pub mod TokenLib {
         context.call_public_function(
             context.this_address(),
             FunctionSelector::from_signature("increase_public_balance((Field),(Field,Field))"),
-            serialize_balance_change_call(to, amount.serialize()),
+            serialize_balance_change_call(to, amount),
         );
     }
 
@@ -149,7 +149,7 @@ pub mod TokenLib {
         context.call_public_function(
             context.this_address(),
             FunctionSelector::from_signature("decrease_public_balance((Field),(Field,Field))"),
-            serialize_balance_change_call(from, amount.serialize()),
+            serialize_balance_change_call(from, amount),
         );
     }
 
@@ -188,7 +188,7 @@ pub mod TokenLib {
         context.call_public_function(
             context.this_address(),
             FunctionSelector::from_signature("finalize_mint_to_private((Field,Field),Field)"),
-            serialize_finalization_call(amount.serialize(), hiding_point_slot),
+            serialize_finalization_call(hiding_point_slot, amount),
         );
     }
 
@@ -288,19 +288,33 @@ pub mod TokenLib {
         result
     }
 
-    fn serialize_finalization_call(amount: [Field; 2], hiding_point_slot: Field) -> [Field; 3] {
+    fn serialize_finalization_call(hiding_point_slot: Field, amount: U128) -> [Field; 3] {
         let mut result = [0 as Field; 3];
-        result[0] = amount[0];
-        result[1] = amount[1];
+        let serialized_amount = amount.serialize();
+        result[0] = serialized_amount[0];
+        result[1] = serialized_amount[1];
         result[2] = hiding_point_slot;
         result
     }
 
-    fn serialize_balance_change_call(account: AztecAddress, amount: [Field; 2]) -> [Field; 3] {
+    fn serialize_balance_change_call(account: AztecAddress, amount: U128) -> [Field; 3] {
         let mut result = [0 as Field; 3];
+        let serialized_amount = amount.serialize();
         result[0] = account.to_field();
-        result[1] = amount[0];
-        result[2] = amount[1];
+        result[1] = serialized_amount[0];
+        result[2] = serialized_amount[1];
+        result
+    }
+
+    fn serialize_recurse_subtract_balance_call(
+        account: AztecAddress,
+        remaining: U128,
+    ) -> [Field; 3] {
+        let mut result = [0 as Field; 3];
+        let serialized_remaining = remaining.serialize();
+        result[0] = account.to_field();
+        result[1] = serialized_remaining[0];
+        result[2] = serialized_remaining[1];
         result
     }
 
