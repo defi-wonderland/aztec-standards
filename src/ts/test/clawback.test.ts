@@ -42,7 +42,7 @@ describe('Clawback - Multi PXE', () => {
 
     await bob.registerSender(alice.getAddress());
     // TODO: why do I need to register Alice's account?
-    await bob.registerAccount(aliceWallet.getSecretKey(), await alice.getCompleteAddress().partialAddress);
+    // await bob.registerAccount(aliceWallet.getSecretKey(), await alice.getCompleteAddress().partialAddress);
 
     console.log({
       alice: alice.getAddress(),

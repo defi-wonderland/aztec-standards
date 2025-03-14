@@ -71,7 +71,7 @@ pub contract ClawbackEscrow {
 
         assert(caller == note.sender, "Only sender can clawback");
 
-        Escrow::at(escrow).withdraw(token, amount, caller).call(&mut context);
+        Escrow::at(escrow).withdraw(token, amount, note.sender).call(&mut context);
     }
 
     /** ==========================================================
