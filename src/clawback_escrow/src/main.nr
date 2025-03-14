@@ -9,16 +9,9 @@ pub contract ClawbackEscrow {
         context::PrivateContext,
         encrypted_logs::log_assembly_strategies::default_aes128::note::encode_and_encrypt_note,
         macros::{functions::private, notes::note, storage::storage},
-        note::{
-            note_getter_options::NoteGetterOptions, note_header::NoteHeader,
-            note_interface::NoteProperties,
-        },
-        oracle::random::random,
+        note::{note_getter_options::NoteGetterOptions, note_interface::NoteProperties},
         prelude::AztecAddress,
-        protocol_types::{
-            constants::GENERATOR_INDEX__NOTE_NULLIFIER,
-            traits::{Hash, Packable, Serialize, ToField},
-        },
+        protocol_types::traits::{Hash, Serialize, ToField},
         state_vars::PrivateSet,
         utils::comparison::Comparator,
     };
@@ -76,6 +69,7 @@ pub contract ClawbackEscrow {
         let note = _find_clawback_note(storage, escrow);
 
         assert(note.escrow == escrow, "Invalid escrow address");
+
         assert(caller == note.sender, "Only sender can clawback");
 
         Escrow::at(escrow).withdraw(token, amount, caller).call(&mut context);

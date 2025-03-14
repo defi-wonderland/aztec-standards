@@ -5,7 +5,7 @@ use aztec::note::lifecycle::destroy_note;
 use aztec::note::note_getter::{MAX_NOTES_PER_PAGE, view_notes};
 use aztec::note::note_viewer_options::NoteViewerOptions;
 use aztec::{
-    oracle::{execution::{get_block_number, get_contract_address}, random::random},
+    oracle::{execution::get_contract_address, random::random},
     prelude::AztecAddress,
     test::helpers::{cheatcodes, test_environment::TestEnvironment},
 };
@@ -51,10 +51,13 @@ pub unconstrained fn setup(
     let clawback_escrow_address = clawback_escrow_contract.to_address();
     env.advance_block_by(1);
 
+    dep::aztec::oracle::debug_log::debug_log("Deploying escrow contract");
+
     // Deploy the escrow
     let escrow_secret = 42069;
     let escrow_contract_account = cheatcodes::add_account(escrow_secret);
-    let initializer_call_escrow = Escrow::interface().constructor(clawback_escrow_address);
+    let initializer_call_escrow =
+        Escrow::interface().constructor(clawback_escrow_address, escrow_secret);
 
     let escrow_contract = env
         .deploy_with_public_keys("./@escrow_contract", "Escrow", escrow_secret)
