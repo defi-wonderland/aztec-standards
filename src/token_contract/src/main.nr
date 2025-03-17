@@ -66,7 +66,7 @@ pub contract Token {
         )
             .emit(encode_and_encrypt_note(&mut context, from, from));
 
-        TokenLib::private_increase_public_balance(&mut context, to, amount);
+        Token::at(context.this_address()).increase_public_balance(to, amount).enqueue(&mut context);
     }
 
     #[private]
@@ -87,7 +87,7 @@ pub contract Token {
         )
             .emit(encode_and_encrypt_note(&mut context, from, from));
 
-        TokenLib::private_increase_public_balance(&mut context, to, amount);
+        Token::at(context.this_address()).increase_public_balance(to, amount).enqueue(&mut context);
 
         let hiding_point_slot = TokenLib::prepare_transfer_public_to_private(
             &mut context,
@@ -139,7 +139,9 @@ pub contract Token {
         )
             .emit(encode_and_encrypt_note(&mut context, from, from));
 
-        TokenLib::private_increase_hiding_point_balance(&mut context, hiding_point_slot, amount);
+        Token::at(context.this_address())
+            .increase_hiding_point_balance(hiding_point_slot, amount)
+            .enqueue(&mut context);
     }
 
     #[private]
@@ -151,7 +153,7 @@ pub contract Token {
     ) {
         AuthLib::validate_from_private(&mut context, from, nonce);
 
-        TokenLib::private_decrease_public_balance(&mut context, from, amount);
+        Token::at(context.this_address()).decrease_public_balance(from, amount).enqueue(&mut context);
 
         TokenLib::increase_private_balance(storage.private_balances, to, amount).emit(
             encode_and_encrypt_note(&mut context, to, from),
@@ -278,7 +280,9 @@ pub contract Token {
             to,
         );
 
-        TokenLib::private_finalize_mint_to_private(&mut context, hiding_point_slot, amount);
+        Token::at(context.this_address())
+            .finalize_mint_to_private(amount, hiding_point_slot)
+            .enqueue(&mut context);
     }
 
     #[public]
