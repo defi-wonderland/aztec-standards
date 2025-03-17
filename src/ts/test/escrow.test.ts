@@ -1,8 +1,8 @@
-import { TokenContractArtifact, TokenContract } from '../../artifacts/Token.js';
-import { EscrowContractArtifact, EscrowContract, EscrowKeys } from '../../artifacts/Escrow.js';
-import { AccountWallet, PXE, Logger, AccountWalletWithSecretKey, Fr, FunctionSelector } from '@aztec/aztec.js';
+import { TokenContract } from '../../artifacts/Token.js';
+import { EscrowContract, EscrowKeys } from '../../artifacts/Escrow.js';
+import { AccountWallet, PXE, Logger, AccountWalletWithSecretKey, Fr } from '@aztec/aztec.js';
 import { createAccount } from '@aztec/accounts/testing';
-import { createPXE, deployEscrow, expectAccountNote, expectTokenBalances, expectUintNote, wad } from './utils.js';
+import { createPXE, deployEscrow, expectAccountNote, expectTokenBalances, wad } from './utils.js';
 import { deployToken } from './token.test.js';
 
 describe('Escrow - Multi PXE', () => {
