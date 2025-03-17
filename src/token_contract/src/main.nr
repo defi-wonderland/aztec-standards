@@ -34,6 +34,8 @@ pub contract Token {
         private_balances: Map<AztecAddress, BalanceSet<Context>, Context>,
         total_supply: PublicMutable<U128, Context>,
         public_balances: Map<AztecAddress, PublicMutable<U128, Context>, Context>,
+        minter: PublicMutable<AztecAddress, Context>,
+    }
 
     #[public]
     #[initializer]
@@ -54,10 +56,12 @@ pub contract Token {
 
     #[public]
     #[initializer]
-    fn constructor(name: str<31>, symbol: str<31>, decimals: u8) {
+    fn constructor_with_minter(name: str<31>, symbol: str<31>, decimals: u8, minter: AztecAddress) {
         storage.name.initialize(FieldCompressedString::from_string(name));
         storage.symbol.initialize(FieldCompressedString::from_string(symbol));
         storage.decimals.initialize(decimals);
+
+        storage.minter.write(minter);
     }
 
     /** ==========================================================
@@ -283,11 +287,12 @@ pub contract Token {
     * ======================================================== */
 
     #[private]
-    fn mint_to_private(
-        from: AztecAddress, // sender of the tag: TODO(#9887): this is not great?
-        to: AztecAddress,
-        amount: U128,
-    ) {
+    fn mint_to_private(to: AztecAddress, amount: U128, nonce: Field) {
+        // WARNING: minter is read asynchronously. It might work on the client side and later revert if the minter is
+        // changed before the sequencer executes the transaction.
+        let from = storage.minter.read();
+        AuthLib::validate_from_private(&mut context, from, nonce);
+
         // We prepare the partial note to which we'll "send" the minted amount.
         let hiding_point_slot = TokenLib::prepare_transfer_public_to_private(
             &mut context,
@@ -302,13 +307,19 @@ pub contract Token {
     }
 
     #[public]
-    fn mint_to_public(to: AztecAddress, amount: U128) {
+    fn mint_to_public(to: AztecAddress, amount: U128, nonce: Field) {
+        let from = storage.minter.read();
+        AuthLib::validate_from_public(&mut context, from, nonce);
+
         TokenLib::increase_public_balance(storage.public_balances, to, amount);
         TokenLib::increase_total_supply(storage.total_supply, amount);
     }
 
     #[public]
-    fn finalize_mint_to_private(amount: U128, hiding_point_slot: Field) {
+    fn finalize_mint_to_private(amount: U128, hiding_point_slot: Field, nonce: Field) {
+        let from = storage.minter.read();
+        AuthLib::validate_from_public(&mut context, from, nonce);
+
         TokenLib::finalize_mint_to_private(
             &mut context,
             storage.total_supply,
