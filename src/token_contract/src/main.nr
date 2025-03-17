@@ -11,6 +11,9 @@ pub contract Token {
         protocol_types::traits::{Hash, Serialize},
     };
 
+    // compression library
+    use compressed_string::FieldCompressedString;
+
     // encryption library
     use aztec::encrypted_logs::log_assembly_strategies::default_aes128::note::encode_and_encrypt_note;
     // balance notes library (NOTE: it needs to be same as in the token_utils.nr)
@@ -25,8 +28,8 @@ pub contract Token {
     struct Storage<Context> {
         // TODO: fix "is private and not visible from the current module" warning
         // TODO: why BalanceSet cannot be imported from TokenLib while FieldCompressedString can?
-        name: PublicImmutable<TokenLib::FieldCompressedString, Context>,
-        symbol: PublicImmutable<TokenLib::FieldCompressedString, Context>,
+        name: PublicImmutable<FieldCompressedString, Context>,
+        symbol: PublicImmutable<FieldCompressedString, Context>,
         decimals: PublicImmutable<u8, Context>,
         private_balances: Map<AztecAddress, BalanceSet<Context>, Context>,
         total_supply: PublicMutable<U128, Context>,
@@ -36,14 +39,9 @@ pub contract Token {
     #[public]
     #[initializer]
     fn constructor(name: str<31>, symbol: str<31>, decimals: u8) {
-        TokenLib::token_constructor(
-            storage.name,
-            storage.symbol,
-            storage.decimals,
-            name,
-            symbol,
-            decimals,
-        );
+        storage.name.initialize(FieldCompressedString::from_string(name));
+        storage.symbol.initialize(FieldCompressedString::from_string(symbol));
+        storage.decimals.initialize(decimals);
     }
 
     /** ==========================================================

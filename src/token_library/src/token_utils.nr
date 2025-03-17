@@ -3,28 +3,13 @@ pub mod TokenLib {
         context::PrivateContext,
         note::{note_emission::OuterNoteEmission, note_interface::PartialNote},
         oracle::random::random,
-        prelude::{AztecAddress, Map, Point, PublicContext, PublicImmutable, PublicMutable},
+        prelude::{AztecAddress, Map, Point, PublicContext, PublicMutable},
         protocol_types::abis::function_selector::FunctionSelector,
     };
 
     use balance_set::balance_set::BalanceSet;
     use uint_note::uint_note::UintNote;
     // TODO: ? use balance_set::balance_set::{BalanceSet, UintNote};
-
-    use compressed_string::FieldCompressedString;
-
-    pub fn token_constructor(
-        storage_name: PublicImmutable<FieldCompressedString, &mut PublicContext>,
-        storage_symbol: PublicImmutable<FieldCompressedString, &mut PublicContext>,
-        storage_decimals: PublicImmutable<u8, &mut PublicContext>,
-        name: str<31>,
-        symbol: str<31>,
-        decimals: u8,
-    ) {
-        storage_name.initialize(FieldCompressedString::from_string(name));
-        storage_symbol.initialize(FieldCompressedString::from_string(symbol));
-        storage_decimals.initialize(decimals);
-    }
 
     /** ==========================================================
      * ======================= LIBRARIES =========================
