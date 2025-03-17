@@ -44,14 +44,14 @@ pub contract Token {
         symbol: str<31>,
         decimals: u8,
         initial_supply: U128,
-        recipient: AztecAddress,
+        to: AztecAddress,
     ) {
         storage.name.initialize(FieldCompressedString::from_string(name));
         storage.symbol.initialize(FieldCompressedString::from_string(symbol));
         storage.decimals.initialize(decimals);
 
-        storage.public_balances.at(recipient).write(initial_supply);
-        storage.total_supply.write(initial_supply);
+        TokenLib::increase_public_balance(storage.public_balances, to, initial_supply);
+        TokenLib::increase_total_supply(storage.total_supply, initial_supply);
     }
 
     #[public]
