@@ -20,6 +20,8 @@ pub contract Token {
     // token & auth utils (TODO(#30): +mint-auth utils)
     use token::{auth_utils::AuthLib, token_utils::TokenLib};
 
+    use dep::uint_note::uint_note::{PartialUintNote, UintNote};
+
     #[storage]
     struct Storage<Context> {
         // TODO: fix "is private and not visible from the current module" warning

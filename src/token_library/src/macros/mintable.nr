@@ -11,14 +11,14 @@ pub global MINTABLE_CODE: Quoted = quote {
         amount: u128,
     ) {
         // We prepare the partial note to which we'll "send" the minted amount.
-        let hiding_point_slot = TokenLib::prepare_transfer_public_to_private(
+        let partial_note = TokenLib::prepare_transfer_public_to_private(
             &mut context,
             storage.private_balances,
             from,
             to,
         );
 
-        TokenLib::private_finalize_mint_to_private(&mut context, hiding_point_slot, amount);
+        TokenLib::private_finalize_mint_to_private(&mut context, partial_note, amount);
     }
 
     #[public]
@@ -28,11 +28,11 @@ pub global MINTABLE_CODE: Quoted = quote {
     }
 
     #[public]
-    fn finalize_mint_to_private(amount: u128, hiding_point_slot: Field) {
+    fn finalize_mint_to_private(amount: u128, partial_note: PartialUintNote) {
         TokenLib::finalize_mint_to_private(
             &mut context,
             storage.total_supply,
-            hiding_point_slot,
+            partial_note,
             amount,
         );
     }
@@ -42,12 +42,12 @@ pub global MINTABLE_CODE: Quoted = quote {
     fn _finalize_mint_to_private_unsafe(
         from: AztecAddress,
         amount: u128,
-        hiding_point_slot: Field,
+        partial_note: PartialUintNote,
     ) {
         TokenLib::finalize_mint_to_private(
             &mut context,
             storage.total_supply,
-            hiding_point_slot,
+            partial_note,
             amount,
         );
     }

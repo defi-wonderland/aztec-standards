@@ -34,7 +34,7 @@ pub global TRANSFERRABLE_CODE: Quoted = quote {
         to: AztecAddress,
         amount: u128,
         nonce: Field,
-    ) -> Field {
+    ) -> PartialUintNote {
         AuthLib::validate_from_private(&mut context, from, nonce);
 
         TokenLib::decrease_private_balance(
@@ -48,13 +48,13 @@ pub global TRANSFERRABLE_CODE: Quoted = quote {
 
         TokenLib::private_increase_public_balance(&mut context, to, amount);
 
-        let hiding_point_slot = TokenLib::prepare_transfer_public_to_private(
+        let partial_note = TokenLib::prepare_transfer_public_to_private(
             &mut context,
             storage.private_balances,
             from,
             to,
         );
-        hiding_point_slot
+        partial_note
     }
 
     #[private]
@@ -84,7 +84,7 @@ pub global TRANSFERRABLE_CODE: Quoted = quote {
     fn transfer_private_to_hiding_point(
         from: AztecAddress,
         amount: u128,
-        hiding_point_slot: Field,
+        partial_note: PartialUintNote,
         nonce: Field,
     ) {
         AuthLib::validate_from_private(&mut context, from, nonce);
@@ -98,7 +98,7 @@ pub global TRANSFERRABLE_CODE: Quoted = quote {
         )
             .emit(encode_and_encrypt_note(&mut context, from, from));
 
-        TokenLib::private_increase_hiding_point_balance(&mut context, hiding_point_slot, amount);
+        TokenLib::private_increase_hiding_point_balance(&mut context, partial_note, amount);
     }
 
     #[private]
@@ -118,7 +118,7 @@ pub global TRANSFERRABLE_CODE: Quoted = quote {
     }
 
     #[private]
-    fn prepare_transfer_public_to_private(from: AztecAddress, to: AztecAddress) -> Field {
+    fn prepare_transfer_public_to_private(from: AztecAddress, to: AztecAddress) -> PartialUintNote {
         TokenLib::prepare_transfer_public_to_private(
             &mut context,
             storage.private_balances,
@@ -152,12 +152,12 @@ pub global TRANSFERRABLE_CODE: Quoted = quote {
 
     /// Finalizes a transfer of token `amount` from public balance of `from` to a private balance of `to`.
     /// The transfer must be prepared by calling `prepare_transfer_public_to_private` first and the resulting
-    /// `hiding_point_slot` must be passed as an argument to this function.
+    /// `partial_note` must be passed as an argument to this function.
     #[public]
     fn finalize_transfer_public_to_private(
         from: AztecAddress,
         amount: u128,
-        hiding_point_slot: Field,
+        partial_note: PartialUintNote,
         nonce: Field,
     ) {
         AuthLib::validate_from_public(&mut context, from, nonce);
@@ -165,15 +165,16 @@ pub global TRANSFERRABLE_CODE: Quoted = quote {
             &mut context,
             storage.public_balances,
             from,
-            hiding_point_slot,
+            partial_note,
             amount,
         );
     }
 
     #[public]
     #[internal]
-    fn store_payload_in_storage(slot: Field, point: [Field; 3], setup_log: [Field; 9]) {
-        TokenLib::store_payload_in_storage(&mut context, slot, point, setup_log);
+    fn store_payload_in_storage(partial_note: PartialUintNote) {
+        // TODO: implement?
+        // TokenLib::store_payload_in_storage(&mut context, slot, point, setup_log);
     }
 
     #[public]
@@ -191,12 +192,12 @@ pub global TRANSFERRABLE_CODE: Quoted = quote {
     #[public]
     #[internal]
     fn increase_hiding_point_balance(
-        hiding_point_slot: Field,
+        partial_note: PartialUintNote,
         amount: u128,
     ) {
         TokenLib::increase_hiding_point_balance(
             &mut context,
-            hiding_point_slot,
+            partial_note,
             amount,
         );
     }

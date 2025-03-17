@@ -4,7 +4,7 @@ use dep::aztec::{
     protocol_types::{address::AztecAddress, constants::MAX_NOTE_HASH_READ_REQUESTS_PER_CALL},
 };
 use dep::aztec::prelude::{NoteGetterOptions, NoteViewerOptions, PrivateSet};
-use dep::uint_note::uint_note::UintNote;
+use dep::uint_note::uint_note::{UintNote, PartialUintNote};
 use std::ops::Add;
 
 pub struct BalanceSet<Context> {

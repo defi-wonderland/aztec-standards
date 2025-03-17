@@ -8,8 +8,7 @@ pub mod TokenLib {
     };
 
     use balance_set::balance_set::BalanceSet;
-    use uint_note::uint_note::UintNote;
-    // TODO: ? use balance_set::balance_set::{BalanceSet, UintNote};
+    use uint_note::uint_note::{UintNote, PartialUintNote};
 
     use compressed_string::FieldCompressedString;
 
@@ -34,11 +33,11 @@ pub mod TokenLib {
         context: &mut PublicContext,
         public_balances: Map<AztecAddress, PublicMutable<u128, &mut PublicContext>, &mut PublicContext>,
         from: AztecAddress,
-        hiding_point_slot: Field,
+        partial_note: PartialUintNote,
         amount: u128,
     ) {
         decrease_public_balance(public_balances, from, amount);
-        increase_hiding_point_balance(context, hiding_point_slot, amount);
+        increase_hiding_point_balance(context, partial_note, amount);
     }
 
     pub fn decrease_private_balance(
@@ -80,13 +79,10 @@ pub mod TokenLib {
 
     pub fn increase_hiding_point_balance(
         context: &mut PublicContext,
-        hiding_point_slot: Field,
+        partial_note: PartialUintNote,
         amount: u128,
     ) {
-        let finalization_payload =
-            UintNote::finalization_payload().new(context, hiding_point_slot, amount);
-        // NOTE: emitting here because expects UintNoteFinalizationPayload to exist.
-        finalization_payload.emit();
+        partial_note.complete(amount, context);
     }
 
     pub fn subtract_balance(
@@ -155,40 +151,36 @@ pub mod TokenLib {
 
     pub fn private_increase_hiding_point_balance(
         context: &mut PrivateContext,
-        hiding_point_slot: Field,
+        partial_note: PartialUintNote,
         amount: u128,
     ) {
         context.call_public_function(
             context.this_address(),
             FunctionSelector::from_signature("increase_hiding_point_balance(Field,(Field,Field))"),
-            serialize_hiding_point_balance_change_call(hiding_point_slot, amount),
+            serialize_hiding_point_balance_change_call(partial_note, amount),
         );
     }
 
     pub fn finalize_mint_to_private(
         context: &mut PublicContext,
         total_supply: PublicMutable<u128, &mut PublicContext>,
-        hiding_point_slot: Field,
+        partial_note: PartialUintNote,
         amount: u128,
     ) {
         increase_total_supply(total_supply, amount);
-        increase_hiding_point_balance(context, hiding_point_slot, amount);
+        increase_hiding_point_balance(context, partial_note, amount);
     }
 
     pub fn private_finalize_mint_to_private(
         context: &mut PrivateContext,
-        hiding_point_slot: Field,
+        partial_note: PartialUintNote,
         amount: u128,
     ) {
-        // let self: Token = Token::at(context.this_address());
-        // self
-        //     ._finalize_mint_to_private_unsafe(context.msg_sender(), amount, hiding_point_slot)
-        //     .enqueue(&mut context);
-
         context.call_public_function(
             context.this_address(),
             FunctionSelector::from_signature("finalize_mint_to_private((Field,Field),Field)"),
-            serialize_finalization_call(amount.serialize(), hiding_point_slot),
+            []
+            // serialize_finalization_call(amount.serialize(), partial_note.commitment()),
         );
     }
 
@@ -202,12 +194,9 @@ pub mod TokenLib {
 
     pub fn store_payload_in_storage(
         context: &mut PublicContext,
-        slot: Field,
-        point: [Field; 3],
-        setup_log: [Field; 9],
+        partial_note: PartialUintNote,
     ) {
-        context.storage_write(slot, point);
-        context.storage_write(slot + aztec::protocol_types::point::POINT_LENGTH as Field, setup_log);
+        context.storage_write(partial_note.commitment(), true);
     }
 
     pub fn prepare_transfer_public_to_private(
@@ -215,39 +204,26 @@ pub mod TokenLib {
         private_balances: Map<AztecAddress, BalanceSet<&mut PrivateContext>, &mut PrivateContext>,
         from: AztecAddress, // sender of the tag: TODO(#9887): this is not great?
         to: AztecAddress,
-    ) -> Field {
-        let to_note_slot = private_balances.at(to).set.storage_slot;
+    ) -> PartialUintNote {
 
-        // We create a setup payload with unpopulated/zero `amount` for 'to'
-        let note_randomness = unsafe { random() };
-        let note_setup_payload = UintNote::setup_payload().new(to, note_randomness, to_note_slot);
-
-        // We get the keys and encrypt the log of the note
-        // TODO: this is inconvenient to encrypt here because `encrypt_log` doesn't depend on TokenContract chosen encryption
-        let setup_log = note_setup_payload.encrypt_log(context, to, from);
-
-        let hiding_point_slot = note_setup_payload.hiding_point.x;
-
-        // We don't need to perform a check that the value overwritten by `_store_point_in_transient_storage_unsafe`
-        // is zero because the slot is the x-coordinate of the hiding point and hence we could only overwrite
-        // the value in the slot with the same value. This makes usage of the `unsafe` method safe.
-
-        // let self = Token::at(context.this_address());
-        // self
-        //     .store_payload_in_storage(hiding_point_slot, note_setup_payload.hiding_point, setup_log)
-        //     .enqueue(context);
+        let partial_note = UintNote::partial(
+            to,
+            private_balances.at(to).set.storage_slot,
+            context,
+            to,
+            from,
+        );
 
         context.call_public_function(
             context.this_address(),
             FunctionSelector::from_signature("store_payload_in_storage(Field,[Field;3],[Field;9])"),
-            serialize_payload_call(
-                hiding_point_slot,
-                note_setup_payload.hiding_point,
-                setup_log,
-            ),
+            []
+            // serialize_payload_call(
+            //     partial_note,
+            // ),
         );
 
-        hiding_point_slot
+        partial_note
     }
 
     /** ==========================================================
@@ -257,41 +233,14 @@ pub mod TokenLib {
     // NOTE: it's painful to manually serialize call arguments
 
     fn serialize_payload_call(
-        hiding_point_slot: Field,
-        hiding_point: Point,
-        setup_log: [Field; 9],
-    ) -> [Field; 13] {
-        let log_count = 9;
-        let point_count = 3; // TODO: import global POINT_LENGTH
-        let total_size = 1 + point_count + log_count;
-
-        // Initialize result array
-        let mut result = [0 as Field; 13]; // TODO: use total_size
-        let mut index = 0;
-
-        // Add simple fields
-        result[0] = hiding_point_slot;
-
-        // Add point
-        let point_data = hiding_point.serialize();
-        for i in 0..point_count {
-            index += 1;
-            result[index] = point_data[i];
-        }
-
-        // Add log
-        for i in 0..log_count {
-            index += 1;
-            result[index] = setup_log[i];
-        }
-
-        result
+        partial_note: PartialUintNote,
+    ) {
     }
 
-    fn serialize_finalization_call(amount: [Field; 1], hiding_point_slot: Field) -> [Field; 2] {
+    fn serialize_finalization_call(amount: [Field; 1], partial_note: PartialUintNote) -> [Field; 2] {
         let mut result = [0 as Field; 2];
         result[0] = amount[0];
-        result[1] = hiding_point_slot;
+        result[1] = partial_note.commitment();
         result
     }
 
@@ -303,12 +252,12 @@ pub mod TokenLib {
     }
 
     fn serialize_hiding_point_balance_change_call(
-        hiding_point_slot: Field,
+        partial_note: PartialUintNote,
         amount: u128,
     ) -> [Field; 2] {
         let mut result = [0 as Field; 2];
         let amount_serialized = amount.serialize();
-        result[0] = hiding_point_slot;
+        result[0] = partial_note.commitment();
         result[1] = amount_serialized[0];
         result
     }
