@@ -185,6 +185,14 @@ pub mod TokenLib {
         total_supply.write(new_supply);
     }
 
+    pub fn decrease_total_supply(
+        total_supply: PublicMutable<U128, &mut PublicContext>,
+        amount: U128,
+    ) {
+        let new_supply = total_supply.read().sub(amount);
+        total_supply.write(new_supply);
+    }
+
     pub fn store_payload_in_storage(
         context: &mut PublicContext,
         slot: Field,
