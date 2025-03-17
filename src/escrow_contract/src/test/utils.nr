@@ -1,11 +1,11 @@
 use crate::Escrow;
 use crate::types::account_note::AccountNote;
+use dep::token::test::utils as token_utils;
 use aztec::{
     note::{constants::MAX_NOTES_PER_PAGE, note_getter::view_notes},
     prelude::{AztecAddress, NoteViewerOptions},
     test::helpers::{cheatcodes, test_environment::TestEnvironment},
 };
-use dep::token::test::utils as token_utils;
 
 pub unconstrained fn setup(
     with_account_contracts: bool,
@@ -52,11 +52,7 @@ pub unconstrained fn setup_and_mint(
     env.impersonate(owner);
     token_utils::mint_to_private(env, token_contract_address, escrow_address, mint_amount);
 
-    token_utils::check_private_balance(
-        token_contract_address,
-        escrow_address,
-        mint_amount,
-    );
+    token_utils::check_private_balance(token_contract_address, escrow_address, mint_amount);
 
     dep::aztec::oracle::debug_log::debug_log_format(
         "TOKEN ADDRESS: {0}",

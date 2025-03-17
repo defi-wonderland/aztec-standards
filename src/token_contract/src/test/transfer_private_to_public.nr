@@ -1,11 +1,8 @@
 use crate::test::utils;
 use crate::Token;
 use authwit::cheatcodes as authwit_cheatcodes;
+use aztec::{note::constants::MAX_NOTES_PER_PAGE, oracle::random::random};
 use uint_note::uint_note::UintNote;
-use aztec::{
-    note::constants::MAX_NOTES_PER_PAGE,
-    oracle::random::random,
-};
 
 #[test]
 unconstrained fn transfer_private_to_public_on_behalf_of_self() {
@@ -103,11 +100,7 @@ unconstrained fn transfer_private_to_public_multiple_notes_recursively() {
         owner,
         total_amount - transfer_amount,
     );
-    utils::check_public_balance(
-        token_contract_address,
-        recipient,
-        transfer_amount,
-    );
+    utils::check_public_balance(token_contract_address, recipient, transfer_amount);
 }
 
 #[test(should_fail)]
