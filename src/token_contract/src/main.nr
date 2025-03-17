@@ -34,6 +34,22 @@ pub contract Token {
         private_balances: Map<AztecAddress, BalanceSet<Context>, Context>,
         total_supply: PublicMutable<U128, Context>,
         public_balances: Map<AztecAddress, PublicMutable<U128, Context>, Context>,
+
+    #[public]
+    #[initializer]
+    fn constructor_with_initial_supply(
+        name: str<31>,
+        symbol: str<31>,
+        decimals: u8,
+        initial_supply: U128,
+        recipient: AztecAddress,
+    ) {
+        storage.name.initialize(FieldCompressedString::from_string(name));
+        storage.symbol.initialize(FieldCompressedString::from_string(symbol));
+        storage.decimals.initialize(decimals);
+
+        storage.public_balances.at(recipient).write(initial_supply);
+        storage.total_supply.write(initial_supply);
     }
 
     #[public]
