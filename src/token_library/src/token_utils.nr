@@ -107,13 +107,13 @@ pub mod TokenLib {
             // let self = Token::at(context.this_address());
             // self._recurse_subtract_balance(account, remaining).call(context)
 
-            let result: Field = context
+            let result: u128 = context
                 .call_private_function(
                     context.this_address(),
                     FunctionSelector::from_signature(
                         "_recurse_subtract_balance((Field),(Field,Field))",
                     ),
-                    [account.to_field(), remaining.to_field()],
+                    [] // serialize_recurse_subtract_balance_call(account, remaining),
                 )
                 .get_preimage();
 
@@ -131,7 +131,7 @@ pub mod TokenLib {
         context.call_public_function(
             context.this_address(),
             FunctionSelector::from_signature("increase_public_balance((Field),(Field,Field))"),
-            serialize_balance_change_call(to, amount.serialize()),
+            [] // serialize_balance_change_call(to, amount),
         );
     }
 
@@ -145,7 +145,7 @@ pub mod TokenLib {
         context.call_public_function(
             context.this_address(),
             FunctionSelector::from_signature("decrease_public_balance((Field),(Field,Field))"),
-            serialize_balance_change_call(from, amount.serialize()),
+            [] // serialize_balance_change_call(from, amount),
         );
     }
 
@@ -157,7 +157,7 @@ pub mod TokenLib {
         context.call_public_function(
             context.this_address(),
             FunctionSelector::from_signature("increase_hiding_point_balance(Field,(Field,Field))"),
-            serialize_hiding_point_balance_change_call(partial_note, amount),
+            [] // serialize_hiding_point_balance_change_call(partial_note, amount),
         );
     }
 
@@ -235,30 +235,25 @@ pub mod TokenLib {
     fn serialize_payload_call(
         partial_note: PartialUintNote,
     ) {
+        // TODO: re-do serialization
     }
 
-    fn serialize_finalization_call(amount: [Field; 1], partial_note: PartialUintNote) -> [Field; 2] {
-        let mut result = [0 as Field; 2];
-        result[0] = amount[0];
-        result[1] = partial_note.commitment();
-        result
+    fn serialize_recurse_subtract_balance_call(account: AztecAddress, amount: u128) {
+        // TODO: re-do serialization
     }
 
-    fn serialize_balance_change_call(account: AztecAddress, amount: [Field; 1]) -> [Field; 2] {
-        let mut result = [0 as Field; 2];
-        result[0] = account.to_field();
-        result[1] = amount[0];
-        result
+    fn serialize_finalization_call(amount: [Field; 1], partial_note: PartialUintNote) {
+        // TODO: re-do serialization
+    }
+
+    fn serialize_balance_change_call(account: AztecAddress, amount: u128) {
+        // TODO: re-do serialization
     }
 
     fn serialize_hiding_point_balance_change_call(
         partial_note: PartialUintNote,
         amount: u128,
-    ) -> [Field; 2] {
-        let mut result = [0 as Field; 2];
-        let amount_serialized = amount.serialize();
-        result[0] = partial_note.commitment();
-        result[1] = amount_serialized[0];
-        result
+    ) {
+        // TODO: re-do serialization
     }
 }
