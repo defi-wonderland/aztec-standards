@@ -54,7 +54,6 @@ pub contract ClawbackEscrow {
         // There should only be one note per escrow
         let note = _find_clawback_note(storage, escrow);
 
-        assert(note.escrow == escrow, "Invalid escrow address");
         assert(caller == note.receiver, "Only receiver can claim");
 
         Escrow::at(escrow).withdraw(token, amount, note.receiver).call(&mut context);
@@ -66,8 +65,6 @@ pub contract ClawbackEscrow {
 
         // There should only be one note per escrow
         let note = _find_clawback_note(storage, escrow);
-
-        assert(note.escrow == escrow, "Invalid escrow address");
 
         assert(caller == note.sender, "Only sender can clawback");
 
@@ -91,7 +88,6 @@ pub contract ClawbackEscrow {
         // We revert if there is no note in the filter so we can probably unwrap directly
         let unwrapped_note = notes.get_unchecked(0);
 
-        assert(unwrapped_note.escrow == escrow, "Invalid escrow address");
         unwrapped_note
     }
 }
