@@ -115,7 +115,7 @@ pub unconstrained fn setup_and_mint_to_public_with_minter(
     // Mint some tokens
     env.impersonate(minter);
     let mint_amount = U128::from_integer(10000);
-    Token::at(token_contract_address).mint_to_public(owner, mint_amount, 0).call(&mut env.public());
+    Token::at(token_contract_address).mint_to_public(owner, mint_amount).call(&mut env.public());
 
     env.advance_block_by(1);
 
@@ -175,7 +175,7 @@ pub unconstrained fn mint_to_private(
     let note_randomness = random();
     let _ = OracleMock::mock("getRandomField").returns(note_randomness);
 
-    Token::at(token_contract_address).mint_to_private(recipient, amount, 0).call(&mut env.private());
+    Token::at(token_contract_address).mint_to_private(recipient, amount).call(&mut env.private());
 
     env.advance_block_by(1);
 }

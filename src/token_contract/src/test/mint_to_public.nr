@@ -8,7 +8,7 @@ unconstrained fn mint_to_public_success() {
 
     env.impersonate(minter);
     let mint_amount = U128::from_integer(10_000);
-    Token::at(token_contract_address).mint_to_public(owner, mint_amount, 0).call(&mut env.public());
+    Token::at(token_contract_address).mint_to_public(owner, mint_amount).call(&mut env.public());
 
     utils::check_public_balance(token_contract_address, owner, mint_amount);
 
@@ -26,7 +26,7 @@ unconstrained fn mint_to_public_failures() {
     let mint_amount = U128::from_integer(10_000);
     env.impersonate(recipient);
     let mint_to_public_call_interface =
-        Token::at(token_contract_address).mint_to_public(owner, mint_amount, 0);
+        Token::at(token_contract_address).mint_to_public(owner, mint_amount);
     env.assert_public_call_fails(mint_to_public_call_interface);
 
     utils::check_public_balance(token_contract_address, owner, U128::zero());
@@ -39,12 +39,10 @@ unconstrained fn mint_to_public_failures() {
     let amount_until_overflow = U128::from_integer(1000);
     let mint_amount = U128::from_integer(2.pow_32(128) - amount_until_overflow.to_integer());
 
-    Token::at(token_contract_address).mint_to_public(recipient, mint_amount, 0).call(
-        &mut env.public(),
-    );
+    Token::at(token_contract_address).mint_to_public(recipient, mint_amount).call(&mut env.public());
 
     let mint_to_public_call_interface =
-        Token::at(token_contract_address).mint_to_public(owner, amount_until_overflow, 0);
+        Token::at(token_contract_address).mint_to_public(owner, amount_until_overflow);
     env.assert_public_call_fails(mint_to_public_call_interface);
 
     utils::check_public_balance(token_contract_address, owner, U128::zero());
@@ -52,7 +50,7 @@ unconstrained fn mint_to_public_failures() {
 
     // Overflow total supply
     let mint_to_public_call_interface =
-        Token::at(token_contract_address).mint_to_public(owner, mint_amount, 0);
+        Token::at(token_contract_address).mint_to_public(owner, mint_amount);
     env.assert_public_call_fails(mint_to_public_call_interface);
 
     utils::check_public_balance(token_contract_address, owner, U128::zero());

@@ -150,7 +150,7 @@ describe('Token - Single PXE', () => {
 
   it('mints', async () => {
     await token.withWallet(alice);
-    const tx = await token.methods.mint_to_public(bob.getAddress(), AMOUNT, 0).send().wait();
+    const tx = await token.methods.mint_to_public(bob.getAddress(), AMOUNT).send().wait();
     const balance = await token.methods.balance_of_public(bob.getAddress()).simulate();
     expect(balance).toBe(AMOUNT);
   }, 300_000);
@@ -159,7 +159,7 @@ describe('Token - Single PXE', () => {
     // First mint 2 tokens to alice
     await token
       .withWallet(alice)
-      .methods.mint_to_public(alice.getAddress(), AMOUNT * 2n, 0)
+      .methods.mint_to_public(alice.getAddress(), AMOUNT * 2n)
       .send()
       .wait();
 
@@ -202,7 +202,7 @@ describe('Token - Single PXE', () => {
     // First mint to private 2 tokens to alice
     await token
       .withWallet(alice)
-      .methods.mint_to_private(alice.getAddress(), AMOUNT * 2n, 0)
+      .methods.mint_to_private(alice.getAddress(), AMOUNT * 2n)
       .send()
       .wait();
 
@@ -224,7 +224,7 @@ describe('Token - Single PXE', () => {
 
   it('fails when using an invalid nonce', async () => {
     // Mint 1 token privately to alice
-    await token.withWallet(alice).methods.mint_to_private(alice.getAddress(), AMOUNT, 0).send().wait();
+    await token.withWallet(alice).methods.mint_to_private(alice.getAddress(), AMOUNT).send().wait();
 
     // This fails because of the nonce check
     await expect(
@@ -238,7 +238,7 @@ describe('Token - Single PXE', () => {
 
   it.skip('fails when transferring more tokens than available in private balance', async () => {
     // Mint 1 token privately to alice
-    await token.withWallet(alice).methods.mint_to_private(alice.getAddress(), AMOUNT, 0).send().wait();
+    await token.withWallet(alice).methods.mint_to_private(alice.getAddress(), AMOUNT).send().wait();
 
     // Try to transfer more tokens than available from private to public balance
     // TODO(#29): fix "Invalid arguments size: expected 3, got 2" error handling
@@ -255,7 +255,7 @@ describe('Token - Single PXE', () => {
     // Mint 2 tokens privately to alice
     await token
       .withWallet(alice)
-      .methods.mint_to_private(alice.getAddress(), AMOUNT * 2n, 0)
+      .methods.mint_to_private(alice.getAddress(), AMOUNT * 2n)
       .send()
       .wait();
 
@@ -285,7 +285,7 @@ describe('Token - Single PXE', () => {
     // Mint 2 tokens privately to alice
     await token
       .withWallet(alice)
-      .methods.mint_to_private(alice.getAddress(), AMOUNT * 2n, 0)
+      .methods.mint_to_private(alice.getAddress(), AMOUNT * 2n)
       .send()
       .wait();
 
@@ -332,7 +332,7 @@ describe('Token - Single PXE', () => {
     // Mint 2 tokens publicly to alice
     await token
       .withWallet(alice)
-      .methods.mint_to_public(alice.getAddress(), AMOUNT * 2n, 0)
+      .methods.mint_to_public(alice.getAddress(), AMOUNT * 2n)
       .send()
       .wait();
 
@@ -365,7 +365,7 @@ describe('Token - Single PXE', () => {
   it.skip('mint in public, prepare partial note and finalize it', async () => {
     await token.withWallet(alice);
 
-    await token.methods.mint_to_public(alice.getAddress(), AMOUNT, 0).send().wait();
+    await token.methods.mint_to_public(alice.getAddress(), AMOUNT).send().wait();
 
     // alice has tokens in public
     expect(await token.methods.balance_of_public(alice.getAddress()).simulate()).toBe(AMOUNT);
@@ -397,7 +397,7 @@ describe('Token - Single PXE', () => {
   }, 300_000);
 
   it('public transfer with authwitness', async () => {
-    await token.withWallet(alice).methods.mint_to_public(alice.getAddress(), AMOUNT, 0).send().wait();
+    await token.withWallet(alice).methods.mint_to_public(alice.getAddress(), AMOUNT).send().wait();
 
     const nonce = Fr.random();
     const action = token
@@ -424,7 +424,7 @@ describe('Token - Single PXE', () => {
 
   it('private transfer with authwitness', async () => {
     // setup balances
-    await token.withWallet(alice).methods.mint_to_public(alice.getAddress(), AMOUNT, 0).send().wait();
+    await token.withWallet(alice).methods.mint_to_public(alice.getAddress(), AMOUNT).send().wait();
     await token
       .withWallet(alice)
       .methods.transfer_public_to_private(alice.getAddress(), alice.getAddress(), AMOUNT, 0)
@@ -515,7 +515,7 @@ describe('Token - Multi PXE', () => {
     let events, notes;
 
     // mint initial amount to alice
-    await token.withWallet(alice).methods.mint_to_public(alice.getAddress(), wad(10), 0).send().wait();
+    await token.withWallet(alice).methods.mint_to_public(alice.getAddress(), wad(10)).send().wait();
 
     // self-transfer 5 public tokens to private
     const aliceShieldTx = await token
