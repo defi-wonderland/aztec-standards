@@ -6,12 +6,16 @@ use aztec::macros::aztec;
 pub contract Token {
 
     use aztec::{
-        context::PrivateContext,
+        context::{PrivateContext},
         macros::{functions::{initializer, internal, private, public, view}, storage::storage},
         note::{note_emission::OuterNoteEmission, note_interface::PartialNote},
         oracle::random::random,
         prelude::{AztecAddress, Map, PublicContext, PublicImmutable, PublicMutable},
         protocol_types::traits::{Hash, Serialize},
+    };
+
+    use authwit::auth::{
+        assert_current_call_valid_authwit, assert_current_call_valid_authwit_public,
     };
 
     use uint_note::uint_note::UintNote;
@@ -21,10 +25,8 @@ pub contract Token {
 
     // encryption library
     use aztec::encrypted_logs::log_assembly_strategies::default_aes128::note::encode_and_encrypt_note;
-    // balance notes library (NOTE: it needs to be same as in the token_utils.nr)
+
     use balance_set::balance_set::BalanceSet;
-    // token & auth utils (TODO(#30): +mint-auth utils)
-    use token::auth_utils::AuthLib;
 
     global INITIAL_TRANSFER_CALL_MAX_NOTES: u32 = 2;
     global RECURSIVE_TRANSFER_CALL_MAX_NOTES: u32 = 8;
@@ -32,7 +34,6 @@ pub contract Token {
     #[storage]
     struct Storage<Context> {
         // TODO: fix "is private and not visible from the current module" warning
-        // TODO: why BalanceSet cannot be imported from TokenLib while FieldCompressedString can?
         name: PublicImmutable<FieldCompressedString, Context>,
         symbol: PublicImmutable<FieldCompressedString, Context>,
         decimals: PublicImmutable<u8, Context>,
@@ -80,7 +81,7 @@ pub contract Token {
         amount: U128,
         nonce: Field,
     ) {
-        AuthLib::validate_from_private(&mut context, from, nonce);
+        _validate_from_private(&mut context, from, nonce);
 
         _decrease_private_balance(
             &mut context,
@@ -101,7 +102,7 @@ pub contract Token {
         amount: U128,
         nonce: Field,
     ) -> Field {
-        AuthLib::validate_from_private(&mut context, from, nonce);
+        _validate_from_private(&mut context, from, nonce);
 
         _decrease_private_balance(
             &mut context,
@@ -126,7 +127,7 @@ pub contract Token {
         amount: U128,
         nonce: Field,
     ) {
-        AuthLib::validate_from_private(&mut context, from, nonce);
+        _validate_from_private(&mut context, from, nonce);
 
         _decrease_private_balance(
             &mut context,
@@ -149,7 +150,7 @@ pub contract Token {
         hiding_point_slot: Field,
         nonce: Field,
     ) {
-        AuthLib::validate_from_private(&mut context, from, nonce);
+        _validate_from_private(&mut context, from, nonce);
 
         _decrease_private_balance(
             &mut context,
@@ -172,7 +173,7 @@ pub contract Token {
         amount: U128,
         nonce: Field,
     ) {
-        AuthLib::validate_from_private(&mut context, from, nonce);
+        _validate_from_private(&mut context, from, nonce);
 
         Token::at(context.this_address()).decrease_public_balance(from, amount).enqueue(&mut context);
 
@@ -204,7 +205,7 @@ pub contract Token {
 
     #[public]
     fn transfer_public_to_public(from: AztecAddress, to: AztecAddress, amount: U128, nonce: Field) {
-        AuthLib::validate_from_public(&mut context, from, nonce);
+        _validate_from_public(&mut context, from, nonce);
         _decrease_public_balance(storage.public_balances, from, amount);
         _increase_public_balance(storage.public_balances, to, amount);
     }
@@ -219,7 +220,7 @@ pub contract Token {
         hiding_point_slot: Field,
         nonce: Field,
     ) {
-        AuthLib::validate_from_public(&mut context, from, nonce);
+        _validate_from_public(&mut context, from, nonce);
         _finalize_transfer_public_to_private(
             &mut context,
             storage.public_balances,
@@ -339,7 +340,7 @@ pub contract Token {
 
     #[private]
     fn burn_private(from: AztecAddress, amount: U128, nonce: Field) {
-        AuthLib::validate_from_private(&mut context, from, nonce);
+        _validate_from_private(&mut context, from, nonce);
 
         _decrease_private_balance(
             &mut context,
@@ -355,7 +356,7 @@ pub contract Token {
 
     #[public]
     fn burn_public(from: AztecAddress, amount: U128, nonce: Field) {
-        AuthLib::validate_from_public(&mut context, from, nonce);
+        _validate_from_public(&mut context, from, nonce);
         _decrease_public_balance(storage.public_balances, from, amount);
         _decrease_total_supply(storage.total_supply, amount);
     }
@@ -367,7 +368,7 @@ pub contract Token {
     }
 
     /** ==========================================================
-     * ======================= LIBRARIES =========================
+     * ================= TOKEN LIBRARIES =========================
      * ======================================================== */
 
     /// Finalizes a public to private transfer
@@ -468,7 +469,6 @@ pub contract Token {
             // and try again.
             let remaining = amount - subtracted;
 
-            // NOTE: hacky way to call itself before Token is compiled to be used as a library.
             let self = Token::at(context.this_address());
             self._recurse_subtract_balance(account, remaining).call(context)
         }
@@ -525,7 +525,6 @@ pub contract Token {
         let note_setup_payload = UintNote::setup_payload().new(to, note_randomness, to_note_slot);
 
         // We get the keys and encrypt the log of the note
-        // TODO: this is inconvenient to encrypt here because `encrypt_log` doesn't depend on TokenContract chosen encryption
         let setup_log = note_setup_payload.encrypt_log(context, to, from);
 
         let hiding_point_slot = note_setup_payload.hiding_point.x;
@@ -546,4 +545,26 @@ pub contract Token {
         hiding_point_slot
     }
 
+    /** ==========================================================
+     * ================== AUTH LIBRARIES =========================
+     * ======================================================== */
+
+    #[contract_library_method]
+    fn _validate_from_private(context: &mut PrivateContext,from: AztecAddress, nonce: Field) {
+        if (!from.eq(context.msg_sender())) {
+            assert_current_call_valid_authwit(context, from);
+        } else {
+            assert(nonce == 0, "invalid nonce");
+        }
+    }
+
+    #[contract_library_method]
+    fn _validate_from_public(context: &mut PublicContext, from: AztecAddress, nonce: Field) {
+        if (!from.eq(context.msg_sender())) {
+            // TODO(#34): uncomment assert_current_call_valid_authwit_public
+            // assert_current_call_valid_authwit_public(&mut context, from);
+        } else {
+            assert(nonce == 0, "invalid nonce");
+        }
+    }
 }
