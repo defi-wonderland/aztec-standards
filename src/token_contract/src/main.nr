@@ -287,15 +287,15 @@ pub contract Token {
     * ======================================================== */
 
     #[private]
-    fn mint_to_private(to: AztecAddress, amount: U128, nonce: Field) {
-        let from = storage.minter.read();
-        AuthLib::validate_from_private(&mut context, from, nonce);
+    fn mint_to_private(to: AztecAddress, amount: U128) {
+        let minter = storage.minter.read();
+        assert(minter.eq(context.msg_sender()), "caller is not minter");
 
         // We prepare the partial note to which we'll "send" the minted amount.
         let hiding_point_slot = TokenLib::prepare_transfer_public_to_private(
             &mut context,
             storage.private_balances,
-            from,
+            minter,
             to,
         );
 
@@ -305,18 +305,18 @@ pub contract Token {
     }
 
     #[public]
-    fn mint_to_public(to: AztecAddress, amount: U128, nonce: Field) {
-        let from = storage.minter.read();
-        AuthLib::validate_from_public(&mut context, from, nonce);
+    fn mint_to_public(to: AztecAddress, amount: U128) {
+        let minter = storage.minter.read();
+        assert(minter.eq(context.msg_sender()), "caller is not minter");
 
         TokenLib::increase_public_balance(storage.public_balances, to, amount);
         TokenLib::increase_total_supply(storage.total_supply, amount);
     }
 
     #[public]
-    fn finalize_mint_to_private(amount: U128, hiding_point_slot: Field, nonce: Field) {
-        let from = storage.minter.read();
-        AuthLib::validate_from_public(&mut context, from, nonce);
+    fn finalize_mint_to_private(amount: U128, hiding_point_slot: Field) {
+        let minter = storage.minter.read();
+        assert(minter.eq(context.msg_sender()), "caller is not minter");
 
         TokenLib::finalize_mint_to_private(
             &mut context,
