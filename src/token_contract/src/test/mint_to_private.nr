@@ -3,12 +3,11 @@ use crate::{test::utils, Token};
 #[test]
 unconstrained fn mint_to_private_success() {
     // Setup without account contracts. We are not using authwits here, so dummy accounts are enough
-    let (env, token_contract_address, owner, _) = utils::setup(/* with_account_contracts */ false);
+    let (env, token_contract_address, owner, _, minter) =
+        utils::setup_with_minter(/* with_account_contracts */ false);
 
     let mint_amount = U128::from_integer(10_000);
-    Token::at(token_contract_address).mint_to_private(owner, owner, mint_amount).call(
-        &mut env.private(),
-    );
+    Token::at(token_contract_address).mint_to_private(owner, mint_amount, 0).call(&mut env.private());
     //TODO(#9257): need to advance one block to "mine a block"
     env.advance_block_by(1);
 
@@ -21,19 +20,19 @@ unconstrained fn mint_to_private_success() {
 #[test]
 unconstrained fn mint_to_private_failures() {
     // Setup without account contracts. We are not using authwits here, so dummy accounts are enough
-    let (env, token_contract_address, owner, recipient) =
-        utils::setup(/* with_account_contracts */ false);
+    let (env, token_contract_address, owner, recipient, minter) =
+        utils::setup_with_minter(/* with_account_contracts */ false);
 
     // As non-minter
     let mint_amount = U128::from_integer(10_000);
     env.impersonate(recipient);
     let mint_to_private_call_interface =
-        Token::at(token_contract_address).mint_to_private(owner, owner, mint_amount);
+        Token::at(token_contract_address).mint_to_private(owner, mint_amount, 0);
     env.assert_private_call_fails(mint_to_private_call_interface);
 
     utils::check_private_balance(token_contract_address, owner, U128::zero());
 
-    env.impersonate(owner);
+    env.impersonate(minter);
 
     // Overflow recipient
 
@@ -41,14 +40,14 @@ unconstrained fn mint_to_private_failures() {
     let amount_until_overflow = U128::from_integer(1000);
     let mint_amount = U128::from_integer(2.pow_32(128) - amount_until_overflow.to_integer());
 
-    Token::at(token_contract_address).mint_to_private(recipient, recipient, mint_amount).call(
+    Token::at(token_contract_address).mint_to_private(recipient, mint_amount, 0).call(
         &mut env.private(),
     );
     //TODO(#9257): need to advance one block to "mine a block"
     env.advance_block_by(1);
 
     let mint_to_private_call_interface =
-        Token::at(token_contract_address).mint_to_private(owner, owner, amount_until_overflow);
+        Token::at(token_contract_address).mint_to_private(owner, amount_until_overflow, 0);
     env.assert_private_call_fails(mint_to_private_call_interface);
 
     utils::check_private_balance(token_contract_address, owner, U128::zero());
@@ -56,7 +55,7 @@ unconstrained fn mint_to_private_failures() {
 
     // Overflow total supply
     let mint_to_private_call_interface =
-        Token::at(token_contract_address).mint_to_private(owner, owner, mint_amount);
+        Token::at(token_contract_address).mint_to_private(owner, mint_amount, 0);
     env.assert_private_call_fails(mint_to_private_call_interface);
 
     utils::check_private_balance(token_contract_address, owner, U128::zero());

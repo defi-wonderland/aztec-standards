@@ -15,7 +15,7 @@ use uint_note::uint_note::UintNote;
 
 pub unconstrained fn setup_with_initial_supply(
     with_account_contracts: bool,
-    initial_supply: U128
+    initial_supply: U128,
 ) -> (&mut TestEnvironment, AztecAddress, AztecAddress, AztecAddress) {
     // Setup env, generate keys
     let mut env = TestEnvironment::new();
@@ -29,7 +29,8 @@ pub unconstrained fn setup_with_initial_supply(
         (owner, recipient)
     };
 
-    let token_contract_address = deploy_token_with_initial_supply(&mut env, owner, initial_supply, owner);
+    let token_contract_address =
+        deploy_token_with_initial_supply(&mut env, owner, initial_supply, owner);
 
     (&mut env, token_contract_address, owner, recipient)
 }
@@ -56,7 +57,12 @@ pub unconstrained fn setup_with_minter(
     (&mut env, token_contract_address, owner, recipient, minter)
 }
 
-pub unconstrained fn deploy_token_with_initial_supply(env: &mut TestEnvironment, owner: AztecAddress, initial_supply: U128, to: AztecAddress) -> AztecAddress {
+pub unconstrained fn deploy_token_with_initial_supply(
+    env: &mut TestEnvironment,
+    owner: AztecAddress,
+    initial_supply: U128,
+    to: AztecAddress,
+) -> AztecAddress {
     // Start the test in the account contract address
     env.impersonate(owner);
 
@@ -76,7 +82,11 @@ pub unconstrained fn deploy_token_with_initial_supply(env: &mut TestEnvironment,
     token_contract.to_address()
 }
 
-pub unconstrained fn deploy_token_with_minter(env: &mut TestEnvironment, owner: AztecAddress, minter: AztecAddress) -> AztecAddress {
+pub unconstrained fn deploy_token_with_minter(
+    env: &mut TestEnvironment,
+    owner: AztecAddress,
+    minter: AztecAddress,
+) -> AztecAddress {
     // Start the test in the account contract address
     env.impersonate(owner);
 
@@ -99,8 +109,9 @@ pub unconstrained fn setup_and_mint_to_public_with_minter(
     with_account_contracts: bool,
 ) -> (&mut TestEnvironment, AztecAddress, AztecAddress, AztecAddress, U128, AztecAddress) {
     // Setup
-    let (env, token_contract_address, owner, recipient, minter) = setup_with_minter(with_account_contracts);
-        
+    let (env, token_contract_address, owner, recipient, minter) =
+        setup_with_minter(with_account_contracts);
+
     // Mint some tokens
     env.impersonate(minter);
     let mint_amount = U128::from_integer(10000);
@@ -112,9 +123,10 @@ pub unconstrained fn setup_and_mint_to_public_with_minter(
 pub unconstrained fn setup_and_mint_to_public_without_minter(
     with_account_contracts: bool,
 ) -> (&mut TestEnvironment, AztecAddress, AztecAddress, AztecAddress, U128) {
-    // Setup    
+    // Setup
     let mint_amount = U128::from_integer(10000);
-    let (env, token_contract_address, owner, recipient) = setup_with_initial_supply(with_account_contracts, mint_amount);
+    let (env, token_contract_address, owner, recipient) =
+        setup_with_initial_supply(with_account_contracts, mint_amount);
 
     (env, token_contract_address, owner, recipient, mint_amount)
 }
@@ -122,11 +134,11 @@ pub unconstrained fn setup_and_mint_to_public_without_minter(
 pub unconstrained fn setup_and_mint_to_private_with_minter(
     with_account_contracts: bool,
 ) -> (&mut TestEnvironment, AztecAddress, AztecAddress, AztecAddress, U128, AztecAddress) {
+    let (env, token_contract_address, owner, recipient, minter) =
+        setup_with_minter(with_account_contracts);
 
-    let (env, token_contract_address, owner, recipient, minter) = setup_with_minter(with_account_contracts);
-
-    // Mint some tokens    
-    env.impersonate(minter);    
+    // Mint some tokens
+    env.impersonate(minter);
     let mint_amount = U128::from_integer(10000);
     mint_to_private(env, token_contract_address, owner, mint_amount);
 
@@ -136,9 +148,10 @@ pub unconstrained fn setup_and_mint_to_private_with_minter(
 pub unconstrained fn setup_and_mint_to_private_without_minter(
     with_account_contracts: bool,
 ) -> (&mut TestEnvironment, AztecAddress, AztecAddress, AztecAddress, U128) {
-    // Setup    
+    // Setup
     let mint_amount = U128::from_integer(10000);
-    let (env, token_contract_address, owner, recipient) = setup_with_initial_supply(with_account_contracts, mint_amount);
+    let (env, token_contract_address, owner, recipient) =
+        setup_with_initial_supply(with_account_contracts, mint_amount);
 
     (env, token_contract_address, owner, recipient, mint_amount)
 }
@@ -152,9 +165,7 @@ pub unconstrained fn mint_to_private(
     let note_randomness = random();
     let _ = OracleMock::mock("getRandomField").returns(note_randomness);
 
-    Token::at(token_contract_address).mint_to_private(recipient, amount, 0).call(
-        &mut env.private(),
-    );
+    Token::at(token_contract_address).mint_to_private(recipient, amount, 0).call(&mut env.private());
 
     env.advance_block_by(1);
 }
