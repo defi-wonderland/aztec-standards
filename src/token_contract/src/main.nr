@@ -34,7 +34,7 @@ pub contract Token {
         private_balances: Map<AztecAddress, BalanceSet<Context>, Context>,
         total_supply: PublicMutable<U128, Context>,
         public_balances: Map<AztecAddress, PublicMutable<U128, Context>, Context>,
-        minter: PublicMutable<AztecAddress, Context>,
+        minter: PublicImmutable<AztecAddress, Context>,
     }
 
     #[public]
@@ -61,7 +61,7 @@ pub contract Token {
         storage.symbol.initialize(FieldCompressedString::from_string(symbol));
         storage.decimals.initialize(decimals);
 
-        storage.minter.write(minter);
+        storage.minter.initialize(minter);
     }
 
     /** ==========================================================
