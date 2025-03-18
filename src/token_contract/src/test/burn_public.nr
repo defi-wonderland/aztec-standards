@@ -6,7 +6,7 @@ use aztec::oracle::random::random;
 #[test]
 unconstrained fn burn_public_success() {
     let (env, token_contract_address, owner, recipient, mint_amount) =
-        utils::setup_and_mint_to_public(/* with_account_contracts */ false);
+        utils::setup_and_mint_to_public_without_minter(/* with_account_contracts */ false);
     let burn_amount = mint_amount / U128::from_integer(10);
 
     // Burn less than balance
@@ -17,7 +17,7 @@ unconstrained fn burn_public_success() {
 #[test]
 unconstrained fn burn_public_decrease_total_supply() {
     let (env, token_contract_address, owner, recipient, mint_amount) =
-        utils::setup_and_mint_to_public(/* with_account_contracts */ false);
+        utils::setup_and_mint_to_public_without_minter(/* with_account_contracts */ false);
     let burn_amount = mint_amount / U128::from_integer(10);
 
     utils::check_total_supply(token_contract_address, mint_amount);
@@ -31,7 +31,7 @@ unconstrained fn burn_public_decrease_total_supply() {
 #[test]
 unconstrained fn burn_public_on_behalf_of_other() {
     let (env, token_contract_address, owner, recipient, mint_amount) =
-        utils::setup_and_mint_to_public(/* with_account_contracts */ true);
+        utils::setup_and_mint_to_public_without_minter(/* with_account_contracts */ true);
     let burn_amount = mint_amount / U128::from_integer(10);
 
     // Burn on behalf of other
@@ -52,7 +52,7 @@ unconstrained fn burn_public_on_behalf_of_other() {
 #[test(should_fail_with = "attempt to subtract with underflow")]
 unconstrained fn burn_public_failure_more_than_balance() {
     let (env, token_contract_address, owner, _, mint_amount) =
-        utils::setup_and_mint_to_public(/* with_account_contracts */ false);
+        utils::setup_and_mint_to_public_without_minter(/* with_account_contracts */ false);
 
     // Burn more than balance
     let burn_amount = mint_amount * U128::from_integer(10);
@@ -63,7 +63,7 @@ unconstrained fn burn_public_failure_more_than_balance() {
 #[test(should_fail_with = "invalid nonce")]
 unconstrained fn burn_public_failure_on_behalf_of_self_non_zero_nonce() {
     let (env, token_contract_address, owner, _, mint_amount) =
-        utils::setup_and_mint_to_public(/* with_account_contracts */ false);
+        utils::setup_and_mint_to_public_without_minter(/* with_account_contracts */ false);
 
     // Burn on behalf of self with non-zero nonce
     let burn_amount = mint_amount / U128::from_integer(10);
@@ -76,7 +76,7 @@ unconstrained fn burn_public_failure_on_behalf_of_self_non_zero_nonce() {
 #[test(should_fail_with = "unauthorized")]
 unconstrained fn burn_public_failure_on_behalf_of_other_without_approval() {
     let (env, token_contract_address, owner, recipient, mint_amount) =
-        utils::setup_and_mint_to_public(/* with_account_contracts */ true);
+        utils::setup_and_mint_to_public_without_minter(/* with_account_contracts */ true);
 
     // Burn on behalf of other without approval
     let burn_amount = mint_amount / U128::from_integer(10);
@@ -90,7 +90,7 @@ unconstrained fn burn_public_failure_on_behalf_of_other_without_approval() {
 #[test(should_fail_with = "unauthorized")]
 unconstrained fn burn_public_failure_on_behalf_of_other_wrong_caller() {
     let (env, token_contract_address, owner, recipient, mint_amount) =
-        utils::setup_and_mint_to_public(/* with_account_contracts */ true);
+        utils::setup_and_mint_to_public_without_minter(/* with_account_contracts */ true);
 
     // Burn on behalf of other, wrong designated caller
     let burn_amount = mint_amount / U128::from_integer(10);
