@@ -331,7 +331,6 @@ pub contract Token {
     #[public]
     #[internal]
     fn _finalize_mint_to_private_unsafe(
-        from: AztecAddress,
         amount: U128,
         hiding_point_slot: Field,
     ) {
