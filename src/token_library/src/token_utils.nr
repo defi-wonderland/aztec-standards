@@ -10,21 +10,6 @@ pub mod TokenLib {
     use balance_set::balance_set::BalanceSet;
     use uint_note::uint_note::{UintNote, PartialUintNote};
 
-    use compressed_string::FieldCompressedString;
-
-    pub fn token_constructor(
-        storage_name: PublicImmutable<FieldCompressedString, &mut PublicContext>,
-        storage_symbol: PublicImmutable<FieldCompressedString, &mut PublicContext>,
-        storage_decimals: PublicImmutable<u8, &mut PublicContext>,
-        name: str<31>,
-        symbol: str<31>,
-        decimals: u8,
-    ) {
-        storage_name.initialize(FieldCompressedString::from_string(name));
-        storage_symbol.initialize(FieldCompressedString::from_string(symbol));
-        storage_decimals.initialize(decimals);
-    }
-
     /** ==========================================================
      * ======================= LIBRARIES =========================
      * ======================================================== */
