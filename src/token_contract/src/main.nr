@@ -127,7 +127,7 @@ pub contract Token {
     fn transfer_private_to_hiding_point(
         from: AztecAddress,
         amount: u128,
-        hiding_point_slot: Field,
+        hiding_point_slot: PartialUintNote,
         nonce: Field,
     ) {
         AuthLib::validate_from_private(&mut context, from, nonce);
