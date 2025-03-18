@@ -302,7 +302,7 @@ pub contract Token {
         );
 
         Token::at(context.this_address())
-            .finalize_mint_to_private(amount, hiding_point_slot)
+            ._finalize_mint_to_private_unsafe(amount, hiding_point_slot)
             .enqueue(&mut context);
     }
 
