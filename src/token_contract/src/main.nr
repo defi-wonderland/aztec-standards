@@ -8,7 +8,6 @@ pub contract Token {
     use aztec::{
         macros::{functions::{initializer, internal, private, public, view}, storage::storage},
         prelude::{AztecAddress, Map, PublicImmutable, PublicMutable},
-        protocol_types::traits::{Hash, Serialize},
     };
 
     // compression library
@@ -21,7 +20,7 @@ pub contract Token {
     // token & auth utils (TODO(#30): +mint-auth utils)
     use token::{auth_utils::AuthLib, token_utils::TokenLib};
 
-    use dep::uint_note::uint_note::{PartialUintNote, UintNote};
+    use dep::uint_note::uint_note::PartialUintNote;
 
     global INITIAL_TRANSFER_CALL_MAX_NOTES: u32 = 2;
     global RECURSIVE_TRANSFER_CALL_MAX_NOTES: u32 = 8;
