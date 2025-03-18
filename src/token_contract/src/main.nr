@@ -22,7 +22,7 @@ pub contract Token {
     use token::{auth_utils::AuthLib, token_utils::TokenLib};
 
     use dep::uint_note::uint_note::{PartialUintNote, UintNote};
-    
+
     global INITIAL_TRANSFER_CALL_MAX_NOTES: u32 = 2;
     global RECURSIVE_TRANSFER_CALL_MAX_NOTES: u32 = 8;
 
