@@ -288,8 +288,6 @@ pub contract Token {
 
     #[private]
     fn mint_to_private(to: AztecAddress, amount: U128, nonce: Field) {
-        // WARNING: minter is read asynchronously. It might work on the client side and later revert if the minter is
-        // changed before the sequencer executes the transaction.
         let from = storage.minter.read();
         AuthLib::validate_from_private(&mut context, from, nonce);
 
