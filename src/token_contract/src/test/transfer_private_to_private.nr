@@ -8,7 +8,7 @@ use aztec::note::constants::MAX_NOTES_PER_PAGE;
 unconstrained fn transfer_private_on_behalf_of_other() {
     // Setup with account contracts. Slower since we actually deploy them, but needed for authwits.
     let (env, token_contract_address, owner, recipient, mint_amount) =
-        utils::setup_and_mint_to_private(/* with_account_contracts */ true);
+        utils::setup_and_mint_to_private_without_minter(/* with_account_contracts */ true);
     // Add authwit
     let transfer_amount = U128::from_integer(1000);
     let transfer_private_from_call_interface = Token::at(token_contract_address)
@@ -30,19 +30,20 @@ unconstrained fn transfer_private_on_behalf_of_other() {
 #[test]
 unconstrained fn transfer_private_multiple_notes_recursively() {
     // Setup with account contracts. Slower since we actually deploy them, but needed for authwits.
-    let (env, token_contract_address, owner, recipient) =
-        utils::setup(/* with_account_contracts */ true);
+    let (env, token_contract_address, owner, recipient, minter) =
+        utils::setup_with_minter(/* with_account_contracts */ true);
 
     let notes_amount = U128::from_integer(1000);
     let notes_count = 12;
     let total_amount = notes_amount * U128::from_integer(notes_count);
-    env.impersonate(owner);
+    env.impersonate(minter);
     for i in 0..notes_count {
         utils::mint_to_private(env, token_contract_address, owner, notes_amount);
     }
 
     // Transfer tokens
     // Transfer will require 11 notes with change, which requires 2 recursive calls: 2 + 8 + 1
+    env.impersonate(owner);
     let transfer_amount = total_amount - notes_amount - U128::from_integer(1);
     let transfer_private_from_call_interface = Token::at(token_contract_address)
         .transfer_private_to_private(owner, recipient, transfer_amount, 0);
@@ -85,7 +86,7 @@ unconstrained fn transfer_private_multiple_notes_recursively() {
 unconstrained fn transfer_private_failure_on_behalf_of_self_non_zero_nonce() {
     // Setup without account contracts. We are not using authwits here, so dummy accounts are enough
     let (env, token_contract_address, owner, recipient, _) =
-        utils::setup_and_mint_to_private(/* with_account_contracts */ false);
+        utils::setup_and_mint_to_private_without_minter(/* with_account_contracts */ false);
     // Add authwit
     let transfer_amount = U128::from_integer(1000);
     let transfer_private_from_call_interface = Token::at(token_contract_address)
@@ -104,7 +105,7 @@ unconstrained fn transfer_private_failure_on_behalf_of_self_non_zero_nonce() {
 unconstrained fn transfer_private_failure_on_behalf_of_more_than_balance() {
     // Setup with account contracts. Slower since we actually deploy them, but needed for authwits.
     let (env, token_contract_address, owner, recipient, mint_amount) =
-        utils::setup_and_mint_to_private(/* with_account_contracts */ true);
+        utils::setup_and_mint_to_private_without_minter(/* with_account_contracts */ true);
     // Add authwit
     let transfer_amount = mint_amount + U128::from_integer(1);
     let transfer_private_from_call_interface = Token::at(token_contract_address)
@@ -125,7 +126,7 @@ unconstrained fn transfer_private_failure_on_behalf_of_more_than_balance() {
 unconstrained fn transfer_private_failure_on_behalf_of_other_without_approval() {
     // Setup with account contracts. Slower since we actually deploy them, but needed for authwits.
     let (env, token_contract_address, owner, recipient, _) =
-        utils::setup_and_mint_to_private(/* with_account_contracts */ true);
+        utils::setup_and_mint_to_private_without_minter(/* with_account_contracts */ true);
     // Add authwit
     let transfer_amount = U128::from_integer(1000);
     let transfer_private_from_call_interface = Token::at(token_contract_address)
@@ -141,7 +142,7 @@ unconstrained fn transfer_private_failure_on_behalf_of_other_without_approval() 
 unconstrained fn transfer_private_failure_on_behalf_of_other_wrong_caller() {
     // Setup with account contracts. Slower since we actually deploy them, but needed for authwits.
     let (env, token_contract_address, owner, recipient, _) =
-        utils::setup_and_mint_to_private(/* with_account_contracts */ true);
+        utils::setup_and_mint_to_private_without_minter(/* with_account_contracts */ true);
     // Add authwit
     let transfer_amount = U128::from_integer(1000);
     let transfer_private_from_call_interface = Token::at(token_contract_address)

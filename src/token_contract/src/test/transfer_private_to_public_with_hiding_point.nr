@@ -6,7 +6,7 @@ use aztec::oracle::random::random;
 #[test]
 unconstrained fn transfer_private_to_public_with_hiding_point() {
     let (env, token_contract_address, owner, recipient, mint_amount) =
-        utils::setup_and_mint_to_private(false);
+        utils::setup_and_mint_to_private_without_minter(false);
 
     utils::check_private_balance(token_contract_address, owner, mint_amount);
     utils::check_private_balance(token_contract_address, recipient, U128::from_integer(0));
@@ -27,7 +27,7 @@ unconstrained fn transfer_private_to_public_with_hiding_point() {
 #[test(should_fail_with = "invalid nonce")]
 unconstrained fn transfer_private_to_public_with_hiding_point_and_non_zero_nonce() {
     let (env, token_contract_address, owner, recipient, mint_amount) =
-        utils::setup_and_mint_to_private(false);
+        utils::setup_and_mint_to_private_without_minter(false);
 
     utils::check_private_balance(token_contract_address, owner, mint_amount);
     utils::check_private_balance(token_contract_address, recipient, U128::from_integer(0));
@@ -44,7 +44,7 @@ unconstrained fn transfer_private_to_public_with_hiding_point_and_non_zero_nonce
 // #[test]
 unconstrained fn transfer_private_to_public_with_hiding_point_on_behalf_of_other() {
     let (env, token_contract_address, owner, recipient, mint_amount) =
-        utils::setup_and_mint_to_private(true);
+        utils::setup_and_mint_to_private_without_minter(true);
 
     utils::check_private_balance(token_contract_address, owner, mint_amount);
     utils::check_private_balance(token_contract_address, recipient, U128::from_integer(0));
@@ -75,7 +75,7 @@ unconstrained fn transfer_private_to_public_with_hiding_point_on_behalf_of_other
 #[test]
 unconstrained fn transfer_private_to_public_with_hiding_point_and_finalize() {
     let (env, token_contract_address, owner, recipient, mint_amount) =
-        utils::setup_and_mint_to_private(false);
+        utils::setup_and_mint_to_private_without_minter(false);
 
     utils::check_private_balance(token_contract_address, owner, mint_amount);
     utils::check_private_balance(token_contract_address, recipient, U128::from_integer(0));
@@ -107,7 +107,7 @@ unconstrained fn transfer_private_to_public_with_hiding_point_and_finalize() {
 #[test(should_fail_with = "transfer not prepared")]
 unconstrained fn transfer_private_to_public_with_hiding_point_and_finalize_with_invalid_hiding_point() {
     let (env, token_contract_address, owner, recipient, mint_amount) =
-        utils::setup_and_mint_to_private(false);
+        utils::setup_and_mint_to_private_without_minter(false);
 
     utils::check_private_balance(token_contract_address, owner, mint_amount);
     utils::check_private_balance(token_contract_address, recipient, U128::from_integer(0));
@@ -133,7 +133,7 @@ unconstrained fn transfer_private_to_public_with_hiding_point_and_finalize_with_
 #[test]
 unconstrained fn transfer_private_to_public_with_hiding_point_and_finalize_with_invalid_hiding_point_literals() {
     let (env, token_contract_address, owner, recipient, mint_amount) =
-        utils::setup_and_mint_to_private(false);
+        utils::setup_and_mint_to_private_without_minter(false);
 
     utils::check_private_balance(token_contract_address, owner, mint_amount);
     utils::check_private_balance(token_contract_address, recipient, U128::from_integer(0));

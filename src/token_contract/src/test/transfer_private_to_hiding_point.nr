@@ -6,7 +6,7 @@ use aztec::oracle::random::random;
 #[test]
 unconstrained fn transfer_private_to_hiding_point() {
     let (env, token_contract_address, owner, recipient, mint_amount) =
-        utils::setup_and_mint_to_private(/* with_account_contracts */ false);
+        utils::setup_and_mint_to_private_without_minter(/* with_account_contracts */ false);
 
     utils::check_private_balance(token_contract_address, owner, mint_amount);
     utils::check_private_balance(token_contract_address, recipient, U128::from_integer(0));
@@ -33,7 +33,7 @@ unconstrained fn transfer_private_to_hiding_point() {
 #[test]
 unconstrained fn transfer_private_to_hiding_point_on_behalf_of_other() {
     let (env, token_contract_address, owner, recipient, mint_amount) =
-        utils::setup_and_mint_to_private(/* with_account_contracts */ true);
+        utils::setup_and_mint_to_private_without_minter(/* with_account_contracts */ true);
 
     utils::check_private_balance(token_contract_address, owner, mint_amount);
     utils::check_private_balance(token_contract_address, recipient, U128::from_integer(0));
@@ -69,7 +69,7 @@ unconstrained fn transfer_private_to_hiding_point_on_behalf_of_other() {
 #[test(should_fail_with = "invalid nonce")]
 unconstrained fn transfer_private_to_hiding_point_non_zero_nonce() {
     let (env, token_contract_address, owner, recipient, mint_amount) =
-        utils::setup_and_mint_to_private(/* with_account_contracts */ false);
+        utils::setup_and_mint_to_private_without_minter(/* with_account_contracts */ false);
 
     // Prepare hiding point slot
     env.impersonate(recipient);
