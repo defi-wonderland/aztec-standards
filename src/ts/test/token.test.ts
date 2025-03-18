@@ -15,12 +15,26 @@ import { createAccount, getInitialTestAccountsWallets } from '@aztec/accounts/te
 import { AMOUNT, createPXE, expectTokenBalances, expectUintNote, logger, setupSandbox, wad } from './utils.js';
 
 export async function deployTokenWithInitialSupply(deployer: AccountWallet) {
-  const contract = await Contract.deploy(deployer, TokenContractArtifact, ['PrivateToken', 'PT', 18, 0, deployer.getAddress()], 'constructor_with_initial_supply').send().deployed();
+  const contract = await Contract.deploy(
+    deployer,
+    TokenContractArtifact,
+    ['PrivateToken', 'PT', 18, 0, deployer.getAddress()],
+    'constructor_with_initial_supply',
+  )
+    .send()
+    .deployed();
   return contract;
 }
 
 export async function deployTokenWithMinter(deployer: AccountWallet) {
-  const contract = await Contract.deploy(deployer, TokenContractArtifact, ['PrivateToken', 'PT', 18, deployer.getAddress()], 'constructor_with_minter').send().deployed();
+  const contract = await Contract.deploy(
+    deployer,
+    TokenContractArtifact,
+    ['PrivateToken', 'PT', 18, deployer.getAddress()],
+    'constructor_with_minter',
+  )
+    .send()
+    .deployed();
   return contract;
 }
 
@@ -66,7 +80,9 @@ describe('Token - Single PXE', () => {
       deployer: deployerWallet.getAddress(),
     });
     const deployer = new ContractDeployer(TokenContractArtifact, deployerWallet, undefined, 'constructor_with_minter');
-    const tx = deployer.deploy('PrivateToken', 'PT', 18, deployerWallet.getAddress()).send({ contractAddressSalt: salt });
+    const tx = deployer
+      .deploy('PrivateToken', 'PT', 18, deployerWallet.getAddress())
+      .send({ contractAddressSalt: salt });
     const receipt = await tx.getReceipt();
 
     expect(receipt).toEqual(
@@ -100,8 +116,15 @@ describe('Token - Single PXE', () => {
       salt,
       deployer: deployerWallet.getAddress(),
     });
-    const deployer = new ContractDeployer(TokenContractArtifact, deployerWallet, undefined, 'constructor_with_initial_supply');
-    const tx = deployer.deploy('PrivateToken', 'PT', 18, 1, deployerWallet.getAddress()).send({ contractAddressSalt: salt });
+    const deployer = new ContractDeployer(
+      TokenContractArtifact,
+      deployerWallet,
+      undefined,
+      'constructor_with_initial_supply',
+    );
+    const tx = deployer
+      .deploy('PrivateToken', 'PT', 18, 1, deployerWallet.getAddress())
+      .send({ contractAddressSalt: salt });
     const receipt = await tx.getReceipt();
 
     expect(receipt).toEqual(
