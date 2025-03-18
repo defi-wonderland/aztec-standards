@@ -6,6 +6,7 @@ unconstrained fn mint_to_private_success() {
     let (env, token_contract_address, owner, _, minter) =
         utils::setup_with_minter(/* with_account_contracts */ false);
 
+    env.impersonate(minter);
     let mint_amount = U128::from_integer(10_000);
     Token::at(token_contract_address).mint_to_private(owner, mint_amount, 0).call(&mut env.private());
     //TODO(#9257): need to advance one block to "mine a block"
