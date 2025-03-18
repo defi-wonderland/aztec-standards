@@ -14,8 +14,13 @@ import {
 import { createAccount, getInitialTestAccountsWallets } from '@aztec/accounts/testing';
 import { AMOUNT, createPXE, expectTokenBalances, expectUintNote, logger, setupSandbox, wad } from './utils.js';
 
-export async function deployToken(deployer: AccountWallet) {
-  const contract = await Contract.deploy(deployer, TokenContractArtifact, ['PrivateToken', 'PT', 18]).send().deployed();
+export async function deployTokenWithInitialSupply(deployer: AccountWallet) {
+  const contract = await Contract.deploy(deployer, TokenContractArtifact, ['PrivateToken', 'PT', 18, 0, deployer.getAddress()], 'constructor_with_initial_supply').send().deployed();
+  return contract;
+}
+
+export async function deployTokenWithMinter(deployer: AccountWallet) {
+  const contract = await Contract.deploy(deployer, TokenContractArtifact, ['PrivateToken', 'PT', 18, deployer.getAddress()], 'constructor_with_minter').send().deployed();
   return contract;
 }
 
@@ -47,20 +52,56 @@ describe('Token - Single PXE', () => {
   });
 
   beforeEach(async () => {
-    token = (await deployToken(alice)) as TokenContract;
+    token = (await deployTokenWithMinter(alice)) as TokenContract;
   });
 
-  it('deploys the contract', async () => {
+  it('deploys the contract with minter', async () => {
     const salt = Fr.random();
     const [deployerWallet] = wallets; // using first account as deployer
 
     const deploymentData = await getContractInstanceFromDeployParams(TokenContractArtifact, {
-      constructorArgs: ['PrivateToken', 'PT', 18],
+      constructorArtifact: 'constructor_with_minter',
+      constructorArgs: ['PrivateToken', 'PT', 18, deployerWallet.getAddress()],
       salt,
       deployer: deployerWallet.getAddress(),
     });
-    const deployer = new ContractDeployer(TokenContractArtifact, deployerWallet);
-    const tx = deployer.deploy('PrivateToken', 'PT', 18).send({ contractAddressSalt: salt });
+    const deployer = new ContractDeployer(TokenContractArtifact, deployerWallet, undefined, 'constructor_with_minter');
+    const tx = deployer.deploy('PrivateToken', 'PT', 18, deployerWallet.getAddress()).send({ contractAddressSalt: salt });
+    const receipt = await tx.getReceipt();
+
+    expect(receipt).toEqual(
+      expect.objectContaining({
+        status: TxStatus.PENDING,
+        error: '',
+      }),
+    );
+
+    const receiptAfterMined = await tx.wait({ wallet: deployerWallet });
+
+    const contractMetadata = await pxe.getContractMetadata(deploymentData.address);
+    expect(contractMetadata).toBeDefined();
+    expect(contractMetadata.isContractPubliclyDeployed).toBeTruthy();
+    expect(receiptAfterMined).toEqual(
+      expect.objectContaining({
+        status: TxStatus.SUCCESS,
+      }),
+    );
+
+    expect(receiptAfterMined.contract.instance.address).toEqual(deploymentData.address);
+  }, 300_000);
+
+  it('deploys the contract with initial supply', async () => {
+    const salt = Fr.random();
+    const [deployerWallet] = wallets; // using first account as deployer
+
+    const deploymentData = await getContractInstanceFromDeployParams(TokenContractArtifact, {
+      constructorArtifact: 'constructor_with_initial_supply',
+      constructorArgs: ['PrivateToken', 'PT', 18, 1, deployerWallet.getAddress()],
+      salt,
+      deployer: deployerWallet.getAddress(),
+    });
+    const deployer = new ContractDeployer(TokenContractArtifact, deployerWallet, undefined, 'constructor_with_initial_supply');
+    const tx = deployer.deploy('PrivateToken', 'PT', 18, 1, deployerWallet.getAddress()).send({ contractAddressSalt: salt });
     const receipt = await tx.getReceipt();
 
     expect(receipt).toEqual(
@@ -86,7 +127,7 @@ describe('Token - Single PXE', () => {
 
   it('mints', async () => {
     await token.withWallet(alice);
-    const tx = await token.methods.mint_to_public(bob.getAddress(), AMOUNT).send().wait();
+    const tx = await token.methods.mint_to_public(bob.getAddress(), AMOUNT, 0).send().wait();
     const balance = await token.methods.balance_of_public(bob.getAddress()).simulate();
     expect(balance).toBe(AMOUNT);
   }, 300_000);
@@ -95,7 +136,7 @@ describe('Token - Single PXE', () => {
     // First mint 2 tokens to alice
     await token
       .withWallet(alice)
-      .methods.mint_to_public(alice.getAddress(), AMOUNT * 2n)
+      .methods.mint_to_public(alice.getAddress(), AMOUNT * 2n, 0)
       .send()
       .wait();
 
@@ -138,7 +179,7 @@ describe('Token - Single PXE', () => {
     // First mint to private 2 tokens to alice
     await token
       .withWallet(alice)
-      .methods.mint_to_private(alice.getAddress(), alice.getAddress(), AMOUNT * 2n)
+      .methods.mint_to_private(alice.getAddress(), AMOUNT * 2n, 0)
       .send()
       .wait();
 
@@ -160,7 +201,7 @@ describe('Token - Single PXE', () => {
 
   it('fails when using an invalid nonce', async () => {
     // Mint 1 token privately to alice
-    await token.withWallet(alice).methods.mint_to_private(alice.getAddress(), alice.getAddress(), AMOUNT).send().wait();
+    await token.withWallet(alice).methods.mint_to_private(alice.getAddress(), AMOUNT, 0).send().wait();
 
     // This fails because of the nonce check
     await expect(
@@ -174,7 +215,7 @@ describe('Token - Single PXE', () => {
 
   it.skip('fails when transferring more tokens than available in private balance', async () => {
     // Mint 1 token privately to alice
-    await token.withWallet(alice).methods.mint_to_private(alice.getAddress(), alice.getAddress(), AMOUNT).send().wait();
+    await token.withWallet(alice).methods.mint_to_private(alice.getAddress(), AMOUNT, 0).send().wait();
 
     // Try to transfer more tokens than available from private to public balance
     // TODO(#29): fix "Invalid arguments size: expected 3, got 2" error handling
@@ -191,7 +232,7 @@ describe('Token - Single PXE', () => {
     // Mint 2 tokens privately to alice
     await token
       .withWallet(alice)
-      .methods.mint_to_private(alice.getAddress(), alice.getAddress(), AMOUNT * 2n)
+      .methods.mint_to_private(alice.getAddress(), AMOUNT * 2n, 0)
       .send()
       .wait();
 
@@ -221,7 +262,7 @@ describe('Token - Single PXE', () => {
     // Mint 2 tokens privately to alice
     await token
       .withWallet(alice)
-      .methods.mint_to_private(alice.getAddress(), alice.getAddress(), AMOUNT * 2n)
+      .methods.mint_to_private(alice.getAddress(), AMOUNT * 2n, 0)
       .send()
       .wait();
 
@@ -268,7 +309,7 @@ describe('Token - Single PXE', () => {
     // Mint 2 tokens publicly to alice
     await token
       .withWallet(alice)
-      .methods.mint_to_public(alice.getAddress(), AMOUNT * 2n)
+      .methods.mint_to_public(alice.getAddress(), AMOUNT * 2n, 0)
       .send()
       .wait();
 
@@ -301,7 +342,7 @@ describe('Token - Single PXE', () => {
   it.skip('mint in public, prepare partial note and finalize it', async () => {
     await token.withWallet(alice);
 
-    await token.methods.mint_to_public(alice.getAddress(), AMOUNT).send().wait();
+    await token.methods.mint_to_public(alice.getAddress(), AMOUNT, 0).send().wait();
 
     // alice has tokens in public
     expect(await token.methods.balance_of_public(alice.getAddress()).simulate()).toBe(AMOUNT);
@@ -333,7 +374,7 @@ describe('Token - Single PXE', () => {
   }, 300_000);
 
   it('public transfer with authwitness', async () => {
-    await token.withWallet(alice).methods.mint_to_public(alice.getAddress(), AMOUNT).send().wait();
+    await token.withWallet(alice).methods.mint_to_public(alice.getAddress(), AMOUNT, 0).send().wait();
 
     const nonce = Fr.random();
     const action = token
@@ -360,7 +401,7 @@ describe('Token - Single PXE', () => {
 
   it('private transfer with authwitness', async () => {
     // setup balances
-    await token.withWallet(alice).methods.mint_to_public(alice.getAddress(), AMOUNT).send().wait();
+    await token.withWallet(alice).methods.mint_to_public(alice.getAddress(), AMOUNT, 0).send().wait();
     await token
       .withWallet(alice)
       .methods.transfer_public_to_private(alice.getAddress(), alice.getAddress(), AMOUNT, 0)
@@ -423,7 +464,7 @@ describe('Token - Multi PXE', () => {
   });
 
   beforeEach(async () => {
-    token = (await deployToken(alice)) as TokenContract;
+    token = (await deployTokenWithMinter(alice)) as TokenContract;
 
     await bobPXE.registerContract(token);
 
@@ -451,7 +492,7 @@ describe('Token - Multi PXE', () => {
     let events, notes;
 
     // mint initial amount to alice
-    await token.withWallet(alice).methods.mint_to_public(alice.getAddress(), wad(10)).send().wait();
+    await token.withWallet(alice).methods.mint_to_public(alice.getAddress(), wad(10), 0).send().wait();
 
     // self-transfer 5 public tokens to private
     const aliceShieldTx = await token
