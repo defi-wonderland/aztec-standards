@@ -330,10 +330,7 @@ pub contract Token {
 
     #[public]
     #[internal]
-    fn _finalize_mint_to_private_unsafe(
-        amount: U128,
-        hiding_point_slot: Field,
-    ) {
+    fn _finalize_mint_to_private_unsafe(amount: U128, hiding_point_slot: Field) {
         TokenLib::finalize_mint_to_private(
             &mut context,
             storage.total_supply,
