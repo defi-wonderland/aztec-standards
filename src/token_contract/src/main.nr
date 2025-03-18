@@ -54,7 +54,7 @@ pub contract Token {
     fn transfer_private_to_public(
         from: AztecAddress,
         to: AztecAddress,
-        amount: U128,
+        amount: u128,
         nonce: Field,
     ) {
         AuthLib::validate_from_private(&mut context, from, nonce);
@@ -75,9 +75,9 @@ pub contract Token {
     fn transfer_private_to_public_with_hiding_point(
         from: AztecAddress,
         to: AztecAddress,
-        amount: U128,
+        amount: u128,
         nonce: Field,
-    ) -> Field {
+    ) -> PartialUintNote {
         AuthLib::validate_from_private(&mut context, from, nonce);
 
         TokenLib::decrease_private_balance(
@@ -104,7 +104,7 @@ pub contract Token {
     fn transfer_private_to_private(
         from: AztecAddress,
         to: AztecAddress,
-        amount: U128,
+        amount: u128,
         nonce: Field,
     ) {
         AuthLib::validate_from_private(&mut context, from, nonce);
@@ -126,7 +126,7 @@ pub contract Token {
     #[private]
     fn transfer_private_to_hiding_point(
         from: AztecAddress,
-        amount: U128,
+        amount: u128,
         hiding_point_slot: Field,
         nonce: Field,
     ) {
@@ -150,7 +150,7 @@ pub contract Token {
     fn transfer_public_to_private(
         from: AztecAddress,
         to: AztecAddress,
-        amount: U128,
+        amount: u128,
         nonce: Field,
     ) {
         AuthLib::validate_from_private(&mut context, from, nonce);
@@ -163,7 +163,7 @@ pub contract Token {
     }
 
     #[private]
-    fn prepare_transfer_public_to_private(from: AztecAddress, to: AztecAddress) -> Field {
+    fn prepare_transfer_public_to_private(from: AztecAddress, to: AztecAddress) -> PartialUintNote {
         TokenLib::prepare_transfer_public_to_private(
             &mut context,
             storage.private_balances,
@@ -174,7 +174,7 @@ pub contract Token {
 
     #[internal]
     #[private]
-    fn _recurse_subtract_balance(account: AztecAddress, amount: U128) -> U128 {
+    fn _recurse_subtract_balance(account: AztecAddress, amount: u128) -> u128 {
         TokenLib::subtract_balance(
             &mut context,
             storage.private_balances,
@@ -189,7 +189,7 @@ pub contract Token {
     * ======================================================== */
 
     #[public]
-    fn transfer_public_to_public(from: AztecAddress, to: AztecAddress, amount: U128, nonce: Field) {
+    fn transfer_public_to_public(from: AztecAddress, to: AztecAddress, amount: u128, nonce: Field) {
         AuthLib::validate_from_public(&mut context, from, nonce);
         TokenLib::decrease_public_balance(storage.public_balances, from, amount);
         TokenLib::increase_public_balance(storage.public_balances, to, amount);
@@ -201,8 +201,8 @@ pub contract Token {
     #[public]
     fn finalize_transfer_public_to_private(
         from: AztecAddress,
-        amount: U128,
-        hiding_point_slot: Field,
+        amount: u128,
+        hiding_point_slot: PartialUintNote,
         nonce: Field,
     ) {
         AuthLib::validate_from_public(&mut context, from, nonce);
@@ -217,25 +217,25 @@ pub contract Token {
 
     #[public]
     #[internal]
-    fn store_payload_in_storage(slot: Field, point: [Field; 3], setup_log: [Field; 9]) {
-        TokenLib::store_payload_in_storage(&mut context, slot, point, setup_log);
+    fn store_payload_in_storage(slot: PartialUintNote) {
+        TokenLib::store_payload_in_storage(&mut context, slot);
     }
 
     #[public]
     #[internal]
-    fn increase_public_balance(to: AztecAddress, amount: U128) {
+    fn increase_public_balance(to: AztecAddress, amount: u128) {
         TokenLib::increase_public_balance(storage.public_balances, to, amount);
     }
 
     #[public]
     #[internal]
-    fn decrease_public_balance(from: AztecAddress, amount: U128) {
+    fn decrease_public_balance(from: AztecAddress, amount: u128) {
         TokenLib::decrease_public_balance(storage.public_balances, from, amount);
     }
 
     #[public]
     #[internal]
-    fn increase_hiding_point_balance(hiding_point_slot: Field, amount: U128) {
+    fn increase_hiding_point_balance(hiding_point_slot: PartialUintNote, amount: u128) {
         TokenLib::increase_hiding_point_balance(&mut context, hiding_point_slot, amount);
     }
 
@@ -245,13 +245,13 @@ pub contract Token {
 
     #[public]
     #[view]
-    fn balance_of_public(owner: AztecAddress) -> U128 {
+    fn balance_of_public(owner: AztecAddress) -> u128 {
         storage.public_balances.at(owner).read()
     }
 
     #[public]
     #[view]
-    fn total_supply() -> U128 {
+    fn total_supply() -> u128 {
         storage.total_supply.read()
     }
 
@@ -272,7 +272,7 @@ pub contract Token {
     fn mint_to_private(
         from: AztecAddress, // sender of the tag: TODO(#9887): this is not great?
         to: AztecAddress,
-        amount: U128,
+        amount: u128,
     ) {
         // We prepare the partial note to which we'll "send" the minted amount.
         let hiding_point_slot = TokenLib::prepare_transfer_public_to_private(
@@ -288,13 +288,13 @@ pub contract Token {
     }
 
     #[public]
-    fn mint_to_public(to: AztecAddress, amount: U128) {
+    fn mint_to_public(to: AztecAddress, amount: u128) {
         TokenLib::increase_public_balance(storage.public_balances, to, amount);
         TokenLib::increase_total_supply(storage.total_supply, amount);
     }
 
     #[public]
-    fn finalize_mint_to_private(amount: U128, hiding_point_slot: Field) {
+    fn finalize_mint_to_private(amount: u128, hiding_point_slot: PartialUintNote) {
         TokenLib::finalize_mint_to_private(
             &mut context,
             storage.total_supply,
@@ -307,8 +307,8 @@ pub contract Token {
     #[internal]
     fn _finalize_mint_to_private_unsafe(
         from: AztecAddress,
-        amount: U128,
-        hiding_point_slot: Field,
+        amount: u128,
+        hiding_point_slot: PartialUintNote,
     ) {
         TokenLib::finalize_mint_to_private(
             &mut context,
@@ -324,7 +324,7 @@ pub contract Token {
     //  * ======================================================== */
 
     // #[private]
-    // fn burn_private(from: AztecAddress, amount: U128, nonce: Field) {
+    // fn burn_private(from: AztecAddress, amount: u128, nonce: Field) {
     //     _validate_from_private(from, nonce, &mut context);
 
     //     storage.private_balances.at(from).sub(from, amount).emit(encode_and_encrypt_note(
@@ -337,7 +337,7 @@ pub contract Token {
     // }
 
     // #[public]
-    // fn burn_public(from: AztecAddress, amount: U128, nonce: Field) {
+    // fn burn_public(from: AztecAddress, amount: u128, nonce: Field) {
     //     if (!from.eq(context.msg_sender())) {
     //         assert_current_call_valid_authwit_public(&mut context, from);
     //     } else {
@@ -350,7 +350,7 @@ pub contract Token {
 
     // #[public]
     // #[internal]
-    // fn _reduce_total_supply(amount: U128) {
+    // fn _reduce_total_supply(amount: u128) {
     //     // Only to be called from burn.
     //     let new_supply = storage.total_supply.read().sub(amount);
     //     storage.total_supply.write(new_supply);
