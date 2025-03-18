@@ -6,7 +6,7 @@ use aztec::macros::aztec;
 pub contract Token {
 
     use aztec::{
-        context::{PrivateContext},
+        context::PrivateContext,
         macros::{functions::{initializer, internal, private, public, view}, storage::storage},
         note::{note_emission::OuterNoteEmission, note_interface::PartialNote},
         oracle::random::random,
@@ -550,7 +550,7 @@ pub contract Token {
      * ======================================================== */
 
     #[contract_library_method]
-    fn _validate_from_private(context: &mut PrivateContext,from: AztecAddress, nonce: Field) {
+    fn _validate_from_private(context: &mut PrivateContext, from: AztecAddress, nonce: Field) {
         if (!from.eq(context.msg_sender())) {
             assert_current_call_valid_authwit(context, from);
         } else {
