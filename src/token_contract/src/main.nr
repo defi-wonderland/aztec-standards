@@ -205,7 +205,13 @@ pub contract Token {
 
     #[public]
     fn transfer_public_to_public(from: AztecAddress, to: AztecAddress, amount: U128, nonce: Field) {
-        _validate_from_public(&mut context, from, nonce);
+        // _validate_from_public(from, nonce);
+        // TODO(#34): we cannot call `assert_current_call_valid_authwit_public` from library methods
+        if (!from.eq(context.msg_sender())) {
+            assert_current_call_valid_authwit_public(&mut context, from);
+        } else {
+            assert(nonce == 0, "invalid nonce");
+        }
         _decrease_public_balance(storage.public_balances, from, amount);
         _increase_public_balance(storage.public_balances, to, amount);
     }
@@ -220,7 +226,13 @@ pub contract Token {
         hiding_point_slot: Field,
         nonce: Field,
     ) {
-        _validate_from_public(&mut context, from, nonce);
+        // _validate_from_public(from, nonce);
+        // TODO(#34): we cannot call `assert_current_call_valid_authwit_public` from library methods
+        if (!from.eq(context.msg_sender())) {
+            assert_current_call_valid_authwit_public(&mut context, from);
+        } else {
+            assert(nonce == 0, "invalid nonce");
+        }
         _finalize_transfer_public_to_private(
             &mut context,
             storage.public_balances,
@@ -356,7 +368,13 @@ pub contract Token {
 
     #[public]
     fn burn_public(from: AztecAddress, amount: U128, nonce: Field) {
-        _validate_from_public(&mut context, from, nonce);
+        // _validate_from_public(from, nonce);
+        // TODO(#34): we cannot call `assert_current_call_valid_authwit_public` from library methods
+        if (!from.eq(context.msg_sender())) {
+            assert_current_call_valid_authwit_public(&mut context, from);
+        } else {
+            assert(nonce == 0, "invalid nonce");
+        }
         _decrease_public_balance(storage.public_balances, from, amount);
         _decrease_total_supply(storage.total_supply, amount);
     }
