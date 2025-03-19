@@ -287,7 +287,11 @@ pub contract Token {
     * ======================================================== */
 
     #[private]
-    fn mint_to_private(to: AztecAddress, amount: U128) {
+    fn mint_to_private(
+        from: AztecAddress, // sender of the tag: TODO(#9887): this is not great?
+        to: AztecAddress,
+        amount: U128,
+    ) {
         let minter = storage.minter.read();
         assert(minter.eq(context.msg_sender()), "caller is not minter");
 
@@ -295,7 +299,7 @@ pub contract Token {
         let hiding_point_slot = TokenLib::prepare_transfer_public_to_private(
             &mut context,
             storage.private_balances,
-            minter,
+            from,
             to,
         );
 

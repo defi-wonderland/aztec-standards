@@ -202,7 +202,7 @@ describe('Token - Single PXE', () => {
     // First mint to private 2 tokens to alice
     await token
       .withWallet(alice)
-      .methods.mint_to_private(alice.getAddress(), AMOUNT * 2n)
+      .methods.mint_to_private(alice.getAddress(), alice.getAddress(), AMOUNT * 2n)
       .send()
       .wait();
 
@@ -224,7 +224,7 @@ describe('Token - Single PXE', () => {
 
   it('fails when using an invalid nonce', async () => {
     // Mint 1 token privately to alice
-    await token.withWallet(alice).methods.mint_to_private(alice.getAddress(), AMOUNT).send().wait();
+    await token.withWallet(alice).methods.mint_to_private(alice.getAddress(), alice.getAddress(), AMOUNT).send().wait();
 
     // This fails because of the nonce check
     await expect(
@@ -238,7 +238,7 @@ describe('Token - Single PXE', () => {
 
   it.skip('fails when transferring more tokens than available in private balance', async () => {
     // Mint 1 token privately to alice
-    await token.withWallet(alice).methods.mint_to_private(alice.getAddress(), AMOUNT).send().wait();
+    await token.withWallet(alice).methods.mint_to_private(alice.getAddress(), alice.getAddress(), AMOUNT).send().wait();
 
     // Try to transfer more tokens than available from private to public balance
     // TODO(#29): fix "Invalid arguments size: expected 3, got 2" error handling
@@ -255,7 +255,7 @@ describe('Token - Single PXE', () => {
     // Mint 2 tokens privately to alice
     await token
       .withWallet(alice)
-      .methods.mint_to_private(alice.getAddress(), AMOUNT * 2n)
+      .methods.mint_to_private(alice.getAddress(), alice.getAddress(), AMOUNT * 2n)
       .send()
       .wait();
 
@@ -285,7 +285,7 @@ describe('Token - Single PXE', () => {
     // Mint 2 tokens privately to alice
     await token
       .withWallet(alice)
-      .methods.mint_to_private(alice.getAddress(), AMOUNT * 2n)
+      .methods.mint_to_private(alice.getAddress(), alice.getAddress(), AMOUNT * 2n)
       .send()
       .wait();
 
