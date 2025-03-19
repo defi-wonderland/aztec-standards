@@ -47,9 +47,7 @@ unconstrained fn transfer_public_to_private_external_orchestration() {
     utils::check_private_balance(token_contract_address, recipient, amount);
 }
 
-#[test(should_fail)]
-// TODO(#33): error logs don't match because of raw calls
-// #[test(should_fail_with = "transfer not prepared")]
+#[test(should_fail_with = "transfer not prepared")]
 unconstrained fn transfer_public_to_private_transfer_not_prepared() {
     // Setup without account contracts. We are not using authwits here, so dummy accounts are enough
     let (env, token_contract_address, owner, _, amount) =
@@ -64,8 +62,7 @@ unconstrained fn transfer_public_to_private_transfer_not_prepared() {
         .call(&mut env.public());
 }
 
-#[test(should_fail)]
-// #[test(should_fail_with = "Assertion failed: attempt to subtract with underflow 'hi == high'")]
+#[test(should_fail_with = "Assertion failed: attempt to subtract with underflow 'hi == high'")]
 unconstrained fn transfer_public_to_private_failure_not_an_owner() {
     // Setup without account contracts. We are not using authwits here, so dummy accounts are enough
     let (env, token_contract_address, owner, not_owner, amount) =

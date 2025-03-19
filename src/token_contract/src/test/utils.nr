@@ -271,6 +271,7 @@ pub unconstrained fn get_private_balance(
     amt
 }
 
+// TODO: I think we don't need this anymore.
 // This is used if we need to add a token note manually, in the case where the note is not emitted in logs.
 pub unconstrained fn add_token_note(
     env: &mut TestEnvironment,

@@ -104,9 +104,7 @@ unconstrained fn transfer_private_to_public_multiple_notes_recursively() {
     utils::check_public_balance(token_contract_address, recipient, transfer_amount);
 }
 
-#[test(should_fail)]
-// TODO(#33): error logs don't match because of raw calls
-// #[test(should_fail_with = "Balance too low")]
+#[test(should_fail_with = "Balance too low")]
 unconstrained fn transfer_private_to_public_failure_more_than_balance() {
     // Setup without account contracts. We are not using authwits here, so dummy accounts are enough
     let (env, token_contract_address, owner, _, mint_amount) =
@@ -118,8 +116,7 @@ unconstrained fn transfer_private_to_public_failure_more_than_balance() {
         .call(&mut env.private());
 }
 
-#[test(should_fail)]
-// #[test(should_fail_with = "invalid nonce")]
+#[test(should_fail_with = "invalid nonce")]
 unconstrained fn transfer_private_to_public_failure_on_behalf_of_self_non_zero_nonce() {
     // Setup without account contracts. We are not using authwits here, so dummy accounts are enough
     let (env, token_contract_address, owner, _, mint_amount) =
@@ -131,8 +128,7 @@ unconstrained fn transfer_private_to_public_failure_on_behalf_of_self_non_zero_n
         .call(&mut env.private());
 }
 
-#[test(should_fail)]
-// #[test(should_fail_with = "Balance too low")]
+#[test(should_fail_with = "Balance too low")]
 unconstrained fn transfer_private_to_public_failure_on_behalf_of_other_more_than_balance() {
     let (env, token_contract_address, owner, recipient, mint_amount) =
         utils::setup_and_mint_to_private_without_minter(/* with_account_contracts */ true);
@@ -151,8 +147,7 @@ unconstrained fn transfer_private_to_public_failure_on_behalf_of_other_more_than
     transfer_private_to_public_call_interface.call(&mut env.private());
 }
 
-#[test(should_fail)]
-// #[test(should_fail_with = "Authorization not found for message hash")]
+#[test(should_fail_with = "Authorization not found for message hash")]
 unconstrained fn transfer_private_to_public_failure_on_behalf_of_other_invalid_designated_caller() {
     let (env, token_contract_address, owner, recipient, mint_amount) =
         utils::setup_and_mint_to_private_without_minter(/* with_account_contracts */ true);
@@ -171,8 +166,7 @@ unconstrained fn transfer_private_to_public_failure_on_behalf_of_other_invalid_d
     transfer_private_to_public_call_interface.call(&mut env.private());
 }
 
-#[test(should_fail)]
-// #[test(should_fail_with = "Authorization not found for message hash")]
+#[test(should_fail_with = "Authorization not found for message hash")]
 unconstrained fn transfer_private_to_public_failure_on_behalf_of_other_no_approval() {
     let (env, token_contract_address, owner, recipient, mint_amount) =
         utils::setup_and_mint_to_private_without_minter(/* with_account_contracts */ true);
