@@ -39,22 +39,23 @@ unconstrained fn mint_to_private_failures() {
 
     // Overflow recipient
 
-    // We have to do this in 2 steps because we have to pass in a valid u128
-    let amount_until_overflow: u128 = 1000;
-    let mint_amount: u128 = 2.pow_32(128) as u128 - amount_until_overflow;
+    // TODO: is there something like type(u128).max?
+    let two_pow_127 = 2.pow_32(127);
+    let two_pow_127_minus_one = two_pow_127 - 1;
+    let max_u128 = (two_pow_127_minus_one + two_pow_127_minus_one) as u128;
 
-    Token::at(token_contract_address).mint_to_private(recipient, recipient, mint_amount).call(
+    Token::at(token_contract_address).mint_to_private(recipient, recipient, max_u128).call(
         &mut env.private(),
     );
     //TODO(#9257): need to advance one block to "mine a block"
     env.advance_block_by(1);
 
     let mint_to_private_call_interface =
-        Token::at(token_contract_address).mint_to_private(owner, owner, amount_until_overflow);
+        Token::at(token_contract_address).mint_to_private(owner, owner, 1 as u128);
     env.assert_private_call_fails(mint_to_private_call_interface);
 
     utils::check_private_balance(token_contract_address, owner, 0);
-    utils::check_total_supply(token_contract_address, mint_amount);
+    utils::check_total_supply(token_contract_address, max_u128);
 
     // Overflow total supply
     let mint_to_private_call_interface =
