@@ -6,7 +6,7 @@ use aztec::{
         random::random,
         storage::storage_read,
     },
-    prelude::{AztecAddress, NoteHeader, NoteViewerOptions},
+    prelude::{AztecAddress, NoteViewerOptions},
     protocol_types::storage::map::derive_storage_slot_in_map,
     test::helpers::{cheatcodes, test_environment::TestEnvironment},
 };
@@ -284,12 +284,7 @@ pub unconstrained fn add_token_note(
         derive_storage_slot_in_map(Token::storage_layout().private_balances.slot, owner);
 
     env.add_note(
-        &mut UintNote {
-            value: amount,
-            owner: owner,
-            randomness: note_randomness,
-            header: NoteHeader::empty(),
-        },
+        UintNote { value: amount, owner: owner, randomness: note_randomness },
         balances_owner_slot,
         token_contract_address,
     );

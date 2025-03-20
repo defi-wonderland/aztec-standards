@@ -18,7 +18,7 @@ pub contract Token {
         assert_current_call_valid_authwit, assert_current_call_valid_authwit_public,
     };
 
-    use uint_note::uint_note::UintNote;
+    use uint_note::uint_note::{PartialUintNote, UintNote};
 
     // compression library
     use compressed_string::FieldCompressedString;
@@ -147,7 +147,7 @@ pub contract Token {
     fn transfer_private_to_hiding_point(
         from: AztecAddress,
         amount: U128,
-        hiding_point_slot: Field,
+        partial_note: PartialUintNote,
         nonce: Field,
     ) {
         _validate_from_private(&mut context, from, nonce);
@@ -162,7 +162,7 @@ pub contract Token {
             .emit(encode_and_encrypt_note(&mut context, from, from));
 
         Token::at(context.this_address())
-            .increase_hiding_point_balance(hiding_point_slot, amount)
+            .increase_hiding_point_balance(partial_note, amount)
             .enqueue(&mut context);
     }
 
@@ -262,8 +262,8 @@ pub contract Token {
 
     #[public]
     #[internal]
-    fn increase_hiding_point_balance(hiding_point_slot: Field, amount: U128) {
-        _increase_hiding_point_balance(&mut context, hiding_point_slot, amount);
+    fn increase_hiding_point_balance(partial_note: PartialUintNote, amount: U128) {
+        _increase_hiding_point_balance(&mut context, partial_note, amount);
     }
 
     /** ==========================================================
@@ -395,13 +395,13 @@ pub contract Token {
         context: &mut PublicContext,
         public_balances: Map<AztecAddress, PublicMutable<U128, &mut PublicContext>, &mut PublicContext>,
         from: AztecAddress,
-        hiding_point_slot: Field,
+        partial_note: PartialUintNote,
         amount: U128,
     ) {
         // Decreases the balance of the public balance of `from` by `amount`
         _decrease_public_balance(public_balances, from, amount);
         // Increases the balance of the hiding point
-        _increase_hiding_point_balance(context, hiding_point_slot, amount);
+        _increase_hiding_point_balance(context, partial_note, amount);
     }
 
     /// Decreases the balance of the private balance of `account` by `amount`
@@ -459,13 +459,10 @@ pub contract Token {
     #[contract_library_method]
     fn _increase_hiding_point_balance(
         context: &mut PublicContext,
-        hiding_point_slot: Field,
+        partial_note: PartialUintNote,
         amount: U128,
     ) {
-        let finalization_payload =
-            UintNote::finalization_payload().new(context, hiding_point_slot, amount);
-        // NOTE: emitting here because expects UintNoteFinalizationPayload to exist.
-        finalization_payload.emit();
+        partial_note.complete(amount, context);
     }
 
     #[contract_library_method]
@@ -496,11 +493,11 @@ pub contract Token {
     fn _finalize_mint_to_private(
         context: &mut PublicContext,
         total_supply: PublicMutable<U128, &mut PublicContext>,
-        hiding_point_slot: Field,
+        partial_note: PartialUintNote,
         amount: U128,
     ) {
         _increase_total_supply(total_supply, amount);
-        _increase_hiding_point_balance(context, hiding_point_slot, amount);
+        _increase_hiding_point_balance(context, partial_note, amount);
     }
 
     // Increases the given storage pointer `total_supply` by `amount`
@@ -519,14 +516,8 @@ pub contract Token {
 
     // TODO: this will change when we upgrade to v81
     #[contract_library_method]
-    fn _store_payload_in_storage(
-        context: &mut PublicContext,
-        slot: Field,
-        point: [Field; 3],
-        setup_log: [Field; 9],
-    ) {
-        context.storage_write(slot, point);
-        context.storage_write(slot + aztec::protocol_types::point::POINT_LENGTH as Field, setup_log);
+    fn _store_payload_in_storage(context: &mut PublicContext, partial_note: PartialUintNote) {
+        context.storage_write(partial_note.commitment(), true);
     }
 
     #[contract_library_method]
@@ -535,32 +526,16 @@ pub contract Token {
         private_balances: Map<AztecAddress, BalanceSet<&mut PrivateContext>, &mut PrivateContext>,
         from: AztecAddress, // sender of the tag: TODO(#9887): this is not great?
         to: AztecAddress,
-    ) -> Field {
-        let to_note_slot = private_balances.at(to).set.storage_slot;
+    ) -> PartialUintNote {
+        let partial_note = UintNote::partial(
+            to,
+            private_balances.at(to).set.storage_slot,
+            context,
+            to,
+            from,
+        );
 
-        // We create a setup payload with unpopulated/zero `amount` for 'to'
-        let note_randomness = unsafe { random() };
-        let note_setup_payload = UintNote::setup_payload().new(to, note_randomness, to_note_slot);
-
-        // We get the keys and encrypt the log of the note
-        let setup_log = note_setup_payload.encrypt_log(context, to, from);
-
-        let hiding_point_slot = note_setup_payload.hiding_point.x;
-
-        // We don't need to perform a check that the value overwritten by `_store_point_in_transient_storage_unsafe`
-        // is zero because the slot is the x-coordinate of the hiding point and hence we could only overwrite
-        // the value in the slot with the same value. This makes usage of the `unsafe` method safe.
-
-        let self = Token::at(context.this_address());
-        self
-            .store_payload_in_storage(
-                hiding_point_slot,
-                note_setup_payload.hiding_point.serialize(),
-                setup_log,
-            )
-            .enqueue(context);
-
-        hiding_point_slot
+        partial_note
     }
 
     /** ==========================================================
