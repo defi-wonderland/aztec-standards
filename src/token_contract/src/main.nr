@@ -18,7 +18,7 @@ pub contract Token {
         assert_current_call_valid_authwit, assert_current_call_valid_authwit_public,
     };
 
-    use uint_note::uint_note::{UintNote, PartialUintNote};
+    use uint_note::uint_note::{PartialUintNote, UintNote};
     // compression library
     use compressed_string::FieldCompressedString;
 
@@ -326,12 +326,7 @@ pub contract Token {
         let minter = storage.minter.read();
         assert(minter.eq(context.msg_sender()), "caller is not minter");
 
-        _finalize_mint_to_private(
-            &mut context,
-            storage.total_supply,
-            partial_note,
-            amount,
-        );
+        _finalize_mint_to_private(&mut context, storage.total_supply, partial_note, amount);
     }
 
     #[public]
@@ -509,7 +504,7 @@ pub contract Token {
     // Decreases the given storage pointer `total_supply` by `amount`
     #[contract_library_method]
     fn _decrease_total_supply(total_supply: PublicMutable<u128, &mut PublicContext>, amount: u128) {
-        let new_supply = total_supply.read()- amount;
+        let new_supply = total_supply.read() - amount;
         total_supply.write(new_supply);
     }
 
