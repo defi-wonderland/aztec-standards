@@ -10,8 +10,14 @@ import {
   Contract,
   AztecAddress,
   AccountWalletWithSecretKey,
+  AccountManager,
+  AccountInterface,
 } from '@aztec/aztec.js';
-import { createAccount, getInitialTestAccountsWallets } from '@aztec/accounts/testing';
+import {
+  deployFundedSchnorrAccount,
+  deployFundedSchnorrAccounts,
+  getInitialTestAccountsWallets,
+} from '@aztec/accounts/testing';
 import { AMOUNT, createPXE, expectTokenBalances, expectUintNote, logger, setupSandbox, wad } from './utils.js';
 
 export async function deployTokenWithInitialSupply(deployer: AccountWallet) {
@@ -465,8 +471,8 @@ describe('Token - Multi PXE', () => {
   let alicePXE: PXE;
   let bobPXE: PXE;
 
-  let aliceWallet: AccountWalletWithSecretKey;
-  let bobWallet: AccountWalletWithSecretKey;
+  let aliceWallet: AccountManager;
+  let bobWallet: AccountManager;
 
   let alice: AccountWallet;
   let bob: AccountWallet;
@@ -478,22 +484,23 @@ describe('Token - Multi PXE', () => {
     bobPXE = await createPXE(1);
 
     // TODO: assert that the used PXEs are actually separate instances?
+    aliceWallet = await deployFundedSchnorrAccount(alicePXE, { secret: Fr.random(), salt: Fr.random() });
+    bobWallet = await deployFundedSchnorrAccount(bobPXE, { secret: Fr.random(), salt: Fr.random() });
 
-    aliceWallet = await createAccount(alicePXE);
-    bobWallet = await createAccount(bobPXE);
-
-    alice = aliceWallet;
-    bob = bobWallet;
+    alice = await aliceWallet.getWallet();
+    bob = await bobWallet.getWallet();
   });
 
   beforeEach(async () => {
     token = (await deployTokenWithMinter(alice)) as TokenContract;
-
     await bobPXE.registerContract(token);
 
     // alice knows bob
     // TODO: review this, alice shouldn't need to register bob's **secrets**!
-    await alicePXE.registerAccount(bobWallet.getSecretKey(), bob.getCompleteAddress().partialAddress);
+    await alicePXE.registerAccount(
+      (await bobWallet.getWallet()).getSecretKey(),
+      bob.getCompleteAddress().partialAddress,
+    );
     alicePXE.registerSender(bob.getAddress());
     alice.setScopes([
       alice.getAddress(),
@@ -501,14 +508,13 @@ describe('Token - Multi PXE', () => {
       // token.address,
     ]);
     // bob knows alice
-    await bobPXE.registerAccount(aliceWallet.getSecretKey(), alice.getCompleteAddress().partialAddress);
+    await bobPXE.registerAccount(
+      (await aliceWallet.getWallet()).getSecretKey(),
+      alice.getCompleteAddress().partialAddress,
+    );
     bobPXE.registerSender(alice.getAddress());
-
-    bob.setScopes([
-      bob.getAddress(),
-      alice.getAddress(),
-      // token.address
-    ]);
+    // TODO: review this!
+    bob.setScopes([bob.getAddress(), alice.getAddress()]);
   });
 
   it('transfers', async () => {
