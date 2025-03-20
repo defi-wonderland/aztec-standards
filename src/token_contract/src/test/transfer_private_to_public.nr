@@ -10,7 +10,7 @@ unconstrained fn transfer_private_to_public_on_behalf_of_self() {
     let (env, token_contract_address, owner, _, mint_amount) =
         utils::setup_and_mint_to_private_without_minter(/* with_account_contracts */ false);
 
-    let transfer_private_to_public_amount = mint_amount / U128::from_integer(10);
+    let transfer_private_to_public_amount = mint_amount / (10 as u128);
     Token::at(token_contract_address)
         .transfer_private_to_public(owner, owner, transfer_private_to_public_amount, 0)
         .call(&mut env.private());
@@ -31,7 +31,7 @@ unconstrained fn transfer_private_to_public_on_behalf_of_other() {
     let (env, token_contract_address, owner, recipient, mint_amount) =
         utils::setup_and_mint_to_private_without_minter(/* with_account_contracts */ true);
 
-    let transfer_private_to_public_amount = mint_amount / U128::from_integer(10);
+    let transfer_private_to_public_amount = mint_amount / (10 as u128);
     let transfer_private_to_public_call_interface = Token::at(token_contract_address)
         .transfer_private_to_public(owner, recipient, transfer_private_to_public_amount, 0);
     authwit_cheatcodes::add_private_authwit_from_call_interface(
@@ -61,9 +61,9 @@ unconstrained fn transfer_private_to_public_multiple_notes_recursively() {
     let (env, token_contract_address, owner, recipient, minter) =
         utils::setup_with_minter(/* with_account_contracts */ true);
 
-    let notes_amount = U128::from_integer(1000);
+    let notes_amount = 1000 as u128;
     let notes_count = 12;
-    let total_amount = notes_amount * U128::from_integer(notes_count);
+    let total_amount = notes_amount * notes_count;
     env.impersonate(minter);
     for i in 0..notes_count {
         utils::mint_to_private(env, token_contract_address, owner, notes_amount);
@@ -72,7 +72,7 @@ unconstrained fn transfer_private_to_public_multiple_notes_recursively() {
     // Transfer tokens
     // Transfer will require 11 notes with change, which requires 2 recursive calls: 2 + 8 + 1
     env.impersonate(owner);
-    let transfer_amount = total_amount - notes_amount - U128::from_integer(1);
+    let transfer_amount = total_amount - notes_amount - (1 as u128);
     let transfer_private_from_call_interface = Token::at(token_contract_address)
         .transfer_private_to_public(owner, recipient, transfer_amount, 0);
     transfer_private_from_call_interface.call(&mut env.private());
@@ -84,10 +84,7 @@ unconstrained fn transfer_private_to_public_multiple_notes_recursively() {
         utils::get_private_balance_notes(owner, 0);
     assert(final_owner_notes.len() == 2, "Incorrect note count"); // 1000 UintNote x1 and 1 UintNote x1
     assert(final_owner_notes.get(0).get_value() == notes_amount, "Incorrect note amount");
-    assert(
-        final_owner_notes.get(1).get_value() == U128::from_integer(1),
-        "Incorrect note change amount",
-    );
+    assert(final_owner_notes.get(1).get_value() == (1 as u128), "Incorrect note change amount");
 
     // Check that the notes generated to the recipient are correct
     env.impersonate(token_contract_address);
@@ -110,7 +107,7 @@ unconstrained fn transfer_private_to_public_failure_more_than_balance() {
     let (env, token_contract_address, owner, _, mint_amount) =
         utils::setup_and_mint_to_private_without_minter(/* with_account_contracts */ false);
 
-    let transfer_private_to_public_amount = mint_amount + U128::one();
+    let transfer_private_to_public_amount = mint_amount + (1 as u128);
     Token::at(token_contract_address)
         .transfer_private_to_public(owner, owner, transfer_private_to_public_amount, 0)
         .call(&mut env.private());
@@ -122,7 +119,7 @@ unconstrained fn transfer_private_to_public_failure_on_behalf_of_self_non_zero_n
     let (env, token_contract_address, owner, _, mint_amount) =
         utils::setup_and_mint_to_private_without_minter(/* with_account_contracts */ false);
 
-    let transfer_private_to_public_amount = mint_amount + U128::one();
+    let transfer_private_to_public_amount = mint_amount + (1 as u128);
     Token::at(token_contract_address)
         .transfer_private_to_public(owner, owner, transfer_private_to_public_amount, random())
         .call(&mut env.private());
@@ -133,7 +130,7 @@ unconstrained fn transfer_private_to_public_failure_on_behalf_of_other_more_than
     let (env, token_contract_address, owner, recipient, mint_amount) =
         utils::setup_and_mint_to_private_without_minter(/* with_account_contracts */ true);
 
-    let transfer_private_to_public_amount = mint_amount + U128::one();
+    let transfer_private_to_public_amount = mint_amount + (1 as u128);
     let transfer_private_to_public_call_interface = Token::at(token_contract_address)
         .transfer_private_to_public(owner, recipient, transfer_private_to_public_amount, 0);
     authwit_cheatcodes::add_private_authwit_from_call_interface(
@@ -152,7 +149,7 @@ unconstrained fn transfer_private_to_public_failure_on_behalf_of_other_invalid_d
     let (env, token_contract_address, owner, recipient, mint_amount) =
         utils::setup_and_mint_to_private_without_minter(/* with_account_contracts */ true);
 
-    let transfer_private_to_public_amount = mint_amount + U128::one();
+    let transfer_private_to_public_amount = mint_amount + (1 as u128);
     let transfer_private_to_public_call_interface = Token::at(token_contract_address)
         .transfer_private_to_public(owner, recipient, transfer_private_to_public_amount, 0);
     authwit_cheatcodes::add_private_authwit_from_call_interface(
@@ -171,7 +168,7 @@ unconstrained fn transfer_private_to_public_failure_on_behalf_of_other_no_approv
     let (env, token_contract_address, owner, recipient, mint_amount) =
         utils::setup_and_mint_to_private_without_minter(/* with_account_contracts */ true);
 
-    let transfer_private_to_public_amount = mint_amount + U128::one();
+    let transfer_private_to_public_amount = mint_amount + (1 as u128);
     let transfer_private_to_public_call_interface = Token::at(token_contract_address)
         .transfer_private_to_public(owner, recipient, transfer_private_to_public_amount, 0);
     // Impersonate recipient

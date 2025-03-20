@@ -7,7 +7,7 @@ unconstrained fn mint_to_private_success() {
         utils::setup_with_minter(/* with_account_contracts */ false);
 
     env.impersonate(minter);
-    let mint_amount = U128::from_integer(10_000);
+    let mint_amount: u128 = 10_000;
     Token::at(token_contract_address).mint_to_private(owner, owner, mint_amount).call(
         &mut env.private(),
     );
@@ -27,21 +27,21 @@ unconstrained fn mint_to_private_failures() {
         utils::setup_with_minter(/* with_account_contracts */ false);
 
     // As non-minter
-    let mint_amount = U128::from_integer(10_000);
+    let mint_amount: u128 = 10_000;
     env.impersonate(recipient);
     let mint_to_private_call_interface =
         Token::at(token_contract_address).mint_to_private(owner, owner, mint_amount);
     env.assert_private_call_fails(mint_to_private_call_interface);
 
-    utils::check_private_balance(token_contract_address, owner, U128::zero());
+    utils::check_private_balance(token_contract_address, owner, 0 as u128);
 
     env.impersonate(minter);
 
     // Overflow recipient
 
-    // We have to do this in 2 steps because we have to pass in a valid U128
-    let amount_until_overflow = U128::from_integer(1000);
-    let mint_amount = U128::from_integer(2.pow_32(128) - amount_until_overflow.to_integer());
+    // We have to do this in 2 steps because we have to pass in a valid u128
+    let amount_until_overflow: u128 = 1000;
+    let mint_amount: u128 = 2.pow_32(128) as u128 - amount_until_overflow;
 
     Token::at(token_contract_address).mint_to_private(recipient, recipient, mint_amount).call(
         &mut env.private(),
@@ -53,7 +53,7 @@ unconstrained fn mint_to_private_failures() {
         Token::at(token_contract_address).mint_to_private(owner, owner, amount_until_overflow);
     env.assert_private_call_fails(mint_to_private_call_interface);
 
-    utils::check_private_balance(token_contract_address, owner, U128::zero());
+    utils::check_private_balance(token_contract_address, owner, 0);
     utils::check_total_supply(token_contract_address, mint_amount);
 
     // Overflow total supply
@@ -61,5 +61,5 @@ unconstrained fn mint_to_private_failures() {
         Token::at(token_contract_address).mint_to_private(owner, owner, mint_amount);
     env.assert_private_call_fails(mint_to_private_call_interface);
 
-    utils::check_private_balance(token_contract_address, owner, U128::zero());
+    utils::check_private_balance(token_contract_address, owner, 0);
 }
