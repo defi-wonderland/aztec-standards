@@ -12,31 +12,7 @@ import {
   IntentAction,
 } from '@aztec/aztec.js';
 import { getInitialTestAccountsWallets } from '@aztec/accounts/testing';
-import { AMOUNT, createPXE, expectTokenBalances, expectUintNote, setupSandbox, wad } from './utils.js';
-
-export async function deployTokenWithInitialSupply(deployer: AccountWallet) {
-  const contract = await Contract.deploy(
-    deployer,
-    TokenContractArtifact,
-    ['PrivateToken', 'PT', 18, 0, deployer.getAddress()],
-    'constructor_with_initial_supply',
-  )
-    .send()
-    .deployed();
-  return contract;
-}
-
-export async function deployTokenWithMinter(deployer: AccountWallet) {
-  const contract = await Contract.deploy(
-    deployer,
-    TokenContractArtifact,
-    ['PrivateToken', 'PT', 18, deployer.getAddress()],
-    'constructor_with_minter',
-  )
-    .send()
-    .deployed();
-  return contract;
-}
+import { AMOUNT, createPXE, deployTokenWithMinter, expectTokenBalances, expectUintNote, setupSandbox, wad } from './utils.js';
 
 describe('Token - Single PXE', () => {
   let pxe: PXE;

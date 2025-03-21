@@ -7,8 +7,10 @@ import {
   AccountWallet,
   createPXEClient,
   FieldLike,
+  Contract,
 } from '@aztec/aztec.js';
 import { TokenContract } from '../../artifacts/Token.js';
+import { TokenContractArtifact } from '@aztec/noir-contracts.js/Token';
 
 export const logger = createLogger('aztec:aztec-standards');
 
@@ -24,6 +26,30 @@ export const createPXE = async (id: number = 0) => {
 export const setupSandbox = async () => {
   return createPXE();
 };
+
+export async function deployTokenWithInitialSupply(deployer: AccountWallet) {
+  const contract = await Contract.deploy(
+    deployer,
+    TokenContractArtifact,
+    ['PrivateToken', 'PT', 18, 0, deployer.getAddress()],
+    'constructor_with_initial_supply',
+  )
+    .send()
+    .deployed();
+  return contract;
+}
+
+export async function deployTokenWithMinter(deployer: AccountWallet) {
+  const contract = await Contract.deploy(
+    deployer,
+    TokenContractArtifact,
+    ['PrivateToken', 'PT', 18, deployer.getAddress()],
+    'constructor_with_minter',
+  )
+    .send()
+    .deployed();
+  return contract;
+}
 
 export const expectUintNote = (note: UniqueNote, amount: bigint, owner: AztecAddress) => {
   expect(note.note.items[0]).toEqual(new Fr(owner.toBigInt()))
