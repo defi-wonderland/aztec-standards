@@ -42,6 +42,13 @@ pub contract Token {
         minter: PublicImmutable<AztecAddress, Context>,
     }
 
+    /// @notice Initializes the token with an initial supply
+    /// @dev Since this constructor don't set a minter address the mint functions will be disabled
+    /// @param name The name of the token
+    /// @param symbol The symbol of the token
+    /// @param decimals The number of decimals of the token
+    /// @param initial_supply The initial supply of the token
+    /// @param to The address to mint the initial supply to
     #[public]
     #[initializer]
     fn constructor_with_initial_supply(
@@ -59,6 +66,11 @@ pub contract Token {
         _increase_total_supply(storage.total_supply, initial_supply);
     }
 
+    /// @notice Initializes the token with a minter
+    /// @param name The name of the token
+    /// @param symbol The symbol of the token
+    /// @param decimals The number of decimals of the token
+    /// @param minter The address of the minter
     #[public]
     #[initializer]
     fn constructor_with_minter(name: str<31>, symbol: str<31>, decimals: u8, minter: AztecAddress) {
@@ -73,6 +85,12 @@ pub contract Token {
     * ========================= PRIVATE =========================
     * ======================================================== */
 
+    /// @notice Transfer tokens from private to public balance
+    /// @dev Spends notes, emits a new note with any remaining change, and enqueues a public call.
+    /// @param from The address of the sender
+    /// @param to The address of the recipient
+    /// @param amount The amount of tokens to transfer
+    /// @param nonce The nonce of the transaction
     #[private]
     fn transfer_private_to_public(
         from: AztecAddress,
@@ -482,7 +500,10 @@ pub contract Token {
         total_supply.write(new_supply);
     }
 
-    // Decreases the given storage pointer `total_supply` by `amount`
+    /// @notice Decreases the given storage pointer `total_supply` by `amount`
+    /// @dev
+    /// @param total_supply The storage pointer to the total supply
+    /// @param amount The amount to decrease the total supply by
     #[contract_library_method]
     fn _decrease_total_supply(total_supply: PublicMutable<u128, &mut PublicContext>, amount: u128) {
         let new_supply = total_supply.read() - amount;
