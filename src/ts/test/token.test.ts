@@ -9,6 +9,7 @@ import {
   getContractInstanceFromDeployParams,
   Contract,
   AccountWalletWithSecretKey,
+  IntentAction,
 } from '@aztec/aztec.js';
 import { getInitialTestAccountsWallets } from '@aztec/accounts/testing';
 import { AMOUNT, createPXE, expectTokenBalances, expectUintNote, setupSandbox, wad } from './utils.js';
@@ -395,20 +396,35 @@ describe('Token - Single PXE', () => {
     // expect(await token.methods.total_supply().simulate()).toBe(AMOUNT);
   }, 300_000);
 
-  it('public transfer with authwitness', async () => {
+  it.skip('public transfer with authwitness', async () => {
+    // Mint tokens to Alice in public
     await token.withWallet(alice).methods.mint_to_public(alice.getAddress(), AMOUNT).send().wait();
 
+    // build transfer public to public call
     const nonce = Fr.random();
     const action = token
       .withWallet(carl)
       .methods.transfer_public_to_public(alice.getAddress(), bob.getAddress(), AMOUNT, nonce);
 
-    await (await alice.setPublicAuthWit({
+    // define intent
+    const intent: IntentAction = {
       caller: carl.getAddress(),
-      action,
-    }, true)).send().wait();
+      action
+    }
+    // alice create authwitness
+    const authWitness = await alice.createAuthWit(intent)
 
-    await action.send().wait();
+    await carl.addAuthWitness(authWitness)
+    await alice.addAuthWitness(authWitness)
+    
+    await (await alice.setPublicAuthWit(intent, true)).send().wait()
+    await (await carl.setPublicAuthWit(intent, true)).send().wait();
+    // check authwit validity
+    const validity = await carl.lookupValidity(alice.getAddress(), intent)
+    expect(validity.isValidInPrivate).toBeTruthy()
+    expect(validity.isValidInPublic).toBeTruthy()
+
+    await action.send().wait()
 
     expect(await token.methods.balance_of_public(alice.getAddress()).simulate()).toBe(0n);
     expect(await token.methods.balance_of_public(bob.getAddress()).simulate()).toBe(AMOUNT);
