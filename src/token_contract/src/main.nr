@@ -95,7 +95,7 @@ pub contract Token {
     }
 
     #[private]
-    fn transfer_private_to_public_with_hiding_point(
+    fn transfer_private_to_public_with_commitment(
         from: AztecAddress,
         to: AztecAddress,
         amount: u128,
@@ -114,9 +114,9 @@ pub contract Token {
 
         Token::at(context.this_address()).increase_public_balance(to, amount).enqueue(&mut context);
 
-        let partial_note =
+        let commitment =
             _prepare_transfer_public_to_private(&mut context, storage.private_balances, from, to);
-        partial_note
+        commitment
     }
 
     #[private]
@@ -143,10 +143,10 @@ pub contract Token {
     }
 
     #[private]
-    fn transfer_private_to_hiding_point(
+    fn transfer_private_to_commitment(
         from: AztecAddress,
         amount: u128,
-        partial_note: PartialUintNote,
+        commitment: PartialUintNote,
         nonce: Field,
     ) {
         _validate_from_private(&mut context, from, nonce);
@@ -160,9 +160,9 @@ pub contract Token {
         )
             .emit(encode_and_encrypt_note(&mut context, from, from));
 
-        Token::at(context.this_address())
-            .increase_hiding_point_balance(partial_note, amount)
-            .enqueue(&mut context);
+        Token::at(context.this_address()).increase_commitment_balance(commitment, amount).enqueue(
+            &mut context,
+        );
     }
 
     #[private]
@@ -211,12 +211,12 @@ pub contract Token {
 
     /// Finalizes a transfer of token `amount` from public balance of `from` to a private balance of `to`.
     /// The transfer must be prepared by calling `prepare_transfer_public_to_private` first and the resulting
-    /// `hiding_point_slot` must be passed as an argument to this function.
+    /// `commitment` must be passed as an argument to this function.
     #[public]
     fn finalize_transfer_public_to_private(
         from: AztecAddress,
         amount: u128,
-        partial_note: PartialUintNote,
+        commitment: PartialUintNote,
         nonce: Field,
     ) {
         _validate_from_public(&mut context, from, nonce);
@@ -224,7 +224,7 @@ pub contract Token {
             &mut context,
             storage.public_balances,
             from,
-            partial_note,
+            commitment,
             amount,
         );
     }
@@ -249,8 +249,8 @@ pub contract Token {
 
     #[public]
     #[internal]
-    fn increase_hiding_point_balance(partial_note: PartialUintNote, amount: u128) {
-        _increase_hiding_point_balance(&mut context, partial_note, amount);
+    fn increase_commitment_balance(commitment: PartialUintNote, amount: u128) {
+        _increase_commitment_balance(&mut context, commitment, amount);
     }
 
     /** ==========================================================
@@ -290,12 +290,12 @@ pub contract Token {
         let minter = storage.minter.read();
         assert(minter.eq(context.msg_sender()), "caller is not minter");
 
-        // We prepare the partial note to which we'll "send" the minted amount.
-        let hiding_point_slot =
+        // We prepare the commitment to which we'll "send" the minted amount.
+        let commitment =
             _prepare_transfer_public_to_private(&mut context, storage.private_balances, minter, to);
 
         Token::at(context.this_address())
-            ._finalize_mint_to_private_unsafe(amount, hiding_point_slot)
+            ._finalize_mint_to_private_unsafe(amount, commitment)
             .enqueue(&mut context);
     }
 
@@ -309,22 +309,17 @@ pub contract Token {
     }
 
     #[public]
-    fn finalize_mint_to_private(amount: u128, partial_note: PartialUintNote) {
+    fn finalize_mint_to_private(amount: u128, commitment: PartialUintNote) {
         let minter = storage.minter.read();
         assert(minter.eq(context.msg_sender()), "caller is not minter");
 
-        _finalize_mint_to_private(&mut context, storage.total_supply, partial_note, amount);
+        _finalize_mint_to_private(&mut context, storage.total_supply, commitment, amount);
     }
 
     #[public]
     #[internal]
-    fn _finalize_mint_to_private_unsafe(amount: u128, hiding_point_slot: PartialUintNote) {
-        _finalize_mint_to_private(
-            &mut context,
-            storage.total_supply,
-            hiding_point_slot,
-            amount,
-        );
+    fn _finalize_mint_to_private_unsafe(amount: u128, commitment: PartialUintNote) {
+        _finalize_mint_to_private(&mut context, storage.total_supply, commitment, amount);
     }
 
     /** ==========================================================
@@ -370,13 +365,13 @@ pub contract Token {
         context: &mut PublicContext,
         public_balances: Map<AztecAddress, PublicMutable<u128, &mut PublicContext>, &mut PublicContext>,
         from: AztecAddress,
-        partial_note: PartialUintNote,
+        commitment: PartialUintNote,
         amount: u128,
     ) {
         // Decreases the balance of the public balance of `from` by `amount`
         _decrease_public_balance(public_balances, from, amount);
-        // Increases the balance of the hiding point
-        _increase_hiding_point_balance(context, partial_note, amount);
+        // Increases the balance of the commitment
+        _increase_commitment_balance(context, commitment, amount);
     }
 
     /// Decreases the balance of the private balance of `account` by `amount`
@@ -430,14 +425,13 @@ pub contract Token {
         public_balances.at(from).write(new_balance);
     }
 
-    // TODO: this will change when we upgrade to v81
     #[contract_library_method]
-    fn _increase_hiding_point_balance(
+    fn _increase_commitment_balance(
         context: &mut PublicContext,
-        partial_note: PartialUintNote,
+        commitment: PartialUintNote,
         amount: u128,
     ) {
-        partial_note.complete(amount, context);
+        commitment.complete(amount, context);
     }
 
     #[contract_library_method]
@@ -468,11 +462,11 @@ pub contract Token {
     fn _finalize_mint_to_private(
         context: &mut PublicContext,
         total_supply: PublicMutable<u128, &mut PublicContext>,
-        partial_note: PartialUintNote,
+        commitment: PartialUintNote,
         amount: u128,
     ) {
         _increase_total_supply(total_supply, amount);
-        _increase_hiding_point_balance(context, partial_note, amount);
+        _increase_commitment_balance(context, commitment, amount);
     }
 
     // Increases the given storage pointer `total_supply` by `amount`
@@ -491,8 +485,8 @@ pub contract Token {
 
     // TODO: this will change when we upgrade to v81
     #[contract_library_method]
-    fn _store_payload_in_storage(context: &mut PublicContext, partial_note: PartialUintNote) {
-        context.storage_write(partial_note.commitment(), true);
+    fn _store_payload_in_storage(context: &mut PublicContext, commitment: PartialUintNote) {
+        context.storage_write(commitment.commitment(), true);
     }
 
     #[contract_library_method]
@@ -502,7 +496,7 @@ pub contract Token {
         from: AztecAddress, // sender of the tag: TODO(#9887): this is not great?
         to: AztecAddress,
     ) -> PartialUintNote {
-        let partial_note = UintNote::partial(
+        let commitment = UintNote::partial(
             to,
             private_balances.at(to).set.storage_slot,
             context,
@@ -510,7 +504,7 @@ pub contract Token {
             from,
         );
 
-        partial_note
+        commitment
     }
 
     /** ==========================================================
