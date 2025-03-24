@@ -1,5 +1,5 @@
 [package]
-name = "balance_set"
+name = "uint253"
 authors = [""]
 compiler_version = ">=1.0.0"
 type = "lib"
@@ -7,4 +7,3 @@ type = "lib"
 [dependencies]
 aztec = { git = "https://github.com/AztecProtocol/aztec-packages/", tag = "v0.82.2", directory = "noir-projects/aztec-nr/aztec" }
 uint_note = { git = "https://github.com/AztecProtocol/aztec-packages/", tag = "v0.82.2", directory = "noir-projects/aztec-nr/uint-note" }
-uint253 = { path = "../uint253" }

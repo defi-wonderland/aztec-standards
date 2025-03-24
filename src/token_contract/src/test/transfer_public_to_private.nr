@@ -1,5 +1,5 @@
 use crate::{test::utils, Token};
-use dep::uint_note::uint_note::{PartialUintNote, UintNote};
+use dep::uint_note::uint_note::{PartialU253Note, UintNote};
 use aztec::oracle::random::random;
 use std::test::OracleMock;
 
@@ -33,7 +33,7 @@ unconstrained fn transfer_public_to_private_external_orchestration() {
     let _ = OracleMock::mock("getRandomField").returns(note_randomness);
 
     // We prepare the transfer
-    let partial_note: PartialUintNote = Token::at(token_contract_address)
+    let partial_note: PartialU253Note = Token::at(token_contract_address)
         .prepare_transfer_public_to_private(owner, recipient)
         .call(&mut env.private());
 
@@ -73,7 +73,7 @@ unconstrained fn transfer_public_to_private_failure_not_an_owner() {
     // (For this specific test we could set a random value for the commitment and not do the call to `prepare...`
     // as the token balance check is before we use the value but that would made the test less robust against changes
     // in the contract.)
-    let partial_note: PartialUintNote = Token::at(token_contract_address)
+    let partial_note: PartialU253Note = Token::at(token_contract_address)
         .prepare_transfer_public_to_private(owner, not_owner)
         .call(&mut env.private());
 

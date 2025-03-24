@@ -1,8 +1,12 @@
 use crate::test::utils;
 use crate::Token;
-use dep::uint_note::uint_note::{PartialUintNote, UintNote};
 use authwit::cheatcodes as authwit_cheatcodes;
 use aztec::oracle::random::random;
+use uint253::{
+    uint253::U253,
+    uint253_note::U253Note,
+    uint253_note::PartialU253Note,
+};
 
 #[test]
 unconstrained fn transfer_private_to_commitment() {
@@ -10,11 +14,11 @@ unconstrained fn transfer_private_to_commitment() {
         utils::setup_and_mint_to_private_without_minter(/* with_account_contracts */ false);
 
     utils::check_private_balance(token_contract_address, owner, mint_amount);
-    utils::check_private_balance(token_contract_address, recipient, 0 as u128);
+    utils::check_private_balance(token_contract_address, recipient, U253::zero());
 
     // Prepare commitment
     env.impersonate(recipient);
-    let commitment: PartialUintNote = Token::at(token_contract_address)
+    let commitment: PartialU253Note = Token::at(token_contract_address)
         .prepare_transfer_public_to_private(recipient, recipient)
         .call(&mut env.private());
 
@@ -27,7 +31,7 @@ unconstrained fn transfer_private_to_commitment() {
     env.advance_block_by(1);
 
     // Check balances
-    utils::check_private_balance(token_contract_address, owner, 0 as u128);
+    utils::check_private_balance(token_contract_address, owner, U253::zero());
     utils::check_private_balance(token_contract_address, recipient, transfer_amount);
 }
 
@@ -37,13 +41,13 @@ unconstrained fn transfer_private_to_commitment_on_behalf_of_other() {
         utils::setup_and_mint_to_private_without_minter(/* with_account_contracts */ true);
 
     utils::check_private_balance(token_contract_address, owner, mint_amount);
-    utils::check_private_balance(token_contract_address, recipient, 0 as u128);
+    utils::check_private_balance(token_contract_address, recipient, U253::zero());
 
     let transfer_amount = mint_amount;
 
     // Prepare commitment
     env.impersonate(recipient);
-    let commitment: PartialUintNote = Token::at(token_contract_address)
+    let commitment: PartialU253Note = Token::at(token_contract_address)
         .prepare_transfer_public_to_private(recipient, recipient)
         .call(&mut env.private());
     env.advance_block_by(1);
@@ -63,7 +67,7 @@ unconstrained fn transfer_private_to_commitment_on_behalf_of_other() {
     env.advance_block_by(1);
 
     // Check balances
-    utils::check_private_balance(token_contract_address, owner, 0 as u128);
+    utils::check_private_balance(token_contract_address, owner, U253::zero());
     utils::check_private_balance(token_contract_address, recipient, transfer_amount);
 }
 
@@ -74,7 +78,7 @@ unconstrained fn transfer_private_to_commitment_non_zero_nonce() {
 
     // Prepare commitment
     env.impersonate(recipient);
-    let commitment: PartialUintNote = Token::at(token_contract_address)
+    let commitment: PartialU253Note = Token::at(token_contract_address)
         .prepare_transfer_public_to_private(recipient, recipient)
         .call(&mut env.private());
 

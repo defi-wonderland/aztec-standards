@@ -18,7 +18,6 @@ pub contract Token {
         assert_current_call_valid_authwit, assert_current_call_valid_authwit_public,
     };
 
-    use uint_note::uint_note::{PartialUintNote, UintNote};
     // compression library
     use compressed_string::FieldCompressedString;
 
@@ -26,6 +25,12 @@ pub contract Token {
     use aztec::encrypted_logs::log_assembly_strategies::default_aes128::note::encode_and_encrypt_note;
 
     use balance_set::balance_set::BalanceSet;
+
+    use uint253::{
+        uint253::U253,
+        uint253_note::U253Note,
+        uint253_note::PartialU253Note,
+    };
 
     global INITIAL_TRANSFER_CALL_MAX_NOTES: u32 = 2;
     global RECURSIVE_TRANSFER_CALL_MAX_NOTES: u32 = 8;
@@ -37,8 +42,8 @@ pub contract Token {
         symbol: PublicImmutable<FieldCompressedString, Context>,
         decimals: PublicImmutable<u8, Context>,
         private_balances: Map<AztecAddress, BalanceSet<Context>, Context>,
-        total_supply: PublicMutable<u128, Context>,
-        public_balances: Map<AztecAddress, PublicMutable<u128, Context>, Context>,
+        total_supply: PublicMutable<U253, Context>,
+        public_balances: Map<AztecAddress, PublicMutable<U253, Context>, Context>,
         minter: PublicImmutable<AztecAddress, Context>,
     }
 
@@ -48,7 +53,7 @@ pub contract Token {
         name: str<31>,
         symbol: str<31>,
         decimals: u8,
-        initial_supply: u128,
+        initial_supply: U253,
         to: AztecAddress,
     ) {
         storage.name.initialize(FieldCompressedString::from_string(name));
@@ -77,7 +82,7 @@ pub contract Token {
     fn transfer_private_to_public(
         from: AztecAddress,
         to: AztecAddress,
-        amount: u128,
+        amount: U253,
         nonce: Field,
     ) {
         _validate_from_private(&mut context, from, nonce);
@@ -98,9 +103,9 @@ pub contract Token {
     fn transfer_private_to_public_with_commitment(
         from: AztecAddress,
         to: AztecAddress,
-        amount: u128,
+        amount: U253,
         nonce: Field,
-    ) -> PartialUintNote {
+    ) -> PartialU253Note {
         _validate_from_private(&mut context, from, nonce);
 
         _decrease_private_balance(
@@ -123,7 +128,7 @@ pub contract Token {
     fn transfer_private_to_private(
         from: AztecAddress,
         to: AztecAddress,
-        amount: u128,
+        amount: U253,
         nonce: Field,
     ) {
         _validate_from_private(&mut context, from, nonce);
@@ -145,8 +150,8 @@ pub contract Token {
     #[private]
     fn transfer_private_to_commitment(
         from: AztecAddress,
-        amount: u128,
-        commitment: PartialUintNote,
+        amount: U253,
+        commitment: PartialU253Note,
         nonce: Field,
     ) {
         _validate_from_private(&mut context, from, nonce);
@@ -169,7 +174,7 @@ pub contract Token {
     fn transfer_public_to_private(
         from: AztecAddress,
         to: AztecAddress,
-        amount: u128,
+        amount: U253,
         nonce: Field,
     ) {
         _validate_from_private(&mut context, from, nonce);
@@ -182,13 +187,13 @@ pub contract Token {
     }
 
     #[private]
-    fn prepare_transfer_public_to_private(from: AztecAddress, to: AztecAddress) -> PartialUintNote {
+    fn prepare_transfer_public_to_private(from: AztecAddress, to: AztecAddress) -> PartialU253Note {
         _prepare_transfer_public_to_private(&mut context, storage.private_balances, from, to)
     }
 
     #[internal]
     #[private]
-    fn _recurse_subtract_balance(account: AztecAddress, amount: u128) -> u128 {
+    fn _recurse_subtract_balance(account: AztecAddress, amount: U253) -> U253 {
         _subtract_balance(
             &mut context,
             storage.private_balances,
@@ -203,7 +208,7 @@ pub contract Token {
     * ======================================================== */
 
     #[public]
-    fn transfer_public_to_public(from: AztecAddress, to: AztecAddress, amount: u128, nonce: Field) {
+    fn transfer_public_to_public(from: AztecAddress, to: AztecAddress, amount: U253, nonce: Field) {
         _validate_from_public(&mut context, from, nonce);
         _decrease_public_balance(storage.public_balances, from, amount);
         _increase_public_balance(storage.public_balances, to, amount);
@@ -215,8 +220,8 @@ pub contract Token {
     #[public]
     fn finalize_transfer_public_to_private(
         from: AztecAddress,
-        amount: u128,
-        commitment: PartialUintNote,
+        amount: U253,
+        commitment: PartialU253Note,
         nonce: Field,
     ) {
         _validate_from_public(&mut context, from, nonce);
@@ -231,25 +236,25 @@ pub contract Token {
 
     #[public]
     #[internal]
-    fn store_payload_in_storage(slot: PartialUintNote) {
+    fn store_payload_in_storage(slot: PartialU253Note) {
         _store_payload_in_storage(&mut context, slot);
     }
 
     #[public]
     #[internal]
-    fn increase_public_balance(to: AztecAddress, amount: u128) {
+    fn increase_public_balance(to: AztecAddress, amount: U253) {
         _increase_public_balance(storage.public_balances, to, amount);
     }
 
     #[public]
     #[internal]
-    fn decrease_public_balance(from: AztecAddress, amount: u128) {
+    fn decrease_public_balance(from: AztecAddress, amount: U253) {
         _decrease_public_balance(storage.public_balances, from, amount);
     }
 
     #[public]
     #[internal]
-    fn increase_commitment_balance(commitment: PartialUintNote, amount: u128) {
+    fn increase_commitment_balance(commitment: PartialU253Note, amount: U253) {
         _increase_commitment_balance(&mut context, commitment, amount);
     }
 
@@ -259,13 +264,13 @@ pub contract Token {
 
     #[public]
     #[view]
-    fn balance_of_public(owner: AztecAddress) -> u128 {
+    fn balance_of_public(owner: AztecAddress) -> U253 {
         storage.public_balances.at(owner).read()
     }
 
     #[public]
     #[view]
-    fn total_supply() -> u128 {
+    fn total_supply() -> U253 {
         storage.total_supply.read()
     }
 
@@ -273,7 +278,7 @@ pub contract Token {
      * ===================== UNCONSTRAINED =======================
      * ======================================================== */
 
-    unconstrained fn balance_of_private(owner: AztecAddress) -> pub u128 {
+    unconstrained fn balance_of_private(owner: AztecAddress) -> pub U253 {
         storage.private_balances.at(owner).balance_of()
     }
 
@@ -285,7 +290,7 @@ pub contract Token {
     fn mint_to_private(
         from: AztecAddress, // sender of the tag: TODO(#9887): this is not great?
         to: AztecAddress,
-        amount: u128,
+        amount: U253,
     ) {
         let minter = storage.minter.read();
         assert(minter.eq(context.msg_sender()), "caller is not minter");
@@ -300,7 +305,7 @@ pub contract Token {
     }
 
     #[public]
-    fn mint_to_public(to: AztecAddress, amount: u128) {
+    fn mint_to_public(to: AztecAddress, amount: U253) {
         let minter = storage.minter.read();
         assert(minter.eq(context.msg_sender()), "caller is not minter");
 
@@ -309,7 +314,7 @@ pub contract Token {
     }
 
     #[public]
-    fn finalize_mint_to_private(amount: u128, commitment: PartialUintNote) {
+    fn finalize_mint_to_private(amount: U253, commitment: PartialU253Note) {
         let minter = storage.minter.read();
         assert(minter.eq(context.msg_sender()), "caller is not minter");
 
@@ -318,7 +323,7 @@ pub contract Token {
 
     #[public]
     #[internal]
-    fn _finalize_mint_to_private_unsafe(amount: u128, commitment: PartialUintNote) {
+    fn _finalize_mint_to_private_unsafe(amount: U253, commitment: PartialU253Note) {
         _finalize_mint_to_private(&mut context, storage.total_supply, commitment, amount);
     }
 
@@ -327,7 +332,7 @@ pub contract Token {
      * ======================================================== */
 
     #[private]
-    fn burn_private(from: AztecAddress, amount: u128, nonce: Field) {
+    fn burn_private(from: AztecAddress, amount: U253, nonce: Field) {
         _validate_from_private(&mut context, from, nonce);
 
         _decrease_private_balance(
@@ -343,7 +348,7 @@ pub contract Token {
     }
 
     #[public]
-    fn burn_public(from: AztecAddress, amount: u128, nonce: Field) {
+    fn burn_public(from: AztecAddress, amount: U253, nonce: Field) {
         _validate_from_public(&mut context, from, nonce);
         _decrease_public_balance(storage.public_balances, from, amount);
         _decrease_total_supply(storage.total_supply, amount);
@@ -351,7 +356,7 @@ pub contract Token {
 
     #[public]
     #[internal]
-    fn decrease_total_supply(amount: u128) {
+    fn decrease_total_supply(amount: U253) {
         _decrease_total_supply(storage.total_supply, amount);
     }
 
@@ -363,10 +368,10 @@ pub contract Token {
     #[contract_library_method]
     fn _finalize_transfer_public_to_private(
         context: &mut PublicContext,
-        public_balances: Map<AztecAddress, PublicMutable<u128, &mut PublicContext>, &mut PublicContext>,
+        public_balances: Map<AztecAddress, PublicMutable<U253, &mut PublicContext>, &mut PublicContext>,
         from: AztecAddress,
-        commitment: PartialUintNote,
-        amount: u128,
+        commitment: PartialU253Note,
+        amount: U253,
     ) {
         // Decreases the balance of the public balance of `from` by `amount`
         _decrease_public_balance(public_balances, from, amount);
@@ -380,9 +385,9 @@ pub contract Token {
         context: &mut PrivateContext,
         private_balances: Map<AztecAddress, BalanceSet<&mut PrivateContext>, &mut PrivateContext>,
         account: AztecAddress,
-        amount: u128,
+        amount: U253,
         max_notes: u32,
-    ) -> OuterNoteEmission<UintNote> {
+    ) -> OuterNoteEmission<U253Note> {
         // Subtracts `amount` of the private balance of `account`
         let change = _subtract_balance(context, private_balances, account, amount, max_notes);
         // Increases the balance of the private balance of `account` by `change`
@@ -394,17 +399,17 @@ pub contract Token {
     fn _increase_private_balance(
         private_balances: Map<AztecAddress, BalanceSet<&mut PrivateContext>, &mut PrivateContext>,
         to: AztecAddress, // todo: rename to `account`?
-        amount: u128,
-    ) -> OuterNoteEmission<UintNote> {
+        amount: U253,
+    ) -> OuterNoteEmission<U253Note> {
         // Increases `amount` of the private balance of `to`, and returns a note emission
         private_balances.at(to).add(to, amount)
     }
 
     #[contract_library_method]
     fn _increase_public_balance(
-        public_balances: Map<AztecAddress, PublicMutable<u128, &mut PublicContext>, &mut PublicContext>,
+        public_balances: Map<AztecAddress, PublicMutable<U253, &mut PublicContext>, &mut PublicContext>,
         to: AztecAddress,
-        amount: u128,
+        amount: U253,
     ) {
         // Read the current public balance of `to`, add `amount` to it,
         let new_balance = public_balances.at(to).read() + amount;
@@ -415,9 +420,9 @@ pub contract Token {
     /// Updates the given storage pointer `public_balances` to decrease the balance of `from` by `amount`
     #[contract_library_method]
     fn _decrease_public_balance(
-        public_balances: Map<AztecAddress, PublicMutable<u128, &mut PublicContext>, &mut PublicContext>,
+        public_balances: Map<AztecAddress, PublicMutable<U253, &mut PublicContext>, &mut PublicContext>,
         from: AztecAddress,
-        amount: u128,
+        amount: U253,
     ) {
         // read the current public balance of `from`, subtract `amount`
         let new_balance = public_balances.at(from).read() - amount;
@@ -428,8 +433,8 @@ pub contract Token {
     #[contract_library_method]
     fn _increase_commitment_balance(
         context: &mut PublicContext,
-        commitment: PartialUintNote,
-        amount: u128,
+        commitment: PartialU253Note,
+        amount: U253,
     ) {
         commitment.complete(amount, context);
     }
@@ -439,9 +444,9 @@ pub contract Token {
         context: &mut PrivateContext,
         private_balances: Map<AztecAddress, BalanceSet<&mut PrivateContext>, &mut PrivateContext>,
         account: AztecAddress,
-        amount: u128,
+        amount: U253,
         max_notes: u32,
-    ) -> u128 {
+    ) -> U253 {
         let subtracted = private_balances.at(account).try_sub(amount, max_notes);
         // Failing to subtract any amount means that the owner was unable to produce more notes that could be nullified.
         assert(subtracted > 0, "Balance too low");
@@ -461,9 +466,9 @@ pub contract Token {
     #[contract_library_method]
     fn _finalize_mint_to_private(
         context: &mut PublicContext,
-        total_supply: PublicMutable<u128, &mut PublicContext>,
-        commitment: PartialUintNote,
-        amount: u128,
+        total_supply: PublicMutable<U253, &mut PublicContext>,
+        commitment: PartialU253Note,
+        amount: U253,
     ) {
         _increase_total_supply(total_supply, amount);
         _increase_commitment_balance(context, commitment, amount);
@@ -471,21 +476,21 @@ pub contract Token {
 
     // Increases the given storage pointer `total_supply` by `amount`
     #[contract_library_method]
-    fn _increase_total_supply(total_supply: PublicMutable<u128, &mut PublicContext>, amount: u128) {
+    fn _increase_total_supply(total_supply: PublicMutable<U253, &mut PublicContext>, amount: U253) {
         let new_supply = total_supply.read() + amount;
         total_supply.write(new_supply);
     }
 
     // Decreases the given storage pointer `total_supply` by `amount`
     #[contract_library_method]
-    fn _decrease_total_supply(total_supply: PublicMutable<u128, &mut PublicContext>, amount: u128) {
+    fn _decrease_total_supply(total_supply: PublicMutable<U253, &mut PublicContext>, amount: U253) {
         let new_supply = total_supply.read() - amount;
         total_supply.write(new_supply);
     }
 
     // TODO: this will change when we upgrade to v81
     #[contract_library_method]
-    fn _store_payload_in_storage(context: &mut PublicContext, commitment: PartialUintNote) {
+    fn _store_payload_in_storage(context: &mut PublicContext, commitment: PartialU253Note) {
         context.storage_write(commitment.commitment(), true);
     }
 
@@ -495,8 +500,8 @@ pub contract Token {
         private_balances: Map<AztecAddress, BalanceSet<&mut PrivateContext>, &mut PrivateContext>,
         from: AztecAddress, // sender of the tag: TODO(#9887): this is not great?
         to: AztecAddress,
-    ) -> PartialUintNote {
-        let commitment = UintNote::partial(
+    ) -> PartialU253Note {
+        let commitment = U253Note::partial(
             to,
             private_balances.at(to).set.storage_slot,
             context,
