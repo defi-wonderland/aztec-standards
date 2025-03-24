@@ -377,9 +377,7 @@ describe('Token - Single PXE', () => {
     expect(await token.methods.total_supply().simulate()).toBe(AMOUNT);
 
     // alice prepares partial note for bob
-    await token.methods.prepare_transfer_public_to_private(bob.getAddress(), alice.getAddress()).send().wait({
-      debug: true,
-    });
+    await token.methods.prepare_transfer_public_to_private(bob.getAddress(), alice.getAddress()).send().wait();
 
     // alice still has tokens in public
     expect(await token.methods.balance_of_public(alice.getAddress()).simulate()).toBe(AMOUNT);
@@ -396,6 +394,7 @@ describe('Token - Single PXE', () => {
     // expect(await token.methods.total_supply().simulate()).toBe(AMOUNT);
   }, 300_000);
 
+  // Assertion failed: unauthorized 'true, authorized'
   it.skip('public transfer with authwitness', async () => {
     // Mint tokens to Alice in public
     await token.withWallet(alice).methods.mint_to_public(alice.getAddress(), AMOUNT).send().wait();
@@ -409,22 +408,19 @@ describe('Token - Single PXE', () => {
     // define intent
     const intent: IntentAction = {
       caller: carl.getAddress(),
-      action
-    }
+      action,
+    };
     // alice create authwitness
-    const authWitness = await alice.createAuthWit(intent)
+    const authWitness = await alice.createAuthWit(intent);
 
-    await carl.addAuthWitness(authWitness)
-    await alice.addAuthWitness(authWitness)
-    
-    await (await alice.setPublicAuthWit(intent, true)).send().wait()
+    await (await alice.setPublicAuthWit(intent, true)).send().wait();
     await (await carl.setPublicAuthWit(intent, true)).send().wait();
     // check authwit validity
-    const validity = await carl.lookupValidity(alice.getAddress(), intent)
-    expect(validity.isValidInPrivate).toBeTruthy()
-    expect(validity.isValidInPublic).toBeTruthy()
+    const validity = await carl.lookupValidity(alice.getAddress(), intent, authWitness);
+    expect(validity.isValidInPrivate).toBeTruthy();
+    expect(validity.isValidInPublic).toBeTruthy();
 
-    await action.send().wait()
+    await action.send({ authWitnesses: [authWitness] }).wait();
 
     expect(await token.methods.balance_of_public(alice.getAddress()).simulate()).toBe(0n);
     expect(await token.methods.balance_of_public(bob.getAddress()).simulate()).toBe(AMOUNT);
@@ -447,22 +443,17 @@ describe('Token - Single PXE', () => {
       .withWallet(carl)
       .methods.transfer_private_to_private(alice.getAddress(), bob.getAddress(), AMOUNT, nonce);
 
-    const witness = await alice.createAuthWit({
+    const intent: IntentAction = {
       caller: carl.getAddress(),
       action,
-    });
+    };
+    const witness = await alice.createAuthWit(intent);
 
-    const validity = await alice.lookupValidity(alice.getAddress(), {
-      caller: carl.getAddress(),
-      action,
-    });
+    const validity = await alice.lookupValidity(alice.getAddress(), intent, witness);
     expect(validity.isValidInPrivate).toBeTruthy();
     expect(validity.isValidInPublic).toBeFalsy();
 
-    // dev: This grants carl access to alice's private notes
-    carl.setScopes([carl.getAddress(), alice.getAddress()]);
-
-    await action.send().wait();
+    await action.send({ authWitnesses: [witness] }).wait();
 
     expect(await token.methods.balance_of_private(alice.getAddress()).simulate()).toBe(0n);
     expect(await token.methods.balance_of_private(bob.getAddress()).simulate()).toBe(AMOUNT);
@@ -489,10 +480,10 @@ describe('Token - Multi PXE', () => {
     const initialsBob = await getInitialTestAccountsWallets(bobPXE);
     // TODO: assert that the used PXEs are actually separate instances?
 
-    aliceWallet = initialsAlice[0]
-    bobWallet = initialsBob[1]
-    alice = initialsAlice[0]
-    bob = initialsBob[1]
+    aliceWallet = initialsAlice[0];
+    bobWallet = initialsBob[1];
+    alice = initialsAlice[0];
+    bob = initialsBob[1];
   });
 
   beforeEach(async () => {
@@ -501,17 +492,12 @@ describe('Token - Multi PXE', () => {
 
     // alice knows bob
     // TODO: review this, alice shouldn't need to register bob's **secrets**!
-    await alicePXE.registerAccount(
-      bobWallet.getSecretKey(),
-      bob.getCompleteAddress().partialAddress,
-    );
-    alicePXE.registerSender(bob.getAddress());
-    alice.setScopes([alice.getAddress(), bob.getAddress()]);
+    await alicePXE.registerAccount(bobWallet.getSecretKey(), bob.getCompleteAddress().partialAddress);
+    await alicePXE.registerSender(bob.getAddress());
+
     // bob knows alice
     await bobPXE.registerAccount(aliceWallet.getSecretKey(), alice.getCompleteAddress().partialAddress);
-    bobPXE.registerSender(alice.getAddress());
-    // TODO: review this!
-    bob.setScopes([bob.getAddress(), alice.getAddress()]);
+    await bobPXE.registerSender(alice.getAddress());
   });
 
   it('transfers', async () => {
@@ -532,7 +518,7 @@ describe('Token - Multi PXE', () => {
     await expectTokenBalances(token, alice.getAddress(), wad(5), wad(5));
 
     // retrieve notes from last tx
-    notes = await alice.getNotes({ txHash: aliceShieldTx.txHash });
+    notes = await alicePXE.getNotes({ txHash: aliceShieldTx.txHash });
     expect(notes.length).toBe(1);
     expectUintNote(notes[0], wad(5), alice.getAddress());
 
@@ -546,7 +532,7 @@ describe('Token - Multi PXE', () => {
     await token.withWallet(alice).methods.sync_notes().simulate({});
     await token.withWallet(bob).methods.sync_notes().simulate({});
 
-    notes = await alice.getNotes({ txHash: fundBobTx.txHash });
+    notes = await alicePXE.getNotes({ txHash: fundBobTx.txHash });
     expect(notes.length).toBe(1);
     expectUintNote(notes[0], wad(5), bob.getAddress());
 
@@ -560,9 +546,7 @@ describe('Token - Multi PXE', () => {
       .withWallet(alice)
       .methods.transfer_private_to_private(alice.getAddress(), bob.getAddress(), wad(5), 0)
       .send()
-      .wait({
-        debug: true,
-      });
+      .wait();
 
     await token.withWallet(alice).methods.sync_notes().simulate({});
     await token.withWallet(bob).methods.sync_notes().simulate({});
@@ -573,10 +557,9 @@ describe('Token - Multi PXE', () => {
 
     // Alice shouldn't have any notes because it not a sender/registered account in her PXE
     // (but she has because I gave her access to Bob's notes)
-    notes = await alice.getNotes({ txHash: fundBobTx2.txHash });
+    notes = await alicePXE.getNotes({ txHash: fundBobTx2.txHash });
     expect(notes.length).toBe(1);
     expectUintNote(notes[0], wad(5), bob.getAddress());
-
 
     // TODO: Bob is not receiving notes
     // Bob should have a note
