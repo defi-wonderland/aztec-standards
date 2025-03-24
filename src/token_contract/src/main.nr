@@ -13,18 +13,17 @@ pub contract Token {
         prelude::{AztecAddress, Map, PublicContext, PublicImmutable, PublicMutable},
         protocol_types::traits::{Hash, Serialize},
     };
-
+    // authorized witness library
     use authwit::auth::{
         assert_current_call_valid_authwit, assert_current_call_valid_authwit_public,
     };
-
+    // note library
     use uint_note::uint_note::{PartialUintNote, UintNote};
     // compression library
     use compressed_string::FieldCompressedString;
-
     // encryption library
     use aztec::encrypted_logs::log_assembly_strategies::default_aes128::note::encode_and_encrypt_note;
-
+    // balance library
     use balance_set::balance_set::BalanceSet;
 
     global INITIAL_TRANSFER_CALL_MAX_NOTES: u32 = 2;
@@ -86,7 +85,7 @@ pub contract Token {
     * ======================================================== */
 
     /// @notice Transfer tokens from private to public balance
-    /// @dev Spends notes, emits a new note with any remaining change, and enqueues a public call.
+    /// @dev Spends notes, emits a new note with any remaining change, and enqueues a public call
     /// @param from The address of the sender
     /// @param to The address of the recipient
     /// @param amount The amount of tokens to transfer
@@ -112,6 +111,13 @@ pub contract Token {
         Token::at(context.this_address()).increase_public_balance(to, amount).enqueue(&mut context);
     }
 
+    /// @notice Transfer tokens from private to public balance with a hiding point
+    /// @dev Spends notes, emits a new note with any remaining change, enqueues a public call, and returns a partial note
+    /// @param from The address of the sender
+    /// @param to The address of the recipient
+    /// @param amount The amount of tokens to transfer
+    /// @param nonce The nonce of the transaction
+    /// @return partial_note The hiding point (privacy entrance)
     #[private]
     fn transfer_private_to_public_with_hiding_point(
         from: AztecAddress,
@@ -132,11 +138,18 @@ pub contract Token {
 
         Token::at(context.this_address()).increase_public_balance(to, amount).enqueue(&mut context);
 
+        // partial note prepares the recipient to transfer the tokens to the private balance
         let partial_note =
             _prepare_transfer_public_to_private(&mut context, storage.private_balances, from, to);
         partial_note
     }
 
+    /// @notice Transfer tokens from private to private balance
+    /// @dev Spends notes, emits a new note with any remaining change, and sends a note to the recipient
+    /// @param from The address of the sender
+    /// @param to The address of the recipient
+    /// @param amount The amount of tokens to transfer
+    /// @param nonce The nonce of the transaction
     #[private]
     fn transfer_private_to_private(
         from: AztecAddress,
@@ -160,6 +173,12 @@ pub contract Token {
         );
     }
 
+    /// @notice Transfer tokens from private to hiding point
+    /// @dev Spends notes, emits a new note with any remaining change, and enqueues a public call
+    /// @param from The address of the sender
+    /// @param amount The amount of tokens to transfer
+    /// @param partial_note The hiding point (privacy entrance)
+    /// @param nonce The nonce of the transaction
     #[private]
     fn transfer_private_to_hiding_point(
         from: AztecAddress,
@@ -178,11 +197,18 @@ pub contract Token {
         )
             .emit(encode_and_encrypt_note(&mut context, from, from));
 
+        // public call retains privacy of the hiding point
         Token::at(context.this_address())
             .increase_hiding_point_balance(partial_note, amount)
             .enqueue(&mut context);
     }
 
+    /// @notice Transfer tokens from public to private balance
+    /// @dev Enqueues a public call to decrease account balance and emits a new note with balance difference
+    /// @param from The address of the sender
+    /// @param to The address of the recipient
+    /// @param amount The amount of tokens to transfer
+    /// @param nonce The nonce of the transaction
     #[private]
     fn transfer_public_to_private(
         from: AztecAddress,
@@ -199,11 +225,21 @@ pub contract Token {
         );
     }
 
+    /// @notice Prepare a transfer from public to private balance
+    /// @dev Returns a partial note that can be used to finalize the transfer
+    /// @param from The address of the sender
+    /// @param to The address of the recipient
+    /// @return partial_note The partial note
     #[private]
     fn prepare_transfer_public_to_private(from: AztecAddress, to: AztecAddress) -> PartialUintNote {
         _prepare_transfer_public_to_private(&mut context, storage.private_balances, from, to)
     }
 
+    /// @notice Recursively subtracts balance from private balance
+    /// @dev Used to subtract balances that exceed the max notes limit
+    /// @param account The address of the account to subtract the balance from
+    /// @param amount The amount of tokens to subtract
+    /// @return The amount subtracted
     #[internal]
     #[private]
     fn _recurse_subtract_balance(account: AztecAddress, amount: u128) -> u128 {
@@ -220,6 +256,12 @@ pub contract Token {
     * ========================= PUBLIC ==========================
     * ======================================================== */
 
+    /// @notice Transfer tokens from public to public balance
+    /// @dev Public call to decrease account balance and a public call to increase recipient balance
+    /// @param from The address of the sender
+    /// @param to The address of the recipient
+    /// @param amount The amount of tokens to transfer
+    /// @param nonce The nonce of the transaction
     #[public]
     fn transfer_public_to_public(from: AztecAddress, to: AztecAddress, amount: u128, nonce: Field) {
         _validate_from_public(&mut context, from, nonce);
@@ -227,9 +269,13 @@ pub contract Token {
         _increase_public_balance(storage.public_balances, to, amount);
     }
 
-    /// Finalizes a transfer of token `amount` from public balance of `from` to a private balance of `to`.
-    /// The transfer must be prepared by calling `prepare_transfer_public_to_private` first and the resulting
-    /// `hiding_point_slot` must be passed as an argument to this function.
+    /// @notice Finalizes a transfer of token `amount` from public balance of `from` to a private balance of `to`
+    /// @dev The transfer must be prepared by calling `prepare_transfer_public_to_private` first and the resulting
+    /// `hiding_point_slot` must be passed as an argument to this function
+    /// @param from The address of the sender
+    /// @param amount The amount of tokens to transfer
+    /// @param partial_note The hiding point (privacy entrance)
+    /// @param nonce The nonce of the transaction
     #[public]
     fn finalize_transfer_public_to_private(
         from: AztecAddress,
@@ -247,24 +293,36 @@ pub contract Token {
         );
     }
 
+    /// @notice Stores a partial note in storage
+    /// @dev Used to store the hiding point (privacy entrance)
+    /// @param slot The partial note to store
     #[public]
     #[internal]
     fn store_payload_in_storage(slot: PartialUintNote) {
         _store_payload_in_storage(&mut context, slot);
     }
 
+    /// @notice Increases the balance of the public balance of `to` by `amount`
+    /// @param to The address of the recipient
+    /// @param amount The amount of tokens to increase the balance by
     #[public]
     #[internal]
     fn increase_public_balance(to: AztecAddress, amount: u128) {
         _increase_public_balance(storage.public_balances, to, amount);
     }
 
+    /// @notice Decreases the balance of the public balance of `from` by `amount`
+    /// @param from The address of the sender
+    /// @param amount The amount of tokens to decrease the balance by
     #[public]
     #[internal]
     fn decrease_public_balance(from: AztecAddress, amount: u128) {
         _decrease_public_balance(storage.public_balances, from, amount);
     }
 
+    /// @notice Increases the balance of the hiding point by `amount`
+    /// @param partial_note The hiding point (privacy entrance)
+    /// @param amount The amount of tokens to increase the balance by
     #[public]
     #[internal]
     fn increase_hiding_point_balance(partial_note: PartialUintNote, amount: u128) {
@@ -275,12 +333,17 @@ pub contract Token {
     * ====================== VIEW FUNCTIONS =====================
     * ======================================================== */
 
+    /// @notice Returns the balance of the public balance of `owner`
+    /// @param owner The address of the owner
+    /// @return The balance of the public balance of `owner`
     #[public]
     #[view]
     fn balance_of_public(owner: AztecAddress) -> u128 {
         storage.public_balances.at(owner).read()
     }
 
+    /// @notice Returns the total supply of the token
+    /// @return The total supply of the token
     #[public]
     #[view]
     fn total_supply() -> u128 {
@@ -291,6 +354,10 @@ pub contract Token {
      * ===================== UNCONSTRAINED =======================
      * ======================================================== */
 
+    /// @notice Returns the balance of the private balance of `owner`
+    /// @param owner The address of the owner
+    /// @return The balance of the private balance of `owner`
+    #[unconstrained]
     unconstrained fn balance_of_private(owner: AztecAddress) -> pub u128 {
         storage.private_balances.at(owner).balance_of()
     }
@@ -299,6 +366,11 @@ pub contract Token {
     * ======================= MINTABLE ==========================
     * ======================================================== */
 
+    /// @notice Mints tokens to a private balance
+    /// @dev Mints tokens to a hiding point and enqueues a public call to update the total supply
+    /// @param from The address of the sender
+    /// @param to The address of the recipient
+    /// @param amount The amount of tokens to mint
     #[private]
     fn mint_to_private(
         from: AztecAddress, // sender of the tag: TODO(#9887): this is not great?
@@ -317,6 +389,10 @@ pub contract Token {
             .enqueue(&mut context);
     }
 
+    /// @notice Mints tokens to a public balance
+    /// @dev Increases the balance of the public balance of `to` by `amount` and the total supply
+    /// @param to The address of the recipient
+    /// @param amount The amount of tokens to mint
     #[public]
     fn mint_to_public(to: AztecAddress, amount: u128) {
         let minter = storage.minter.read();
@@ -326,6 +402,10 @@ pub contract Token {
         _increase_total_supply(storage.total_supply, amount);
     }
 
+    /// @notice Finalizes a mint to a private balance
+    /// @dev Finalizes a mint to a hiding point and updates the total supply
+    /// @param amount The amount of tokens to mint
+    /// @param partial_note The hiding point (privacy entrance)
     #[public]
     fn finalize_mint_to_private(amount: u128, partial_note: PartialUintNote) {
         let minter = storage.minter.read();
@@ -334,6 +414,10 @@ pub contract Token {
         _finalize_mint_to_private(&mut context, storage.total_supply, partial_note, amount);
     }
 
+    /// @notice Finalizes a mint to a private balance
+    /// @dev Finalizes a mint to a hiding point and updates the total supply without enforcing the caller is the minter
+    /// @param amount The amount of tokens to mint
+    /// @param partial_note The hiding point (privacy entrance)
     #[public]
     #[internal]
     fn _finalize_mint_to_private_unsafe(amount: u128, hiding_point_slot: PartialUintNote) {
@@ -349,6 +433,11 @@ pub contract Token {
      * ======================= BURNABLE ==========================
      * ======================================================== */
 
+    /// @notice Burns tokens from a private balance
+    /// @dev Burns tokens from a private balance and enqueues a public call to update the total supply
+    /// @param from The address of the sender
+    /// @param amount The amount of tokens to burn
+    /// @param nonce The nonce of the transaction
     #[private]
     fn burn_private(from: AztecAddress, amount: u128, nonce: Field) {
         _validate_from_private(&mut context, from, nonce);
@@ -365,6 +454,11 @@ pub contract Token {
         Token::at(context.this_address()).decrease_total_supply(amount).enqueue(&mut context);
     }
 
+    /// @notice Burns tokens from a public balance
+    /// @dev Burns tokens from a public balance and enqueues a public call to update the total supply
+    /// @param from The address of the sender
+    /// @param amount The amount of tokens to burn
+    /// @param nonce The nonce of the transaction
     #[public]
     fn burn_public(from: AztecAddress, amount: u128, nonce: Field) {
         _validate_from_public(&mut context, from, nonce);
@@ -372,6 +466,8 @@ pub contract Token {
         _decrease_total_supply(storage.total_supply, amount);
     }
 
+    /// @notice Decreases the total supply by `amount`
+    /// @param amount The amount of tokens to decrease the total supply by
     #[public]
     #[internal]
     fn decrease_total_supply(amount: u128) {
@@ -382,7 +478,13 @@ pub contract Token {
      * ================= TOKEN LIBRARIES =========================
      * ======================================================== */
 
-    /// Finalizes a public to private transfer
+    /// @notice Finalizes a public to private transfer
+    /// @dev Decreases the balance of the public balance of `from` by `amount` and increases the balance of the hiding point
+    /// @param context The context of the public call
+    /// @param public_balances The storage pointer to the public balances
+    /// @param from The address of the sender
+    /// @param partial_note The hiding point (privacy entrance)
+    /// @param amount The amount of tokens to transfer
     #[contract_library_method]
     fn _finalize_transfer_public_to_private(
         context: &mut PublicContext,
@@ -397,7 +499,13 @@ pub contract Token {
         _increase_hiding_point_balance(context, partial_note, amount);
     }
 
-    /// Decreases the balance of the private balance of `account` by `amount`
+    /// @notice Updates the given storage pointer `private_balances` to decrease the balance of `account` by `amount`
+    /// @dev Subtracts amount from private balance and returns the change to the owner, recursively if necessary
+    /// @param context The context of the private call
+    /// @param private_balances The storage pointer to the private balances
+    /// @param account The address of the account to decrease the balance of
+    /// @param amount The amount of tokens to decrease the balance by
+    /// @return The note emission
     #[contract_library_method]
     fn _decrease_private_balance(
         context: &mut PrivateContext,
@@ -412,7 +520,11 @@ pub contract Token {
         _increase_private_balance(private_balances, account, change)
     }
 
-    /// Increases the balance of the private balance of `to` by `amount`
+    /// @notice Updates the given storage pointer `private_balances` to increase the balance of `to` by `amount`
+    /// @param private_balances The storage pointer to the private balances
+    /// @param to The address of the recipient
+    /// @param amount The amount of tokens to increase the balance by
+    /// @return The note emission
     #[contract_library_method]
     fn _increase_private_balance(
         private_balances: Map<AztecAddress, BalanceSet<&mut PrivateContext>, &mut PrivateContext>,
@@ -423,6 +535,10 @@ pub contract Token {
         private_balances.at(to).add(to, amount)
     }
 
+    /// @notice Updates the given storage pointer `public_balances` to increase the balance of `to` by `amount`
+    /// @param public_balances The storage pointer to the public balances
+    /// @param to The address of the recipient
+    /// @param amount The amount of tokens to increase the balance by
     #[contract_library_method]
     fn _increase_public_balance(
         public_balances: Map<AztecAddress, PublicMutable<u128, &mut PublicContext>, &mut PublicContext>,
@@ -435,7 +551,10 @@ pub contract Token {
         public_balances.at(to).write(new_balance);
     }
 
-    /// Updates the given storage pointer `public_balances` to decrease the balance of `from` by `amount`
+    /// @notice Updates the given storage pointer `public_balances` to decrease the balance of `from` by `amount`
+    /// @param public_balances The storage pointer to the public balances
+    /// @param from The address of the account to decrease the balance of
+    /// @param amount The amount of tokens to decrease the balance by
     #[contract_library_method]
     fn _decrease_public_balance(
         public_balances: Map<AztecAddress, PublicMutable<u128, &mut PublicContext>, &mut PublicContext>,
@@ -449,6 +568,11 @@ pub contract Token {
     }
 
     // TODO: this will change when we upgrade to v81
+    /// @notice Completes a partial note
+    /// @dev Completes a partial note and increases the balance of the hiding point by `amount`
+    /// @param context The context of the public call
+    /// @param partial_note The hiding point (privacy entrance)
+    /// @param amount The amount of tokens to increase the balance of the hiding point by
     #[contract_library_method]
     fn _increase_hiding_point_balance(
         context: &mut PublicContext,
@@ -458,6 +582,11 @@ pub contract Token {
         partial_note.complete(amount, context);
     }
 
+    /// @notice Subtracts balance from private balance
+    /// @dev Subtracts amount from private balance and returns the change to the owner, recursively if necessary
+    /// @param account The address of the account to subtract the balance from
+    /// @param amount The amount of tokens to subtract
+    /// @return The change to return to the owner
     #[contract_library_method]
     fn _subtract_balance(
         context: &mut PrivateContext,
@@ -482,6 +611,12 @@ pub contract Token {
         }
     }
 
+    /// @notice Finalizes a mint to a private balance
+    /// @dev Increases the total supply and the balance of the hiding point by `amount`
+    /// @param context The context of the public call
+    /// @param total_supply The storage pointer to the total supply
+    /// @param partial_note The hiding point (privacy entrance)
+    /// @param amount The amount of tokens to mint
     #[contract_library_method]
     fn _finalize_mint_to_private(
         context: &mut PublicContext,
@@ -493,7 +628,9 @@ pub contract Token {
         _increase_hiding_point_balance(context, partial_note, amount);
     }
 
-    // Increases the given storage pointer `total_supply` by `amount`
+    /// @notice Increases the given storage pointer `total_supply` by `amount`
+    /// @param total_supply The storage pointer to the total supply
+    /// @param amount The amount of tokens to increase the total supply by
     #[contract_library_method]
     fn _increase_total_supply(total_supply: PublicMutable<u128, &mut PublicContext>, amount: u128) {
         let new_supply = total_supply.read() + amount;
@@ -501,7 +638,6 @@ pub contract Token {
     }
 
     /// @notice Decreases the given storage pointer `total_supply` by `amount`
-    /// @dev
     /// @param total_supply The storage pointer to the total supply
     /// @param amount The amount to decrease the total supply by
     #[contract_library_method]
@@ -511,11 +647,20 @@ pub contract Token {
     }
 
     // TODO: this will change when we upgrade to v81
+    /// @notice Stores a partial note in storage
+    /// @param context The context of the public call
+    /// @param partial_note The partial note to store
     #[contract_library_method]
     fn _store_payload_in_storage(context: &mut PublicContext, partial_note: PartialUintNote) {
         context.storage_write(partial_note.commitment(), true);
     }
 
+    /// @notice Prepares a transfer from public to private balance
+    /// @param context The context of the private call
+    /// @param private_balances The storage pointer to the private balances
+    /// @param from The address of the sender
+    /// @param to The address of the recipient
+    /// @return The partial note that can be used to finalize the transfer
     #[contract_library_method]
     fn _prepare_transfer_public_to_private(
         context: &mut PrivateContext,
@@ -538,6 +683,10 @@ pub contract Token {
      * ================== AUTH LIBRARIES =========================
      * ======================================================== */
 
+    /// @notice Validates that the caller is the owner of the private balance
+    /// @param context The context of the private call
+    /// @param from The address of the sender
+    /// @param nonce The nonce of the transaction
     #[contract_library_method]
     fn _validate_from_private(context: &mut PrivateContext, from: AztecAddress, nonce: Field) {
         if (!from.eq(context.msg_sender())) {
@@ -547,6 +696,10 @@ pub contract Token {
         }
     }
 
+    /// @notice Validates that the caller is the owner of the public balance
+    /// @param context The context of the public call
+    /// @param from The address of the sender
+    /// @param nonce The nonce of the transaction
     #[contract_library_method]
     unconstrained fn _validate_from_public(
         context: &mut PublicContext,
