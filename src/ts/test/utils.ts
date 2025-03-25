@@ -9,8 +9,7 @@ import {
   FieldLike,
   Contract,
 } from '@aztec/aztec.js';
-import { TokenContract } from '../../artifacts/Token.js';
-import { TokenContractArtifact } from '@aztec/noir-contracts.js/Token';
+import { TokenContractArtifact, TokenContract } from '../../artifacts/Token.js';
 
 export const logger = createLogger('aztec:aztec-standards');
 
@@ -52,8 +51,8 @@ export async function deployTokenWithMinter(deployer: AccountWallet) {
 }
 
 export const expectUintNote = (note: UniqueNote, amount: bigint, owner: AztecAddress) => {
-  expect(note.note.items[0]).toEqual(new Fr(owner.toBigInt()))
-  expect(note.note.items[2]).toEqual(new Fr(amount))
+  expect(note.note.items[0]).toEqual(new Fr(owner.toBigInt()));
+  expect(note.note.items[2]).toEqual(new Fr(amount));
 };
 
 export const expectAddressNote = (note: UniqueNote, address: AztecAddress, owner: AztecAddress) => {
