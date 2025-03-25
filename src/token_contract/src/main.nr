@@ -135,7 +135,7 @@ pub contract Token {
             INITIAL_TRANSFER_CALL_MAX_NOTES,
         );
 
-        _increase_private_balance(storage.private_balances, to, amount);
+        _increase_private_balance(&mut context, storage.private_balances, from, to, amount);
     }
 
     #[private]
@@ -171,7 +171,7 @@ pub contract Token {
 
         Token::at(context.this_address()).decrease_public_balance(from, amount).enqueue(&mut context);
 
-        _increase_private_balance(storage.private_balances, to, amount);
+        _increase_private_balance(&mut context, storage.private_balances, from, to, amount);
     }
 
     #[private]
@@ -407,19 +407,20 @@ pub contract Token {
         // Subtracts `amount` of the private balance of `account`
         let change = _subtract_balance(context, private_balances, account, amount, max_notes);
         // Increases `amount` of the private balance of `account`, and emits a private balance note to account
-        private_balances.at(account).add(account, amount).emit(encode_and_encrypt_note(&mut context, account, account));
+        private_balances.at(account).add(account, amount).emit(encode_and_encrypt_note(context, account, account));
     }
 
     /// Increases the private balance of `to` by `amount` and emits a private balance note to `to` from `from`
     #[contract_library_method]
     fn _increase_private_balance(
+        context: &mut PrivateContext,
         private_balances: Map<AztecAddress, BalanceSet<&mut PrivateContext>, &mut PrivateContext>,
         from: AztecAddress,
         to: AztecAddress,
         amount: U128,
     ) {
         // Increases `amount` of the private balance of `to`, and emits a private balance note to `to` from `from`
-        private_balances.at(to).add(to, amount).emit(encode_and_encrypt_note(&mut context, to, from));
+        private_balances.at(to).add(to, amount).emit(encode_and_encrypt_note(context, to, from));
     }
 
     #[contract_library_method]
