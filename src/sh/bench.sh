@@ -72,16 +72,16 @@ done
 process_profile_output "mint_to_private" \
     "$(aztec-wallet profile mint_to_private -ca token --args $ALICE $ALICE $NOTE_AMOUNT -f $MINTER)"
 
-process_profile_output "mint_to_public" \
-    "$(aztec-wallet profile mint_to_public -ca token --args $ALICE $NOTE_AMOUNT -f $MINTER)"
+# process_profile_output "mint_to_public" \
+#     "$(aztec-wallet profile mint_to_public -ca token --args $ALICE $NOTE_AMOUNT -f $MINTER)"
 
 # ## profile burns
 
 process_profile_output "burn_private" \
     "$(aztec-wallet profile burn_private -ca token --args $ALICE 10 0 -f $ALICE)"
 
-process_profile_output "burn_public" \
-    "$(aztec-wallet profile burn_public -ca token --args $ALICE 10 0 -f $ALICE)"
+# process_profile_output "burn_public" \
+#     "$(aztec-wallet profile burn_public -ca token --args $ALICE 10 0 -f $ALICE)"
 
 ## Profile transfers
 
@@ -91,8 +91,8 @@ process_profile_output "transfer_private_to_private" \
 process_profile_output "transfer_private_to_public" \
     "$(aztec-wallet profile transfer_private_to_public -ca token --args $ALICE $BOB 10 0 -f $ALICE)"
 
-process_profile_output "transfer_public_to_public" \
-    "$(aztec-wallet profile transfer_public_to_public -ca token --args $ALICE $BOB 10 0 -f $ALICE)"
+# process_profile_output "transfer_public_to_public" \
+#     "$(aztec-wallet profile transfer_public_to_public -ca token --args $ALICE $BOB 10 0 -f $ALICE)"
 
 process_profile_output "transfer_public_to_private" \
     "$(aztec-wallet profile transfer_public_to_private -ca token --args $ALICE $BOB 10 0 -f $ALICE)" \
@@ -106,15 +106,16 @@ COMMITMENT=$(aztec-wallet simulate -ca token "prepare_transfer_public_to_private
 hex=$(echo "obase=16; $COMMITMENT" | bc)
 
 process_profile_output "prepare_transfer_public_to_private" \
-    "$(aztec-wallet profile prepare_transfer_public_to_private -ca token --args $ALICE $BOB -f $ALICE)"
+    "$(aztec-wallet profile prepare_transfer_public_to_private -ca token --args $ALICE $BOB -f $ALICE)" \
+    "true"
 # Submit tx to prepare the commitment
-aztec-wallet send prepare_transfer_public_to_private -ca token --args $ALICE $BOB -f $ALICE
+# aztec-wallet send prepare_transfer_public_to_private -ca token --args $ALICE $BOB -f $ALICE
 
-process_profile_output "finalize_transfer_public_to_private" \
-    "$(aztec-wallet profile finalize_transfer_public_to_private -ca token --args $ALICE 17 "{\"commitment\":\"0x$hex\"}" 0 -f $ALICE)" \
-    "true" # flag to mark this is the last operation, so we can close the json object
+# process_profile_output "finalize_transfer_public_to_private" \
+#     "$(aztec-wallet profile finalize_transfer_public_to_private -ca token --args $ALICE 17 "{\"commitment\":\"0x$hex\"}" 0 -f $ALICE)" \
+#     "true" # flag to mark this is the last operation, so we can close the json object
 
-aztec-wallet send finalize_transfer_public_to_private -ca token --args $ALICE 17 "{\"commitment\":\"0x$hex\"}" 0 -f $ALICE
+# aztec-wallet send finalize_transfer_public_to_private -ca token --args $ALICE 17 "{\"commitment\":\"0x$hex\"}" 0 -f $ALICE
 
 
 ## profile recursive note fetching
