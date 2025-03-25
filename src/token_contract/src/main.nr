@@ -189,7 +189,7 @@ pub contract Token {
 
     #[internal]
     #[private]
-    fn _recurse_subtract_balance(account: AztecAddress, amount: U128) -> U128 {
+    fn recurse_subtract_balance(account: AztecAddress, amount: U128) -> U128 {
         _subtract_balance(
             &mut context,
             storage.private_balances,
@@ -309,7 +309,7 @@ pub contract Token {
             _prepare_transfer_public_to_private(&mut context, storage.private_balances, minter, to);
 
         Token::at(context.this_address())
-            ._finalize_mint_to_private_unsafe(amount, hiding_point_slot)
+            .finalize_mint_to_private_unsafe(amount, hiding_point_slot)
             .enqueue(&mut context);
     }
 
@@ -337,7 +337,7 @@ pub contract Token {
 
     #[public]
     #[internal]
-    fn _finalize_mint_to_private_unsafe(amount: U128, hiding_point_slot: Field) {
+    fn finalize_mint_to_private_unsafe(amount: U128, hiding_point_slot: Field) {
         _finalize_mint_to_private(
             &mut context,
             storage.total_supply,
@@ -487,7 +487,7 @@ pub contract Token {
             // and try again.
             let remaining = amount - subtracted;
 
-            Token::at(context.this_address())._recurse_subtract_balance(account, remaining).call(context)
+            Token::at(context.this_address()).recurse_subtract_balance(account, remaining).call(context)
         }
     }
 
