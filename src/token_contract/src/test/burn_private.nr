@@ -76,9 +76,7 @@ unconstrained fn burn_private_failure_on_behalf_of_other_more_than_balance() {
     env.impersonate(recipient);
     burn_call_interface.call(&mut env.private());
 }
-// TODO: Current message error includes the authwit hash
-// #[test(should_fail_with = "Authorization not found for message hash")]
-#[test(should_fail)]
+#[test(should_fail_with = "Unknown auth witness for message hash")]
 unconstrained fn burn_private_failure_on_behalf_of_other_without_approval() {
     let (env, token_contract_address, owner, recipient, mint_amount) =
         utils::setup_and_mint_to_public_without_minter(/* with_account_contracts */ true);
@@ -92,9 +90,7 @@ unconstrained fn burn_private_failure_on_behalf_of_other_without_approval() {
     burn_call_interface.call(&mut env.private());
 }
 
-// TODO: Current message error includes the authwit hash
-// #[test(should_fail_with = "Authorization not found for message hash")]
-#[test(should_fail)]
+#[test(should_fail_with = "Unknown auth witness for message hash")]
 unconstrained fn burn_private_failure_on_behalf_of_other_wrong_designated_caller() {
     let (env, token_contract_address, owner, recipient, mint_amount) =
         utils::setup_and_mint_to_public_without_minter(/* with_account_contracts */ true);

@@ -118,10 +118,8 @@ unconstrained fn transfer_private_failure_on_behalf_of_more_than_balance() {
     transfer_private_from_call_interface.call(&mut env.private());
 }
 
-// TODO: Current message error includes the authwit hash as follows:
 // Unknown auth witness for message hash 0x055a9af747d60526794cfa8d3cf0b506831f34a202f85f6576ac67c429962b01
-// #[test(should_fail_with = "Authorization not found for message hash")]
-#[test(should_fail)]
+#[test(should_fail_with = "Unknown auth witness for message hash ")]
 unconstrained fn transfer_private_failure_on_behalf_of_other_without_approval() {
     // Setup with account contracts. Slower since we actually deploy them, but needed for authwits.
     let (env, token_contract_address, owner, recipient, _) =
@@ -136,9 +134,7 @@ unconstrained fn transfer_private_failure_on_behalf_of_other_without_approval() 
     transfer_private_from_call_interface.call(&mut env.private());
 }
 
-// TODO: Current message error includes the authwit hash
-// #[test(should_fail_with = "Authorization not found for message hash")]
-#[test(should_fail)]
+#[test(should_fail_with = "Unknown auth witness for message hash")]
 unconstrained fn transfer_private_failure_on_behalf_of_other_wrong_caller() {
     // Setup with account contracts. Slower since we actually deploy them, but needed for authwits.
     let (env, token_contract_address, owner, recipient, _) =

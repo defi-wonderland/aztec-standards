@@ -146,9 +146,7 @@ unconstrained fn transfer_private_to_public_failure_on_behalf_of_other_more_than
     transfer_private_to_public_call_interface.call(&mut env.private());
 }
 
-// TODO: Current message error includes the authwit hash
-// #[test(should_fail_with = "Authorization not found for message hash")]
-#[test(should_fail)]
+#[test(should_fail_with = "Unknown auth witness for message hash")]
 unconstrained fn transfer_private_to_public_failure_on_behalf_of_other_invalid_designated_caller() {
     let (env, token_contract_address, owner, recipient, mint_amount) =
         utils::setup_and_mint_to_private_without_minter(/* with_account_contracts */ true);
@@ -167,9 +165,7 @@ unconstrained fn transfer_private_to_public_failure_on_behalf_of_other_invalid_d
     transfer_private_to_public_call_interface.call(&mut env.private());
 }
 
-// TODO: Current message error includes the authwit hash
-// #[test(should_fail_with = "Authorization not found for message hash")]
-#[test(should_fail)]
+#[test(should_fail_with = "Unknown auth witness for message hash")]
 unconstrained fn transfer_private_to_public_failure_on_behalf_of_other_no_approval() {
     let (env, token_contract_address, owner, recipient, mint_amount) =
         utils::setup_and_mint_to_private_without_minter(/* with_account_contracts */ true);
