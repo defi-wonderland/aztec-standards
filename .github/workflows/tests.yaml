@@ -28,9 +28,9 @@ jobs:
           run: |
             VERSION=0.82.2 aztec-up
         
-        # - name: Start sandbox
-        #   run: |
-        #     aztec start --sandbox &
+        - name: Start sandbox
+          run: |
+            aztec start --sandbox &
 
         - name: Install project dependencies
           run: yarn
