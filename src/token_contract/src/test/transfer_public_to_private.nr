@@ -64,7 +64,7 @@ unconstrained fn transfer_public_to_private_external_orchestration() {
 // }
 
 // #[test(should_fail_with = "Assertion failed: attempt to subtract with underflow 'hi == high'")]
-#[test(should_fail_with = "attempt to subtract with overflow 'public_balances.at(from).read() - amount'")]
+#[test(should_fail_with = "Assertion failed: U253 subtraction underflow 'other.value.lt(self.value) | other.value.eq(self.value)'")]
 unconstrained fn transfer_public_to_private_failure_not_an_owner() {
     // Setup without account contracts. We are not using authwits here, so dummy accounts are enough
     let (env, token_contract_address, owner, not_owner, amount) =
