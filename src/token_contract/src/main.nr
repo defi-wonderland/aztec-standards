@@ -487,8 +487,7 @@ pub contract Token {
             // and try again.
             let remaining = amount - subtracted;
 
-            let self = Token::at(context.this_address());
-            self._recurse_subtract_balance(account, remaining).call(context)
+            Token::at(context.this_address())._recurse_subtract_balance(account, remaining).call(context)
         }
     }
 
@@ -551,8 +550,7 @@ pub contract Token {
         // is zero because the slot is the x-coordinate of the hiding point and hence we could only overwrite
         // the value in the slot with the same value. This makes usage of the `unsafe` method safe.
 
-        let self = Token::at(context.this_address());
-        self
+        Token::at(context.this_address())
             .store_payload_in_storage(
                 hiding_point_slot,
                 note_setup_payload.hiding_point.serialize(),
