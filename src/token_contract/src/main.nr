@@ -294,7 +294,7 @@ pub contract Token {
         amount: U128,
     ) {
         let minter = storage.minter.read();
-        assert(minter.eq(context.msg_sender()), "caller is not minter");
+        _validate_minter(context.msg_sender(), minter);
 
         // We prepare the partial note to which we'll "send" the minted amount.
         let hiding_point_slot =
@@ -307,8 +307,7 @@ pub contract Token {
 
     #[public]
     fn mint_to_public(to: AztecAddress, amount: U128) {
-        let minter = storage.minter.read();
-        assert(minter.eq(context.msg_sender()), "caller is not minter");
+        _validate_minter(context.msg_sender(), storage.minter.read());
 
         _increase_public_balance(storage.public_balances, to, amount);
         _increase_total_supply(storage.total_supply, amount);
@@ -316,8 +315,7 @@ pub contract Token {
 
     #[public]
     fn finalize_mint_to_private(amount: U128, hiding_point_slot: Field) {
-        let minter = storage.minter.read();
-        assert(minter.eq(context.msg_sender()), "caller is not minter");
+        _validate_minter(context.msg_sender(), storage.minter.read());
 
         _finalize_mint_to_private(
             &mut context,
@@ -393,6 +391,12 @@ pub contract Token {
         _decrease_public_balance(public_balances, from, amount);
         // Increases the balance of the hiding point
         _increase_hiding_point_balance(context, hiding_point_slot, amount);
+    }
+
+    /// Validates that the caller is the minter
+    #[contract_library_method]
+    fn _validate_minter(sender: AztecAddress, minter: AztecAddress) {
+        assert(minter.eq(sender), "caller is not minter");
     }
 
     /// Decreases the private balance of `account` by `amount` and emits a private balance note to account
