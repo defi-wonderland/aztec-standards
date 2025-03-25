@@ -1,7 +1,7 @@
 use crate::{test::utils, Token};
-use dep::uint_note::uint_note::{PartialU253Note, UintNote};
 use aztec::oracle::random::random;
 use std::test::OracleMock;
+use uint253::uint253_note::PartialU253Note;
 
 /// Internal orchestration means that the calls to `prepare_transfer_public_to_private`
 /// and `finalize_transfer_public_to_private` are done by the TOKEN contract itself.

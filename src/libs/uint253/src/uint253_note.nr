@@ -87,11 +87,11 @@ impl U253Note {
     }
 
     pub fn get_value(self) -> U253 {
-        U253::new_unchecked(self.value)
+        U253::new_unchecked(self.value.to_field())
     }
 
     pub fn get_field_value(self) -> Field {
-        self.value
+        self.value.to_field()
     }
 
     /// Creates a partial note that will hide the owner and storage slot but not the value, since the note will be later
@@ -204,7 +204,7 @@ impl PartialU253Note {
         // track their length, and so trailing zeros are simply trimmed. This results in the completion log missing its
         // last field (the value), and note discovery failing.
         // TODO(#11636): remove this
-        assert(value != 0, "Cannot complete a PartialU253Note with a value of 0");
+        assert(value != U253::zero(), "Cannot complete a PartialU253Note with a value of 0");
 
         // We need to do two things:
         //  - emit a public log containing the public fields (the value). The contract will later find it by searching

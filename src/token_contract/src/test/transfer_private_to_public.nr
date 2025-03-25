@@ -3,11 +3,7 @@ use crate::Token;
 use authwit::cheatcodes as authwit_cheatcodes;
 use aztec::{note::constants::MAX_NOTES_PER_PAGE, oracle::random::random};
 use aztec::protocol_types::traits::ToField;
-use uint_note::uint_note::UintNote;
-use uint253::{
-    uint253::U253,
-    uint253_note::U253Note,
-};
+use uint253::{uint253::U253, uint253_note::U253Note};
 
 #[test]
 unconstrained fn transfer_private_to_public_on_behalf_of_self() {
@@ -67,8 +63,9 @@ unconstrained fn transfer_private_to_public_multiple_notes_recursively() {
         utils::setup_with_minter(/* with_account_contracts */ true);
 
     let notes_amount = U253::new(1000);
-    let notes_count = 12;
-    let total_amount = notes_amount * notes_count;
+    let notes_count: u32 = 12;
+    let total_amount = notes_amount * U253::new(notes_count.to_field());
+
     env.impersonate(minter);
     for i in 0..notes_count {
         utils::mint_to_private(env, token_contract_address, owner, notes_amount);
@@ -85,16 +82,16 @@ unconstrained fn transfer_private_to_public_multiple_notes_recursively() {
 
     // Check that the notes still owned by the owner are correct
     env.impersonate(token_contract_address);
-    let final_owner_notes: BoundedVec<UintNote, MAX_NOTES_PER_PAGE> =
+    let final_owner_notes: BoundedVec<U253Note, MAX_NOTES_PER_PAGE> =
         utils::get_private_balance_notes(owner, 0);
 
-    assert(final_owner_notes.len() == 2, "Incorrect note count"); // 1000 UintNote x1 and 1 UintNote x1
+    assert(final_owner_notes.len() == 2, "Incorrect note count"); // 1000 U253Note x1 and 1 U253Note x1
     assert(final_owner_notes.get(0).get_value() == notes_amount, "Incorrect note amount");
     assert(final_owner_notes.get(1).get_value() == U253::one(), "Incorrect note change amount");
 
     // Check that the notes generated to the recipient are correct
     env.impersonate(token_contract_address);
-    let recipient_notes: BoundedVec<UintNote, MAX_NOTES_PER_PAGE> =
+    let recipient_notes: BoundedVec<U253Note, MAX_NOTES_PER_PAGE> =
         utils::get_private_balance_notes(recipient, 0);
     assert(recipient_notes.len() == 0, "Incorrect transferred note count");
 

@@ -26,11 +26,7 @@ pub contract Token {
 
     use balance_set::balance_set::BalanceSet;
 
-    use uint253::{
-        uint253::U253,
-        uint253_note::U253Note,
-        uint253_note::PartialU253Note,
-    };
+    use uint253::{uint253::U253, uint253_note::{PartialU253Note, U253Note}};
 
     global INITIAL_TRANSFER_CALL_MAX_NOTES: u32 = 2;
     global RECURSIVE_TRANSFER_CALL_MAX_NOTES: u32 = 8;
@@ -449,7 +445,7 @@ pub contract Token {
     ) -> U253 {
         let subtracted = private_balances.at(account).try_sub(amount, max_notes);
         // Failing to subtract any amount means that the owner was unable to produce more notes that could be nullified.
-        assert(subtracted > 0, "Balance too low");
+        assert(subtracted > U253::zero(), "Balance too low");
         if subtracted >= amount {
             // We have achieved our goal of nullifying notes that add up to more than amount, so we return the change.
             subtracted - amount

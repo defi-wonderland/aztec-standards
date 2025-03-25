@@ -2,11 +2,7 @@ use crate::test::utils;
 use crate::Token;
 use authwit::cheatcodes as authwit_cheatcodes;
 use aztec::oracle::random::random;
-use uint253::{
-    uint253::U253,
-    uint253_note::U253Note,
-    uint253_note::PartialU253Note,
-};
+use uint253::{uint253::U253, uint253_note::{PartialU253Note, U253Note}};
 
 #[test]
 unconstrained fn transfer_private_to_commitment() {

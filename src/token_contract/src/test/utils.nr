@@ -11,10 +11,7 @@ use aztec::{
     test::helpers::{cheatcodes, test_environment::TestEnvironment},
 };
 use std::test::OracleMock;
-use uint253::{
-    uint253::U253,
-    uint253_note::U253Note,
-};
+use uint253::{uint253::U253, uint253_note::U253Note};
 
 pub unconstrained fn setup_with_initial_supply(
     with_account_contracts: bool,

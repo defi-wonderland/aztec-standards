@@ -1,8 +1,5 @@
 use crate::{test::utils, Token};
-use uint253::{
-    uint253::U253,
-    uint253_note::U253Note,
-};
+use uint253::{uint253::U253, uint253_note::U253Note};
 
 #[test]
 unconstrained fn mint_to_private_success() {
@@ -11,7 +8,7 @@ unconstrained fn mint_to_private_success() {
         utils::setup_with_minter(/* with_account_contracts */ false);
 
     env.impersonate(minter);
-    let mint_amount: U253 =  U253::new(10_000);
+    let mint_amount: U253 = U253::new(10_000);
     Token::at(token_contract_address).mint_to_private(owner, owner, mint_amount).call(
         &mut env.private(),
     );
@@ -31,7 +28,7 @@ unconstrained fn mint_to_private_failures() {
         utils::setup_with_minter(/* with_account_contracts */ false);
 
     // As non-minter
-    let mint_amount: U253 =  U253::new(10_000);
+    let mint_amount: U253 = U253::new(10_000);
     env.impersonate(recipient);
     let mint_to_private_call_interface =
         Token::at(token_contract_address).mint_to_private(owner, owner, mint_amount);
