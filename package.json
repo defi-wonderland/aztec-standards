@@ -15,7 +15,7 @@
     "test:js": "NODE_NO_WARNINGS=1 node --experimental-vm-modules $(yarn bin jest) --no-cache --runInBand --config jest.integration.config.json",
     "test:nr": "aztec test",
     "lint:prettier": "prettier '**/*.{js,ts}' --write",
-    "bench": "tsx src/ts/scripts/bench.ts"
+    "bench": "bash src/sh/bench.sh"
   },
   "lint-staged": {
     "*.ts": "prettier --write -u"
