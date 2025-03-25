@@ -7,7 +7,7 @@ set -euo pipefail
 echo "{" > gate_counts.json
 
 aztec-wallet import-test-accounts
-aztec-wallet deploy token_contract@Token --args Token TKN 18 accounts:test0 -f accounts:test0 -a token
+aztec-wallet deploy token_contract@Token --args Token TKN 18 accounts:test0 -f accounts:test0 -a token --init "constructor_with_minter"
 
 process_profile_output() {
     local operation=$1
