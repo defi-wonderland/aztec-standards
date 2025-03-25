@@ -89,8 +89,7 @@ pub contract Token {
             from,
             amount,
             INITIAL_TRANSFER_CALL_MAX_NOTES,
-        )
-            .emit(encode_and_encrypt_note(&mut context, from, from));
+        );
 
         Token::at(context.this_address()).increase_public_balance(to, amount).enqueue(&mut context);
     }
@@ -110,8 +109,7 @@ pub contract Token {
             from,
             amount,
             INITIAL_TRANSFER_CALL_MAX_NOTES,
-        )
-            .emit(encode_and_encrypt_note(&mut context, from, from));
+        );
 
         Token::at(context.this_address()).increase_public_balance(to, amount).enqueue(&mut context);
 
@@ -135,12 +133,9 @@ pub contract Token {
             from,
             amount,
             INITIAL_TRANSFER_CALL_MAX_NOTES,
-        )
-            .emit(encode_and_encrypt_note(&mut context, from, from));
-
-        _increase_private_balance(storage.private_balances, to, amount).emit(
-            encode_and_encrypt_note(&mut context, to, from),
         );
+
+        _increase_private_balance(storage.private_balances, to, amount);
     }
 
     #[private]
@@ -158,8 +153,7 @@ pub contract Token {
             from,
             amount,
             INITIAL_TRANSFER_CALL_MAX_NOTES,
-        )
-            .emit(encode_and_encrypt_note(&mut context, from, from));
+        );
 
         Token::at(context.this_address())
             .increase_hiding_point_balance(hiding_point_slot, amount)
@@ -177,9 +171,7 @@ pub contract Token {
 
         Token::at(context.this_address()).decrease_public_balance(from, amount).enqueue(&mut context);
 
-        _increase_private_balance(storage.private_balances, to, amount).emit(
-            encode_and_encrypt_note(&mut context, to, from),
-        );
+        _increase_private_balance(storage.private_balances, to, amount);
     }
 
     #[private]
@@ -360,8 +352,7 @@ pub contract Token {
             from,
             amount,
             INITIAL_TRANSFER_CALL_MAX_NOTES,
-        )
-            .emit(encode_and_encrypt_note(&mut context, from, from));
+        );
 
         Token::at(context.this_address()).decrease_total_supply(amount).enqueue(&mut context);
     }
@@ -404,7 +395,7 @@ pub contract Token {
         _increase_hiding_point_balance(context, hiding_point_slot, amount);
     }
 
-    /// Decreases the balance of the private balance of `account` by `amount`
+    /// Decreases the private balance of `account` by `amount` and emits a private balance note to account
     #[contract_library_method]
     fn _decrease_private_balance(
         context: &mut PrivateContext,
@@ -412,22 +403,23 @@ pub contract Token {
         account: AztecAddress,
         amount: U128,
         max_notes: u32,
-    ) -> OuterNoteEmission<UintNote> {
+    ) {
         // Subtracts `amount` of the private balance of `account`
         let change = _subtract_balance(context, private_balances, account, amount, max_notes);
-        // Increases the balance of the private balance of `account` by `change`
-        _increase_private_balance(private_balances, account, change)
+        // Increases `amount` of the private balance of `account`, and emits a private balance note to account
+        private_balances.at(account).add(account, amount).emit(encode_and_encrypt_note(&mut context, account, account));
     }
 
-    /// Increases the balance of the private balance of `to` by `amount`
+    /// Increases the private balance of `to` by `amount` and emits a private balance note to `to` from `from`
     #[contract_library_method]
     fn _increase_private_balance(
         private_balances: Map<AztecAddress, BalanceSet<&mut PrivateContext>, &mut PrivateContext>,
-        to: AztecAddress, // todo: rename to `account`?
+        from: AztecAddress,
+        to: AztecAddress,
         amount: U128,
-    ) -> OuterNoteEmission<UintNote> {
-        // Increases `amount` of the private balance of `to`, and returns a note emission
-        private_balances.at(to).add(to, amount)
+    ) {
+        // Increases `amount` of the private balance of `to`, and emits a private balance note to `to` from `from`
+        private_balances.at(to).add(to, amount).emit(encode_and_encrypt_note(&mut context, to, from));
     }
 
     #[contract_library_method]
