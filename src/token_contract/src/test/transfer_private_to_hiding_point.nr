@@ -1,20 +1,20 @@
 use crate::test::utils;
 use crate::Token;
-use dep::uint_note::uint_note::{PartialUintNote, UintNote};
 use authwit::cheatcodes as authwit_cheatcodes;
 use aztec::oracle::random::random;
+use uint_note::uint_note::{PartialUintNote, UintNote};
 
 #[test]
-unconstrained fn transfer_private_to_hiding_point() {
+unconstrained fn transfer_private_to_commitment() {
     let (env, token_contract_address, owner, recipient, mint_amount) =
         utils::setup_and_mint_to_private_without_minter(/* with_account_contracts */ false);
 
     utils::check_private_balance(token_contract_address, owner, mint_amount);
     utils::check_private_balance(token_contract_address, recipient, 0 as u128);
 
-    // Prepare hiding point slot
+    // Prepare commitment
     env.impersonate(recipient);
-    let partial_note: PartialUintNote = Token::at(token_contract_address)
+    let commitment: PartialUintNote = Token::at(token_contract_address)
         .prepare_transfer_public_to_private(recipient, recipient)
         .call(&mut env.private());
 
@@ -22,7 +22,7 @@ unconstrained fn transfer_private_to_hiding_point() {
     let transfer_amount = mint_amount;
     env.impersonate(owner);
     Token::at(token_contract_address)
-        .transfer_private_to_hiding_point(owner, transfer_amount, partial_note, 0)
+        .transfer_private_to_commitment(owner, transfer_amount, commitment, 0)
         .call(&mut env.private());
     env.advance_block_by(1);
 
@@ -32,7 +32,7 @@ unconstrained fn transfer_private_to_hiding_point() {
 }
 
 #[test]
-unconstrained fn transfer_private_to_hiding_point_on_behalf_of_other() {
+unconstrained fn transfer_private_to_commitment_on_behalf_of_other() {
     let (env, token_contract_address, owner, recipient, mint_amount) =
         utils::setup_and_mint_to_private_without_minter(/* with_account_contracts */ true);
 
@@ -41,25 +41,25 @@ unconstrained fn transfer_private_to_hiding_point_on_behalf_of_other() {
 
     let transfer_amount = mint_amount;
 
-    // Prepare hiding point slot
+    // Prepare commitment
     env.impersonate(recipient);
-    let partial_note: PartialUintNote = Token::at(token_contract_address)
+    let commitment: PartialUintNote = Token::at(token_contract_address)
         .prepare_transfer_public_to_private(recipient, recipient)
         .call(&mut env.private());
     env.advance_block_by(1);
 
-    let transfer_to_hiding_point_call_interface = Token::at(token_contract_address)
-        .transfer_private_to_hiding_point(owner, transfer_amount, partial_note, 0);
+    let transfer_to_commitment_call_interface = Token::at(token_contract_address)
+        .transfer_private_to_commitment(owner, transfer_amount, commitment, 0);
 
     authwit_cheatcodes::add_private_authwit_from_call_interface(
         owner,
         recipient,
-        transfer_to_hiding_point_call_interface,
+        transfer_to_commitment_call_interface,
     );
 
     // Transfer tokens
     env.impersonate(recipient);
-    transfer_to_hiding_point_call_interface.call(&mut env.private());
+    transfer_to_commitment_call_interface.call(&mut env.private());
     env.advance_block_by(1);
 
     // Check balances
@@ -68,13 +68,13 @@ unconstrained fn transfer_private_to_hiding_point_on_behalf_of_other() {
 }
 
 #[test(should_fail_with = "invalid nonce")]
-unconstrained fn transfer_private_to_hiding_point_non_zero_nonce() {
+unconstrained fn transfer_private_to_commitment_non_zero_nonce() {
     let (env, token_contract_address, owner, recipient, mint_amount) =
         utils::setup_and_mint_to_private_without_minter(/* with_account_contracts */ false);
 
-    // Prepare hiding point slot
+    // Prepare commitment
     env.impersonate(recipient);
-    let partial_note: PartialUintNote = Token::at(token_contract_address)
+    let commitment: PartialUintNote = Token::at(token_contract_address)
         .prepare_transfer_public_to_private(recipient, recipient)
         .call(&mut env.private());
 
@@ -82,6 +82,6 @@ unconstrained fn transfer_private_to_hiding_point_non_zero_nonce() {
     let transfer_amount = mint_amount;
     env.impersonate(owner);
     Token::at(token_contract_address)
-        .transfer_private_to_hiding_point(owner, transfer_amount, partial_note, random())
+        .transfer_private_to_commitment(owner, transfer_amount, commitment, random())
         .call(&mut env.private());
 }
