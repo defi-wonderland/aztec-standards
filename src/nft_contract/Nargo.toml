@@ -1,0 +1,6 @@
+[package]
+name = "nft_contract"
+type = "contract"
+authors = [""]
+
+[dependencies]
