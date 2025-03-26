@@ -26,7 +26,9 @@ pub contract Token {
     // balance library
     use balance_set::balance_set::BalanceSet;
 
+    // gas-optimized max notes for initial transfer call
     global INITIAL_TRANSFER_CALL_MAX_NOTES: u32 = 2;
+    // max notes transfer for recursive transfer call if initial max notes are exceeded
     global RECURSIVE_TRANSFER_CALL_MAX_NOTES: u32 = 8;
 
     #[storage]
@@ -42,7 +44,7 @@ pub contract Token {
     }
 
     /// @notice Initializes the token with an initial supply
-    /// @dev Since this constructor don't set a minter address the mint functions will be disabled
+    /// @dev Since this constructor doesn't set a minter address the mint functions will be disabled
     /// @param name The name of the token
     /// @param symbol The symbol of the token
     /// @param decimals The number of decimals of the token
@@ -225,7 +227,7 @@ pub contract Token {
         );
     }
 
-    /// @notice Prepare a transfer from public to private balance
+    /// @notice Prepares a transfer from public to private balance
     /// @dev Returns a partial note that can be used to finalize the transfer
     /// @param from The address of the sender
     /// @param to The address of the recipient
@@ -256,7 +258,7 @@ pub contract Token {
     * ========================= PUBLIC ==========================
     * ======================================================== */
 
-    /// @notice Transfer tokens from public to public balance
+    /// @notice Transfers tokens from public to public balance
     /// @dev Public call to decrease account balance and a public call to increase recipient balance
     /// @param from The address of the sender
     /// @param to The address of the recipient
@@ -454,7 +456,7 @@ pub contract Token {
     }
 
     /// @notice Burns tokens from a public balance
-    /// @dev Burns tokens from a public balance and enqueues a public call to update the total supply
+    /// @dev Burns tokens from a public balance and updates the total supply
     /// @param from The address of the sender
     /// @param amount The amount of tokens to burn
     /// @param nonce The nonce used for authwitness
