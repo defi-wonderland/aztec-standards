@@ -115,7 +115,7 @@ pub contract Token {
     /// @param to The address of the recipient
     /// @param amount The amount of tokens to transfer
     /// @param nonce The nonce used for authwitness
-    /// @return partial_note The hiding point (privacy entrance)
+    /// @return commitment The hiding point (privacy entrance)
     #[private]
     fn transfer_private_to_public_with_commitment(
         from: AztecAddress,
@@ -170,7 +170,7 @@ pub contract Token {
     /// @dev Spends notes, emits a new note (UintNote) with any remaining change, and enqueues a public call
     /// @param from The address of the sender
     /// @param amount The amount of tokens to transfer
-    /// @param partial_note The hiding point (privacy entrance that the recipient shares with the sender)
+    /// @param commitment The hiding point (privacy entrance that the recipient shares with the sender)
     /// @param nonce The nonce used for authwitness
     #[private]
     fn transfer_private_to_commitment(
@@ -218,7 +218,7 @@ pub contract Token {
     /// @dev Returns a partial note that can be used to finalize the transfer
     /// @param from The address of the sender
     /// @param to The address of the recipient
-    /// @return partial_note The partial note
+    /// @return commitment The partial note
     #[private]
     fn prepare_transfer_public_to_private(from: AztecAddress, to: AztecAddress) -> PartialUintNote {
         _prepare_transfer_public_to_private(&mut context, storage.private_balances, from, to)
@@ -263,7 +263,7 @@ pub contract Token {
     /// `commitment` must be passed as an argument to this function
     /// @param from The address of the sender
     /// @param amount The amount of tokens to transfer
-    /// @param partial_note The hiding point (privacy entrance)
+    /// @param commitment The hiding point (privacy entrance)
     /// @param nonce The nonce used for authwitness
     #[public]
     fn finalize_transfer_public_to_private(
@@ -310,7 +310,7 @@ pub contract Token {
     }
 
     /// @notice Increases the balance of the hiding point by `amount`
-    /// @param partial_note The hiding point (privacy entrance)
+    /// @param commitment The hiding point (privacy entrance)
     /// @param amount The amount of tokens to increase the balance by
     #[public]
     #[internal]
@@ -457,7 +457,7 @@ pub contract Token {
     /// @param context The context of the public call
     /// @param public_balances The storage pointer to the public balances
     /// @param from The address of the sender
-    /// @param partial_note The hiding point (privacy entrance)
+    /// @param commitment The hiding point (privacy entrance)
     /// @param amount The amount of tokens to transfer
     #[contract_library_method]
     fn _finalize_transfer_public_to_private(
@@ -551,7 +551,7 @@ pub contract Token {
     /// @notice Completes a partial note
     /// @dev Completes a partial note and increases the balance of the hiding point by `amount`
     /// @param context The context of the public call
-    /// @param partial_note The hiding point (privacy entrance)
+    /// @param commitment The hiding point (privacy entrance)
     /// @param amount The amount of tokens to increase the balance of the hiding point by
     #[contract_library_method]
     fn _increase_commitment_balance(
@@ -596,7 +596,7 @@ pub contract Token {
     /// @dev Increases the total supply and the balance of the hiding point by `amount`
     /// @param context The context of the public call
     /// @param total_supply The storage pointer to the total supply
-    /// @param partial_note The hiding point (privacy entrance)
+    /// @param commitment The hiding point (privacy entrance)
     /// @param amount The amount of tokens to mint
     #[contract_library_method]
     fn _finalize_mint_to_private(
@@ -630,10 +630,10 @@ pub contract Token {
     // TODO: this will change when we upgrade to v81
     /// @notice Stores a partial note in storage
     /// @param context The context of the public call
-    /// @param partial_note The partial note to store
+    /// @param commitment The partial note to store
     #[contract_library_method]
-    fn _store_payload_in_storage(context: &mut PublicContext, partial_note: PartialUintNote) {
-        context.storage_write(partial_note.commitment(), true);
+    fn _store_payload_in_storage(context: &mut PublicContext, commitment: PartialUintNote) {
+        context.storage_write(commitment.commitment(), true);
     }
 
     /// @notice Prepares a transfer from public to private balance
