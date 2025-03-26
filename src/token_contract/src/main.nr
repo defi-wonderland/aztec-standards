@@ -88,8 +88,7 @@ pub contract Token {
             from,
             amount,
             INITIAL_TRANSFER_CALL_MAX_NOTES,
-        )
-            .emit(encode_and_encrypt_note(&mut context, from, from));
+        );
 
         Token::at(context.this_address()).increase_public_balance(to, amount).enqueue(&mut context);
     }
@@ -109,8 +108,7 @@ pub contract Token {
             from,
             amount,
             INITIAL_TRANSFER_CALL_MAX_NOTES,
-        )
-            .emit(encode_and_encrypt_note(&mut context, from, from));
+        );
 
         Token::at(context.this_address()).increase_public_balance(to, amount).enqueue(&mut context);
 
@@ -134,12 +132,9 @@ pub contract Token {
             from,
             amount,
             INITIAL_TRANSFER_CALL_MAX_NOTES,
-        )
-            .emit(encode_and_encrypt_note(&mut context, from, from));
-
-        _increase_private_balance(storage.private_balances, to, amount).emit(
-            encode_and_encrypt_note(&mut context, to, from),
         );
+
+        _increase_private_balance(&mut context, storage.private_balances, from, to, amount);
     }
 
     #[private]
@@ -157,8 +152,7 @@ pub contract Token {
             from,
             amount,
             INITIAL_TRANSFER_CALL_MAX_NOTES,
-        )
-            .emit(encode_and_encrypt_note(&mut context, from, from));
+        );
 
         Token::at(context.this_address()).increase_commitment_balance(commitment, amount).enqueue(
             &mut context,
@@ -176,9 +170,7 @@ pub contract Token {
 
         Token::at(context.this_address()).decrease_public_balance(from, amount).enqueue(&mut context);
 
-        _increase_private_balance(storage.private_balances, to, amount).emit(
-            encode_and_encrypt_note(&mut context, to, from),
-        );
+        _increase_private_balance(&mut context, storage.private_balances, from, to, amount);
     }
 
     #[private]
@@ -188,7 +180,7 @@ pub contract Token {
 
     #[internal]
     #[private]
-    fn _recurse_subtract_balance(account: AztecAddress, amount: u128) -> u128 {
+    fn recurse_subtract_balance(account: AztecAddress, amount: u128) -> u128 {
         _subtract_balance(
             &mut context,
             storage.private_balances,
@@ -288,21 +280,20 @@ pub contract Token {
         amount: u128,
     ) {
         let minter = storage.minter.read();
-        assert(minter.eq(context.msg_sender()), "caller is not minter");
+        _validate_minter(context.msg_sender(), minter);
 
         // We prepare the commitment to which we'll "send" the minted amount.
         let commitment =
             _prepare_transfer_public_to_private(&mut context, storage.private_balances, minter, to);
 
         Token::at(context.this_address())
-            ._finalize_mint_to_private_unsafe(amount, commitment)
+            .finalize_mint_to_private_unsafe(amount, commitment)
             .enqueue(&mut context);
     }
 
     #[public]
     fn mint_to_public(to: AztecAddress, amount: u128) {
-        let minter = storage.minter.read();
-        assert(minter.eq(context.msg_sender()), "caller is not minter");
+        _validate_minter(context.msg_sender(), storage.minter.read());
 
         _increase_public_balance(storage.public_balances, to, amount);
         _increase_total_supply(storage.total_supply, amount);
@@ -310,16 +301,20 @@ pub contract Token {
 
     #[public]
     fn finalize_mint_to_private(amount: u128, commitment: PartialUintNote) {
-        let minter = storage.minter.read();
-        assert(minter.eq(context.msg_sender()), "caller is not minter");
+        _validate_minter(context.msg_sender(), storage.minter.read());
 
         _finalize_mint_to_private(&mut context, storage.total_supply, commitment, amount);
     }
 
     #[public]
     #[internal]
-    fn _finalize_mint_to_private_unsafe(amount: u128, commitment: PartialUintNote) {
-        _finalize_mint_to_private(&mut context, storage.total_supply, commitment, amount);
+    fn finalize_mint_to_private_unsafe(amount: u128, commitment: PartialUintNote) {
+        _finalize_mint_to_private(
+            &mut context,
+            storage.total_supply,
+            commitment,
+            amount,
+        );
     }
 
     /** ==========================================================
@@ -336,8 +331,7 @@ pub contract Token {
             from,
             amount,
             INITIAL_TRANSFER_CALL_MAX_NOTES,
-        )
-            .emit(encode_and_encrypt_note(&mut context, from, from));
+        );
 
         Token::at(context.this_address()).decrease_total_supply(amount).enqueue(&mut context);
     }
@@ -374,7 +368,13 @@ pub contract Token {
         _increase_commitment_balance(context, commitment, amount);
     }
 
-    /// Decreases the balance of the private balance of `account` by `amount`
+    /// Validates that the caller is the minter
+    #[contract_library_method]
+    fn _validate_minter(sender: AztecAddress, minter: AztecAddress) {
+        assert(minter.eq(sender), "caller is not minter");
+    }
+
+    /// Decreases the private balance of `account` by `amount` and emits a private balance note to account
     #[contract_library_method]
     fn _decrease_private_balance(
         context: &mut PrivateContext,
@@ -382,22 +382,24 @@ pub contract Token {
         account: AztecAddress,
         amount: u128,
         max_notes: u32,
-    ) -> OuterNoteEmission<UintNote> {
+    ) {
         // Subtracts `amount` of the private balance of `account`
         let change = _subtract_balance(context, private_balances, account, amount, max_notes);
-        // Increases the balance of the private balance of `account` by `change`
-        _increase_private_balance(private_balances, account, change)
+        // Increases `change` of the private balance of `account`, and emits a private balance note to account
+        private_balances.at(account).add(account, change).emit(encode_and_encrypt_note(context, account, account));
     }
 
-    /// Increases the balance of the private balance of `to` by `amount`
+    /// Increases the private balance of `to` by `amount` and emits a private balance note to `to` from `from`
     #[contract_library_method]
     fn _increase_private_balance(
+        context: &mut PrivateContext,
         private_balances: Map<AztecAddress, BalanceSet<&mut PrivateContext>, &mut PrivateContext>,
-        to: AztecAddress, // todo: rename to `account`?
+        from: AztecAddress,
+        to: AztecAddress,
         amount: u128,
-    ) -> OuterNoteEmission<UintNote> {
-        // Increases `amount` of the private balance of `to`, and returns a note emission
-        private_balances.at(to).add(to, amount)
+    ) {
+        // Increases `amount` of the private balance of `to`, and emits a private balance note to `to` from `from`
+        private_balances.at(to).add(to, amount).emit(encode_and_encrypt_note(context, to, from));
     }
 
     #[contract_library_method]
@@ -453,8 +455,7 @@ pub contract Token {
             // and try again.
             let remaining = amount - subtracted;
 
-            let self = Token::at(context.this_address());
-            self._recurse_subtract_balance(account, remaining).call(context)
+            Token::at(context.this_address()).recurse_subtract_balance(account, remaining).call(context)
         }
     }
 
