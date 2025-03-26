@@ -56,6 +56,7 @@ unconstrained fn transfer_private_to_public_on_behalf_of_other() {
     );
 }
 
+// TODO: Can't figure out why this test is failing
 // #[test]
 unconstrained fn transfer_private_to_public_multiple_notes_recursively() {
     // Setup with account contracts. Slower since we actually deploy them, but needed for authwits.

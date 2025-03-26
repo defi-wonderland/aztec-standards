@@ -1,8 +1,8 @@
 use crate::test::utils;
 use crate::Token;
-use dep::uint_note::uint_note::{PartialUintNote, UintNote};
 use authwit::cheatcodes as authwit_cheatcodes;
 use aztec::oracle::random::random;
+use uint_note::uint_note::{PartialUintNote, UintNote};
 
 #[test]
 unconstrained fn transfer_private_to_commitment() {

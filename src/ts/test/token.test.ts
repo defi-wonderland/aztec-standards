@@ -394,6 +394,7 @@ describe('Token - Single PXE', () => {
     // expect(await token.methods.total_supply().simulate()).toBe(AMOUNT);
   }, 300_000);
 
+  // TODO: Can't figure out why this is failing
   // Assertion failed: unauthorized 'true, authorized'
   it.skip('public transfer with authwitness', async () => {
     // Mint tokens to Alice in public
@@ -410,19 +411,22 @@ describe('Token - Single PXE', () => {
       caller: carl.getAddress(),
       action,
     };
-    // alice create authwitness
+    // alice creates authwitness
     const authWitness = await alice.createAuthWit(intent);
-
+    // alice authorizes the public authwit
     await (await alice.setPublicAuthWit(intent, true)).send().wait();
-    await (await carl.setPublicAuthWit(intent, true)).send().wait();
-    // check authwit validity
+
+    // check validity of alice's authwit
     const validity = await carl.lookupValidity(alice.getAddress(), intent, authWitness);
     expect(validity.isValidInPrivate).toBeTruthy();
     expect(validity.isValidInPublic).toBeTruthy();
 
+    // Carl submits the action, using alice's authwit
     await action.send({ authWitnesses: [authWitness] }).wait();
 
+    // Check balances, alice to should 0
     expect(await token.methods.balance_of_public(alice.getAddress()).simulate()).toBe(0n);
+    // Bob should have the a non-zero amount
     expect(await token.methods.balance_of_public(bob.getAddress()).simulate()).toBe(AMOUNT);
   }, 300_000);
 

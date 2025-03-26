@@ -103,6 +103,7 @@ unconstrained fn transfer_private_to_public_with_commitment_and_finalize() {
     utils::check_private_balance(token_contract_address, recipient, transfer_amount);
 }
 
+// TODO: We're finalizing a transfer using an invalid commitment, I think this behavior should be restricted
 // #[test(should_fail_with = "transfer not prepared")]
 #[test]
 unconstrained fn transfer_private_to_public_with_commitment_and_finalize_with_invalid_commitment() {

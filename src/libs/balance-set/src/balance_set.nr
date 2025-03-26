@@ -1,4 +1,4 @@
-use dep::aztec::{
+use aztec::{
     context::{PrivateContext, UnconstrainedContext},
     note::{note_emission::OuterNoteEmission, retrieved_note::RetrievedNote},
     prelude::{NoteGetterOptions, NoteViewerOptions, PrivateSet},

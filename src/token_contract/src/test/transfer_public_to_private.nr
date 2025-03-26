@@ -1,7 +1,7 @@
 use crate::{test::utils, Token};
-use dep::uint_note::uint_note::{PartialUintNote, UintNote};
 use aztec::oracle::random::random;
 use std::test::OracleMock;
+use uint_note::uint_note::{PartialUintNote, UintNote};
 
 /// Internal orchestration means that the calls to `prepare_transfer_public_to_private`
 /// and `finalize_transfer_public_to_private` are done by the TOKEN contract itself.
@@ -48,20 +48,22 @@ unconstrained fn transfer_public_to_private_external_orchestration() {
     utils::check_private_balance(token_contract_address, recipient, amount);
 }
 
+// TODO: This test is passing, but we're finalizing a transfer using an invalid commitment.
 // #[test(should_fail_with = "transfer not prepared")]
-// unconstrained fn transfer_public_to_private_transfer_not_prepared() {
-//     // Setup without account contracts. We are not using authwits here, so dummy accounts are enough
-//     let (env, token_contract_address, owner, _, amount) =
-//         utils::setup_and_mint_to_public_without_minter(/* with_account_contracts */ false);
+#[test]
+unconstrained fn transfer_public_to_private_transfer_not_prepared() {
+    // Setup without account contracts. We are not using authwits here, so dummy accounts are enough
+    let (env, token_contract_address, owner, _, amount) =
+        utils::setup_and_mint_to_public_without_minter(/* with_account_contracts */ false);
 
-//     // Transfer was not prepared so we can use random value for the hiding point slot
-//     let hiding_point_slot = random();
+    // Transfer was not prepared, so we can use a random value for the commitment
+    let commitment = PartialUintNote { commitment: random() };
 
-//     // Try finalizing the transfer without preparing it
-//     Token::at(token_contract_address)
-//         .finalize_transfer_public_to_private(owner, amount, hiding_point_slot, 0)
-//         .call(&mut env.public());
-// }
+    // Try finalizing the transfer without preparing it first
+    Token::at(token_contract_address)
+        .finalize_transfer_public_to_private(owner, amount, commitment, 0)
+        .call(&mut env.public());
+}
 
 #[test(should_fail_with = "attempt to subtract with overflow 'public_balances.at(from).read() - amount'")]
 unconstrained fn transfer_public_to_private_failure_not_an_owner() {
