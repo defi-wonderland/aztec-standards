@@ -410,8 +410,8 @@ pub contract Token {
     ) {
         // Subtracts `amount` of the private balance of `account`
         let change = _subtract_balance(context, private_balances, account, amount, max_notes);
-        // Increases `amount` of the private balance of `account`, and emits a private balance note to account
-        private_balances.at(account).add(account, amount).emit(encode_and_encrypt_note(context, account, account));
+        // Increases `change` of the private balance of `account`, and emits a private balance note to account
+        private_balances.at(account).add(account, change).emit(encode_and_encrypt_note(context, account, account));
     }
 
     /// Increases the private balance of `to` by `amount` and emits a private balance note to `to` from `from`
