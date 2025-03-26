@@ -8,10 +8,7 @@ pub contract Token {
     use aztec::{
         context::PrivateContext,
         macros::{functions::{initializer, internal, private, public, view}, storage::storage},
-        note::{note_emission::OuterNoteEmission, note_interface::PartialNote},
-        oracle::random::random,
         prelude::{AztecAddress, Map, PublicContext, PublicImmutable, PublicMutable},
-        protocol_types::traits::{Hash, Serialize},
     };
 
     use authwit::auth::{
@@ -309,12 +306,7 @@ pub contract Token {
     #[public]
     #[internal]
     fn finalize_mint_to_private_unsafe(amount: u128, commitment: PartialUintNote) {
-        _finalize_mint_to_private(
-            &mut context,
-            storage.total_supply,
-            commitment,
-            amount,
-        );
+        _finalize_mint_to_private(&mut context, storage.total_supply, commitment, amount);
     }
 
     /** ==========================================================
@@ -386,7 +378,11 @@ pub contract Token {
         // Subtracts `amount` of the private balance of `account`
         let change = _subtract_balance(context, private_balances, account, amount, max_notes);
         // Increases `change` of the private balance of `account`, and emits a private balance note to account
-        private_balances.at(account).add(account, change).emit(encode_and_encrypt_note(context, account, account));
+        private_balances.at(account).add(account, change).emit(encode_and_encrypt_note(
+            context,
+            account,
+            account,
+        ));
     }
 
     /// Increases the private balance of `to` by `amount` and emits a private balance note to `to` from `from`
@@ -455,7 +451,9 @@ pub contract Token {
             // and try again.
             let remaining = amount - subtracted;
 
-            Token::at(context.this_address()).recurse_subtract_balance(account, remaining).call(context)
+            Token::at(context.this_address()).recurse_subtract_balance(account, remaining).call(
+                context,
+            )
         }
     }
 
