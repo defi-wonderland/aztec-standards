@@ -85,11 +85,11 @@ pub contract Token {
     * ======================================================== */
 
     /// @notice Transfer tokens from private to public balance
-    /// @dev Spends notes, emits a new note with any remaining change, and enqueues a public call
+    /// @dev Spends notes, emits a new note (UintNote) with any remaining change, and enqueues a public call
     /// @param from The address of the sender
     /// @param to The address of the recipient
     /// @param amount The amount of tokens to transfer
-    /// @param nonce The nonce of the transaction
+    /// @param nonce The nonce used for authwitness
     #[private]
     fn transfer_private_to_public(
         from: AztecAddress,
@@ -112,11 +112,11 @@ pub contract Token {
     }
 
     /// @notice Transfer tokens from private to public balance with a hiding point
-    /// @dev Spends notes, emits a new note with any remaining change, enqueues a public call, and returns a partial note
+    /// @dev Spends notes, emits a new note (UintNote) with any remaining change, enqueues a public call, and returns a partial note
     /// @param from The address of the sender
     /// @param to The address of the recipient
     /// @param amount The amount of tokens to transfer
-    /// @param nonce The nonce of the transaction
+    /// @param nonce The nonce used for authwitness
     /// @return partial_note The hiding point (privacy entrance)
     #[private]
     fn transfer_private_to_public_with_hiding_point(
@@ -145,11 +145,11 @@ pub contract Token {
     }
 
     /// @notice Transfer tokens from private to private balance
-    /// @dev Spends notes, emits a new note with any remaining change, and sends a note to the recipient
+    /// @dev Spends notes, emits a new note (UintNote) with any remaining change, and sends a note to the recipient
     /// @param from The address of the sender
     /// @param to The address of the recipient
     /// @param amount The amount of tokens to transfer
-    /// @param nonce The nonce of the transaction
+    /// @param nonce The nonce used for authwitness
     #[private]
     fn transfer_private_to_private(
         from: AztecAddress,
@@ -173,12 +173,12 @@ pub contract Token {
         );
     }
 
-    /// @notice Transfer tokens from private to hiding point
-    /// @dev Spends notes, emits a new note with any remaining change, and enqueues a public call
+    /// @notice Transfer tokens from private to the recipient hiding point (recipient must create a hiding point first)
+    /// @dev Spends notes, emits a new note (UintNote) with any remaining change, and enqueues a public call
     /// @param from The address of the sender
     /// @param amount The amount of tokens to transfer
-    /// @param partial_note The hiding point (privacy entrance)
-    /// @param nonce The nonce of the transaction
+    /// @param partial_note The hiding point (privacy entrance that the recipient shares with the sender)
+    /// @param nonce The nonce used for authwitness
     #[private]
     fn transfer_private_to_hiding_point(
         from: AztecAddress,
@@ -208,7 +208,7 @@ pub contract Token {
     /// @param from The address of the sender
     /// @param to The address of the recipient
     /// @param amount The amount of tokens to transfer
-    /// @param nonce The nonce of the transaction
+    /// @param nonce The nonce used for authwitness
     #[private]
     fn transfer_public_to_private(
         from: AztecAddress,
@@ -261,7 +261,7 @@ pub contract Token {
     /// @param from The address of the sender
     /// @param to The address of the recipient
     /// @param amount The amount of tokens to transfer
-    /// @param nonce The nonce of the transaction
+    /// @param nonce The nonce used for authwitness
     #[public]
     fn transfer_public_to_public(from: AztecAddress, to: AztecAddress, amount: u128, nonce: Field) {
         _validate_from_public(&mut context, from, nonce);
@@ -275,7 +275,7 @@ pub contract Token {
     /// @param from The address of the sender
     /// @param amount The amount of tokens to transfer
     /// @param partial_note The hiding point (privacy entrance)
-    /// @param nonce The nonce of the transaction
+    /// @param nonce The nonce used for authwitness
     #[public]
     fn finalize_transfer_public_to_private(
         from: AztecAddress,
@@ -436,7 +436,7 @@ pub contract Token {
     /// @dev Burns tokens from a private balance and enqueues a public call to update the total supply
     /// @param from The address of the sender
     /// @param amount The amount of tokens to burn
-    /// @param nonce The nonce of the transaction
+    /// @param nonce The nonce used for authwitness
     #[private]
     fn burn_private(from: AztecAddress, amount: u128, nonce: Field) {
         _validate_from_private(&mut context, from, nonce);
@@ -457,7 +457,7 @@ pub contract Token {
     /// @dev Burns tokens from a public balance and enqueues a public call to update the total supply
     /// @param from The address of the sender
     /// @param amount The amount of tokens to burn
-    /// @param nonce The nonce of the transaction
+    /// @param nonce The nonce used for authwitness
     #[public]
     fn burn_public(from: AztecAddress, amount: u128, nonce: Field) {
         _validate_from_public(&mut context, from, nonce);
