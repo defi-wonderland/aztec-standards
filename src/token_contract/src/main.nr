@@ -357,7 +357,6 @@ pub contract Token {
     /// @notice Returns the balance of the private balance of `owner`
     /// @param owner The address of the owner
     /// @return The balance of the private balance of `owner`
-    #[unconstrained]
     unconstrained fn balance_of_private(owner: AztecAddress) -> pub u128 {
         storage.private_balances.at(owner).balance_of()
     }
