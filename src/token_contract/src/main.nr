@@ -4,7 +4,7 @@ use aztec::macros::aztec;
 
 #[aztec]
 pub contract Token {
-
+    // aztec library
     use aztec::{
         context::PrivateContext,
         macros::{functions::{initializer, internal, private, public, view}, storage::storage},
@@ -28,6 +28,13 @@ pub contract Token {
     // max notes transfer for recursive transfer call if initial max notes are exceeded
     global RECURSIVE_TRANSFER_CALL_MAX_NOTES: u32 = 8;
 
+    /// @param name The name of the token
+    /// @param symbol The symbol of the token
+    /// @param decimals The number of decimals of the token
+    /// @param private_balances The private balances of the token
+    /// @param total_supply The total supply of the token
+    /// @param public_balances The public balances of the token
+    /// @param minter The account permissioned to mint the token
     #[storage]
     struct Storage<Context> {
         // TODO: fix "is private and not visible from the current module" warning
