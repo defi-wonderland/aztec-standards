@@ -116,13 +116,13 @@ pub contract Token {
         Token::at(context.this_address()).increase_public_balance(to, amount).enqueue(&mut context);
     }
 
-    /// @notice Transfer tokens from private to public balance with a hiding point
+    /// @notice Transfer tokens from private to public balance with a commitment
     /// @dev Spends notes, emits a new note (UintNote) with any remaining change, enqueues a public call, and returns a partial note
     /// @param from The address of the sender
     /// @param to The address of the recipient
     /// @param amount The amount of tokens to transfer
     /// @param nonce The nonce used for authwitness
-    /// @return commitment The hiding point (privacy entrance)
+    /// @return commitment The commitment (privacy entrance)
     #[private]
     fn transfer_private_to_public_with_commitment(
         from: AztecAddress,
@@ -173,11 +173,11 @@ pub contract Token {
         _increase_private_balance(&mut context, storage.private_balances, from, to, amount);
     }
 
-    /// @notice Transfer tokens from private to the recipient hiding point (recipient must create a hiding point first)
+    /// @notice Transfer tokens from private to the recipient commitment (recipient must create a commitment first)
     /// @dev Spends notes, emits a new note (UintNote) with any remaining change, and enqueues a public call
     /// @param from The address of the sender
     /// @param amount The amount of tokens to transfer
-    /// @param commitment The hiding point (privacy entrance that the recipient shares with the sender)
+    /// @param commitment The commitment (privacy entrance that the recipient shares with the sender)
     /// @param nonce The nonce used for authwitness
     #[private]
     fn transfer_private_to_commitment(
@@ -270,7 +270,7 @@ pub contract Token {
     /// `commitment` must be passed as an argument to this function
     /// @param from The address of the sender
     /// @param amount The amount of tokens to transfer
-    /// @param commitment The hiding point (privacy entrance)
+    /// @param commitment The commitment (privacy entrance)
     /// @param nonce The nonce used for authwitness
     #[public]
     fn finalize_transfer_public_to_private(
@@ -290,7 +290,7 @@ pub contract Token {
     }
 
     /// @notice Stores a partial note in storage
-    /// @dev Used to store the hiding point (privacy entrance)
+    /// @dev Used to store the commitment (privacy entrance)
     /// @param slot The partial note to store
     #[public]
     #[internal]
@@ -316,8 +316,8 @@ pub contract Token {
         _decrease_public_balance(storage.public_balances, from, amount);
     }
 
-    /// @notice Increases the balance of the hiding point by `amount`
-    /// @param commitment The hiding point (privacy entrance)
+    /// @notice Increases the balance of the commitment by `amount`
+    /// @param commitment The commitment (privacy entrance)
     /// @param amount The amount of tokens to increase the balance by
     #[public]
     #[internal]
@@ -359,7 +359,7 @@ pub contract Token {
     * ======================================================== */
 
     /// @notice Mints tokens to a private balance
-    /// @dev Mints tokens to a hiding point and enqueues a public call to update the total supply
+    /// @dev Mints tokens to a commitment and enqueues a public call to update the total supply
     /// @param from The address of the sender
     /// @param to The address of the recipient
     /// @param amount The amount of tokens to mint
@@ -394,7 +394,7 @@ pub contract Token {
     }
 
     /// @notice Finalizes a mint to a private balance
-    /// @dev Finalizes a mint to a hiding point and updates the total supply
+    /// @dev Finalizes a mint to a commitment and updates the total supply
     /// @param amount The amount of tokens to mint
     /// @param commitment The commitment (privacy entrance)
     #[public]
@@ -460,11 +460,11 @@ pub contract Token {
      * ======================================================== */
 
     /// @notice Finalizes a public to private transfer
-    /// @dev Decreases the balance of the public balance of `from` by `amount` and increases the balance of the hiding point
+    /// @dev Decreases the balance of the public balance of `from` by `amount` and increases the balance of the commitment
     /// @param context The context of the public call
     /// @param public_balances The storage pointer to the public balances
     /// @param from The address of the sender
-    /// @param commitment The hiding point (privacy entrance)
+    /// @param commitment The commitment (privacy entrance)
     /// @param amount The amount of tokens to transfer
     #[contract_library_method]
     fn _finalize_transfer_public_to_private(
@@ -556,10 +556,10 @@ pub contract Token {
 
     // TODO: this will change when we upgrade to v81
     /// @notice Completes a partial note
-    /// @dev Completes a partial note and increases the balance of the hiding point by `amount`
+    /// @dev Completes a partial note and increases the balance of the commitment by `amount`
     /// @param context The context of the public call
-    /// @param commitment The hiding point (privacy entrance)
-    /// @param amount The amount of tokens to increase the balance of the hiding point by
+    /// @param commitment The commitment (privacy entrance)
+    /// @param amount The amount of tokens to increase the balance of the commitment by
     #[contract_library_method]
     fn _increase_commitment_balance(
         context: &mut PublicContext,
@@ -600,10 +600,10 @@ pub contract Token {
     }
 
     /// @notice Finalizes a mint to a private balance
-    /// @dev Increases the total supply and the balance of the hiding point by `amount`
+    /// @dev Increases the total supply and the balance of the commitment by `amount`
     /// @param context The context of the public call
     /// @param total_supply The storage pointer to the total supply
-    /// @param commitment The hiding point (privacy entrance)
+    /// @param commitment The commitment (privacy entrance)
     /// @param amount The amount of tokens to mint
     #[contract_library_method]
     fn _finalize_mint_to_private(
