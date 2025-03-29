@@ -400,7 +400,7 @@ pub contract Token {
     #[public]
     fn finalize_mint_to_private(amount: u128, commitment: PartialUintNote) {
         let minter = storage.minter.read();
-        assert(minter.eq(context.msg_sender()), "caller is not minter");
+        _validate_minter(context.msg_sender(), minter);
 
         _finalize_mint_to_private(&mut context, storage.total_supply, commitment, amount);
     }
@@ -509,7 +509,6 @@ pub contract Token {
     /// @param private_balances The storage pointer to the private balances
     /// @param to The address of the recipient
     /// @param amount The amount of tokens to increase the balance by
-    /// @return The note emission
     #[contract_library_method]
     fn _increase_private_balance(
         context: &mut PrivateContext,
@@ -554,7 +553,6 @@ pub contract Token {
         public_balances.at(from).write(new_balance);
     }
 
-    // TODO: this will change when we upgrade to v81
     /// @notice Completes a partial note
     /// @dev Completes a partial note and increases the balance of the commitment by `amount`
     /// @param context The context of the public call
@@ -671,7 +669,8 @@ pub contract Token {
      * ================== AUTH LIBRARIES =========================
      * ======================================================== */
 
-    /// @notice Validates that the caller is the owner of the private balance
+    /// @notice Validates that the caller possesses authwit from the `from` address or the caller is the `from` address
+    /// @dev If the caller is the `from` address, the nonce must be 0
     /// @param context The context of the private call
     /// @param from The address of the sender
     /// @param nonce The nonce of the transaction
@@ -684,7 +683,8 @@ pub contract Token {
         }
     }
 
-    /// @notice Validates that the caller is the owner of the public balance
+    /// @notice Validates that the caller possesses authwit from the `from` address or the caller is the `from` address
+    /// @dev If the caller is the `from` address, the nonce must be 0
     /// @param context The context of the public call
     /// @param from The address of the sender
     /// @param nonce The nonce of the transaction
