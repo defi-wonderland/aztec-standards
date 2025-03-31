@@ -166,7 +166,7 @@ impl Add for U253 {
         let result = self.value + other.value;
         result.assert_max_bit_size::<253>();
 
-        assert(!MAX_U253.lt(result), "U253 addition overflow");
+        assert(!MAX_U253.lt(result), "U253 addition overflow"); // TODO: is this redundant with L167?
         assert(!result.lt(self.value), "U253 addition overflow");
         assert(!result.lt(other.value), "U253 addition overflow");
         Self { value: result }
@@ -180,7 +180,7 @@ impl Sub for U253 {
             "U253 subtraction underflow",
         );
         let result = self.value - other.value;
-        result.assert_max_bit_size::<253>();
+        result.assert_max_bit_size::<253>(); // TODO: remove. If self.value complies with U253, result does too
         Self { value: result }
     }
 }
@@ -191,6 +191,9 @@ impl Mul for U253 {
 
         result.assert_max_bit_size::<253>();
         // Allow multiplication by 1 without additional checks, otherwise check for overflow
+        // TODO: is result.lt(MAX_U253 + 1) more efficient than result.lt(MAX_U253) | result.eq(MAX_U253)?
+        // TODO: BUG: This assertion is not compatible with multiplication by zero.
+        // TODO: is there a value c = a*b mod 2^254 >= a,b that actually overflows? YES
         assert(
             (self.value == 1)
                 | (other.value == 1)
