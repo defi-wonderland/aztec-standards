@@ -235,7 +235,7 @@ pub contract Token {
     /// @dev Used to subtract balances that exceed the max notes limit
     /// @param account The address of the account to subtract the balance from
     /// @param amount The amount of tokens to subtract
-    /// @return The amount subtracted
+    /// @return The change to return to the owner
     #[internal]
     #[private]
     fn recurse_subtract_balance(account: AztecAddress, amount: u128) -> u128 {
