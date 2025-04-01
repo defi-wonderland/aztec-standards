@@ -48,10 +48,8 @@ unconstrained fn transfer_public_to_commitment_external_orchestration() {
     utils::check_private_balance(token_contract_address, recipient, amount);
 }
 
-// TODO: This test is passing, but we're finalizing a transfer using an invalid commitment.
-// #[test(should_fail_with = "transfer not prepared")]
-#[test]
-unconstrained fn transfer_public_to_commitment_transfer_not_prepared() {
+#[test(should_fail_with = "Invalid commitment")]
+unconstrained fn transfer_public_to_commitment_transfer_not_initialized() {
     // Setup without account contracts. We are not using authwits here, so dummy accounts are enough
     let (env, token_contract_address, owner, _, amount) =
         utils::setup_and_mint_to_public_without_minter(/* with_account_contracts */ false);
