@@ -93,7 +93,7 @@ unconstrained fn transfer_private_to_public_with_commitment_and_finalize() {
     // Transfer tokens
     env.impersonate(recipient);
     Token::at(token_contract_address)
-        .finalize_transfer_public_to_private(recipient, transfer_amount, commitment, 0)
+        .transfer_public_to_commitment(recipient, transfer_amount, commitment, 0)
         .call(&mut env.public());
     env.advance_block_by(1);
 
@@ -127,7 +127,7 @@ unconstrained fn transfer_private_to_public_with_commitment_and_finalize_with_in
     // finalize transfer to an invalid commitment
     env.impersonate(recipient);
     Token::at(token_contract_address)
-        .finalize_transfer_public_to_private(recipient, transfer_amount, invalid_commitment, 0)
+        .transfer_public_to_commitment(recipient, transfer_amount, invalid_commitment, 0)
         .call(&mut env.public());
 
     // you can finalize but the recipient will not have tokens
@@ -158,7 +158,7 @@ unconstrained fn transfer_private_to_public_with_commitment_and_finalize_with_co
     // Transfer tokens
     env.impersonate(recipient);
     Token::at(token_contract_address)
-        .finalize_transfer_public_to_private(recipient, transfer_amount, invalid_commitment, 0)
+        .transfer_public_to_commitment(recipient, transfer_amount, invalid_commitment, 0)
         .call(&mut env.public());
 
     // check that both owner and recipient have no tokens
