@@ -271,12 +271,11 @@ pub contract Token {
 
     #[private]
     fn mint_to_private(from: AztecAddress, to: AztecAddress, amount: u128) {
-        let minter = storage.minter.read();
-        _validate_minter(context.msg_sender(), minter);
+        _validate_minter(context.msg_sender(), storage.minter.read());
 
         // We prepare the commitment to which we'll "send" the minted amount.
         let commitment =
-            _initialize_transfer_commitment(&mut context, storage.private_balances, minter, to);
+            _initialize_transfer_commitment(&mut context, storage.private_balances, from, to);
 
         Token::at(context.this_address()).mint_to_commitment_internal(amount, commitment).enqueue(
             &mut context,
