@@ -21,6 +21,22 @@ unconstrained fn mint_to_private_success() {
 }
 
 #[test]
+unconstrained fn mint_to_private_stores_commitment() {
+    let (env, token_contract_address, owner, _, minter) =
+        utils::setup_with_minter(/* with_account_contracts */ false);
+    let mint_amount: u128 = 10_000;
+    env.impersonate(minter);
+    Token::at(token_contract_address).mint_to_private(owner, owner, mint_amount).call(
+        &mut env.private(),
+    );
+    // TODO: how do we retrieve the used commitment from here?
+    // assert(
+    //     utils::_commitment_storage_read(token_contract_address, commitment.commitment()) == true,
+    //     "Commitment not stored",
+    // );
+}
+
+#[test]
 unconstrained fn mint_to_private_failures() {
     // Setup without account contracts. We are not using authwits here, so dummy accounts are enough
     let (env, token_contract_address, owner, recipient, minter) =
