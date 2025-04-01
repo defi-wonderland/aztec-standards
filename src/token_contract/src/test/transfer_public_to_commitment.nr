@@ -3,12 +3,12 @@ use aztec::oracle::random::random;
 use std::test::OracleMock;
 use uint_note::uint_note::{PartialUintNote, UintNote};
 
-/// Internal orchestration means that the calls to `prepare_transfer_public_to_private`
-/// and `finalize_transfer_public_to_private` are done by the TOKEN contract itself.
-/// In this test's case this is done by the `Token::transfer_public_to_private(...)` function called
-/// in `utils::setup_mint_and_transfer_public_to_private`.
+/// Internal orchestration means that the calls to `initialize_transfer_commitment`
+/// and `transfer_public_to_commitment` are done by the TOKEN contract itself.
+/// In this test's case this is done by the `Token::transfer_public_to_commitment(...)` function called
+/// in `utils::setup_mint_and_transfer_public_to_commitment`.
 #[test]
-unconstrained fn transfer_public_to_private_internal_orchestration() {
+unconstrained fn transfer_public_to_commitment_internal_orchestration() {
     // The transfer to private is done in `utils::setup_and_mint_to_private_without_minter` and for this reason
     // in this test we just call it and check the outcome.
     // Setup without account contracts. We are not using authwits here, so dummy accounts are enough
@@ -22,7 +22,7 @@ unconstrained fn transfer_public_to_private_internal_orchestration() {
 /// External orchestration means that the calls to prepare and finalize are not done by the Token contract. This flow
 /// will typically be used by a DEX.
 #[test]
-unconstrained fn transfer_public_to_private_external_orchestration() {
+unconstrained fn transfer_public_to_commitment_external_orchestration() {
     // Setup without account contracts. We are not using authwits here, so dummy accounts are enough
     let (env, token_contract_address, owner, recipient, amount) =
         utils::setup_and_mint_to_public_without_minter(/* with_account_contracts */ false);
@@ -34,12 +34,12 @@ unconstrained fn transfer_public_to_private_external_orchestration() {
 
     // We prepare the transfer
     let partial_note: PartialUintNote = Token::at(token_contract_address)
-        .prepare_transfer_public_to_private(owner, recipient)
+        .initialize_transfer_commitment(owner, recipient)
         .call(&mut env.private());
 
     // Finalize the transfer of the tokens (message sender owns the tokens in public)
     Token::at(token_contract_address)
-        .finalize_transfer_public_to_private(owner, amount, partial_note, 0)
+        .transfer_public_to_commitment(owner, amount, partial_note, 0)
         .call(&mut env.public());
 
     env.advance_block_by(1);
@@ -51,7 +51,7 @@ unconstrained fn transfer_public_to_private_external_orchestration() {
 // TODO: This test is passing, but we're finalizing a transfer using an invalid commitment.
 // #[test(should_fail_with = "transfer not prepared")]
 #[test]
-unconstrained fn transfer_public_to_private_transfer_not_prepared() {
+unconstrained fn transfer_public_to_commitment_transfer_not_prepared() {
     // Setup without account contracts. We are not using authwits here, so dummy accounts are enough
     let (env, token_contract_address, owner, _, amount) =
         utils::setup_and_mint_to_public_without_minter(/* with_account_contracts */ false);
@@ -61,12 +61,12 @@ unconstrained fn transfer_public_to_private_transfer_not_prepared() {
 
     // Try finalizing the transfer without preparing it first
     Token::at(token_contract_address)
-        .finalize_transfer_public_to_private(owner, amount, commitment, 0)
+        .transfer_public_to_commitment(owner, amount, commitment, 0)
         .call(&mut env.public());
 }
 
 #[test(should_fail_with = "attempt to subtract with overflow 'public_balances.at(from).read() - amount'")]
-unconstrained fn transfer_public_to_private_failure_not_an_owner() {
+unconstrained fn transfer_public_to_commitment_failure_not_an_owner() {
     // Setup without account contracts. We are not using authwits here, so dummy accounts are enough
     let (env, token_contract_address, owner, not_owner, amount) =
         utils::setup_and_mint_to_public_without_minter(/* with_account_contracts */ false);
@@ -75,12 +75,12 @@ unconstrained fn transfer_public_to_private_failure_not_an_owner() {
     // as the token balance check is before we use the value but that would made the test less robust against changes
     // in the contract.)
     let partial_note: PartialUintNote = Token::at(token_contract_address)
-        .prepare_transfer_public_to_private(owner, not_owner)
+        .initialize_transfer_commitment(owner, not_owner)
         .call(&mut env.private());
 
     // Try transferring someone else's token balance
     env.impersonate(not_owner);
     Token::at(token_contract_address)
-        .finalize_transfer_public_to_private(not_owner, amount, partial_note, 0)
+        .transfer_public_to_commitment(not_owner, amount, partial_note, 0)
         .call(&mut env.public());
 }
