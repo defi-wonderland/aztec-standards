@@ -144,18 +144,24 @@ impl NFTNote {
             public_log_tag: commitment,
         };
 
-        // TODO: we're abusing the note encoding scheme by computing the log for a fake note type with such a note type
-        // id that the recipient will realize that these are the private fields of a partial note. Ideally we'd not rely
-        // on this crude mechanism and we'd instead compute it as a proper event log. However, given the current state
-        // of the log library it's far easier to do it this way.
-        let encrypted_log = default_aes128::note::compute_log(
-            *context,
-            private_log_content,
-            storage_slot,
-            recipient,
-            sender,
-        );
-        context.emit_private_log(encrypted_log);
+        // Emit a private log directly without using compute_log
+        // First, get the note type ID
+        let note_type_id = PrivateNFTPartialNotePrivateLogContent::get_id();
+        
+        // Pack the note content
+        let packed_content = private_log_content.pack();
+        
+        // Create a log with the note type ID as the first element
+        let mut log = [0; 18]; // Use an array of sufficient size for the private log
+        log[0] = note_type_id;
+        
+        // Copy the packed content into the log
+        for i in 0..packed_content.len() {
+            log[i + 1] = packed_content[i];
+        }
+        
+        // Emit the private log
+        context.emit_private_log(log);
 
         PartialNFTNote { commitment }
     }
