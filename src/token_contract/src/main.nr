@@ -414,6 +414,11 @@ pub contract Token {
         commitment: PartialUintNote,
         amount: u128,
     ) {
+        // We verify that the partial note we're completing is valid (i.e. it uses the correct state variable's storage
+        // slot, and it is internally consistent). We *could* clear the storage since each partial note should only be
+        // used once, but since the AVM offers no gas refunds for doing so this would just make the transaction be more
+        // expensive.
+        assert(context.storage_read(commitment.commitment()), "Invalid commitment");
         commitment.complete(amount, context);
     }
 
@@ -476,6 +481,14 @@ pub contract Token {
             from,
         );
 
+        // We can't simply return the partial note because we won't be able to later on verify that it was created
+        // correctly (e.g. that the storage slot corresponds to the owner, and that we're using the balance set and not
+        // another state variable) once this information is hidden in the partial note commitment. We therefore store
+        // the partial note in our own public storage, so that we can later check that we're only completing correctly
+        // created partial notes.
+        Token::at(context.this_address()).store_commitment_in_storage_internal(commitment).enqueue(
+            context,
+        );
         commitment
     }
 
