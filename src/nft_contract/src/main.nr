@@ -36,7 +36,6 @@ pub contract NFT {
 
     /// @param symbol The symbol of the NFT
     /// @param name The name of the NFT
-    /// @param minters The addresses that can mint
     /// @param private_nfts The NFTs owned by each address in private
     /// @param nft_exists A map from token ID to a boolean indicating if the NFT exists
     /// @param public_owners A map from token ID to the public owner of the NFT
@@ -45,7 +44,6 @@ pub contract NFT {
     struct Storage<Context> {
         symbol: PublicImmutable<FieldCompressedString, Context>,
         name: PublicImmutable<FieldCompressedString, Context>,
-        minters: Map<AztecAddress, PublicMutable<bool, Context>, Context>,
         private_nfts: Map<AztecAddress, PrivateSet<NFTNote, Context>, Context>,
         nft_exists: Map<Field, PublicMutable<bool, Context>, Context>,
         public_owners: Map<Field, PublicMutable<AztecAddress, Context>, Context>,
@@ -89,11 +87,7 @@ pub contract NFT {
 
     #[private]
     fn transfer_in_private(from: AztecAddress, to: AztecAddress, token_id: Field, nonce: Field) {
-        if (!from.eq(context.msg_sender())) {
-            assert_current_call_valid_authwit(&mut context, from);
-        } else {
-            assert(nonce == 0, "invalid nonce");
-        }
+        _validate_from_private(&mut context, from, nonce);
 
         let nfts = storage.private_nfts;
 
@@ -109,11 +103,7 @@ pub contract NFT {
 
     #[private]
     fn transfer_to_public(from: AztecAddress, to: AztecAddress, token_id: Field, nonce: Field) {
-        if (!from.eq(context.msg_sender())) {
-            assert_current_call_valid_authwit(&mut context, from);
-        } else {
-            assert(nonce == 0, "invalid nonce");
-        }
+        _validate_from_private(&mut context, from, nonce);
 
         let notes = storage.private_nfts.at(from).pop_notes(NoteGetterOptions::new()
             .select(NFTNote::properties().token_id, Comparator.EQ, token_id)
@@ -131,11 +121,7 @@ pub contract NFT {
 
     #[public]
     fn transfer_in_public(from: AztecAddress, to: AztecAddress, token_id: Field, nonce: Field) {
-        if (!from.eq(context.msg_sender())) {
-            assert_current_call_valid_authwit_public(&mut context, from);
-        } else {
-            assert(nonce == 0, "invalid nonce");
-        }
+        _validate_from_public(&mut context, from, nonce);
 
         let public_owners_storage = storage.public_owners.at(token_id);
         assert(public_owners_storage.read().eq(from), "invalid owner");
@@ -235,7 +221,7 @@ pub contract NFT {
     #[public]
     fn mint(to: AztecAddress, token_id: Field) {
         assert(token_id != 0, "zero token ID not supported");
-        assert(storage.minters.at(context.msg_sender()).read(), "caller is not a minter");
+        _validate_minter(context.msg_sender(), storage.minter.read());
         assert(storage.nft_exists.at(token_id).read() == false, "token already exists");
 
         storage.nft_exists.at(token_id).write(true);
@@ -300,7 +286,39 @@ pub contract NFT {
         commitment.complete(token_id, context);
     }
 
+    /// Validates that the caller is an authorized minter
+    #[contract_library_method]
+    fn _validate_minter(sender: AztecAddress, minter: AztecAddress) {
+        assert(minter.eq(sender), "caller is not minter");
+    }
+
     /** ==========================================================
      * ================== AUTH LIBRARIES =========================
      * ======================================================== */
+
+    /// Validates that a user can perform operations on behalf of `from` in a private context.
+    /// If the caller is not `from`, then they must have an authentication witness.
+    #[contract_library_method]
+    fn _validate_from_private(context: &mut PrivateContext, from: AztecAddress, nonce: Field) {
+        if (!from.eq(context.msg_sender())) {
+            assert_current_call_valid_authwit(context, from);
+        } else {
+            assert(nonce == 0, "invalid nonce");
+        }
+    }
+
+    /// Validates that a user can perform operations on behalf of `from` in a public context.
+    /// If the caller is not `from`, then they must have an authentication witness.
+    #[contract_library_method]
+    unconstrained fn _validate_from_public(
+        context: &mut PublicContext,
+        from: AztecAddress,
+        nonce: Field,
+    ) {
+        if (!from.eq(context.msg_sender())) {
+            assert_current_call_valid_authwit_public(context, from);
+        } else {
+            assert(nonce == 0, "invalid nonce");
+        }
+    }
 }
