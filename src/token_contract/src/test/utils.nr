@@ -130,6 +130,8 @@ pub unconstrained fn setup_and_mint_to_public_without_minter(
     let (env, token_contract_address, owner, recipient) =
         setup_with_initial_supply(with_account_contracts, mint_amount);
 
+    env.advance_block_by(1);
+
     (env, token_contract_address, owner, recipient, mint_amount)
 }
 
