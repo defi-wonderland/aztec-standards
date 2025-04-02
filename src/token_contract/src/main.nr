@@ -476,9 +476,9 @@ pub contract Token {
         amount: u128,
         max_notes: u32,
     ) {
-        // Subtracts `amount` of the commitment of `account`
+        // Subtracts `amount` from the private balance of `account`
         let change = _subtract_balance(context, private_balances, account, amount, max_notes);
-        // Increases `change` of the commitment of `account`, and emits a commitment note to account
+        // Increases `change` to the private balance of `account`, and emits a private balance note to account
         private_balances.at(account).add(account, change).emit(encode_and_encrypt_note(
             context,
             account,
@@ -498,7 +498,7 @@ pub contract Token {
         to: AztecAddress,
         amount: u128,
     ) {
-        // Increases `amount` of the commitment of `to`, and emits a commitment note to `to` from `from`
+        // Increases `amount` to the private balance of `to`, and emits a private balance note to `to` from `from`
         private_balances.at(to).add(to, amount).emit(encode_and_encrypt_note(context, to, from));
     }
 
@@ -604,12 +604,12 @@ pub contract Token {
         context.storage_write(commitment.commitment(), true);
     }
 
-    /// @notice Initializes a transfer from public balance to commitment
+    /// @notice Initializes a transfer commitment to be used for transfers/mints
     /// @param context The context of the private call
     /// @param private_balances The storage pointer to the private balances
     /// @param from The address of the sender
     /// @param to The address of the recipient
-    /// @return The partial note that can be used to finalize the transfer
+    /// @return The partial note that can be used to execute the transfer/mint
     #[contract_library_method]
     fn _initialize_transfer_commitment(
         context: &mut PrivateContext,
