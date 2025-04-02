@@ -382,7 +382,7 @@ describe('Token - Single PXE', () => {
     // alice still has tokens in public
     expect(await token.methods.balance_of_public(alice.getAddress()).simulate()).toBe(AMOUNT);
 
-    // finalize partial note passing the hiding point slot
+    // finalize partial note passing the commitment slot
     // await token.methods.transfer_public_to_commitment(AMOUNT, latestEvent.hiding_point_slot).send().wait();
 
     // alice now has no tokens
