@@ -271,10 +271,9 @@ pub contract Token {
 
     #[private]
     fn mint_to_private(from: AztecAddress, to: AztecAddress, amount: u128) {
-        let minter = storage.minter.read();
-        _validate_minter(context.msg_sender(), minter);
+        _validate_minter(context.msg_sender(), storage.minter.read());
 
-        _increase_private_balance(&mut context, storage.private_balances, minter, to, amount);
+        _increase_private_balance(&mut context, storage.private_balances, from, to, amount);
 
         // Enqueue call to increase total supply
         Token::at(context.this_address()).increase_total_supply_internal(amount).enqueue(
