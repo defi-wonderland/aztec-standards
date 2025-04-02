@@ -274,11 +274,10 @@ pub contract Token {
         let minter = storage.minter.read();
         _validate_minter(context.msg_sender(), minter);
 
-        // We prepare the commitment to which we'll "send" the minted amount.
-        let commitment =
-            _initialize_transfer_commitment(&mut context, storage.private_balances, minter, to);
+        _increase_private_balance(&mut context, storage.private_balances, minter, to, amount);
 
-        Token::at(context.this_address()).mint_to_commitment_internal(amount, commitment).enqueue(
+        // Enqueue call to increase total supply
+        Token::at(context.this_address()).increase_total_supply_internal(amount).enqueue(
             &mut context,
         );
     }
@@ -304,6 +303,12 @@ pub contract Token {
     fn mint_to_commitment_internal(amount: u128, commitment: PartialUintNote) {
         _increase_total_supply(storage.total_supply, amount);
         _increase_commitment_balance(&mut context, commitment, amount);
+    }
+
+    #[public]
+    #[internal]
+    fn increase_total_supply_internal(amount: u128) {
+        _increase_total_supply(storage.total_supply, amount);
     }
 
     /** ==========================================================
