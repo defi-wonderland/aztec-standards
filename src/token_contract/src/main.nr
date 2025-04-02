@@ -150,7 +150,7 @@ pub contract Token {
         commitment
     }
 
-    /// @notice Transfer tokens from private to private balance
+    /// @notice Transfer tokens from commitment to another commitment
     /// @dev Spends notes, emits a new note (UintNote) with any remaining change, and sends a note to the recipient
     /// @param from The address of the sender
     /// @param to The address of the recipient
@@ -204,7 +204,7 @@ pub contract Token {
             .enqueue(&mut context);
     }
 
-    /// @notice Transfer tokens from public to private balance
+    /// @notice Transfer tokens from public to commitment
     /// @dev Enqueues a public call to decrease account balance and emits a new note with balance difference
     /// @param from The address of the sender
     /// @param to The address of the recipient
@@ -226,7 +226,7 @@ pub contract Token {
         _increase_private_balance(&mut context, storage.private_balances, from, to, amount);
     }
 
-    /// @notice Prepares a transfer from public to private balance
+    /// @notice Initializes a transfer from public to commitment
     /// @dev Returns a partial note that can be used to finalize the transfer
     /// @param from The address of the sender
     /// @param to The address of the recipient
@@ -236,7 +236,7 @@ pub contract Token {
         _initialize_transfer_commitment(&mut context, storage.private_balances, from, to)
     }
 
-    /// @notice Recursively subtracts balance from private balance
+    /// @notice Recursively subtracts balance from commitment
     /// @dev Used to subtract balances that exceed the max notes limit
     /// @param account The address of the account to subtract the balance from
     /// @param amount The amount of tokens to subtract
@@ -271,8 +271,8 @@ pub contract Token {
         _increase_public_balance(storage.public_balances, to, amount);
     }
 
-    /// @notice Finalizes a transfer of token `amount` from public balance of `from` to a private balance of `to`
-    /// @dev The transfer must be prepared by calling `prepare_transfer_public_to_private` first and the resulting
+    /// @notice Finalizes a transfer of token `amount` from public balance of `from` to a commitment of `to`
+    /// @dev The transfer must be prepared by calling `initialize_transfer_commitment` first and the resulting
     /// `commitment` must be passed as an argument to this function
     /// @param from The address of the sender
     /// @param amount The amount of tokens to transfer
@@ -360,8 +360,8 @@ pub contract Token {
     * ======================= MINTABLE ==========================
     * ======================================================== */
 
-    /// @notice Mints tokens to a private balance
-    /// @dev Mints tokens to a commitment and enqueues a public call to update the total supply
+    /// @notice Mints tokens to a commitment
+    /// @dev Mints tokens to a commitment and enqueues a public call to increase the total supply
     /// @param from The address of the sender
     /// @param to The address of the recipient
     /// @param amount The amount of tokens to mint
@@ -370,7 +370,7 @@ pub contract Token {
         let minter = storage.minter.read();
         _validate_minter(context.msg_sender(), minter);
 
-        // We prepare the commitment to which we'll "send" the minted amount.
+        // Initialize a commitment to allow the follow up action of recipient to privately receive the minted amount
         let commitment =
             _initialize_transfer_commitment(&mut context, storage.private_balances, minter, to);
 
@@ -380,7 +380,7 @@ pub contract Token {
     }
 
     /// @notice Mints tokens to a public balance
-    /// @dev Increases the balance of the public balance of `to` by `amount` and the total supply
+    /// @dev Increases the public balance of `to` by `amount` and the total supply
     /// @param to The address of the recipient
     /// @param amount The amount of tokens to mint
     #[public]
@@ -391,7 +391,7 @@ pub contract Token {
         _increase_total_supply(storage.total_supply, amount);
     }
 
-    /// @notice Finalizes a mint to a private balance
+    /// @notice Finalizes a mint to a commitment
     /// @dev Finalizes a mint to a commitment and updates the total supply
     /// @param amount The amount of tokens to mint
     /// @param commitment The commitment (privacy entrance)
@@ -414,8 +414,8 @@ pub contract Token {
      * ======================= BURNABLE ==========================
      * ======================================================== */
 
-    /// @notice Burns tokens from a private balance
-    /// @dev Burns tokens from a private balance and enqueues a public call to update the total supply
+    /// @notice Burns tokens from a commitment
+    /// @dev Burns tokens from a commitment and enqueues a public call to update the total supply
     /// @param from The address of the sender
     /// @param amount The amount of tokens to burn
     /// @param nonce The nonce used for authwitness
@@ -467,7 +467,7 @@ pub contract Token {
         assert(minter.eq(sender), "caller is not minter");
     }
 
-    /// Decreases the private balance of `account` by `amount` and emits a private balance note to account
+    /// Decreases the commitment of `account` by `amount` and emits a commitment note to account
     #[contract_library_method]
     fn _decrease_private_balance(
         context: &mut PrivateContext,
@@ -476,9 +476,9 @@ pub contract Token {
         amount: u128,
         max_notes: u32,
     ) {
-        // Subtracts `amount` of the private balance of `account`
+        // Subtracts `amount` of the commitment of `account`
         let change = _subtract_balance(context, private_balances, account, amount, max_notes);
-        // Increases `change` of the private balance of `account`, and emits a private balance note to account
+        // Increases `change` of the commitment of `account`, and emits a commitment note to account
         private_balances.at(account).add(account, change).emit(encode_and_encrypt_note(
             context,
             account,
@@ -498,7 +498,7 @@ pub contract Token {
         to: AztecAddress,
         amount: u128,
     ) {
-        // Increases `amount` of the private balance of `to`, and emits a private balance note to `to` from `from`
+        // Increases `amount` of the commitment of `to`, and emits a commitment note to `to` from `from`
         private_balances.at(to).add(to, amount).emit(encode_and_encrypt_note(context, to, from));
     }
 
@@ -548,8 +548,8 @@ pub contract Token {
         commitment.complete(amount, context);
     }
 
-    /// @notice Subtracts balance from private balance
-    /// @dev Subtracts amount from private balance and returns the change to the owner, recursively if necessary
+    /// @notice Subtracts balance from commitment
+    /// @dev Subtracts amount from commitment and returns the change to the owner, recursively if necessary
     /// @param account The address of the account to subtract the balance from
     /// @param amount The amount of tokens to subtract
     /// @return The change to return to the owner
@@ -578,7 +578,7 @@ pub contract Token {
         }
     }
 
-    /// @notice Finalizes a mint to a private balance
+    /// @notice Finalizes a mint to a commitment
     /// @dev Increases the total supply and the balance of the commitment by `amount`
     /// @param context The context of the public call
     /// @param total_supply The storage pointer to the total supply
@@ -621,7 +621,7 @@ pub contract Token {
         context.storage_write(commitment.commitment(), true);
     }
 
-    /// @notice Prepares a transfer from public to private balance
+    /// @notice Initializes a transfer from public to commitment
     /// @param context The context of the private call
     /// @param private_balances The storage pointer to the private balances
     /// @param from The address of the sender
