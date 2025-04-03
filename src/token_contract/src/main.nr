@@ -581,9 +581,9 @@ pub contract Token {
             // and try again.
             let remaining = amount - subtracted;
 
-            Token::at(context.this_address()).recurse_subtract_balance_internal(account, remaining).call(
-                context,
-            )
+            Token::at(context.this_address())
+                .recurse_subtract_balance_internal(account, remaining)
+                .call(context)
         }
     }
 
