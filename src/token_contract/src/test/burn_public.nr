@@ -5,7 +5,7 @@ use aztec::oracle::random::random;
 
 #[test]
 unconstrained fn burn_public_success() {
-    let (env, token_contract_address, owner, recipient, mint_amount) =
+    let (env, token_contract_address, owner, _, mint_amount) =
         utils::setup_and_mint_to_public_without_minter(/* with_account_contracts */ false);
     let burn_amount = mint_amount / 10 as u128;
 
@@ -49,7 +49,6 @@ unconstrained fn burn_public_on_behalf_of_other() {
     utils::check_public_balance(token_contract_address, owner, mint_amount - burn_amount);
 }
 
-// #[test(should_fail_with = "attempt to subtract with underflow")]
 #[test(should_fail_with = "attempt to subtract with overflow 'public_balances.at(from).read() - amount'")]
 unconstrained fn burn_public_failure_more_than_balance() {
     let (env, token_contract_address, owner, _, mint_amount) =

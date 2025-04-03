@@ -2,7 +2,6 @@ use crate::test::utils;
 use crate::Token;
 use authwit::cheatcodes as authwit_cheatcodes;
 use aztec::{note::constants::MAX_NOTES_PER_PAGE, oracle::random::random};
-use aztec::protocol_types::traits::ToField;
 use uint_note::uint_note::UintNote;
 
 #[test]
@@ -56,6 +55,7 @@ unconstrained fn transfer_private_to_public_on_behalf_of_other() {
     );
 }
 
+// TODO: Can't figure out why this test is failing
 // #[test]
 unconstrained fn transfer_private_to_public_multiple_notes_recursively() {
     // Setup with account contracts. Slower since we actually deploy them, but needed for authwits.
@@ -146,9 +146,7 @@ unconstrained fn transfer_private_to_public_failure_on_behalf_of_other_more_than
     transfer_private_to_public_call_interface.call(&mut env.private());
 }
 
-// TODO: Current message error includes the authwit hash
-// #[test(should_fail_with = "Authorization not found for message hash")]
-#[test(should_fail)]
+#[test(should_fail_with = "Unknown auth witness for message hash")]
 unconstrained fn transfer_private_to_public_failure_on_behalf_of_other_invalid_designated_caller() {
     let (env, token_contract_address, owner, recipient, mint_amount) =
         utils::setup_and_mint_to_private_without_minter(/* with_account_contracts */ true);
@@ -167,9 +165,7 @@ unconstrained fn transfer_private_to_public_failure_on_behalf_of_other_invalid_d
     transfer_private_to_public_call_interface.call(&mut env.private());
 }
 
-// TODO: Current message error includes the authwit hash
-// #[test(should_fail_with = "Authorization not found for message hash")]
-#[test(should_fail)]
+#[test(should_fail_with = "Unknown auth witness for message hash")]
 unconstrained fn transfer_private_to_public_failure_on_behalf_of_other_no_approval() {
     let (env, token_contract_address, owner, recipient, mint_amount) =
         utils::setup_and_mint_to_private_without_minter(/* with_account_contracts */ true);

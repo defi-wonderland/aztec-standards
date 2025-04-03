@@ -1,8 +1,8 @@
 use crate::test::utils;
 use crate::Token;
-use dep::uint_note::uint_note::{PartialUintNote, UintNote};
 use authwit::cheatcodes as authwit_cheatcodes;
 use aztec::oracle::random::random;
+use uint_note::uint_note::{PartialUintNote, UintNote};
 
 #[test]
 unconstrained fn transfer_private_to_commitment() {
@@ -15,7 +15,7 @@ unconstrained fn transfer_private_to_commitment() {
     // Prepare commitment
     env.impersonate(recipient);
     let commitment: PartialUintNote = Token::at(token_contract_address)
-        .prepare_transfer_public_to_private(recipient, recipient)
+        .initialize_transfer_commitment(recipient, recipient)
         .call(&mut env.private());
 
     // Transfer tokens
@@ -44,7 +44,7 @@ unconstrained fn transfer_private_to_commitment_on_behalf_of_other() {
     // Prepare commitment
     env.impersonate(recipient);
     let commitment: PartialUintNote = Token::at(token_contract_address)
-        .prepare_transfer_public_to_private(recipient, recipient)
+        .initialize_transfer_commitment(recipient, recipient)
         .call(&mut env.private());
     env.advance_block_by(1);
 
@@ -75,7 +75,7 @@ unconstrained fn transfer_private_to_commitment_non_zero_nonce() {
     // Prepare commitment
     env.impersonate(recipient);
     let commitment: PartialUintNote = Token::at(token_contract_address)
-        .prepare_transfer_public_to_private(recipient, recipient)
+        .initialize_transfer_commitment(recipient, recipient)
         .call(&mut env.private());
 
     // Transfer tokens
