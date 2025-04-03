@@ -403,13 +403,6 @@ pub contract Token {
 
     #[public]
     #[internal]
-    fn mint_to_commitment_internal(amount: u128, commitment: PartialUintNote) {
-        _increase_total_supply(storage.total_supply, amount);
-        _increase_commitment_balance(&mut context, commitment, amount);
-    }
-
-    #[public]
-    #[internal]
     fn increase_total_supply_internal(amount: u128) {
         _increase_total_supply(storage.total_supply, amount);
     }
