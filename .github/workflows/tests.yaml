@@ -28,9 +28,9 @@ jobs:
           run: |
             VERSION=0.82.3 aztec-up
         
-        # - name: Start sandbox
-        #   run: |
-        #     aztec start --sandbox &
+        - name: Start sandbox
+          run: |
+            aztec start --sandbox &
 
         - name: Install project dependencies
           run: yarn
@@ -38,12 +38,17 @@ jobs:
         - name: Compile
           run: script -e -c "${AZTEC_NARGO:-aztec-nargo} compile"
   
-        # - name: Codegen
-        #   run: script -e -c "aztec codegen target --outdir src/artifacts"
+        - name: Codegen
+          run: script -e -c "aztec codegen target --outdir src/artifacts"
 
-        # - name: Run js tests
-        #   run: script -e -c "BASE_PXE_URL=http://localhost NODE_NO_WARNINGS=1 node --experimental-vm-modules $(yarn bin jest) --no-cache --runInBand --config jest.integration.config.json"
+        - name: Start PXE
+          run: |
+            VERSION=0.82.3 aztec start --port 8081 --pxe --pxe.nodeUrl=http://localhost:8080/ --pxe.proverEnabled false &
 
         - name: Run nr tests
           run: |
             script -e -c "aztec test"
+
+        - name: Run js tests
+          run: script -e -c "BASE_PXE_URL=http://localhost NODE_NO_WARNINGS=1 node --experimental-vm-modules $(yarn bin jest) --no-cache --runInBand --config jest.integration.config.json"
+
