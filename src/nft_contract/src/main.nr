@@ -3,6 +3,7 @@ mod test;
 
 use aztec::macros::aztec;
 
+/// @dev NFT only supports public minting and public/private transfers
 #[aztec]
 pub contract NFT {
     // nft note structs

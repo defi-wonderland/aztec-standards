@@ -1,5 +1,5 @@
 use crate::{NFT, types::nft_note::NFTNote};
-use dep::aztec::{
+use aztec::{
     oracle::{
         execution::{get_block_number, get_contract_address},
         random::random,
@@ -11,69 +11,82 @@ use dep::aztec::{
 };
 use std::test::OracleMock;
 
-pub unconstrained fn setup(
+pub unconstrained fn setup_with_minter(
     with_account_contracts: bool,
-) -> (&mut TestEnvironment, AztecAddress, AztecAddress, AztecAddress) {
+) -> (&mut TestEnvironment, AztecAddress, AztecAddress, AztecAddress, AztecAddress) {
     // Setup env, generate keys
     let mut env = TestEnvironment::new();
-    let (owner, recipient) = if with_account_contracts {
+    let (owner, minter, recipient) = if with_account_contracts {
         let owner = env.create_account_contract(1);
-        let recipient = env.create_account_contract(2);
-        (owner, recipient)
+        let minter = env.create_account_contract(2);
+        let recipient = env.create_account_contract(3);
+        (owner, minter, recipient)
     } else {
-        let owner = env.create_account(1);
-        let recipient = env.create_account(2);
-        (owner, recipient)
+        let minter = env.create_account(1);
+        let owner = env.create_account(2);
+        let recipient = env.create_account(3);
+        (owner, minter, recipient)
     };
 
+    let nft_contract_address = deploy_nft_with_minter(&mut env, owner, minter);
+
+    (&mut env, nft_contract_address, owner, minter, recipient)
+}
+
+pub unconstrained fn deploy_nft_with_minter(
+    env: &mut TestEnvironment,
+    owner: AztecAddress,
+    minter: AztecAddress,
+) -> AztecAddress {
     // Start the test in the account contract address
     env.impersonate(owner);
 
     // Deploy token contract
-    let initializer_call_interface = NFT::interface().constructor(
-        owner,
+    let initializer_call_interface = NFT::interface().constructor_with_minter(
         "TestNFT000000000000000000000000",
         "TN00000000000000000000000000000",
+        minter,
     );
-    let nft_contract =
-        env.deploy_self("NFT").with_public_void_initializer(initializer_call_interface);
-    let nft_contract_address = nft_contract.to_address();
+    let nft_contract = env.deploy("./@nft_contract", "NFT").with_public_void_initializer(
+        initializer_call_interface,
+    );
     env.advance_block_by(1);
-    (&mut env, nft_contract_address, owner, recipient)
+
+    nft_contract.to_address()
 }
 
-pub unconstrained fn setup_and_mint(
+pub unconstrained fn setup_and_mint_to_public(
     with_account_contracts: bool,
-) -> (&mut TestEnvironment, AztecAddress, AztecAddress, AztecAddress, Field) {
+    token_id: Field,
+) -> (&mut TestEnvironment, AztecAddress, AztecAddress, AztecAddress, AztecAddress, Field) {
     // Setup
-    let (env, nft_contract_address, owner, recipient) = setup(with_account_contracts);
-    let minted_token_id = 615;
+    let (env, nft_contract_address, owner, minter, recipient) = setup_with_minter(with_account_contracts);
 
-    NFT::at(nft_contract_address).mint(owner, minted_token_id).call(&mut env.public());
+
+    env.impersonate(minter);
+    NFT::at(nft_contract_address).mint(owner, token_id).call(&mut env.public());
     env.advance_block_by(1);
 
-    (env, nft_contract_address, owner, recipient, minted_token_id)
+    (env, nft_contract_address, owner, minter, recipient, token_id)
 }
 
 pub unconstrained fn setup_mint_and_transfer_to_private(
     with_account_contracts: bool,
-) -> (&mut TestEnvironment, AztecAddress, AztecAddress, AztecAddress, Field) {
-    let (env, nft_contract_address, owner, recipient, minted_token_id) =
-        setup_and_mint(with_account_contracts);
+    token_id: Field,
+) -> (&mut TestEnvironment, AztecAddress, AztecAddress, AztecAddress, AztecAddress, Field) {
+    let (env, nft_contract_address, owner, minter, recipient, minted_token_id) =
+        setup_and_mint_to_public(with_account_contracts, token_id);
 
     let note_randomness = random();
-
-    // We mock the Oracle to return the note randomness such that later on we can manually add the note
     let _ = OracleMock::mock("getRandomField").returns(note_randomness);
 
-    // We transfer the public NFT to private.
-    NFT::at(nft_contract_address).transfer_to_private(owner, minted_token_id).call(
+    NFT::at(nft_contract_address).transfer_to_private(recipient, minted_token_id).call(
         &mut env.private(),
     );
 
     env.advance_block_by(1);
 
-    (env, nft_contract_address, owner, recipient, minted_token_id)
+    (env, nft_contract_address, owner, minter, recipient, minted_token_id)
 }
 
 pub unconstrained fn get_nft_exists(nft_contract_address: AztecAddress, token_id: Field) -> bool {
