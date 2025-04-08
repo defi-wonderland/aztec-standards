@@ -65,12 +65,16 @@ jobs:
           run: |
             TITLE="${{ github.event.pull_request.title }}"
             echo "PR Title: $TITLE"
-            if [[ "$TITLE" =~ \(([^)]+)\) ]]; then
-              contracts=$(echo "${BASH_REMATCH[1]}" | tr -d '[:space:]')
-            elif [[ "$TITLE" =~ \(\) ]]; then
-              contracts=""
+            if [[ "$TITLE" =~ ^[a-zA-Z_]+\(([[:alnum:]_,-]+)\): ]]; then
+              contracts=$(echo "${BASH_REMATCH[1]}" | tr -d ' ')
+              echo "contracts=$contracts" >> $GITHUB_OUTPUT
+              echo "should_run=true" >> $GITHUB_OUTPUT
+            elif [[ "$TITLE" =~ ^[a-zA-Z_]+: ]]; then
+              echo "contracts=token" >> $GITHUB_OUTPUT
+              echo "should_run=true" >> $GITHUB_OUTPUT
             else
-              contracts="token"
+              echo "contracts=" >> $GITHUB_OUTPUT
+              echo "should_run=false" >> $GITHUB_OUTPUT
             fi
             echo "Found contracts: $contracts"
             echo "contracts=$contracts" >> $GITHUB_OUTPUT
