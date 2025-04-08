@@ -54,10 +54,7 @@ where
         assert(sender != AztecAddress::zero(), "Sender cannot be the zero address");
 
         let encrypted_log = compute_note_log(note, storage_slot, recipient, sender);
-
-        let storage_slot_string: str<31> = "no_emit________________________";
-        let storage_slot_capsule = FieldCompressedString::from_string(storage_slot_string).value;
-
-        unsafe { store(context.this_address(), storage_slot_capsule, encrypted_log) };
+        // Storage slot as an example. It should use CapsuleArray to store the notes.
+        unsafe { store(context.this_address(), 66666667777888, encrypted_log) };
     }
 }
