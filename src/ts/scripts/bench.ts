@@ -97,6 +97,7 @@ class Profiler {
       results: this.#results,
       gasSummary,
     };
+    console.log('saving results in', this.filename);
     fs.writeFileSync(this.filename, JSON.stringify(report, null, 2));
   }
 

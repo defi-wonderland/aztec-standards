@@ -46,11 +46,12 @@ jobs:
           run: script -e -c "aztec codegen target --outdir src/artifacts"
 
         - name: Bench
-          run: script -e -c "yarn bench"
+          run: |
+            mv bench.json bench_old.json
+            script -e -c "yarn bench bench.json"
 
         - name: Run compare-bench
           run: |
-            mv bench.json bench_old.json
             yarn tsx src/ts/scripts/compare-bench.ts bench.json bench_old.json bench_diff.md
 
         - name: Comment diff
