@@ -369,11 +369,10 @@ pub contract Token {
     fn mint_to_private(from: AztecAddress, to: AztecAddress, amount: u128) {
         _validate_minter(context.msg_sender(), storage.minter.read());
 
-        // Initialize a commitment to allow the follow up action of recipient to privately receive the minted amount
-        let commitment =
-            _initialize_transfer_commitment(&mut context, storage.private_balances, from, to);
+        _increase_private_balance(&mut context, storage.private_balances, from, to, amount);
 
-        Token::at(context.this_address()).mint_to_commitment_internal(amount, commitment).enqueue(
+        // Enqueue call to increase total supply
+        Token::at(context.this_address()).increase_total_supply_internal(amount).enqueue(
             &mut context,
         );
     }
@@ -404,9 +403,8 @@ pub contract Token {
 
     #[public]
     #[internal]
-    fn mint_to_commitment_internal(amount: u128, commitment: PartialUintNote) {
+    fn increase_total_supply_internal(amount: u128) {
         _increase_total_supply(storage.total_supply, amount);
-        _increase_commitment_balance(&mut context, commitment, amount);
     }
 
     /** ==========================================================
@@ -544,6 +542,11 @@ pub contract Token {
         commitment: PartialUintNote,
         amount: u128,
     ) {
+        // We verify that the partial note we're completing is valid (i.e. it uses the correct state variable's storage
+        // slot, and it is internally consistent). We *could* clear the storage since each partial note should only be
+        // used once, but since the AVM offers no gas refunds for doing so this would just make the transaction be more
+        // expensive.
+        assert(context.storage_read(commitment.commitment()), "Invalid commitment");
         commitment.complete(amount, context);
     }
 
@@ -571,9 +574,9 @@ pub contract Token {
             // and try again.
             let remaining = amount - subtracted;
 
-            Token::at(context.this_address()).recurse_subtract_balance_internal(account, remaining).call(
-                context,
-            )
+            Token::at(context.this_address())
+                .recurse_subtract_balance_internal(account, remaining)
+                .call(context)
         }
     }
 
@@ -624,6 +627,14 @@ pub contract Token {
             from,
         );
 
+        // We can't simply return the partial note because we won't be able to later on verify that it was created
+        // correctly (e.g. that the storage slot corresponds to the owner, and that we're using the balance set and not
+        // another state variable) once this information is hidden in the partial note commitment. We therefore store
+        // the partial note in our own public storage, so that we can later check that we're only completing correctly
+        // created partial notes.
+        Token::at(context.this_address()).store_commitment_in_storage_internal(commitment).enqueue(
+            context,
+        );
         commitment
     }
 
