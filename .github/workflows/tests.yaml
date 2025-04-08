@@ -4,6 +4,9 @@ on:
         - main
     pull_request:
 
+permissions:
+  pull-requests: write
+
 jobs:
     setup-and-run:
       runs-on: ubuntu-latest
@@ -37,16 +40,23 @@ jobs:
   
         - name: Compile
           run: script -e -c "${AZTEC_NARGO:-aztec-nargo} compile"
+
+        - name: Codegen
+          run: script -e -c "aztec codegen target --outdir src/artifacts"
   
         - name: Bench
           run: script -e -c "yarn bench"
 
         - name: Display gate counts
           run: |
-            cat gate_counts.json
+            cat bench.json
 
-        # - name: Codegen
-        #   run: script -e -c "aztec codegen target --outdir src/artifacts"
+        - name: Comment diff
+          uses: peter-evans/create-or-update-comment@v4
+          with:
+            issue-number: ${{ github.event.pull_request.number }}
+            body-file: bench_diff.md
+            comment-identifier: benchmark-diff
 
         # - name: Run js tests
         #   run: script -e -c "BASE_PXE_URL=http://localhost NODE_NO_WARNINGS=1 node --experimental-vm-modules $(yarn bin jest) --no-cache --runInBand --config jest.integration.config.json"
