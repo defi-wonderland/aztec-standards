@@ -22,8 +22,8 @@ pub unconstrained fn setup_with_minter(
         let recipient = env.create_account_contract(3);
         (owner, minter, recipient)
     } else {
-        let minter = env.create_account(1);
-        let owner = env.create_account(2);
+        let owner = env.create_account(1);
+        let minter = env.create_account(2);
         let recipient = env.create_account(3);
         (owner, minter, recipient)
     };
@@ -55,6 +55,7 @@ pub unconstrained fn deploy_nft_with_minter(
     nft_contract.to_address()
 }
 
+/// @dev Setup and mint to owner in public
 pub unconstrained fn setup_and_mint_to_public(
     with_account_contracts: bool,
     token_id: Field,
