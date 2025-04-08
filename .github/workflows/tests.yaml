@@ -51,6 +51,9 @@ jobs:
           run: |
             cat bench.json
 
+        - name: Run compare-bench
+          run: yarn tsx src/ts/scripts/compare-bench.ts bench.json bench_old.json
+
         - name: Comment diff
           uses: peter-evans/create-or-update-comment@v4
           with:
