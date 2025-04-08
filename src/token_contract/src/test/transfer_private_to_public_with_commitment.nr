@@ -25,6 +25,23 @@ unconstrained fn transfer_private_to_public_with_commitment() {
     utils::check_public_balance(token_contract_address, recipient, transfer_amount);
 }
 
+#[test]
+unconstrained fn transfer_private_to_public_with_commitment_stores_commitment() {
+    let (env, token_contract_address, owner, recipient, mint_amount) =
+        utils::setup_and_mint_to_private_without_minter(false);
+
+    env.impersonate(owner);
+    let commitment = Token::at(token_contract_address)
+        .transfer_private_to_public_with_commitment(owner, recipient, mint_amount, 0)
+        .call(&mut env.private());
+    env.advance_block_by(1);
+
+    assert(
+        utils::_commitment_storage_read(token_contract_address, commitment.commitment()) == true,
+        "Commitment not stored",
+    );
+}
+
 #[test(should_fail_with = "invalid nonce")]
 unconstrained fn transfer_private_to_public_with_commitment_and_non_zero_nonce() {
     let (env, token_contract_address, owner, recipient, mint_amount) =
@@ -103,9 +120,7 @@ unconstrained fn transfer_private_to_public_with_commitment_and_finalize() {
     utils::check_private_balance(token_contract_address, recipient, transfer_amount);
 }
 
-// TODO: We're finalizing a transfer using an invalid commitment, I think this behavior should be restricted
-// #[test(should_fail_with = "transfer not prepared")]
-#[test]
+#[test(should_fail_with = "Invalid commitment")]
 unconstrained fn transfer_private_to_public_with_commitment_and_finalize_with_invalid_commitment() {
     let (env, token_contract_address, owner, recipient, mint_amount) =
         utils::setup_and_mint_to_private_without_minter(false);
@@ -137,7 +152,7 @@ unconstrained fn transfer_private_to_public_with_commitment_and_finalize_with_in
     utils::check_private_balance(token_contract_address, recipient, 0 as u128);
 }
 
-#[test]
+#[test(should_fail_with = "Invalid commitment")]
 unconstrained fn transfer_private_to_public_with_commitment_and_finalize_with_commitment_zero() {
     let (env, token_contract_address, owner, recipient, mint_amount) =
         utils::setup_and_mint_to_private_without_minter(false);
