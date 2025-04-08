@@ -65,16 +65,16 @@ jobs:
           run: |
             TITLE="${{ github.event.pull_request.title }}"
             echo "PR Title: $TITLE"
-            if [[ "$TITLE" =~ \(([^)]+)\) ]]; then 
+            if [[ "$TITLE" =~ \(([^)]+)\) ]]; then
               contracts=$(echo "${BASH_REMATCH[1]}" | tr -d '[:space:]')
-              echo "Found contracts: $contracts"
-              echo "contracts=$contracts" >> $GITHUB_OUTPUT
-              echo "should_run=true" >> $GITHUB_OUTPUT
+            elif [[ "$TITLE" =~ \(\) ]]; then
+              contracts=""
             else
-              echo "No contracts found in PR title, skipping benchmarks"
-              echo "contracts=" >> $GITHUB_OUTPUT
-              echo "should_run=false" >> $GITHUB_OUTPUT
+              contracts="token"
             fi
+            echo "Found contracts: $contracts"
+            echo "contracts=$contracts" >> $GITHUB_OUTPUT
+            echo "should_run=${contracts:+true}" >> $GITHUB_OUTPUT
 
         - name: Run benchmark(s)
           if: steps.extract_targets.outputs.contracts != ''
