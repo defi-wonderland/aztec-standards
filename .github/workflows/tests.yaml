@@ -92,14 +92,17 @@ jobs:
             done
 
         - name: Combine results
+          if: steps.extract_targets.outputs.should_run == 'true'
           run: |
             echo "# Benchmark Results" > bench_summary.md
+            ls .
             for file in bench_diff_*.md; do
               echo -e "\n## ${file##*/}\n" >> bench_summary.md
               cat "$file" >> bench_summary.md
             done
 
         - name: Comment benchmark summary on PR
+          if: steps.extract_targets.outputs.should_run == 'true'
           uses: peter-evans/create-or-update-comment@v4
           with:
             issue-number: ${{ github.event.pull_request.number }}
