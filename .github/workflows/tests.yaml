@@ -89,7 +89,7 @@ jobs:
               echo "Benchmarking $contract"
               yarn bench "bench_$contract.json"
               git show HEAD^:bench_$contract.json > "bench_old_$contract.json" || echo "{}" > "bench_old_$contract.json"
-              yarn tsx src/ts/scripts/compare-bench.ts "bench_old_$contract.json" "bench_$contract.json" > "bench_diff_$contract.md"
+              yarn tsx src/ts/scripts/compare-bench.ts "bench_old_$contract.json" "bench_$contract.json" "bench_diff_$contract.md"
             done
 
         - name: Combine results
