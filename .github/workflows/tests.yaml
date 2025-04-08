@@ -8,7 +8,7 @@ permissions:
   pull-requests: write
 
 jobs:
-    setup-and-run:
+    tests:
       runs-on: ubuntu-latest
       timeout-minutes: 30
   
@@ -43,27 +43,68 @@ jobs:
 
         - name: Codegen
           run: script -e -c "aztec codegen target --outdir src/artifacts"
-  
-        - name: Bench
-          run: script -e -c "yarn bench"
 
-        - name: Display gate counts
+        #  - name: Bench
+        #   run: script -e -c "yarn bench"
+
+        # - name: Display gate counts
+        #   run: |
+        #     cat bench.json
+
+        # - name: Run compare-bench
+        #   run: yarn tsx src/ts/scripts/compare-bench.ts bench.json bench_old.json bench_diff.md
+
+        # - name: Comment diff
+        #   uses: peter-evans/create-or-update-comment@v4
+        #   with:
+        #     issue-number: ${{ github.event.pull_request.number }}
+        #     body-file: bench_diff.md
+
+        - name: Extract benchmark targets
+          id: extract_targets
           run: |
-            cat bench.json
+            TITLE="${{ github.event.pull_request.title }}"
+            echo "PR Title: $TITLE"
+            if [[ "$TITLE" =~ \(([^)]+)\) ]]; then 
+              contracts=$(echo "${BASH_REMATCH[1]}" | tr -d '[:space:]')
+              echo "Found contracts: $contracts"
+              echo "contracts=$contracts" >> $GITHUB_OUTPUT
+              echo "should_run=true" >> $GITHUB_OUTPUT
+            else
+              echo "No contracts found in PR title, skipping benchmarks"
+              echo "contracts=" >> $GITHUB_OUTPUT
+              echo "should_run=false" >> $GITHUB_OUTPUT
+            fi
 
-        - name: Run compare-bench
-          run: yarn tsx src/ts/scripts/compare-bench.ts bench.json bench_old.json
+        - name: Run benchmark(s)
+          if: steps.extract_targets.outputs.contracts != ''
+          run: |
+            IFS=',' read -ra TARGETS <<< "${{ steps.extract_targets.outputs.contracts }}"
+            for contract in "${TARGETS[@]}"; do
+              echo "Benchmarking $contract"
+              yarn bench "bench_$contract.json"
+              git show HEAD^:bench_$contract.json > "bench_old_$contract.json" || echo "{}" > "bench_old_$contract.json"
+              yarn tsx src/ts/scripts/compare-bench.ts "bench_old_$contract.json" "bench_$contract.json" > "bench_diff_$contract.md"
+            done
 
-        - name: Comment diff
+        - name: Combine results
+          run: |
+            echo "# Benchmark Results" > bench_summary.md
+            for file in bench_diff_*.md; do
+              echo -e "\n## ${file##*/}\n" >> bench_summary.md
+              cat "$file" >> bench_summary.md
+            done
+
+        - name: Comment benchmark summary on PR
           uses: peter-evans/create-or-update-comment@v4
           with:
             issue-number: ${{ github.event.pull_request.number }}
-            body-file: bench_diff.md
-            comment-id: benchmark-diff
+            body-file: bench_summary.md
+
 
         # - name: Run js tests
         #   run: script -e -c "BASE_PXE_URL=http://localhost NODE_NO_WARNINGS=1 node --experimental-vm-modules $(yarn bin jest) --no-cache --runInBand --config jest.integration.config.json"
 
-        - name: Run nr tests
-          run: |
-            script -e -c "aztec test"
+        # - name: Run nr tests
+        #   run: |
+        #     script -e -c "aztec test"

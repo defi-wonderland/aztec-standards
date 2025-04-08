@@ -8,7 +8,7 @@ import { deployTokenWithMinter } from '../test/utils.js';
 
 let owner: AztecAddress;
 
-async function main() {
+async function main(outputFilename: string) {
   const pxe = createPXEClient('http://localhost:8080');
 
   const accounts = await getInitialTestAccountsWallets(pxe);
@@ -17,7 +17,7 @@ async function main() {
   const bob = accounts[1]!;
   const token = (await deployTokenWithMinter(alice)) as TokenContract;
 
-  const profiler = new Profiler('bench.json');
+  const profiler = new Profiler(outputFilename);
   await profiler.profile([
     token.withWallet(alice).methods.mint_to_private(alice.getAddress(), alice.getAddress(), amt(100)),
     token.withWallet(alice).methods.mint_to_public(alice.getAddress(), amt(100)),
@@ -149,4 +149,7 @@ type ProfileResult = {
 
 type Gas = Record<`${GasDimensions}Gas`, number>;
 
-main();
+// TODO: we should use commander or something to handle these scripts
+const outputFilename = process.argv[2] || 'bench.json';
+console.log(`outputting to ${outputFilename}`);
+main(outputFilename);

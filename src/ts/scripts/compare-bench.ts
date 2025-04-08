@@ -69,11 +69,11 @@ const createComparisonTable = (oldData: GateCounts, newData: GateCounts): void =
     )
     .join('\n');
 
-  writeFileSync('bench_diff.md', output);
+  writeFileSync(resolve(process.argv[4]), output);
 };
 
-if (process.argv.length !== 4) {
-  console.error('Usage: tsx compare-bench.ts <old-json-file> <new-json-file>');
+if (process.argv.length !== 5) {
+  console.error('Usage: tsx compare-bench.ts <old-json-file> <new-json-file> <output-file>');
   process.exit(1);
 }
 
