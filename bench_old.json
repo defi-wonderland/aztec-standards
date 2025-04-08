@@ -55,7 +55,7 @@
     },
     {
       "name": "mint_to_public",
-      "totalGateCount": 20116578,
+      "totalGateCount": 366870,
       "gateCounts": [
         {
           "circuitName": "SchnorrAccount:entrypoint",
@@ -131,7 +131,7 @@
         },
         {
           "circuitName": "Token:transfer_private_to_public",
-          "gateCount": 36687
+          "gateCount": 36534543687
         },
         {
           "circuitName": "private_kernel_inner",

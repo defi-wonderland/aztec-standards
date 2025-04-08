@@ -45,7 +45,7 @@ const createComparisonTable = (oldData: GateCounts, newData: GateCounts): void =
 
   const output = [
     '<!-- benchmark-diff -->\n',
-    '# Gate Count Comparison (U253 vs U128)\n',
+    '# Gate Count Comparison\n',
     '| Function | Gates | DA Gas | L2 Gas |',
     '|-----------|--------|---------|---------|',
   ]
