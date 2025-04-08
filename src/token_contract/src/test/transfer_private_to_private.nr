@@ -170,10 +170,13 @@ unconstrained fn transfer_private_on_behalf_of_other_no_emit() {
     cheatcodes::set_contract_address(token_contract_address);
     // Store in capsule that we want to skip the emit
     let storage_slot_string: str<31> = "no_emit________________________";
-    let storage_slot: Field = FieldCompressedString::from_string(storage_slot_string).value;
-    capsules::store(token_contract_address, 1231534237488, 1);
+    let storage_slot_capsule: Field = FieldCompressedString::from_string(storage_slot_string).value;
+    capsules::store(token_contract_address, storage_slot_capsule, true);
+
+    let no_emit = capsules::load(token_contract_address, storage_slot_capsule).unwrap_or(false) as bool;
+    assert(no_emit, "No emit should be true");
     cheatcodes::set_contract_address(current_contract_address);
-    
+
     // Add authwit
     let transfer_amount = (1000 as u128);
     let transfer_private_from_call_interface = Token::at(token_contract_address)
