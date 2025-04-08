@@ -12,6 +12,8 @@ jobs:
     tests:
       runs-on: ubuntu-latest
       timeout-minutes: 30
+      env:
+        AZTEC_VERSION: "0.84.0"
   
       steps:
         - name: Checkout repository
@@ -30,7 +32,7 @@ jobs:
   
         - name: Set Aztec version
           run: |
-            VERSION=0.84.0 aztec-up
+            VERSION=${AZTEC_VERSION} aztec-up
         
         - name: Start sandbox
           run: |
@@ -41,9 +43,6 @@ jobs:
   
         - name: Compile
           run: script -e -c "${AZTEC_NARGO:-aztec-nargo} compile"
-
-        - name: Codegen
-          run: script -e -c "aztec codegen target --outdir src/artifacts"
 
         - name: Bench
           run: |
@@ -59,6 +58,10 @@ jobs:
           with:
             issue-number: ${{ github.event.pull_request.number }}
             body-file: bench_diff.md
+
+        - name: Start PXE
+          run: |
+            VERSION=${AZTEC_VERSION} aztec start --port 8081 --pxe --pxe.nodeUrl=http://localhost:8080/ --pxe.proverEnabled false &
 
         - name: Run nr tests
           run: |
