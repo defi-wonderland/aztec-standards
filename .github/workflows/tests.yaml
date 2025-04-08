@@ -40,10 +40,13 @@ jobs:
 
         - name: Install project dependencies
           run: yarn
-  
+
         - name: Compile
           run: script -e -c "${AZTEC_NARGO:-aztec-nargo} compile"
-
+        
+        - name: Codegen
+          run: script -e -c "aztec codegen target --outdir src/artifacts"
+        
         - name: Bench
           run: |
             mv bench.json bench_old.json
