@@ -1,6 +1,7 @@
 pub mod test;
 
 use aztec::macros::aztec;
+mod utils;
 
 #[aztec]
 pub contract Token {
@@ -22,6 +23,7 @@ pub contract Token {
     use aztec::encrypted_logs::log_assembly_strategies::default_aes128::note::encode_and_encrypt_note;
     // balance library
     use balance_set::balance_set::BalanceSet;
+    use crate::utils::emit_to_capsule::emit_or_store_in_capsule;
 
     // gas-optimized max notes for initial transfer call
     global INITIAL_TRANSFER_CALL_MAX_NOTES: u32 = 2;
@@ -476,7 +478,7 @@ pub contract Token {
         // Subtracts `amount` from the private balance of `account`
         let change = _subtract_balance(context, private_balances, account, amount, max_notes);
         // Increases `change` to the private balance of `account`, and emits a private balance note to account
-        private_balances.at(account).add(account, change).emit(encode_and_encrypt_note(
+        private_balances.at(account).add(account, change).emit(emit_or_store_in_capsule(
             context,
             account,
             account,
@@ -496,7 +498,7 @@ pub contract Token {
         amount: u128,
     ) {
         // Increases `amount` to the private balance of `to`, and emits a private balance note to `to` from `from`
-        private_balances.at(to).add(to, amount).emit(encode_and_encrypt_note(context, to, from));
+        private_balances.at(to).add(to, amount).emit(emit_or_store_in_capsule(context, to, from));
     }
 
     /// @notice Updates the given storage pointer `public_balances` to increase the public balance of `to` by `amount`
