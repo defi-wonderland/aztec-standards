@@ -101,7 +101,7 @@ impl Mul for BigNumField {
 
 impl Div for BigNumField {
     fn div(self, other: Self) -> Self {
-        let result: U256 = U256::from_slice([self.limbs[0] as u128, self.limbs[1] as u128, self.limbs[2] as u128]) / U256::from_slice([other.limbs[0] as u128, other.limbs[1] as u128, other.limbs[2] as u128]);
+        let result: U256 = U256::from_slice([self.limbs[0] as u128, self.limbs[1] as u128, self.limbs[2] as u128]).udiv(U256::from_slice([other.limbs[0] as u128, other.limbs[1] as u128, other.limbs[2] as u128]));
         Self { limbs: [result.limbs[0] as Field, result.limbs[1] as Field, result.limbs[2] as Field] }  
     }
 }
