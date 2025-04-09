@@ -1,5 +1,5 @@
 use crate::{test::utils, Token};
-use uint253::{uint253::U253, uint253_note::U253Note};
+use bignum_field::{bignum_field::BigNumField, bignum_field_note::BigNumFieldNote};
 
 #[test]
 unconstrained fn mint_to_public_success() {
@@ -8,7 +8,7 @@ unconstrained fn mint_to_public_success() {
         utils::setup_with_minter(/* with_account_contracts */ false);
 
     env.impersonate(minter);
-    let mint_amount: U253 = U253::new(10_000);
+    let mint_amount: BigNumField = BigNumField::new(10_000);
     Token::at(token_contract_address).mint_to_public(owner, mint_amount).call(&mut env.public());
 
     utils::check_public_balance(token_contract_address, owner, mint_amount);
@@ -24,33 +24,35 @@ unconstrained fn mint_to_public_failures() {
         utils::setup_with_minter(/* with_account_contracts */ false);
 
     // As non-minter
-    let mint_amount: U253 = U253::new(10_000);
+    let mint_amount: BigNumField = BigNumField::new(10_000);
     env.impersonate(recipient);
     let mint_to_public_call_interface =
         Token::at(token_contract_address).mint_to_public(owner, mint_amount);
     env.assert_public_call_fails(mint_to_public_call_interface);
 
-    utils::check_public_balance(token_contract_address, owner, U253::zero());
+    utils::check_public_balance(token_contract_address, owner, BigNumField::zero());
 
     env.impersonate(minter);
 
     // Overflow recipient
 
-    // We have to do this in 2 steps because we have to pass in a valid U253
-    let max_U253 = U253::max();
-    Token::at(token_contract_address).mint_to_public(recipient, max_U253).call(&mut env.public());
+    // We have to do this in 2 steps because we have to pass in a valid BigNumField
+    let max_BigNumField = BigNumField::max();
+    Token::at(token_contract_address).mint_to_public(recipient, max_BigNumField).call(
+        &mut env.public(),
+    );
 
     let mint_to_public_call_interface =
-        Token::at(token_contract_address).mint_to_public(owner, U253::one());
+        Token::at(token_contract_address).mint_to_public(owner, BigNumField::one());
     env.assert_public_call_fails(mint_to_public_call_interface);
 
-    utils::check_public_balance(token_contract_address, owner, U253::zero());
-    utils::check_total_supply(token_contract_address, max_U253);
+    utils::check_public_balance(token_contract_address, owner, BigNumField::zero());
+    utils::check_total_supply(token_contract_address, max_BigNumField);
 
     // Overflow total supply
     let mint_to_public_call_interface =
-        Token::at(token_contract_address).mint_to_public(owner, max_U253);
+        Token::at(token_contract_address).mint_to_public(owner, max_BigNumField);
     env.assert_public_call_fails(mint_to_public_call_interface);
 
-    utils::check_public_balance(token_contract_address, owner, U253::zero());
+    utils::check_public_balance(token_contract_address, owner, BigNumField::zero());
 }

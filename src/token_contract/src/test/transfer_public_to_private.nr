@@ -1,7 +1,7 @@
 use crate::{test::utils, Token};
 use aztec::oracle::random::random;
+use bignum_field::bignum_field_note::PartialBigNumFieldNote;
 use std::test::OracleMock;
-use uint253::uint253_note::PartialU253Note;
 
 /// Internal orchestration means that the calls to `prepare_transfer_public_to_private`
 /// and `finalize_transfer_public_to_private` are done by the TOKEN contract itself.
@@ -33,7 +33,7 @@ unconstrained fn transfer_public_to_private_external_orchestration() {
     let _ = OracleMock::mock("getRandomField").returns(note_randomness);
 
     // We prepare the transfer
-    let partial_note: PartialU253Note = Token::at(token_contract_address)
+    let partial_note: PartialBigNumFieldNote = Token::at(token_contract_address)
         .prepare_transfer_public_to_private(owner, recipient)
         .call(&mut env.private());
 
@@ -64,7 +64,7 @@ unconstrained fn transfer_public_to_private_external_orchestration() {
 // }
 
 // #[test(should_fail_with = "Assertion failed: attempt to subtract with underflow 'hi == high'")]
-#[test(should_fail_with = "Assertion failed: U253 subtraction underflow 'other.value.lt(self.value) | other.value.eq(self.value)'")]
+#[test(should_fail_with = "Assertion failed: Field subtraction underflow")]
 unconstrained fn transfer_public_to_private_failure_not_an_owner() {
     // Setup without account contracts. We are not using authwits here, so dummy accounts are enough
     let (env, token_contract_address, owner, not_owner, amount) =
@@ -73,7 +73,7 @@ unconstrained fn transfer_public_to_private_failure_not_an_owner() {
     // (For this specific test we could set a random value for the commitment and not do the call to `prepare...`
     // as the token balance check is before we use the value but that would made the test less robust against changes
     // in the contract.)
-    let partial_note: PartialU253Note = Token::at(token_contract_address)
+    let partial_note: PartialBigNumFieldNote = Token::at(token_contract_address)
         .prepare_transfer_public_to_private(owner, not_owner)
         .call(&mut env.private());
 

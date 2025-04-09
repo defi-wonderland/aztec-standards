@@ -2,13 +2,13 @@ use crate::test::utils;
 use crate::Token;
 use authwit::cheatcodes as authwit_cheatcodes;
 use aztec::oracle::random::random;
-use uint253::{uint253::U253, uint253_note::U253Note};
+use bignum_field::{bignum_field::BigNumField, bignum_field_note::BigNumFieldNote};
 
 #[test]
 unconstrained fn burn_public_success() {
     let (env, token_contract_address, owner, recipient, mint_amount) =
         utils::setup_and_mint_to_public_without_minter(/* with_account_contracts */ false);
-    let burn_amount = mint_amount / U253::new(10);
+    let burn_amount = mint_amount / BigNumField::new(10);
 
     // Burn less than balance
     Token::at(token_contract_address).burn_public(owner, burn_amount, 0).call(&mut env.public());
@@ -19,7 +19,7 @@ unconstrained fn burn_public_success() {
 unconstrained fn burn_public_decrease_total_supply() {
     let (env, token_contract_address, owner, recipient, mint_amount) =
         utils::setup_and_mint_to_public_without_minter(/* with_account_contracts */ false);
-    let burn_amount = mint_amount / U253::new(10);
+    let burn_amount = mint_amount / BigNumField::new(10);
 
     utils::check_total_supply(token_contract_address, mint_amount);
 
@@ -33,7 +33,7 @@ unconstrained fn burn_public_decrease_total_supply() {
 unconstrained fn burn_public_on_behalf_of_other() {
     let (env, token_contract_address, owner, recipient, mint_amount) =
         utils::setup_and_mint_to_public_without_minter(/* with_account_contracts */ true);
-    let burn_amount = mint_amount / U253::new(10);
+    let burn_amount = mint_amount / BigNumField::new(10);
 
     // Burn on behalf of other
     let burn_call_interface =
@@ -51,13 +51,13 @@ unconstrained fn burn_public_on_behalf_of_other() {
 }
 
 // #[test(should_fail_with = "attempt to subtract with underflow")]
-#[test(should_fail_with = "Assertion failed: U253 subtraction underflow 'other.value.lt(self.value) | other.value.eq(self.value)'")]
+#[test(should_fail_with = "Assertion failed: Field subtraction underflow")]
 unconstrained fn burn_public_failure_more_than_balance() {
     let (env, token_contract_address, owner, _, mint_amount) =
         utils::setup_and_mint_to_public_without_minter(/* with_account_contracts */ false);
 
     // Burn more than balance
-    let burn_amount = mint_amount * U253::new(10);
+    let burn_amount = mint_amount * BigNumField::new(10);
     // Try to burn
     Token::at(token_contract_address).burn_public(owner, burn_amount, 0).call(&mut env.public());
 }
@@ -68,7 +68,7 @@ unconstrained fn burn_public_failure_on_behalf_of_self_non_zero_nonce() {
         utils::setup_and_mint_to_public_without_minter(/* with_account_contracts */ false);
 
     // Burn on behalf of self with non-zero nonce
-    let burn_amount = mint_amount / U253::new(10);
+    let burn_amount = mint_amount / BigNumField::new(10);
     // Try to burn
     Token::at(token_contract_address).burn_public(owner, burn_amount, random()).call(
         &mut env.public(),
@@ -81,7 +81,7 @@ unconstrained fn burn_public_failure_on_behalf_of_other_without_approval() {
         utils::setup_and_mint_to_public_without_minter(/* with_account_contracts */ true);
 
     // Burn on behalf of other without approval
-    let burn_amount = mint_amount / U253::new(10);
+    let burn_amount = mint_amount / BigNumField::new(10);
     let burn_call_interface =
         Token::at(token_contract_address).burn_public(owner, burn_amount, random());
     // Impersonate recipient to perform the call
@@ -95,7 +95,7 @@ unconstrained fn burn_public_failure_on_behalf_of_other_wrong_caller() {
         utils::setup_and_mint_to_public_without_minter(/* with_account_contracts */ true);
 
     // Burn on behalf of other, wrong designated caller
-    let burn_amount = mint_amount / (U253::new(10));
+    let burn_amount = mint_amount / (BigNumField::new(10));
     let burn_call_interface =
         Token::at(token_contract_address).burn_public(owner, burn_amount, random());
     authwit_cheatcodes::add_public_authwit_from_call_interface(owner, owner, burn_call_interface);

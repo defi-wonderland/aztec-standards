@@ -5,15 +5,15 @@ use dep::aztec::{
 };
 use dep::aztec::prelude::{NoteGetterOptions, NoteViewerOptions, PrivateSet};
 use std::ops::Add;
-use uint253::{
-    uint253::U253,
-    uint253_note::U253Note,
+use bignum_field::{
+    bignum_field::BigNumField,
+    bignum_field_note::BigNumFieldNote,
 };
 
 // use aztec::prelude::{NoteGetterOptions, NoteViewerOptions, PrivateSet};
 
 pub struct BalanceSet<Context> {
-    pub set: PrivateSet<U253Note, Context>,
+    pub set: PrivateSet<BigNumFieldNote, Context>,
 }
 
 impl<Context> BalanceSet<Context> {
@@ -24,12 +24,12 @@ impl<Context> BalanceSet<Context> {
 }
 
 impl BalanceSet<UnconstrainedContext> {
-    pub unconstrained fn balance_of(self: Self) -> U253 {
+    pub unconstrained fn balance_of(self: Self) -> BigNumField {
         self.balance_of_with_offset(0)
     }
 
-    pub unconstrained fn balance_of_with_offset(self: Self, offset: u32) -> U253 {
-        let mut balance = U253::zero();
+    pub unconstrained fn balance_of_with_offset(self: Self, offset: u32) -> BigNumField {
+        let mut balance = BigNumField::zero();
         let mut options = NoteViewerOptions::new();
         let notes = self.set.view_notes(options.set_offset(offset));
         for i in 0..options.limit {
@@ -46,18 +46,18 @@ impl BalanceSet<UnconstrainedContext> {
 }
 
 impl BalanceSet<&mut PrivateContext> {
-    pub fn add(self: Self, owner: AztecAddress, addend: U253) -> OuterNoteEmission<U253Note> {
-        if addend == U253::zero() {
+    pub fn add(self: Self, owner: AztecAddress, addend: BigNumField) -> OuterNoteEmission<BigNumFieldNote> {
+        if addend == BigNumField::zero() {
             OuterNoteEmission::new(Option::none())
         } else {
             // We fetch the nullifier public key hash from the registry / from our PXE
-            let mut addend_note = U253Note::new(addend, owner);
+            let mut addend_note = BigNumFieldNote::new(addend, owner);
 
             OuterNoteEmission::new(Option::some(self.set.insert(addend_note)))
         }
     }
 
-    pub fn sub(self: Self, owner: AztecAddress, amount: U253) -> OuterNoteEmission<U253Note> {
+    pub fn sub(self: Self, owner: AztecAddress, amount: BigNumField) -> OuterNoteEmission<BigNumFieldNote> {
         let subtracted = self.try_sub(amount, MAX_NOTE_HASH_READ_REQUESTS_PER_CALL);
 
         // try_sub may have substracted more or less than amount. We must ensure that we subtracted at least as much as
@@ -75,7 +75,7 @@ impl BalanceSet<&mut PrivateContext> {
     // The `max_notes` parameter is used to fine-tune the number of constraints created by this function. The gate count
     // scales relatively linearly with `max_notes`, but a lower `max_notes` parameter increases the likelihood of
     // `try_sub` subtracting an amount smaller than `target_amount`.
-    pub fn try_sub(self: Self, target_amount: U253, max_notes: u32) -> U253 {
+    pub fn try_sub(self: Self, target_amount: BigNumField, max_notes: u32) -> BigNumField {
         // We are using a preprocessor here (filter applied in an unconstrained context) instead of a filter because
         // we do not need to prove correct execution of the preprocessor.
         // Because the `min_sum` notes is not constrained, users could choose to e.g. not call it. However, all this
@@ -85,7 +85,7 @@ impl BalanceSet<&mut PrivateContext> {
             .set_limit(max_notes);
         let notes = self.set.pop_notes(options);
 
-        let mut subtracted = U253::zero();
+        let mut subtracted = BigNumField::zero();
         for i in 0..options.limit {
             if i < notes.len() {
                 let note = notes.get_unchecked(i);
@@ -103,11 +103,11 @@ impl BalanceSet<&mut PrivateContext> {
 // 'min_sum' - all it does is remove extra notes if it does reach that value.
 // Note that proper usage of this preprocessor requires for notes to be sorted in descending order.
 pub fn preprocess_notes_min_sum(
-    notes: [Option<RetrievedNote<U253Note>>; MAX_NOTE_HASH_READ_REQUESTS_PER_CALL],
-    min_sum: U253,
-) -> [Option<RetrievedNote<U253Note>>; MAX_NOTE_HASH_READ_REQUESTS_PER_CALL] {
+    notes: [Option<RetrievedNote<BigNumFieldNote>>; MAX_NOTE_HASH_READ_REQUESTS_PER_CALL],
+    min_sum: BigNumField,
+) -> [Option<RetrievedNote<BigNumFieldNote>>; MAX_NOTE_HASH_READ_REQUESTS_PER_CALL] {
     let mut selected = [Option::none(); MAX_NOTE_HASH_READ_REQUESTS_PER_CALL];
-    let mut sum = U253::zero();
+    let mut sum = BigNumField::zero();
     for i in 0..notes.len() {
         // Because we process notes in retrieved order, notes need to be sorted in descending amount order for this
         // filter to be useful. Consider a 'min_sum' of 4, and a set of notes with amounts [3, 2, 1, 1, 1, 1, 1]. If

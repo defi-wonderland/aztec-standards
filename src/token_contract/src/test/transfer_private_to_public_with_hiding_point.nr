@@ -2,7 +2,10 @@ use crate::test::utils;
 use crate::Token;
 use authwit::cheatcodes as authwit_cheatcodes;
 use aztec::oracle::random::random;
-use uint253::{uint253::U253, uint253_note::{PartialU253Note, U253Note}};
+use bignum_field::{
+    bignum_field::BigNumField,
+    bignum_field_note::{BigNumFieldNote, PartialBigNumFieldNote},
+};
 
 #[test]
 unconstrained fn transfer_private_to_public_with_commitment() {
@@ -10,7 +13,7 @@ unconstrained fn transfer_private_to_public_with_commitment() {
         utils::setup_and_mint_to_private_without_minter(false);
 
     utils::check_private_balance(token_contract_address, owner, mint_amount);
-    utils::check_private_balance(token_contract_address, recipient, U253::zero());
+    utils::check_private_balance(token_contract_address, recipient, BigNumField::zero());
 
     // Transfer tokens
     let transfer_amount = mint_amount;
@@ -21,7 +24,7 @@ unconstrained fn transfer_private_to_public_with_commitment() {
     env.advance_block_by(1);
 
     // Check balances
-    utils::check_private_balance(token_contract_address, owner, U253::zero());
+    utils::check_private_balance(token_contract_address, owner, BigNumField::zero());
     utils::check_public_balance(token_contract_address, recipient, transfer_amount);
 }
 
@@ -31,7 +34,7 @@ unconstrained fn transfer_private_to_public_with_commitment_and_non_zero_nonce()
         utils::setup_and_mint_to_private_without_minter(false);
 
     utils::check_private_balance(token_contract_address, owner, mint_amount);
-    utils::check_private_balance(token_contract_address, recipient, U253::zero());
+    utils::check_private_balance(token_contract_address, recipient, BigNumField::zero());
 
     // Transfer tokens
     let transfer_amount = mint_amount;
@@ -47,7 +50,7 @@ unconstrained fn transfer_private_to_public_with_commitment_on_behalf_of_other()
         utils::setup_and_mint_to_private_without_minter(true);
 
     utils::check_private_balance(token_contract_address, owner, mint_amount);
-    utils::check_private_balance(token_contract_address, recipient, U253::zero());
+    utils::check_private_balance(token_contract_address, recipient, BigNumField::zero());
 
     // Transfer tokens
     let transfer_amount = mint_amount;
@@ -67,7 +70,7 @@ unconstrained fn transfer_private_to_public_with_commitment_on_behalf_of_other()
     env.advance_block_by(1);
 
     // Check balances
-    utils::check_private_balance(token_contract_address, owner, U253::zero());
+    utils::check_private_balance(token_contract_address, owner, BigNumField::zero());
     utils::check_public_balance(token_contract_address, recipient, transfer_amount);
 }
 
@@ -77,7 +80,7 @@ unconstrained fn transfer_private_to_public_with_commitment_and_finalize() {
         utils::setup_and_mint_to_private_without_minter(false);
 
     utils::check_private_balance(token_contract_address, owner, mint_amount);
-    utils::check_private_balance(token_contract_address, recipient, U253::zero());
+    utils::check_private_balance(token_contract_address, recipient, BigNumField::zero());
 
     // Transfer tokens
     let transfer_amount = mint_amount;
@@ -98,8 +101,8 @@ unconstrained fn transfer_private_to_public_with_commitment_and_finalize() {
     env.advance_block_by(1);
 
     // Check balances
-    utils::check_private_balance(token_contract_address, owner, U253::zero());
-    utils::check_public_balance(token_contract_address, recipient, U253::zero());
+    utils::check_private_balance(token_contract_address, owner, BigNumField::zero());
+    utils::check_public_balance(token_contract_address, recipient, BigNumField::zero());
     utils::check_private_balance(token_contract_address, recipient, transfer_amount);
 }
 
@@ -109,7 +112,7 @@ unconstrained fn transfer_private_to_public_with_commitment_and_finalize() {
 //         utils::setup_and_mint_to_private_without_minter(false);
 
 //     utils::check_private_balance(token_contract_address, owner, mint_amount);
-//     utils::check_private_balance(token_contract_address, recipient, U253::zero());
+//     utils::check_private_balance(token_contract_address, recipient, BigNumField::zero());
 
 //     // Transfer tokens
 //     let transfer_amount = mint_amount;
@@ -135,13 +138,13 @@ unconstrained fn transfer_private_to_public_with_commitment_and_finalize() {
 //         utils::setup_and_mint_to_private_without_minter(false);
 
 //     utils::check_private_balance(token_contract_address, owner, mint_amount);
-//     utils::check_private_balance(token_contract_address, recipient, U253::zero());
+//     utils::check_private_balance(token_contract_address, recipient, BigNumField::zero());
 
 //     // Transfer tokens
 //     let transfer_amount = mint_amount;
 
 //     env.impersonate(owner);
-//     let partial_note: PartialU253Note = Token::at(token_contract_address)
+//     let partial_note: PartialBigNumFieldNote = Token::at(token_contract_address)
 //         .transfer_private_to_public_with_hiding_point(owner, recipient, transfer_amount, 0)
 //         .call(&mut env.private());
 

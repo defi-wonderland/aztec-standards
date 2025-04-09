@@ -3,7 +3,7 @@ use crate::Token;
 use authwit::cheatcodes as authwit_cheatcodes;
 use aztec::{note::constants::MAX_NOTES_PER_PAGE, oracle::random::random};
 use aztec::protocol_types::traits::ToField;
-use uint253::{uint253::U253, uint253_note::U253Note};
+use bignum_field::{bignum_field::BigNumField, bignum_field_note::BigNumFieldNote};
 
 #[test]
 unconstrained fn transfer_private_to_public_on_behalf_of_self() {
@@ -11,7 +11,7 @@ unconstrained fn transfer_private_to_public_on_behalf_of_self() {
     let (env, token_contract_address, owner, _, mint_amount) =
         utils::setup_and_mint_to_private_without_minter(/* with_account_contracts */ false);
 
-    let transfer_private_to_public_amount = mint_amount / (U253::new(10));
+    let transfer_private_to_public_amount = mint_amount / (BigNumField::new(10));
     Token::at(token_contract_address)
         .transfer_private_to_public(owner, owner, transfer_private_to_public_amount, 0)
         .call(&mut env.private());
@@ -32,7 +32,7 @@ unconstrained fn transfer_private_to_public_on_behalf_of_other() {
     let (env, token_contract_address, owner, recipient, mint_amount) =
         utils::setup_and_mint_to_private_without_minter(/* with_account_contracts */ true);
 
-    let transfer_private_to_public_amount = mint_amount / (U253::new(10));
+    let transfer_private_to_public_amount = mint_amount / (BigNumField::new(10));
     let transfer_private_to_public_call_interface = Token::at(token_contract_address)
         .transfer_private_to_public(owner, recipient, transfer_private_to_public_amount, 0);
     authwit_cheatcodes::add_private_authwit_from_call_interface(
@@ -62,9 +62,9 @@ unconstrained fn transfer_private_to_public_multiple_notes_recursively() {
     let (env, token_contract_address, owner, recipient, minter) =
         utils::setup_with_minter(/* with_account_contracts */ true);
 
-    let notes_amount = U253::new(1000);
+    let notes_amount = BigNumField::new(1000);
     let notes_count: u32 = 12;
-    let total_amount = notes_amount * U253::new(notes_count.to_field());
+    let total_amount = notes_amount * BigNumField::new(notes_count.to_field());
 
     env.impersonate(minter);
     for i in 0..notes_count {
@@ -74,7 +74,7 @@ unconstrained fn transfer_private_to_public_multiple_notes_recursively() {
     // Transfer tokens
     // Transfer will require 11 notes with change, which requires 2 recursive calls: 2 + 8 + 1
     env.impersonate(owner);
-    let transfer_amount = total_amount - notes_amount - (U253::one());
+    let transfer_amount = total_amount - notes_amount - (BigNumField::one());
     let transfer_private_from_call_interface = Token::at(token_contract_address)
         .transfer_private_to_public(owner, recipient, transfer_amount, 0);
     transfer_private_from_call_interface.call(&mut env.private());
@@ -82,16 +82,19 @@ unconstrained fn transfer_private_to_public_multiple_notes_recursively() {
 
     // Check that the notes still owned by the owner are correct
     env.impersonate(token_contract_address);
-    let final_owner_notes: BoundedVec<U253Note, MAX_NOTES_PER_PAGE> =
+    let final_owner_notes: BoundedVec<BigNumFieldNote, MAX_NOTES_PER_PAGE> =
         utils::get_private_balance_notes(owner, 0);
 
-    assert(final_owner_notes.len() == 2, "Incorrect note count"); // 1000 U253Note x1 and 1 U253Note x1
+    assert(final_owner_notes.len() == 2, "Incorrect note count"); // 1000 BigNumFieldNote x1 and 1 BigNumFieldNote x1
     assert(final_owner_notes.get(0).get_value() == notes_amount, "Incorrect note amount");
-    assert(final_owner_notes.get(1).get_value() == U253::one(), "Incorrect note change amount");
+    assert(
+        final_owner_notes.get(1).get_value() == BigNumField::one(),
+        "Incorrect note change amount",
+    );
 
     // Check that the notes generated to the recipient are correct
     env.impersonate(token_contract_address);
-    let recipient_notes: BoundedVec<U253Note, MAX_NOTES_PER_PAGE> =
+    let recipient_notes: BoundedVec<BigNumFieldNote, MAX_NOTES_PER_PAGE> =
         utils::get_private_balance_notes(recipient, 0);
     assert(recipient_notes.len() == 0, "Incorrect transferred note count");
 
@@ -110,7 +113,7 @@ unconstrained fn transfer_private_to_public_failure_more_than_balance() {
     let (env, token_contract_address, owner, _, mint_amount) =
         utils::setup_and_mint_to_private_without_minter(/* with_account_contracts */ false);
 
-    let transfer_private_to_public_amount = mint_amount + (U253::one());
+    let transfer_private_to_public_amount = mint_amount + (BigNumField::one());
     Token::at(token_contract_address)
         .transfer_private_to_public(owner, owner, transfer_private_to_public_amount, 0)
         .call(&mut env.private());
@@ -122,7 +125,7 @@ unconstrained fn transfer_private_to_public_failure_on_behalf_of_self_non_zero_n
     let (env, token_contract_address, owner, _, mint_amount) =
         utils::setup_and_mint_to_private_without_minter(/* with_account_contracts */ false);
 
-    let transfer_private_to_public_amount = mint_amount + (U253::one());
+    let transfer_private_to_public_amount = mint_amount + (BigNumField::one());
     Token::at(token_contract_address)
         .transfer_private_to_public(owner, owner, transfer_private_to_public_amount, random())
         .call(&mut env.private());
@@ -133,7 +136,7 @@ unconstrained fn transfer_private_to_public_failure_on_behalf_of_other_more_than
     let (env, token_contract_address, owner, recipient, mint_amount) =
         utils::setup_and_mint_to_private_without_minter(/* with_account_contracts */ true);
 
-    let transfer_private_to_public_amount = mint_amount + (U253::one());
+    let transfer_private_to_public_amount = mint_amount + (BigNumField::one());
     let transfer_private_to_public_call_interface = Token::at(token_contract_address)
         .transfer_private_to_public(owner, recipient, transfer_private_to_public_amount, 0);
     authwit_cheatcodes::add_private_authwit_from_call_interface(
@@ -154,7 +157,7 @@ unconstrained fn transfer_private_to_public_failure_on_behalf_of_other_invalid_d
     let (env, token_contract_address, owner, recipient, mint_amount) =
         utils::setup_and_mint_to_private_without_minter(/* with_account_contracts */ true);
 
-    let transfer_private_to_public_amount = mint_amount + (U253::one());
+    let transfer_private_to_public_amount = mint_amount + (BigNumField::one());
     let transfer_private_to_public_call_interface = Token::at(token_contract_address)
         .transfer_private_to_public(owner, recipient, transfer_private_to_public_amount, 0);
     authwit_cheatcodes::add_private_authwit_from_call_interface(
@@ -175,7 +178,7 @@ unconstrained fn transfer_private_to_public_failure_on_behalf_of_other_no_approv
     let (env, token_contract_address, owner, recipient, mint_amount) =
         utils::setup_and_mint_to_private_without_minter(/* with_account_contracts */ true);
 
-    let transfer_private_to_public_amount = mint_amount + (U253::one());
+    let transfer_private_to_public_amount = mint_amount + (BigNumField::one());
     let transfer_private_to_public_call_interface = Token::at(token_contract_address)
         .transfer_private_to_public(owner, recipient, transfer_private_to_public_amount, 0);
     // Impersonate recipient
