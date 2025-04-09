@@ -133,8 +133,7 @@ impl BigNumFieldNote {
         // id that the recipient will realize that these are the private fields of a partial note. Ideally we'd not rely
         // on this crude mechanism and we'd instead compute it as a proper event log. However, given the current state
         // of the log library it's far easier to do it this way.
-        let encrypted_log = default_aes128::note::compute_log(
-            *context,
+        let encrypted_log = default_aes128::note::compute_partial_note_log(
             private_log_content,
             storage_slot,
             recipient,
