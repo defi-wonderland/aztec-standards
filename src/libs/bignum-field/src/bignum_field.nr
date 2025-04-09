@@ -1,6 +1,3 @@
-// Copyright (c) 2025 Clarified Labs, Inc.
-// SPDX-License-Identifier: Apache-2.0
-
 use aztec::protocol_types::{
     constants::MAX_FIELD_VALUE,
     traits::{Deserialize, FromField, Packable, Serialize, ToField},

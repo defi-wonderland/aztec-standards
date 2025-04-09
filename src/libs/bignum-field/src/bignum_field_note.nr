@@ -1,6 +1,3 @@
-// Copyright (c) 2025 Clarified Labs, Inc.
-// SPDX-License-Identifier: Apache-2.0
-
 use aztec::{
     context::{PrivateContext, PublicContext},
     keys::getters::{get_nsk_app, get_public_keys},
