@@ -209,17 +209,17 @@ impl PartialBigNumFieldNote {
         context.push_note_hash(self.compute_complete_note_hash(value));
     }
 
-    fn compute_note_completion_log(self, value: BigNumField) -> [Field; 2] {
+    fn compute_note_completion_log(self, value: BigNumField) -> [Field; 4] {
         // The first field of this log must be the tag that the recipient of the partial note private field logs
         // expects, which is equal to the partial note commitment.
-        [self.commitment, value.value]
+        [self.commitment, value.limbs[0] as Field, value.limbs[1] as Field, value.limbs[2] as Field]
     }
 
     fn compute_complete_note_hash(self, value: BigNumField) -> Field {
         // Here we finalize the note hash by including the (public) value into the partial note commitment. Note that we
         // use the same generator index as we used for the first round of poseidon - this is not an issue.
         poseidon2_hash_with_separator(
-            [self.commitment, value.value],
+            [self.commitment, value.limbs[0] as Field, value.limbs[1] as Field, value.limbs[2] as Field],
             GENERATOR_INDEX__NOTE_HASH,
         )
     }
