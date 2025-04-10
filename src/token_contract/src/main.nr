@@ -546,7 +546,7 @@ pub contract Token {
         // slot, and it is internally consistent). We *could* clear the storage since each partial note should only be
         // used once, but since the AVM offers no gas refunds for doing so this would just make the transaction be more
         // expensive.
-        assert(context.storage_read(commitment.commitment()), "Invalid commitment");
+        assert(context.storage_read(commitment.commitment()), "invalid commitment");
         commitment.complete(amount, context);
     }
 
@@ -565,7 +565,7 @@ pub contract Token {
     ) -> u128 {
         let subtracted = private_balances.at(account).try_sub(amount, max_notes);
         // Failing to subtract any amount means that the owner was unable to produce more notes that could be nullified.
-        assert(subtracted > 0, "Balance too low");
+        assert(subtracted > 0, "balance too low");
         if subtracted >= amount {
             // We have achieved our goal of nullifying notes that add up to more than amount, so we return the change.
             subtracted - amount
