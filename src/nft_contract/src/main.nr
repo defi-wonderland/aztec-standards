@@ -67,6 +67,12 @@ pub contract NFT {
      * ========================= PRIVATE =========================
      * ======================================================== */
 
+    /// @notice Transfers token by id from private nft set to a public owner
+    /// @dev Removes token from private nft set, and enqueues a public call to update the public owner
+    /// @param from The address of the sender
+    /// @param to The address of the recipient
+    /// @param token_id The id of the token to transfer
+    /// @param nonce The nonce used for authwitness
     #[private]
     fn transfer_private_to_public(from: AztecAddress, to: AztecAddress, token_id: Field, nonce: Field) {
         _validate_from_private(&mut context, from, nonce);
@@ -76,8 +82,15 @@ pub contract NFT {
         );
     }
 
+    /// @notice Transfers token by id from private nft set to a public owner with a commitment
+    /// @dev Removes token from private nft set, enqueues a public call to update the public owner, and returns a commitment
+    /// @param from The address of the sender
+    /// @param to The address of the recipient
+    /// @param token_id The id of the token to transfer
+    /// @param nonce The nonce used for authwitness
+    /// @return commitment The partial nft note utilized for the transfer commitment (privacy entrance)
     #[private]
-    fn transfer_private_to_public_with_commitment(from: AztecAddress, to: AztecAddress, token_id: Field, commitment: PartialNFTNote, nonce: Field) -> PartialNFTNote {
+    fn transfer_private_to_public_with_commitment(from: AztecAddress, to: AztecAddress, token_id: Field nonce: Field) -> PartialNFTNote {
         _validate_from_private(&mut context, from, nonce);
         _remove_private_token_owner(storage.private_nfts.at(from), token_id);
         NFT::at(context.this_address()).update_public_token_owner_internal(from, to, token_id, true).enqueue(
@@ -87,6 +100,12 @@ pub contract NFT {
         commitment
     }
 
+    /// @notice Transfers token by id from private nft set to another private nft set
+    /// @dev Removes token by id from private nft set, and sends a nft note with id to the recipient
+    /// @param from The address of the sender
+    /// @param to The address of the recipient
+    /// @param token_id The id of the token to transfer
+    /// @param nonce The nonce used for authwitness
     #[private]
     fn transfer_private_to_private(from: AztecAddress, to: AztecAddress, token_id: Field, nonce: Field) {
         _validate_from_private(&mut context, from, nonce);
@@ -95,6 +114,12 @@ pub contract NFT {
         _update_private_token_owner(&mut context, private_nfts.at(to), from, to, token_id);
     }
 
+    /// @notice Transfers token by id from private nft set to the recipient commitment (recipient must create a commitment first)
+    /// @dev Removes token by id from private nft set, and enqueues a public call to complete the commitment
+    /// @param from The address of the sender
+    /// @param token_id The id of the token to transfer
+    /// @param commitment The commitment to use for the transfer
+    /// @param nonce The nonce used for authwitness
     #[private]
     fn transfer_private_to_commitment(from: AztecAddress, token_id: Field, commitment: PartialNFTNote, nonce: Field) {
         _validate_from_private(&mut context, from, nonce);
@@ -104,6 +129,12 @@ pub contract NFT {
         );
     }
 
+    /// @notice Transfers token by id from public owner to private nft set
+    /// @dev Enqueues a public call to remove the public owner, and emits a nft note with id to the recipient
+    /// @param from The address of the sender
+    /// @param to The address of the recipient
+    /// @param token_id The id of the token to transfer
+    /// @param nonce The nonce used for authwitness
     #[private]
     fn transfer_public_to_private(from: AztecAddress, to: AztecAddress, token_id: Field, nonce: Field) {
         _validate_from_private(&mut context, from, nonce);
@@ -113,6 +144,11 @@ pub contract NFT {
         _update_private_token_owner(&mut context, storage.private_nfts.at(to), from, to, token_id);
     }
 
+    /// @notice Initializes a transfer commitment to be used for transfers
+    /// @dev Returns a partial nft note that can be used to execute transfers
+    /// @param from The address of the sender
+    /// @param to The address of the recipient
+    /// @return commitment The partial nft note utilized for the transfer commitment (privacy entrance)
     #[private]
     fn initialize_transfer_commitment(from: AztecAddress, to: AztecAddress) -> PartialNFTNote {
         _initialize_transfer_commitment(&mut context, storage.private_nfts, from, to)
@@ -348,7 +384,9 @@ pub contract NFT {
         commitment.complete(token_id, context);
     }
 
-    /// Validates that the caller is an authorized minter
+    /// @notice Validates that the caller is an authorized minter
+    /// @param sender The address of the caller
+    /// @param minter The address of the minter
     #[contract_library_method]
     fn _validate_minter(sender: AztecAddress, minter: AztecAddress) {
         assert(minter.eq(sender), "caller is not minter");
@@ -358,8 +396,11 @@ pub contract NFT {
      * ================== AUTH LIBRARIES =========================
      * ======================================================== */
 
-    /// Validates that a user can perform operations on behalf of `from` in a private context.
-    /// If the caller is not `from`, then they must have an authentication witness.
+    /// @notice Validates that the caller possesses authwit from the `from` address or the caller is the `from` address
+    /// @dev If the caller is the `from` address, the nonce must be 0
+    /// @param context The context of the private call
+    /// @param from The address of the sender
+    /// @param nonce The nonce of the transaction
     #[contract_library_method]
     fn _validate_from_private(context: &mut PrivateContext, from: AztecAddress, nonce: Field) {
         if (!from.eq(context.msg_sender())) {
@@ -369,8 +410,11 @@ pub contract NFT {
         }
     }
 
-    /// Validates that a user can perform operations on behalf of `from` in a public context.
-    /// If the caller is not `from`, then they must have an authentication witness.
+    /// @notice Validates that the caller possesses authwit from the `from` address or the caller is the `from` address
+    /// @dev If the caller is the `from` address, the nonce must be 0
+    /// @param context The context of the public call
+    /// @param from The address of the sender
+    /// @param nonce The nonce of the transaction
     #[contract_library_method]
     unconstrained fn _validate_from_public(
         context: &mut PublicContext,
