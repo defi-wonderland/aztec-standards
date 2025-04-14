@@ -104,19 +104,15 @@ pub contract NFT {
         );
     }
 
-    // Transfers token with `token_id` from public balance of message sender to a private balance of `to`.
     #[private]
     fn transfer_public_to_private(from: AztecAddress, to: AztecAddress, token_id: Field, nonce: Field) {
         _validate_from_private(&mut context, from, nonce);
-        // validate public token owner
         NFT::at(context.this_address()).update_public_token_owner_internal(from, AztecAddress::zero(), token_id, false).enqueue(
             &mut context,
         );
         _update_private_token_owner(&mut context, storage.private_nfts.at(to), from, to, token_id);
     }
 
-    /// Prepares an increase of private balance of `to` (commitment). The increase needs to be finalized by calling
-    /// `finalize_transfer_to_private` with the returned commitment.
     #[private]
     fn initialize_transfer_commitment(from: AztecAddress, to: AztecAddress) -> PartialNFTNote {
         _initialize_transfer_commitment(&mut context, storage.private_nfts, from, to)
@@ -166,7 +162,8 @@ pub contract NFT {
     #[internal]
     fn update_nft_exists_internal(
         token_id: Field, 
-        exists: bool) {
+        exists: bool,
+        ) {
         storage.nft_exists.at(token_id).write(exists);
     }
 
@@ -186,7 +183,6 @@ pub contract NFT {
         storage.symbol.read()
     }
 
-    // Returns zero address when the token does not have a public owner. Reverts if the token does not exist.
     #[public]
     #[view]
     fn owner_of(token_id: Field) -> AztecAddress {
@@ -223,14 +219,32 @@ pub contract NFT {
     * ======================= MINTABLE ==========================
     * ======================================================== */
 
+    #[private]
+    fn mint_private(to: AztecAddress, token_id: Field) {
+        _validate_minter(context.msg_sender(), storage.minter.read());
+        let nft = NFT::at(context.this_address());
+        nft.validate_token_to_mint_internal(token_id).enqueue(
+            &mut context,
+        );
+        nft.update_nft_exists_internal(token_id, true).enqueue(
+            &mut context,
+        );
+        storage.private_nfts.at(to).insert(NFTNote::new(token_id, to));
+    }
+
     #[public]
     fn mint_public(to: AztecAddress, token_id: Field) {
-        assert(token_id != 0, "zero token ID not supported");
         _validate_minter(context.msg_sender(), storage.minter.read());
-        assert(storage.nft_exists.at(token_id).read() == false, "token already exists");
-
-        storage.nft_exists.at(token_id).write(true);
+        validate_token_to_mint_internal(token_id);
+        update_nft_exists_internal(token_id, true);
         storage.public_owners.at(token_id).write(to);
+    }
+
+    #[public]
+    #[internal]
+    fn validate_token_to_mint_internal(token_id: Field) {
+        assert(token_id != 0, "zero token ID not supported");
+        assert(storage.nft_exists.at(token_id).read() == false, "token already exists");
     }
 
     /** ==========================================================
