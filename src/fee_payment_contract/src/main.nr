@@ -11,12 +11,12 @@ pub contract FPC {
     use aztec::{
         context::PrivateContext,
         macros::{functions::{initializer, internal, private, public, view}, storage::storage},
-        prelude::{AztecAddress, Map, PublicContext, PublicImmutable, PublicMutable, NoteGetterOptions},
+        prelude::{
+            AztecAddress, Map, NoteGetterOptions, PublicContext, PublicImmutable, PublicMutable,
+        },
     };
 
-    use aztec::protocol_types::{
-        traits::{Deserialize, Packable, Serialize},
-    };
+    use aztec::protocol_types::traits::{Deserialize, Packable, Serialize};
 
     use authwit::auth::{
         assert_current_call_valid_authwit, assert_current_call_valid_authwit_public,
