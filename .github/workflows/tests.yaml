@@ -26,7 +26,7 @@ jobs:
   
         - name: Set Aztec version
           run: |
-            VERSION=0.82.3 aztec-up
+            VERSION=0.84.0 aztec-up
         
         - name: Start sandbox
           run: |

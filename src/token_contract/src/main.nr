@@ -7,7 +7,10 @@ pub contract Token {
     // aztec library
     use aztec::{
         context::PrivateContext,
-        macros::{functions::{initializer, internal, private, public, view}, storage::storage},
+        macros::{
+            functions::{initializer, internal, private, public, utility, view},
+            storage::storage,
+        },
         prelude::{AztecAddress, Map, PublicContext, PublicImmutable, PublicMutable},
     };
     // authorized witness library
@@ -351,8 +354,8 @@ pub contract Token {
     /** ==========================================================
      * ===================== UNCONSTRAINED =======================
      * ======================================================== */
-
-    unconstrained fn balance_of_private(owner: AztecAddress) -> pub u128 {
+    #[utility]
+    unconstrained fn balance_of_private(owner: AztecAddress) -> u128 {
         storage.private_balances.at(owner).balance_of()
     }
 
