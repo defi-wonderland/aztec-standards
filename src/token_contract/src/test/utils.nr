@@ -10,10 +10,9 @@ use aztec::{
     protocol_types::storage::map::derive_storage_slot_in_map,
     test::helpers::{cheatcodes, test_environment::TestEnvironment},
 };
-use bignum::{BigNum, bignum::to_field, BigNumTrait, params::{BigNumParams, BigNumParamsGetter}};
 use bignum_field::{
     bignum_field::BigNumField,
-    bignum_field_note::{BigNumFieldNote, PartialBigNumFieldNote},
+    bignum_field_note::BigNumFieldNote,
 };
 use std::test::OracleMock;
 

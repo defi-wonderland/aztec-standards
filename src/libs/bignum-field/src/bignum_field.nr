@@ -78,28 +78,56 @@ impl Deserialize<3> for BigNumField {
 
 impl Add for BigNumField {
     fn add(self, other: Self) -> Self {
-        let result: U256 = U256::from_slice([self.limbs[0] as u128, self.limbs[1] as u128, self.limbs[2] as u128]) + U256::from_slice([other.limbs[0] as u128, other.limbs[1] as u128, other.limbs[2] as u128]);
+        let self_bn: U256 = U256::from_slice([self.limbs[0] as u128, self.limbs[1] as u128, self.limbs[2] as u128]);
+        let other_bn: U256 = U256::from_slice([other.limbs[0] as u128, other.limbs[1] as u128, other.limbs[2] as u128]);
+        
+        let result: U256 = self_bn + other_bn;
+        assert(
+            (result.limbs[2] > self_bn.limbs[2]) | 
+            ((result.limbs[2] == self_bn.limbs[2]) & (result.limbs[1] > self_bn.limbs[1])) |
+            ((result.limbs[2] == self_bn.limbs[2]) & (result.limbs[1] == self_bn.limbs[1]) & !(result.limbs[0] < self_bn.limbs[0])), 
+            "U256 addition overflow"
+        );
+        
         Self { limbs: [result.limbs[0] as Field, result.limbs[1] as Field, result.limbs[2] as Field] }    
     }
 }
 
 impl Sub for BigNumField {
     fn sub(self, other: Self) -> Self {
-        let result: U256 = U256::from_slice([self.limbs[0] as u128, self.limbs[1] as u128, self.limbs[2] as u128]) - U256::from_slice([other.limbs[0] as u128, other.limbs[1] as u128, other.limbs[2] as u128]);
+        let self_bn: U256 = U256::from_slice([self.limbs[0] as u128, self.limbs[1] as u128, self.limbs[2] as u128]);
+        let other_bn: U256 = U256::from_slice([other.limbs[0] as u128, other.limbs[1] as u128, other.limbs[2] as u128]);
+        
+        assert(
+            (self_bn.limbs[2] > other_bn.limbs[2]) | 
+            ((self_bn.limbs[2] == other_bn.limbs[2]) & (self_bn.limbs[1] > other_bn.limbs[1])) |
+            ((self_bn.limbs[2] == other_bn.limbs[2]) & (self_bn.limbs[1] == other_bn.limbs[1]) & !(self_bn.limbs[0] < other_bn.limbs[0])), 
+            "U256 subtraction underflow"
+        );
+        let result: U256 = self_bn - other_bn;
+        
         Self { limbs: [result.limbs[0] as Field, result.limbs[1] as Field, result.limbs[2] as Field] }  
     }
 }
 
 impl Mul for BigNumField {
     fn mul(self, other: Self) -> Self {
-        let result: U256 = U256::from_slice([self.limbs[0] as u128, self.limbs[1] as u128, self.limbs[2] as u128]) * U256::from_slice([other.limbs[0] as u128, other.limbs[1] as u128, other.limbs[2] as u128]);
+        let self_bn: U256 = U256::from_slice([self.limbs[0] as u128, self.limbs[1] as u128, self.limbs[2] as u128]);
+        let other_bn: U256 = U256::from_slice([other.limbs[0] as u128, other.limbs[1] as u128, other.limbs[2] as u128]);
+        
+        let result: U256 = self_bn * other_bn;
+        assert(result.udiv(self_bn) == other_bn, "U256 multiplication overflow");
+
         Self { limbs: [result.limbs[0] as Field, result.limbs[1] as Field, result.limbs[2] as Field] }  
     }
 }
 
 impl Div for BigNumField {
     fn div(self, other: Self) -> Self {
-        let result: U256 = U256::from_slice([self.limbs[0] as u128, self.limbs[1] as u128, self.limbs[2] as u128]).udiv(U256::from_slice([other.limbs[0] as u128, other.limbs[1] as u128, other.limbs[2] as u128]));
+        let self_bn: U256 = U256::from_slice([self.limbs[0] as u128, self.limbs[1] as u128, self.limbs[2] as u128]);
+        let other_bn: U256 = U256::from_slice([other.limbs[0] as u128, other.limbs[1] as u128, other.limbs[2] as u128]);
+        
+        let result: U256 = self_bn.udiv(other_bn);
         Self { limbs: [result.limbs[0] as Field, result.limbs[1] as Field, result.limbs[2] as Field] }  
     }
 }

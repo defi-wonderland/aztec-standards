@@ -51,7 +51,7 @@ unconstrained fn burn_public_on_behalf_of_other() {
 }
 
 // #[test(should_fail_with = "attempt to subtract with underflow")]
-#[test(should_fail_with = "Assertion failed: Field subtraction underflow")]
+#[test(should_fail_with = "Assertion failed: U256 subtraction underflow")]
 unconstrained fn burn_public_failure_more_than_balance() {
     let (env, token_contract_address, owner, _, mint_amount) =
         utils::setup_and_mint_to_public_without_minter(/* with_account_contracts */ false);

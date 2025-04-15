@@ -57,7 +57,7 @@ unconstrained fn public_transfer_on_behalf_of_other() {
 }
 
 // #[test(should_fail_with = "attempt to subtract with underflow")]
-#[test(should_fail_with = "Assertion failed: Field subtraction underflow")]
+#[test(should_fail_with = "Assertion failed: U256 subtraction underflow")]
 unconstrained fn public_transfer_failure_more_than_balance() {
     // Setup without account contracts. We are not using authwits here, so dummy accounts are enough
     let (env, token_contract_address, owner, recipient, mint_amount) =
@@ -103,7 +103,7 @@ unconstrained fn public_transfer_failure_on_behalf_of_other_without_approval() {
 }
 
 // #[test(should_fail_with = "attempt to subtract with underflow")]
-#[test(should_fail_with = "Assertion failed: Field subtraction underflow")]
+#[test(should_fail_with = "Assertion failed: U256 subtraction underflow")]
 unconstrained fn public_transfer_failure_on_behalf_of_other_more_than_balance() {
     // Setup with account contracts. Slower since we actually deploy them, but needed for authwits.
     let (env, token_contract_address, owner, recipient, mint_amount) =
