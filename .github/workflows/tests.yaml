@@ -13,7 +13,7 @@ jobs:
       runs-on: ubuntu-latest
       timeout-minutes: 30
       env:
-        AZTEC_VERSION: "0.84.0"
+        AZTEC_VERSION: "0.85.0"
   
       steps:
         - name: Checkout repository
