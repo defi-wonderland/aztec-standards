@@ -10,8 +10,6 @@ use bignum_field::{
     bignum_field_note::BigNumFieldNote,
 };
 
-// use aztec::prelude::{NoteGetterOptions, NoteViewerOptions, PrivateSet};
-
 pub struct BalanceSet<Context> {
     pub set: PrivateSet<BigNumFieldNote, Context>,
 }
