@@ -49,12 +49,12 @@ jobs:
         
         - name: Bench
           run: |
-            mv bench.json bench_old.json
+            mv bench.json bench_main.json
             script -e -c "yarn bench bench.json"
 
         - name: Run compare-bench
           run: |
-            yarn tsx src/ts/scripts/compare-bench.ts bench.json bench_old.json bench_diff.md
+            yarn tsx src/ts/scripts/compare-bench.ts bench.json bench_pr.json bench_diff.md
 
         - name: Comment diff
           uses: peter-evans/create-or-update-comment@v4
