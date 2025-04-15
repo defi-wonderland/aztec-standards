@@ -377,13 +377,13 @@ describe('Token - Single PXE', () => {
     expect(await token.methods.total_supply().simulate()).toBe(AMOUNT);
 
     // alice prepares partial note for bob
-    await token.methods.prepare_transfer_public_to_private(bob.getAddress(), alice.getAddress()).send().wait();
+    await token.methods.initialize_transfer_commitment(bob.getAddress(), alice.getAddress()).send().wait();
 
     // alice still has tokens in public
     expect(await token.methods.balance_of_public(alice.getAddress()).simulate()).toBe(AMOUNT);
 
-    // finalize partial note passing the hiding point slot
-    // await token.methods.finalize_transfer_public_to_private(AMOUNT, latestEvent.hiding_point_slot).send().wait();
+    // finalize partial note passing the commitment slot
+    // await token.methods.transfer_public_to_commitment(AMOUNT, latestEvent.hiding_point_slot).send().wait();
 
     // alice now has no tokens
     // expect(await token.methods.balance_of_public(alice.getAddress()).simulate()).toBe(0n);
@@ -394,6 +394,7 @@ describe('Token - Single PXE', () => {
     // expect(await token.methods.total_supply().simulate()).toBe(AMOUNT);
   }, 300_000);
 
+  // TODO: Can't figure out why this is failing
   // Assertion failed: unauthorized 'true, authorized'
   it.skip('public transfer with authwitness', async () => {
     // Mint tokens to Alice in public
@@ -410,19 +411,22 @@ describe('Token - Single PXE', () => {
       caller: carl.getAddress(),
       action,
     };
-    // alice create authwitness
+    // alice creates authwitness
     const authWitness = await alice.createAuthWit(intent);
-
+    // alice authorizes the public authwit
     await (await alice.setPublicAuthWit(intent, true)).send().wait();
-    await (await carl.setPublicAuthWit(intent, true)).send().wait();
-    // check authwit validity
+
+    // check validity of alice's authwit
     const validity = await carl.lookupValidity(alice.getAddress(), intent, authWitness);
     expect(validity.isValidInPrivate).toBeTruthy();
     expect(validity.isValidInPublic).toBeTruthy();
 
+    // Carl submits the action, using alice's authwit
     await action.send({ authWitnesses: [authWitness] }).wait();
 
+    // Check balances, alice to should 0
     expect(await token.methods.balance_of_public(alice.getAddress()).simulate()).toBe(0n);
+    // Bob should have the a non-zero amount
     expect(await token.methods.balance_of_public(bob.getAddress()).simulate()).toBe(AMOUNT);
   }, 300_000);
 

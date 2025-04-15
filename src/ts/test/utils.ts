@@ -26,8 +26,8 @@ export const setupSandbox = async () => {
 };
 
 export const expectUintNote = (note: UniqueNote, amount: bigint, owner: AztecAddress) => {
-  expect(note.note.items[0]).toEqual(new Fr(owner.toBigInt()))
-  expect(note.note.items[2]).toEqual(new Fr(amount))
+  expect(note.note.items[0]).toEqual(new Fr(owner.toBigInt()));
+  expect(note.note.items[2]).toEqual(new Fr(amount));
 };
 
 export const expectAddressNote = (note: UniqueNote, address: AztecAddress, owner: AztecAddress) => {

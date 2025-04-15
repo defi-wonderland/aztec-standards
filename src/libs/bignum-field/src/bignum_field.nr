@@ -1,14 +1,12 @@
 use aztec::protocol_types::{
-    constants::MAX_FIELD_VALUE,
     traits::{Deserialize, FromField, Packable, Serialize, ToField},
 };
 use std::cmp::{Eq, Ord, Ordering};
-use std::ops::{Add, Div, Mul, Rem, Sub, Neg};
+use std::ops::{Add, Div, Mul, Sub};
 use bignum::{
     fields::U256::U256,
     bignum::to_field,
-    BigNum,
-    BigNumTrait,
+    bignum::BigNumTrait,
 };
 
 pub struct BigNumField {

@@ -28,6 +28,23 @@ unconstrained fn transfer_private_to_public_with_commitment() {
     utils::check_public_balance(token_contract_address, recipient, transfer_amount);
 }
 
+#[test]
+unconstrained fn transfer_private_to_public_with_commitment_stores_commitment() {
+    let (env, token_contract_address, owner, recipient, mint_amount) =
+        utils::setup_and_mint_to_private_without_minter(false);
+
+    env.impersonate(owner);
+    let commitment = Token::at(token_contract_address)
+        .transfer_private_to_public_with_commitment(owner, recipient, mint_amount, 0)
+        .call(&mut env.private());
+    env.advance_block_by(1);
+
+    assert(
+        utils::_commitment_storage_read(token_contract_address, commitment.commitment()) == true,
+        "Commitment not stored",
+    );
+}
+
 #[test(should_fail_with = "invalid nonce")]
 unconstrained fn transfer_private_to_public_with_commitment_and_non_zero_nonce() {
     let (env, token_contract_address, owner, recipient, mint_amount) =
@@ -96,7 +113,7 @@ unconstrained fn transfer_private_to_public_with_commitment_and_finalize() {
     // Transfer tokens
     env.impersonate(recipient);
     Token::at(token_contract_address)
-        .finalize_transfer_public_to_private(recipient, transfer_amount, commitment, 0)
+        .transfer_public_to_commitment(recipient, transfer_amount, commitment, 0)
         .call(&mut env.public());
     env.advance_block_by(1);
 

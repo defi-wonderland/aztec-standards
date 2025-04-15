@@ -8,7 +8,7 @@ use aztec::{
         address::AztecAddress,
         constants::{GENERATOR_INDEX__NOTE_HASH, GENERATOR_INDEX__NOTE_NULLIFIER},
         hash::poseidon2_hash_with_separator,
-        traits::{Deserialize, Hash, Packable, Serialize, ToField},
+        traits::{Deserialize, Hash, Packable, Serialize},
         utils::arrays::array_concat,
     },
     encrypted_logs::log_assembly_strategies::default_aes128,
