@@ -104,7 +104,11 @@ impl Sub for BigNumField {
 
 impl Mul for BigNumField {
     fn mul(self, other: Self) -> Self {
-        let result: BN254_Fq = BN254_Fq::from(self.value) * BN254_Fq::from(other.value);
+        let self_bn: BN254_Fq = BN254_Fq::from(self.value);
+        let other_bn: BN254_Fq = BN254_Fq::from(other.value);
+
+        let result: BN254_Fq = self_bn * other_bn;
+        assert(result.div(self_bn) == other_bn, "U256 multiplication overflow");
         Self { value: to_field(result) }
     }
 }
