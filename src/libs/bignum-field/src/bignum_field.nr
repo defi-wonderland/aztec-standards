@@ -5,6 +5,7 @@ use std::cmp::{Eq, Ord, Ordering};
 use std::ops::{Add, Div, Mul, Sub};
 use bignum::{
     fields::U256::U256,
+    // fns::constrained_ops::validate_gt,
     bignum::to_field,
     bignum::BigNumTrait,
 };
@@ -82,12 +83,7 @@ impl Add for BigNumField {
         let other_bn: U256 = U256::from_slice([other.limbs[0] as u128, other.limbs[1] as u128, other.limbs[2] as u128]);
         
         let result: U256 = self_bn + other_bn;
-        assert(
-            (result.limbs[2] > self_bn.limbs[2]) | 
-            ((result.limbs[2] == self_bn.limbs[2]) & (result.limbs[1] > self_bn.limbs[1])) |
-            ((result.limbs[2] == self_bn.limbs[2]) & (result.limbs[1] == self_bn.limbs[1]) & !(result.limbs[0] < self_bn.limbs[0])), 
-            "U256 addition overflow"
-        );
+        assert(result >= self_bn, "U256 addition overflow");
         
         Self { limbs: [result.limbs[0] as Field, result.limbs[1] as Field, result.limbs[2] as Field] }    
     }
@@ -98,12 +94,8 @@ impl Sub for BigNumField {
         let self_bn: U256 = U256::from_slice([self.limbs[0] as u128, self.limbs[1] as u128, self.limbs[2] as u128]);
         let other_bn: U256 = U256::from_slice([other.limbs[0] as u128, other.limbs[1] as u128, other.limbs[2] as u128]);
         
-        assert(
-            (self_bn.limbs[2] > other_bn.limbs[2]) | 
-            ((self_bn.limbs[2] == other_bn.limbs[2]) & (self_bn.limbs[1] > other_bn.limbs[1])) |
-            ((self_bn.limbs[2] == other_bn.limbs[2]) & (self_bn.limbs[1] == other_bn.limbs[1]) & !(self_bn.limbs[0] < other_bn.limbs[0])), 
-            "U256 subtraction underflow"
-        );
+        assert(self_bn >= other_bn, "U256 subtraction underflow");
+        // validate_gt::<3, 257>(self_bn.limbs, other_bn.limbs);
         let result: U256 = self_bn - other_bn;
         
         Self { limbs: [result.limbs[0] as Field, result.limbs[1] as Field, result.limbs[2] as Field] }  

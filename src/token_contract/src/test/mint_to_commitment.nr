@@ -41,9 +41,7 @@ unconstrained fn mint_to_private_failure_unauthorized() {
     mint_to_commitment_call_interface.call(&mut env.public());
 }
 
-// TODO: no overflow?
-// #[test(should_fail_with = "attempt to add with overflow 'total_supply.read() + amount'")]
-#[test]
+#[test(should_fail_with = "U256 addition overflow")]
 unconstrained fn mint_to_private_failure_balance_overflow() {
     let (env, token_contract_address, owner, recipient, minter) = utils::setup_with_minter(false);
 
@@ -61,16 +59,9 @@ unconstrained fn mint_to_private_failure_balance_overflow() {
     let mint_to_commitment_call_interface =
         Token::at(token_contract_address).mint_to_commitment(BigNumField::new(2), commitment);
     mint_to_commitment_call_interface.call(&mut env.public());
-    // env.assert_private_call_fails(mint_to_private_call_interface);
-
-    utils::check_private_balance(token_contract_address, owner, BigNumField::zero());
-    // utils::check_total_supply(token_contract_address, BigNumField::max());
-    utils::check_total_supply(token_contract_address, BigNumField::new(1));
 }
 
-// TODO: no overflow?
-// #[test(should_fail_with = "attempt to add with overflow 'total_supply.read() + amount'")]
-#[test]
+#[test(should_fail_with = "U256 addition overflow")]
 unconstrained fn mint_to_private_failure_total_supply_overflow() {
     let (env, token_contract_address, owner, recipient, minter) = utils::setup_with_minter(false);
 
@@ -80,9 +71,6 @@ unconstrained fn mint_to_private_failure_total_supply_overflow() {
         .call(&mut env.private());
 
     let mint_amount: BigNumField = BigNumField::new(10_000);
-    let two_pow_127 = 2.pow_32(127);
-    let two_pow_127_minus_one = two_pow_127 - 1;
-    let max_u128 = (two_pow_127 + two_pow_127_minus_one) as u128;
 
     env.impersonate(minter);
     Token::at(token_contract_address).mint_to_commitment(BigNumField::max(), commitment).call(
