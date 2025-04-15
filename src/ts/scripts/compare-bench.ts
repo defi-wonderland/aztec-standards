@@ -28,18 +28,18 @@ interface GateCounts {
 
 const formatNumber = (num: number): string => num.toLocaleString().padStart(8, ' ');
 
-const formatDiff = (oldVal: number, newVal: number): string => {
-  if (oldVal === 0) return formatNumber(newVal);
-  const diff = newVal - oldVal;
-  const percent = ((diff / oldVal) * 100).toFixed(1);
+const formatDiff = (mainValue: number, prValue: number): string => {
+  const diff = prValue - mainValue;
+  if (diff === 0) return '0';
+  // This case is for when the old value is 0, which means that the base's impl do not have the circuit to compare with
+  if (mainValue === 0) return '0';
+  const percent = ((diff / mainValue) * 100).toFixed(1);
   const sign = diff >= 0 ? '+' : '';
-  return `${formatNumber(newVal)} (${sign}${percent}%)`;
+  return `${diff} (${sign}${percent}%)`;
 };
 
 const getPublicOverhead = (data: CircuitData[]): number => {
-  console.log('Getting public overhead from data:', data);
   const overhead = data.find((v) => v.gateCounts.length === 4)?.totalGateCount || 0;
-  console.log('Found overhead:', overhead);
   return overhead;
 };
 
@@ -84,12 +84,14 @@ const createComparisonTable = (mainData: GateCounts, prData: GateCounts): void =
     '# Benchmark Comparison\n',
     '<table>',
     '<tr>',
+    '  <th>Status</th>',
     '  <th>Function</th>',
     '  <th colspan="3">Gates</th>',
     '  <th colspan="3">DA Gas</th>',
     '  <th colspan="3">L2 Gas</th>',
     '</tr>',
     '<tr>',
+    '  <th></th>',
     '  <th></th>',
     '  <th>main</th>',
     '  <th>PR</th>',
@@ -103,20 +105,22 @@ const createComparisonTable = (mainData: GateCounts, prData: GateCounts): void =
     '</tr>',
   ];
 
-  // For each function in the benchmark
+  // For each function in the benchmark object we push one row to the table
   for (const [funcName, metrics] of Object.entries(comparison)) {
+    const statusEmoji = getStatusEmoji(metrics);
     output.push(
       '<tr>',
+      `  <td>${statusEmoji}</td>`,
       `  <td>${funcName}</td>`,
       `  <td>${metrics.gates.main}</td>`,
       `  <td>${metrics.gates.pr}</td>`,
-      `  <td>${metrics.gates.diff}</td>`,
+      `  <td>${formatDiff(metrics.gates.main, metrics.gates.pr)}</td>`,
       `  <td>${metrics.daGas.main}</td>`,
       `  <td>${metrics.daGas.pr}</td>`,
-      `  <td>${metrics.daGas.diff}</td>`,
+      `  <td>${formatDiff(metrics.daGas.main, metrics.daGas.pr)}</td>`,
       `  <td>${metrics.l2Gas.main}</td>`,
       `  <td>${metrics.l2Gas.pr}</td>`,
-      `  <td>${metrics.l2Gas.diff}</td>`,
+      `  <td>${formatDiff(metrics.l2Gas.main, metrics.l2Gas.pr)}</td>`,
       '</tr>',
     );
   }
@@ -124,6 +128,11 @@ const createComparisonTable = (mainData: GateCounts, prData: GateCounts): void =
   output.push('</table>');
 
   writeFileSync(resolve(process.argv[4]), output.join('\n'));
+};
+
+const getStatusEmoji = (metrics: any) => {
+  if (metrics.gates.diff === 0 && metrics.daGas.diff === 0 && metrics.l2Gas.diff === 0) return '🗿';
+  return metrics.gates.diff > 0 || metrics.daGas.diff > 0 || metrics.l2Gas.diff > 0 ? '❌' : '✅';
 };
 
 if (process.argv.length !== 5) {
