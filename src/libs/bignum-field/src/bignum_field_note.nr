@@ -253,6 +253,6 @@ impl NoteType for PrivateBigNumFieldPartialNotePrivateLogContent {
     fn get_id() -> Field {
         // We abuse the fact that note type ids are 7 bits long to use the 8th bit indicate the log corresponds to a
         // partial note. Ideally we'd use proper events with selectors, but those are not handled well at the moment.
-        BigNumFieldNote::get_id() + 128
+        BigNumFieldNote::get_id()
     }
 }
