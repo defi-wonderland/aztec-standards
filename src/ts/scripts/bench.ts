@@ -21,7 +21,7 @@ async function main(outputFilename: string) {
   await profiler.profile([
     token.withWallet(alice).methods.mint_to_private(alice.getAddress(), alice.getAddress(), amt(100)),
     token.withWallet(alice).methods.mint_to_public(alice.getAddress(), amt(100)),
-    token.withWallet(alice).methods.mint_to_commitment(amt(100), { commitment: 0 }),
+    // token.withWallet(alice).methods.mint_to_commitment(amt(100), { commitment: 0 }),
   ]);
 
   await profiler.profile([
