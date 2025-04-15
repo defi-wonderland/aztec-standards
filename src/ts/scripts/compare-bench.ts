@@ -84,7 +84,7 @@ const createComparisonTable = (mainData: GateCounts, prData: GateCounts): void =
     '# Benchmark Comparison\n',
     '<table>',
     '<tr>',
-    '  <th>Status</th>',
+    '  <th>🧪</th>',
     '  <th>Function</th>',
     '  <th colspan="3">Gates</th>',
     '  <th colspan="3">DA Gas</th>',
