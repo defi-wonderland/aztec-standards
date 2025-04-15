@@ -22,7 +22,7 @@ pub contract Token {
     // compression library
     use compressed_string::FieldCompressedString;
     // encryption library
-    use aztec::encrypted_logs::log_assembly_strategies::default_aes128::note::encode_and_encrypt_note;
+    use aztec::messages::logs::note::encode_and_encrypt_note;
     // balance library
     use balance_set::balance_set::BalanceSet;
 
