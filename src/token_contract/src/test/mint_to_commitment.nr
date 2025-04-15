@@ -123,9 +123,7 @@ unconstrained fn mint_to_private_failure_invalid_commitments_zero() {
         .call(&mut env.public());
 }
 
-// TODO: so, now it's possible to complete a partial note twice?
-// #[test(should_fail_with = "Got 2 logs for tag")]
-#[test]
+#[test(should_fail_with = "Got 2 logs for tag")]
 unconstrained fn mint_to_private_failure_already_completed_partial_note() {
     let (env, token_contract_address, _, recipient, minter) = utils::setup_with_minter(false);
 
