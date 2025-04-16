@@ -26,15 +26,26 @@ interface GateCounts {
   gasSummary: Record<string, number>;
 }
 
-const formatNumber = (num: number): string => num.toLocaleString().padStart(8, ' ');
+interface MetricComparison {
+  main: number;
+  pr: number;
+  diff: number;
+}
+
+interface ComparisonResult {
+  gates: MetricComparison;
+  daGas: MetricComparison;
+  l2Gas: MetricComparison;
+}
 
 const formatDiff = (mainValue: number, prValue: number): string => {
-  const diff = prValue - mainValue;
+  // console.log(mainValue, prValue);
+  const diff = mainValue - prValue;
   if (diff === 0) return '0';
-  // This case is for when the old value is 0, which means that the base's impl do not have the circuit to compare with
-  if (mainValue === 0) return '0';
-  const percent = ((diff / mainValue) * 100).toFixed(1);
-  const sign = diff >= 0 ? '+' : '';
+  // when main value 0, it means that the main's impl do not have a circuit to compare it
+  if (mainValue === 0) return '+100%';
+  const percent = ((Math.abs(diff) / mainValue) * 100).toFixed(1);
+  const sign = diff > 0 ? '+' : '-';
   return `${diff} (${sign}${percent}%)`;
 };
 
@@ -46,35 +57,33 @@ const getPublicOverhead = (data: CircuitData[]): number => {
 const createComparisonTable = (mainData: GateCounts, prData: GateCounts): void => {
   const mainOverhead = getPublicOverhead(mainData.results);
   const prOverhead = getPublicOverhead(prData.results);
+  const comparison: Record<string, ComparisonResult> = {};
 
-  const comparison: Record<
-    string,
-    {
-      gates: { main: number; pr: number; diff: number };
-      daGas: { main: number; pr: number; diff: number };
-      l2Gas: { main: number; pr: number; diff: number };
-    }
-  > = {};
+  // Get all unique function names from both main and PR
+  const allFunctions = new Set([
+    ...mainData.results.map(r => r.name),
+    ...prData.results.map(r => r.name)
+  ]);
 
-  for (const mainResult of mainData.results) {
-    const prResult = prData.results.find((r) => r.name === mainResult.name);
-    if (!prResult) continue;
+  for (const name of allFunctions) {
+    const mainResult = mainData.results.find(r => r.name === name);
+    const prResult = prData.results.find(r => r.name === name);
 
-    comparison[mainResult.name] = {
+    comparison[name] = {
       gates: {
-        main: mainResult.totalGateCount - mainOverhead,
-        pr: prResult.totalGateCount - prOverhead,
-        diff: prResult.totalGateCount - prOverhead - (mainResult.totalGateCount - mainOverhead),
+        main: mainResult ? (mainResult.totalGateCount - mainOverhead) : 0,
+        pr: prResult ? (prResult.totalGateCount - prOverhead) : 0,
+        diff: (mainResult?.totalGateCount ?? 0) - mainOverhead - ((prResult?.totalGateCount ?? 0) - prOverhead),
       },
       daGas: {
-        main: mainResult.gas.gasLimits.daGas,
-        pr: prResult.gas.gasLimits.daGas,
-        diff: prResult.gas.gasLimits.daGas - mainResult.gas.gasLimits.daGas,
+        main: mainResult?.gas.gasLimits.daGas ?? 0,
+        pr: prResult?.gas.gasLimits.daGas ?? 0,
+        diff: (mainResult?.gas.gasLimits.daGas ?? 0) - (prResult?.gas.gasLimits.daGas ?? 0),
       },
       l2Gas: {
-        main: mainResult.gas.gasLimits.l2Gas,
-        pr: prResult.gas.gasLimits.l2Gas,
-        diff: prResult.gas.gasLimits.l2Gas - mainResult.gas.gasLimits.l2Gas,
+        main: mainResult?.gas.gasLimits.l2Gas ?? 0,
+        pr: prResult?.gas.gasLimits.l2Gas ?? 0,
+        diff: (mainResult?.gas.gasLimits.l2Gas ?? 0) - (prResult?.gas.gasLimits.l2Gas ?? 0),
       },
     };
   }
@@ -84,14 +93,14 @@ const createComparisonTable = (mainData: GateCounts, prData: GateCounts): void =
     '# Benchmark Comparison\n',
     '<table>',
     '<tr>',
-    '  <th>🧪</th>',
+    '  <th></th>',
     '  <th>Function</th>',
     '  <th colspan="3">Gates</th>',
     '  <th colspan="3">DA Gas</th>',
     '  <th colspan="3">L2 Gas</th>',
     '</tr>',
     '<tr>',
-    '  <th></th>',
+    '  <th>🧪</th>',
     '  <th></th>',
     '  <th>main</th>',
     '  <th>PR</th>',
