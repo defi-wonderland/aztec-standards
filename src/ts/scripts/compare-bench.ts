@@ -39,13 +39,12 @@ interface ComparisonResult {
 }
 
 const formatDiff = (mainValue: number, prValue: number): string => {
-  // console.log(mainValue, prValue);
   const diff = mainValue - prValue;
   if (diff === 0) return '0';
   // when main value 0, it means that the main's impl do not have a circuit to compare it
   if (mainValue === 0) return '+100%';
   const percent = ((Math.abs(diff) / mainValue) * 100).toFixed(1);
-  const sign = diff > 0 ? '+' : '-';
+  const sign = diff < 0 ? '+' : '-';
   return `${diff} (${sign}${percent}%)`;
 };
 
@@ -113,7 +112,7 @@ const createComparisonTable = (mainData: GateCounts, prData: GateCounts): void =
 
   // For each function in the benchmark object we push one row to the table
   for (const [funcName, metrics] of Object.entries(comparison)) {
-    const statusEmoji = getStatusEmoji(metrics);
+    const statusEmoji = getStatusEmoji(metrics, process.argv[5] ? parseFloat(process.argv[5]) : 0.025);
     output.push(
       '<tr>',
       `  <td>${statusEmoji}</td>`,
@@ -136,21 +135,37 @@ const createComparisonTable = (mainData: GateCounts, prData: GateCounts): void =
   writeFileSync(resolve(process.argv[4]), output.join('\n'));
 };
 
-const getStatusEmoji = (metrics: ComparisonResult) => {
+const getStatusEmoji = (metrics: ComparisonResult, threshold: number) => {
   // Function exists in main, but doesn't exist in PR
   if (metrics.gates.main > 0 && metrics.gates.pr === 0) return '🚮';
 
   // Function doesn't exist in main, but exists in PR
   if (metrics.gates.main === 0 && metrics.gates.pr > 0) return '🆕';
 
-  // No changes across all metrics
-  if (metrics.gates.diff === 0 && metrics.daGas.diff === 0 && metrics.l2Gas.diff === 0) return '🗿';
+  // Check if any metric has a significante difference
+  const hasSignificantDiff =
+    Math.abs(metrics.gates.diff / metrics.gates.main) > threshold ||
+    Math.abs(metrics.daGas.diff / metrics.daGas.main) > threshold ||
+    Math.abs(metrics.l2Gas.diff / metrics.l2Gas.main) > threshold;
 
-  return metrics.gates.diff > 0 || metrics.daGas.diff > 0 || metrics.l2Gas.diff > 0 ? '❌' : '✅';
+  if (hasSignificantDiff) {
+    if (
+      metrics.gates.diff / metrics.gates.main > threshold ||
+      metrics.daGas.diff / metrics.daGas.main > threshold ||
+      metrics.l2Gas.diff / metrics.l2Gas.main > threshold
+    ) {
+      return '🔴';
+    } else {
+      return '🟢';
+    }
+  } else {
+    return '🗿';
+  }
 };
 
-if (process.argv.length !== 5) {
-  console.error('Usage: tsx compare-bench.ts <main-bench-json-file> <pr-bench-json-file> <output-file>');
+// TODO: threshold should be taken from a CI env variable
+if (process.argv.length < 5) {
+  console.error('Usage: tsx compare-bench.ts <main-bench-json-file> <pr-bench-json-file> <output-file> [threshold]');
   process.exit(1);
 }
 
