@@ -1,3 +1,5 @@
 [workspace]
-members = ["src/token_contract", "src/fee_payment_contract"]
-
+members = [
+  "src/token_contract",
+  "src/fee_payment_contract"
+]

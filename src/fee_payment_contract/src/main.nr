@@ -1,3 +1,5 @@
+pub mod test;
+
 use aztec::macros::aztec;
 
 /// Fee Payment Contract (FPC) allows users to pay for the transaction fee with an arbitrary asset. Supports private
@@ -9,21 +11,14 @@ use aztec::macros::aztec;
 #[aztec]
 pub contract FPC {
     use aztec::{
-        context::PrivateContext,
-        macros::{functions::{initializer, internal, private, public, view}, storage::storage},
-        prelude::{
-            AztecAddress, Map, NoteGetterOptions, PublicContext, PublicImmutable, PublicMutable,
-        },
+        macros::{functions::{initializer, internal, private, public}, storage::storage},
+        prelude::{AztecAddress, PublicImmutable},
     };
 
     use aztec::protocol_types::traits::{Deserialize, Packable, Serialize};
 
-    use authwit::auth::{
-        assert_current_call_valid_authwit, assert_current_call_valid_authwit_public,
-    };
-
     use token::Token;
-    use uint_note::uint_note::{PartialUintNote, UintNote};
+    use uint_note::uint_note::PartialUintNote;
 
     /// We store the addresses in a struct such that to load it from PublicImmutable asserts only a single
     /// merkle proof.
@@ -118,7 +113,7 @@ pub contract FPC {
 
         // Set a public teardown function in which the refund will be paid back to the user by finalizing the partial note.
         FPC::at(context.this_address())
-            ._complete_refund_internal(accepted_asset, partial_note, max_fee)
+            .complete_refund_internal(accepted_asset, partial_note, max_fee)
             .set_as_teardown(&mut context);
 
         // Set the FPC as the fee payer of the tx.
@@ -165,7 +160,7 @@ pub contract FPC {
 
         // Set a public teardown function to handle the refund.
         FPC::at(context.this_address())
-            ._pay_refund_internal(user, max_fee, config.accepted_asset)
+            .pay_refund_internal(user, max_fee, config.accepted_asset)
             .set_as_teardown(&mut context);
     }
 
@@ -211,7 +206,7 @@ pub contract FPC {
     // docs:start:complete_refund
     #[public]
     #[internal]
-    fn _complete_refund_internal(
+    fn complete_refund_internal(
         accepted_asset: AztecAddress,
         partial_note: PartialUintNote,
         max_fee: u128,
@@ -228,10 +223,10 @@ pub contract FPC {
 
         // 3. Finalize the refund by completing the partial note (commitment) created earlier.
         // This sends the \`refund_amount\` back to the user's private balance.
-        // Always call increase_commitment_balance_internal to ensure the commitment is consumed,
+        // Always call transfer_public_to_commitment to ensure the commitment is consumed,
         // even if refund_amount is 0. This prevents commitment reuse.
         Token::at(accepted_asset)
-            .increase_commitment_balance_internal(partial_note, refund_amount)
+            .transfer_public_to_commitment(context.this_address(), refund_amount, partial_note, 0)
             .call(&mut context);
     }
     // docs:end:complete_refund
@@ -241,7 +236,7 @@ pub contract FPC {
     /// It's passed as an argument to avoid the need for another read from public storage.
     #[public]
     #[internal]
-    fn _pay_refund_internal(
+    fn pay_refund_internal(
         refund_recipient: AztecAddress,
         max_fee: u128,
         accepted_asset: AztecAddress,
