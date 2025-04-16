@@ -142,6 +142,13 @@ const getStatusEmoji = (metrics: ComparisonResult, threshold: number) => {
   // Function doesn't exist in main, but exists in PR
   if (metrics.gates.main === 0 && metrics.gates.pr > 0) return '🆕';
 
+  console.log(
+    metrics.gates.diff / metrics.gates.main,
+    metrics.daGas.diff / metrics.daGas.main,
+    metrics.l2Gas.diff / metrics.l2Gas.main,
+    threshold,
+  );
+
   // Check if any metric has a significante difference
   const hasSignificantDiff =
     Math.abs(metrics.gates.diff / metrics.gates.main) > threshold ||

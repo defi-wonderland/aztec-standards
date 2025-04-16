@@ -54,7 +54,7 @@ jobs:
 
         - name: Run compare-bench
           run: |
-            yarn tsx src/ts/scripts/compare-bench.ts bench_main.json bench.json bench_diff.md
+            yarn tsx src/ts/scripts/compare-bench.ts bench_main.json bench.json bench_diff.md 0.024
 
         - name: Comment diff
           uses: peter-evans/create-or-update-comment@v4
