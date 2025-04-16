@@ -60,19 +60,16 @@ const createComparisonTable = (mainData: GateCounts, prData: GateCounts): void =
   const comparison: Record<string, ComparisonResult> = {};
 
   // Get all unique function names from both main and PR
-  const allFunctions = new Set([
-    ...mainData.results.map(r => r.name),
-    ...prData.results.map(r => r.name)
-  ]);
+  const allFunctions = new Set([...mainData.results.map((r) => r.name), ...prData.results.map((r) => r.name)]);
 
   for (const name of allFunctions) {
-    const mainResult = mainData.results.find(r => r.name === name);
-    const prResult = prData.results.find(r => r.name === name);
+    const mainResult = mainData.results.find((r) => r.name === name);
+    const prResult = prData.results.find((r) => r.name === name);
 
     comparison[name] = {
       gates: {
-        main: mainResult ? (mainResult.totalGateCount - mainOverhead) : 0,
-        pr: prResult ? (prResult.totalGateCount - prOverhead) : 0,
+        main: mainResult ? mainResult.totalGateCount - mainOverhead : 0,
+        pr: prResult ? prResult.totalGateCount - prOverhead : 0,
         diff: (mainResult?.totalGateCount ?? 0) - mainOverhead - ((prResult?.totalGateCount ?? 0) - prOverhead),
       },
       daGas: {
@@ -139,8 +136,16 @@ const createComparisonTable = (mainData: GateCounts, prData: GateCounts): void =
   writeFileSync(resolve(process.argv[4]), output.join('\n'));
 };
 
-const getStatusEmoji = (metrics: any) => {
+const getStatusEmoji = (metrics: ComparisonResult) => {
+  // Function exists in main, but doesn't exist in PR
+  if (metrics.gates.main > 0 && metrics.gates.pr === 0) return '🚮';
+
+  // Function doesn't exist in main, but exists in PR
+  if (metrics.gates.main === 0 && metrics.gates.pr > 0) return '🆕';
+
+  // No changes across all metrics
   if (metrics.gates.diff === 0 && metrics.daGas.diff === 0 && metrics.l2Gas.diff === 0) return '🗿';
+
   return metrics.gates.diff > 0 || metrics.daGas.diff > 0 || metrics.l2Gas.diff > 0 ? '❌' : '✅';
 };
 
