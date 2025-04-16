@@ -15,38 +15,31 @@ async function main(outputFilename: string) {
   const alice = accounts[0]!;
   owner = alice.getAddress();
   const bob = accounts[1]!;
-  const token = (await deployTokenWithMinter(alice)) as TokenContract;
+  const token = (await deployTokenWithMinter(alice)).withWallet(alice) as TokenContract;
 
   const profiler = new Profiler(outputFilename);
   await profiler.profile([
-    token.withWallet(alice).methods.mint_to_private(alice.getAddress(), alice.getAddress(), amt(100)),
-    token.withWallet(alice).methods.mint_to_public(alice.getAddress(), amt(100)),
+    // mint methods
+    token.methods.mint_to_private(alice.getAddress(), alice.getAddress(), amt(100)),
+    token.methods.mint_to_public(alice.getAddress(), amt(100)),
     // token.withWallet(alice).methods.mint_to_commitment(amt(100), { commitment: 0 }),
-  ]);
 
-  await profiler.profile([
-    token.withWallet(alice).methods.transfer_private_to_public(alice.getAddress(), bob.getAddress(), amt(10), 0),
-    // this returns a commitment
-    token
-      .withWallet(alice)
-      .methods.transfer_private_to_public_with_commitment(alice.getAddress(), bob.getAddress(), amt(10), 0),
-    token.withWallet(alice).methods.transfer_private_to_private(alice.getAddress(), bob.getAddress(), amt(10), 0),
-    // requires a initialized commitment
-    // token.withWallet(alice).methods.transfer_private_to_commitment(alice.getAddress(), amt(10), {commitment: 0}, 0),
+    // transfer methods
+    token.methods.transfer_private_to_public(alice.getAddress(), bob.getAddress(), amt(10), 0),
+    token.methods.transfer_private_to_public_with_commitment(alice.getAddress(), bob.getAddress(), amt(10), 0),
+    token.methods.transfer_private_to_private(alice.getAddress(), bob.getAddress(), amt(10), 0),
     token.methods.transfer_public_to_private(alice.getAddress(), bob.getAddress(), amt(10), 0),
     token.methods.transfer_public_to_public(alice.getAddress(), bob.getAddress(), amt(10), 0),
+    // token.methods.transfer_private_to_commitment(alice.getAddress(), amt(10), {commitment: 0}, 0),
     // token.methods.transfer_public_to_commitment(alice.getAddress(), amt(10), {commitment: 0}, 0),
-  ]);
 
-  await profiler.profile([
-    token.withWallet(alice).methods.initialize_transfer_commitment(bob.getAddress(), alice.getAddress()),
-  ]);
+    // partial notes methods
+    token.methods.initialize_transfer_commitment(bob.getAddress(), alice.getAddress()),
 
-  await profiler.profile([
+    // burn methods
     token.methods.burn_private(alice.getAddress(), amt(10), 0),
     token.methods.burn_public(alice.getAddress(), amt(10), 0),
   ]);
-
   await profiler.saveResults();
 }
 
