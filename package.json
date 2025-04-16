@@ -20,9 +20,9 @@
     "*.ts": "prettier --write -u"
   },
   "dependencies": {
-    "@aztec/accounts": "0.84.0",
-    "@aztec/aztec.js": "0.84.0",
-    "@aztec/noir-contracts.js": "0.84.0",
+    "@aztec/accounts": "0.85.0",
+    "@aztec/aztec.js": "0.85.0",
+    "@aztec/noir-contracts.js": "0.85.0",
     "@types/node": "22.5.1"
   },
   "devDependencies": {
