@@ -256,11 +256,8 @@ pub unconstrained fn check_private_balance(
     let current_contract_address = get_contract_address();
     cheatcodes::set_contract_address(token_contract_address);
     // Direct call to unconstrained
-    // TODO: This call is failing, with:
-    /// Failed calling external resolver. ErrorObject { code: InvalidRequest,
-    /// message: "Block number is undefined for leaf index 384 in tree NULLIFIER_TREE", data: None }
-    // let balance_of_private = Token::balance_of_private(address);
-    // assert(balance_of_private == address_amount, "Private balance is not correct");
+    let balance_of_private = Token::balance_of_private(address);
+    assert(balance_of_private == address_amount, "Private balance is not correct");
     cheatcodes::set_contract_address(current_contract_address);
 }
 
