@@ -8,7 +8,7 @@ unconstrained fn mint_to_private_success() {
         utils::setup_with_minter(/* with_account_contracts */ false);
 
     env.impersonate(minter);
-    let mint_amount: BigNumField = BigNumField::new(10_000);
+    let mint_amount: BigNumField = BigNumField::new_with_offset(10_000);
     Token::at(token_contract_address).mint_to_private(owner, owner, mint_amount).call(
         &mut env.private(),
     );
@@ -28,7 +28,7 @@ unconstrained fn mint_to_private_failures() {
         utils::setup_with_minter(/* with_account_contracts */ false);
 
     // As non-minter
-    let mint_amount: BigNumField = BigNumField::new(10_000);
+    let mint_amount: BigNumField = BigNumField::new_with_offset(10_000);
     env.impersonate(recipient);
     let mint_to_private_call_interface =
         Token::at(token_contract_address).mint_to_private(owner, owner, mint_amount);

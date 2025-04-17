@@ -5,7 +5,6 @@ use std::cmp::{Eq, Ord, Ordering};
 use std::ops::{Add, Div, Mul, Sub};
 use bignum::{
     fields::U256::U256,
-    // fns::constrained_ops::validate_gt,
     bignum::to_field,
     bignum::BigNumTrait,
 };
@@ -26,6 +25,11 @@ impl BigNumField {
 
     pub fn one() -> Self {
         Self { limbs: [1,0,0] }
+    }
+
+    pub fn new_with_offset(value: Field) -> Self {
+        // TODO(#11636): to avoid zero fields in logs
+        Self { limbs: [1+value,1,1] }
     }
 
     pub fn max() -> Self {
