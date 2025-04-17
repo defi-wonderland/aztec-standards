@@ -10,9 +10,8 @@ pub contract NFT {
     // aztec library
     use aztec::{
         context::PrivateContext,
-        encrypted_logs::log_assembly_strategies::default_aes128::note::encode_and_encrypt_note,
         macros::{
-            functions::{initializer, internal, private, public, view},
+            functions::{initializer, internal, private, public, utility, view},
             storage::storage,
         },
         note::{constants::MAX_NOTES_PER_PAGE, note_interface::NoteProperties},
@@ -25,15 +24,12 @@ pub contract NFT {
     };
     // authorized witness library
     use authwit::auth::{
-        assert_current_call_valid_authwit, assert_current_call_valid_authwit_public,
-        compute_authwit_nullifier,
+        assert_current_call_valid_authwit, assert_current_call_valid_authwit_public
     };
     // compression library
     use compressed_string::FieldCompressedString;
-    // aztec protocol types
-    use aztec::protocol_types::traits::ToField;
-    // std library
-    use std::meta::derive;
+    // encryption library
+    use aztec::messages::logs::note::encode_and_encrypt_note;
 
     /// @param symbol The symbol of the NFT
     /// @param name The name of the NFT
@@ -232,22 +228,23 @@ pub contract NFT {
     /// Returns an array of token IDs owned by `owner` in private and a flag indicating whether a page limit was
     /// reached. Starts getting the notes from page with index `page_index`. Zero values in the array are placeholder
     /// values for non-existing notes.
+    #[utility]
     unconstrained fn get_private_nfts(
         owner: AztecAddress,
         page_index: u32,
     ) -> pub ([Field; MAX_NOTES_PER_PAGE], bool) {
         let offset = page_index * MAX_NOTES_PER_PAGE;
         let mut options = NoteViewerOptions::new();
-        let notes = storage.private_nfts.at(owner).view_notes(options.set_offset(offset));
+        let nfts = storage.private_nfts.at(owner).view_notes(options.set_offset(offset));
 
         let mut owned_nft_ids = [0; MAX_NOTES_PER_PAGE];
         for i in 0..options.limit {
-            if i < notes.len() {
-                owned_nft_ids[i] = notes.get_unchecked(i).token_id;
+            if i < nfts.len() {
+                owned_nft_ids[i] = nfts.get_unchecked(i).token_id;
             }
         }
 
-        let page_limit_reached = notes.len() == options.limit;
+        let page_limit_reached = nfts.len() == options.limit;
         (owned_nft_ids, page_limit_reached)
     }
 
