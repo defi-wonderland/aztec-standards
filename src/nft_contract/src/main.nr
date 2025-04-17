@@ -370,6 +370,11 @@ pub contract NFT {
         public_owners.at(token_id).write(to);
     }
 
+    /// @notice Transfers a token to a commitment
+    /// @dev Asserts that a commitment is valid, and completes it
+    /// @param context The context of the public call
+    /// @param commitment The commitment to complete
+    /// @param token_id The id of the token to transfer
     #[contract_library_method]
     fn _transfer_token_to_commitment(
         context: &mut PublicContext,
