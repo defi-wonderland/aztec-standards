@@ -86,7 +86,7 @@ pub contract NFT {
     /// @param nonce The nonce used for authwitness
     /// @return commitment The partial nft note utilized for the transfer commitment (privacy entrance)
     #[private]
-    fn transfer_private_to_public_with_commitment(from: AztecAddress, to: AztecAddress, token_id: Field nonce: Field) -> PartialNFTNote {
+    fn transfer_private_to_public_with_commitment(from: AztecAddress, to: AztecAddress, token_id: Field, nonce: Field) -> PartialNFTNote {
         _validate_from_private(&mut context, from, nonce);
         _remove_private_token_owner(storage.private_nfts.at(from), token_id);
         NFT::at(context.this_address()).update_public_token_owner_internal(from, to, token_id, true).enqueue(
