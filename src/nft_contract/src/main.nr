@@ -11,7 +11,7 @@ pub contract NFT {
     use aztec::{
         context::PrivateContext,
         macros::{
-            functions::{initializer, internal, private, public, view},
+            functions::{initializer, internal, private, public, utility, view},
             storage::storage,
         },
         note::{constants::MAX_NOTES_PER_PAGE, note_interface::NoteProperties},
@@ -30,10 +30,6 @@ pub contract NFT {
     use compressed_string::FieldCompressedString;
     // encryption library
     use aztec::messages::logs::note::encode_and_encrypt_note;
-    // aztec protocol types
-    // use aztec::protocol_types::traits::ToField;
-    // std library
-    // use std::meta::derive;
 
     /// @param symbol The symbol of the NFT
     /// @param name The name of the NFT
@@ -196,25 +192,25 @@ pub contract NFT {
     /// Returns an array of token IDs owned by `owner` in private and a flag indicating whether a page limit was
     /// reached. Starts getting the notes from page with index `page_index`. Zero values in the array are placeholder
     /// values for non-existing notes.
-    // #[contract_library_method]
-    // unconstrained fn get_private_nfts(
-    //     owner: AztecAddress,
-    //     page_index: u32,
-    // ) -> pub ([Field; MAX_NOTES_PER_PAGE], bool) {
-    //     let offset = page_index * MAX_NOTES_PER_PAGE;
-    //     let mut options = NoteViewerOptions::new();
-    //     let notes = storage.private_nfts.at(owner).view_notes(options.set_offset(offset));
+    #[utility]
+    unconstrained fn get_private_nfts(
+        owner: AztecAddress,
+        page_index: u32,
+    ) -> pub ([Field; MAX_NOTES_PER_PAGE], bool) {
+        let offset = page_index * MAX_NOTES_PER_PAGE;
+        let mut options = NoteViewerOptions::new();
+        let nfts = storage.private_nfts.at(owner).view_notes(options.set_offset(offset));
 
-    //     let mut owned_nft_ids = [0; MAX_NOTES_PER_PAGE];
-    //     for i in 0..options.limit {
-    //         if i < notes.len() {
-    //             owned_nft_ids[i] = notes.get_unchecked(i).token_id;
-    //         }
-    //     }
+        let mut owned_nft_ids = [0; MAX_NOTES_PER_PAGE];
+        for i in 0..options.limit {
+            if i < nfts.len() {
+                owned_nft_ids[i] = nfts.get_unchecked(i).token_id;
+            }
+        }
 
-    //     let page_limit_reached = notes.len() == options.limit;
-    //     (owned_nft_ids, page_limit_reached)
-    // }
+        let page_limit_reached = nfts.len() == options.limit;
+        (owned_nft_ids, page_limit_reached)
+    }
 
     /** ==========================================================
     * ======================= MINTABLE ==========================
