@@ -43,9 +43,11 @@ const formatDiff = (mainValue: number, prValue: number): string => {
   if (diff === 0) return '0';
   // when main value 0, it means that the main's impl do not have a circuit to compare it
   if (mainValue === 0) return '+100%';
-  const percent = ((Math.abs(diff) / mainValue) * 100).toFixed(1);
-  const sign = diff < 0 ? '+' : '-';
-  return `${diff} (${sign}${percent}%)`;
+  // when pr value 0, it means that the pr's impl do not have a circuit to compare it
+  if (prValue === 0) return '-100%';
+
+  const percent = ((diff / mainValue) * 100).toFixed(1);
+  return `${diff}&nbsp;(${percent}%)`;
 };
 
 const getPublicOverhead = (data: CircuitData[]): number => {
