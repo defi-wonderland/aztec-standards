@@ -38,24 +38,12 @@ interface ComparisonResult {
   l2Gas: MetricComparison;
 }
 
-const formatDiff = (mainValue: number, prValue: number): string => {
-  const diff = mainValue - prValue;
-  if (diff === 0) return '0';
-  // when main value 0, it means that the main's impl do not have a circuit to compare it
-  if (mainValue === 0) return '+100%';
-  // when pr value 0, it means that the pr's impl do not have a circuit to compare it
-  if (prValue === 0) return '-100%';
-
-  const percent = ((diff / mainValue) * 100).toFixed(1);
-  return `${diff}&nbsp;(${percent}%)`;
-};
-
 const getPublicOverhead = (data: CircuitData[]): number => {
   const overhead = data.find((v) => v.gateCounts.length === 4)?.totalGateCount || 0;
   return overhead;
 };
 
-const createComparisonTable = (mainData: GateCounts, prData: GateCounts): void => {
+const createComparisonTable = (mainData: GateCounts, prData: GateCounts, threshold: number): void => {
   const mainOverhead = getPublicOverhead(mainData.results);
   const prOverhead = getPublicOverhead(prData.results);
   const comparison: Record<string, ComparisonResult> = {};
@@ -114,7 +102,7 @@ const createComparisonTable = (mainData: GateCounts, prData: GateCounts): void =
 
   // For each function in the benchmark object we push one row to the table
   for (const [funcName, metrics] of Object.entries(comparison)) {
-    const statusEmoji = getStatusEmoji(metrics, process.argv[5] ? parseFloat(process.argv[5]) : 0.025);
+    const statusEmoji = getStatusEmoji(metrics, threshold);
     output.push(
       '<tr>',
       `  <td>${statusEmoji}</td>`,
@@ -137,44 +125,42 @@ const createComparisonTable = (mainData: GateCounts, prData: GateCounts): void =
   writeFileSync(resolve(process.argv[4]), output.join('\n'));
 };
 
+const formatDiff = (main: number, pr: number): string => {
+  if (!main && !pr) return '-';
+  // new in PR
+  if (!main) return '+100%';
+  // removed in PR
+  if (!pr) return '-100%';
+
+  const diff = pr - main;
+  if (diff === 0) return '0';
+
+  const pct = ((diff / main) * 100).toFixed(1);
+  return `${diff}&nbsp;(${pct}%)`;
+};
+
 const getStatusEmoji = (metrics: ComparisonResult, threshold: number) => {
   // Function exists in main, but doesn't exist in PR
-  if (metrics.gates.main > 0 && metrics.gates.pr === 0) return '🚮';
+  if (metrics.l2Gas.main > 0 && metrics.l2Gas.pr === 0) return '🚮';
 
   // Function doesn't exist in main, but exists in PR
-  if (metrics.gates.main === 0 && metrics.gates.pr > 0) return '🆕';
+  if (metrics.l2Gas.main === 0 && metrics.l2Gas.pr > 0) return '🆕';
 
-  console.log(
+  const metricsDiffs = [
     metrics.gates.diff / metrics.gates.main,
     metrics.daGas.diff / metrics.daGas.main,
     metrics.l2Gas.diff / metrics.l2Gas.main,
-    threshold,
-  );
+  ];
 
-  // Check if any metric has a significante difference
-  const hasSignificantDiff =
-    Math.abs(metrics.gates.diff / metrics.gates.main) > threshold ||
-    Math.abs(metrics.daGas.diff / metrics.daGas.main) > threshold ||
-    Math.abs(metrics.l2Gas.diff / metrics.l2Gas.main) > threshold;
-
-  if (hasSignificantDiff) {
-    if (
-      metrics.gates.diff / metrics.gates.main > threshold ||
-      metrics.daGas.diff / metrics.daGas.main > threshold ||
-      metrics.l2Gas.diff / metrics.l2Gas.main > threshold
-    ) {
-      return '🔴';
-    } else {
-      return '🟢';
-    }
-  } else {
-    return '🗿';
-  }
+  // if all metrics are within the threshold, we return a moai
+  if (!metricsDiffs.some((m) => Math.abs(m) > threshold)) return '🗿';
+  // check if any metric is outside the threshold
+  return metricsDiffs.some((m) => m > threshold) ? '🟢' : '🔴';
 };
 
 // TODO: threshold should be taken from a CI env variable
-if (process.argv.length < 5) {
-  console.error('Usage: tsx compare-bench.ts <main-bench-json-file> <pr-bench-json-file> <output-file> [threshold]');
+if (process.argv.length < 6) {
+  console.error('Usage: tsx compare-bench.ts <main-bench-json-file> <pr-bench-json-file> <output-file> threshold');
   process.exit(1);
 }
 
@@ -182,6 +168,6 @@ Promise.resolve()
   .then(() => {
     const mainData = JSON.parse(readFileSync(resolve(process.argv[2]), 'utf8'));
     const prData = JSON.parse(readFileSync(resolve(process.argv[3]), 'utf8'));
-    createComparisonTable(mainData, prData);
+    createComparisonTable(mainData, prData, parseFloat(process.argv[5]));
   })
   .catch(console.error);
