@@ -7,7 +7,10 @@ pub contract Token {
     // aztec library
     use aztec::{
         context::PrivateContext,
-        macros::{functions::{initializer, internal, private, public, view}, storage::storage},
+        macros::{
+            functions::{initializer, internal, private, public, utility, view},
+            storage::storage,
+        },
         prelude::{AztecAddress, Map, PublicContext, PublicImmutable, PublicMutable},
     };
     // authorized witness library
@@ -19,7 +22,7 @@ pub contract Token {
     // compression library
     use compressed_string::FieldCompressedString;
     // encryption library
-    use aztec::encrypted_logs::log_assembly_strategies::default_aes128::note::encode_and_encrypt_note;
+    use aztec::messages::logs::note::encode_and_encrypt_note;
     // balance library
     use balance_set::balance_set::BalanceSet;
 
@@ -351,8 +354,8 @@ pub contract Token {
     /** ==========================================================
      * ===================== UNCONSTRAINED =======================
      * ======================================================== */
-
-    unconstrained fn balance_of_private(owner: AztecAddress) -> pub u128 {
+    #[utility]
+    unconstrained fn balance_of_private(owner: AztecAddress) -> u128 {
         storage.private_balances.at(owner).balance_of()
     }
 
@@ -546,7 +549,7 @@ pub contract Token {
         // slot, and it is internally consistent). We *could* clear the storage since each partial note should only be
         // used once, but since the AVM offers no gas refunds for doing so this would just make the transaction be more
         // expensive.
-        assert(context.storage_read(commitment.commitment()), "Invalid commitment");
+        assert(context.storage_read(commitment.commitment()), "invalid commitment");
         commitment.complete(amount, context);
     }
 
@@ -565,7 +568,7 @@ pub contract Token {
     ) -> u128 {
         let subtracted = private_balances.at(account).try_sub(amount, max_notes);
         // Failing to subtract any amount means that the owner was unable to produce more notes that could be nullified.
-        assert(subtracted > 0, "Balance too low");
+        assert(subtracted > 0, "balance too low");
         if subtracted >= amount {
             // We have achieved our goal of nullifying notes that add up to more than amount, so we return the change.
             subtracted - amount

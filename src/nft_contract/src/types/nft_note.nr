@@ -1,6 +1,5 @@
 use dep::aztec::{
     context::{PrivateContext, PublicContext},
-    encrypted_logs::log_assembly_strategies::default_aes128,
     keys::getters::{get_nsk_app, get_public_keys},
     macros::notes::custom_note,
     note::note_interface::{NoteHash, NoteType},
@@ -20,7 +19,6 @@ use dep::aztec::{
 // #[custom_note] macro to implement it manually, resulting in some boilerplate. This is expected to be unnecessary once
 // macro support is expanded.
 
-// docs:start:nft_note
 /// A private note representing a token id associated to an account.
 #[custom_note]
 #[derive(Eq, Serialize)]
@@ -37,7 +35,6 @@ pub struct NFTNote {
     /// The ID of the token represented by this note.
     token_id: Field,
 }
-// docs:end:nft_note
 
 impl NoteHash for NFTNote {
     fn compute_note_hash(self, storage_slot: Field) -> Field {
@@ -147,19 +144,19 @@ impl NFTNote {
         // Emit a private log directly without using compute_log
         // First, get the note type ID
         let note_type_id = PrivateNFTPartialNotePrivateLogContent::get_id();
-        
+
         // Pack the note content
         let packed_content = private_log_content.pack();
-        
+
         // Create a log with the note type ID as the first element
         let mut log = [0; 18]; // Use an array of sufficient size for the private log
         log[0] = note_type_id;
-        
+
         // Copy the packed content into the log
         for i in 0..packed_content.len() {
             log[i + 1] = packed_content[i];
         }
-        
+
         // Emit the private log
         context.emit_private_log(log);
 
