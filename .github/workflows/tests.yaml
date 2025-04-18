@@ -3,11 +3,17 @@ on:
       branches:
         - main
     pull_request:
+      types: [opened, synchronize, reopened, edited]
+
+permissions:
+  pull-requests: write
 
 jobs:
-    setup-and-run:
+    tests:
       runs-on: ubuntu-latest
       timeout-minutes: 30
+      env:
+        AZTEC_VERSION: "0.85.0"
   
       steps:
         - name: Checkout repository
@@ -26,7 +32,7 @@ jobs:
   
         - name: Set Aztec version
           run: |
-            VERSION=0.82.3 aztec-up
+            VERSION=${AZTEC_VERSION} aztec-up
         
         - name: Start sandbox
           run: |
@@ -34,23 +40,35 @@ jobs:
 
         - name: Install project dependencies
           run: yarn
-  
+
         - name: Compile
           run: script -e -c "${AZTEC_NARGO:-aztec-nargo} compile"
-  
+        
+        - name: Codegen
+          run: script -e -c "aztec codegen target --outdir src/artifacts"
+        
         - name: Bench
-          run: script -e -c "yarn bench"
-
-        - name: Display gate counts
           run: |
-            cat gate_counts.json
+            mv bench.json bench_main.json
+            script -e -c "yarn bench bench.json"
 
-        # - name: Codegen
-        #   run: script -e -c "aztec codegen target --outdir src/artifacts"
+        - name: Run compare-bench
+          run: |
+            yarn tsx src/ts/scripts/compare-bench.ts bench_main.json bench.json bench_diff.md 0.024
 
-        # - name: Run js tests
-        #   run: script -e -c "BASE_PXE_URL=http://localhost NODE_NO_WARNINGS=1 node --experimental-vm-modules $(yarn bin jest) --no-cache --runInBand --config jest.integration.config.json"
+        - name: Comment diff
+          uses: peter-evans/create-or-update-comment@v4
+          with:
+            issue-number: ${{ github.event.pull_request.number }}
+            body-file: bench_diff.md
+
+        - name: Start PXE
+          run: |
+            VERSION=${AZTEC_VERSION} aztec start --port 8081 --pxe --pxe.nodeUrl=http://localhost:8080/ --pxe.proverEnabled false &
 
         - name: Run nr tests
           run: |
             script -e -c "aztec test"
+
+        - name: Run js tests
+          run: script -e -c "BASE_PXE_URL=http://localhost NODE_NO_WARNINGS=1 node --experimental-vm-modules $(yarn bin jest) --no-cache --runInBand --config jest.integration.config.json"

@@ -15,16 +15,17 @@
     "test:js": "NODE_NO_WARNINGS=1 node --experimental-vm-modules $(yarn bin jest) --no-cache --runInBand --config jest.integration.config.json",
     "test:nr": "aztec test",
     "lint:prettier": "prettier '**/*.{js,ts}' --write",
-    "bench": "bash src/sh/bench.sh"
+    "bench": "tsx src/ts/scripts/bench.ts",
+    "ccc": "yarn clean && yarn compile && yarn codegen"
   },
   "lint-staged": {
     "*.ts": "prettier --write -u"
   },
   "dependencies": {
-    "@aztec/accounts": "0.82.3",
-    "@aztec/aztec.js": "0.82.3",
-    "@aztec/noir-contracts.js": "0.82.3",
-    "@aztec/stdlib": "0.82.3",
+    "@aztec/accounts": "0.85.0",
+    "@aztec/aztec.js": "0.85.0",
+    "@aztec/noir-contracts.js": "0.85.0",
+    "@aztec/stdlib": "0.85.0",
     "@types/node": "22.5.1"
   },
   "devDependencies": {

@@ -130,6 +130,8 @@ pub unconstrained fn setup_and_mint_to_public_without_minter(
     let (env, token_contract_address, owner, recipient) =
         setup_with_initial_supply(with_account_contracts, mint_amount);
 
+    env.advance_block_by(1);
+
     (env, token_contract_address, owner, recipient, mint_amount)
 }
 
@@ -300,4 +302,20 @@ pub unconstrained fn get_private_balance_notes(
     let notes: BoundedVec<UintNote, MAX_NOTES_PER_PAGE> =
         view_notes(private_balance_slot, options.set_offset(offset));
     notes
+}
+
+/// @notice Retrieves whether a commitment has been stored in the storage of the target contract
+pub unconstrained fn _commitment_storage_read(
+    target_contract_address: AztecAddress,
+    commitment: Field,
+) -> bool {
+    // store current contract address
+    let current_contract_address = get_contract_address();
+    // set target contract address
+    cheatcodes::set_contract_address(target_contract_address);
+    let block_number = get_block_number();
+    let value: bool = storage_read(target_contract_address, commitment, block_number);
+    // restore current contract address
+    cheatcodes::set_contract_address(current_contract_address);
+    value
 }

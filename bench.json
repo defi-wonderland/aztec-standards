@@ -1,0 +1,404 @@
+{
+  "summary": {
+    "mint_to_private": 320817,
+    "mint_to_public": 208476,
+    "transfer_private_to_public": 325275,
+    "transfer_private_to_public_with_commitment": 350268,
+    "transfer_private_to_private": 332028,
+    "transfer_public_to_private": 316593,
+    "transfer_public_to_public": 208476,
+    "initialize_transfer_commitment": 315317,
+    "burn_private": 325195,
+    "burn_public": 208476
+  },
+  "results": [
+    {
+      "name": "mint_to_private",
+      "totalGateCount": 300817,
+      "gateCounts": [
+        {
+          "circuitName": "SchnorrAccount:entrypoint",
+          "gateCount": 21784
+        },
+        {
+          "circuitName": "private_kernel_init",
+          "gateCount": 41150
+        },
+        {
+          "circuitName": "Token:mint_to_private",
+          "gateCount": 32229
+        },
+        {
+          "circuitName": "private_kernel_inner",
+          "gateCount": 80112
+        },
+        {
+          "circuitName": "private_kernel_reset",
+          "gateCount": 94631
+        },
+        {
+          "circuitName": "private_kernel_tail",
+          "gateCount": 50911
+        }
+      ],
+      "gas": {
+        "gasLimits": {
+          "daGas": 12954,
+          "l2Gas": 47604
+        },
+        "teardownGasLimits": {
+          "daGas": 0,
+          "l2Gas": 0
+        }
+      }
+    },
+    {
+      "name": "old_function",
+      "totalGateCount": 220817,
+      "gateCounts": [
+        {
+          "circuitName": "SchnorrAccount:entrypoint",
+          "gateCount": 21784
+        },
+        {
+          "circuitName": "private_kernel_init",
+          "gateCount": 41150
+        },
+          {
+            "circuitName": "Token:new_function",
+          "gateCount": 32229
+        },
+        {
+          "circuitName": "private_kernel_inner",
+          "gateCount": 80112
+        },
+        {
+          "circuitName": "private_kernel_reset",
+          "gateCount": 94631
+        },
+        {
+          "circuitName": "private_kernel_tail",
+          "gateCount": 50911
+        }
+      ],
+      "gas": {
+        "gasLimits": {
+          "daGas": 12954,
+          "l2Gas": 47604
+        },
+        "teardownGasLimits": {
+          "daGas": 0,
+          "l2Gas": 0
+        }
+      }
+    },
+    {
+      "name": "mint_to_public",
+      "totalGateCount": 208476,
+      "gateCounts": [
+        {
+          "circuitName": "SchnorrAccount:entrypoint",
+          "gateCount": 21784
+        },
+        {
+          "circuitName": "private_kernel_init",
+          "gateCount": 41150
+        },
+        {
+          "circuitName": "private_kernel_reset",
+          "gateCount": 94631
+        },
+        {
+          "circuitName": "private_kernel_tail",
+          "gateCount": 50911
+        }
+      ],
+      "gas": {
+        "gasLimits": {
+          "daGas": 2253,
+          "l2Gas": 74037
+        },
+        "teardownGasLimits": {
+          "daGas": 0,
+          "l2Gas": 0
+        }
+      }
+    },
+    {
+      "name": "transfer_private_to_public",
+      "totalGateCount": 325275,
+      "gateCounts": [
+        {
+          "circuitName": "SchnorrAccount:entrypoint",
+          "gateCount": 21784
+        },
+        {
+          "circuitName": "private_kernel_init",
+          "gateCount": 41150
+        },
+        {
+          "circuitName": "Token:transfer_private_to_public",
+          "gateCount": 36687
+        },
+        {
+          "circuitName": "private_kernel_inner",
+          "gateCount": 80112
+        },
+        {
+          "circuitName": "private_kernel_reset",
+          "gateCount": 94631
+        },
+        {
+          "circuitName": "private_kernel_tail",
+          "gateCount": 50911
+        }
+      ],
+      "gas": {
+        "gasLimits": {
+          "daGas": 13517,
+          "l2Gas": 72606
+        },
+        "teardownGasLimits": {
+          "daGas": 0,
+          "l2Gas": 0
+        }
+      }
+    },
+    {
+      "name": "transfer_private_to_public_with_commitment",
+      "totalGateCount": 350268,
+      "gateCounts": [
+        {
+          "circuitName": "SchnorrAccount:entrypoint",
+          "gateCount": 21784
+        },
+        {
+          "circuitName": "private_kernel_init",
+          "gateCount": 41150
+        },
+        {
+          "circuitName": "Token:transfer_private_to_public_with_commitment",
+          "gateCount": 61680
+        },
+        {
+          "circuitName": "private_kernel_inner",
+          "gateCount": 80112
+        },
+        {
+          "circuitName": "private_kernel_reset",
+          "gateCount": 94631
+        },
+        {
+          "circuitName": "private_kernel_tail",
+          "gateCount": 50911
+        }
+      ],
+      "gas": {
+        "gasLimits": {
+          "daGas": 24781,
+          "l2Gas": 106523
+        },
+        "teardownGasLimits": {
+          "daGas": 0,
+          "l2Gas": 0
+        }
+      }
+    },
+    {
+      "name": "transfer_private_to_private",
+      "totalGateCount": 332028,
+      "gateCounts": [
+        {
+          "circuitName": "SchnorrAccount:entrypoint",
+          "gateCount": 21784
+        },
+        {
+          "circuitName": "private_kernel_init",
+          "gateCount": 41150
+        },
+        {
+          "circuitName": "Token:transfer_private_to_private",
+          "gateCount": 62677
+        },
+        {
+          "circuitName": "private_kernel_inner",
+          "gateCount": 80112
+        },
+        {
+          "circuitName": "private_kernel_reset",
+          "gateCount": 94631
+        },
+        {
+          "circuitName": "private_kernel_tail",
+          "gateCount": 31674
+        }
+      ],
+      "gas": {
+        "gasLimits": {
+          "daGas": 24218,
+          "l2Gas": 20909
+        },
+        "teardownGasLimits": {
+          "daGas": 0,
+          "l2Gas": 0
+        }
+      }
+    },
+    {
+      "name": "transfer_public_to_private",
+      "totalGateCount": 316593,
+      "gateCounts": [
+        {
+          "circuitName": "SchnorrAccount:entrypoint",
+          "gateCount": 21784
+        },
+        {
+          "circuitName": "private_kernel_init",
+          "gateCount": 41150
+        },
+        {
+          "circuitName": "Token:transfer_public_to_private",
+          "gateCount": 28005
+        },
+        {
+          "circuitName": "private_kernel_inner",
+          "gateCount": 80112
+        },
+        {
+          "circuitName": "private_kernel_reset",
+          "gateCount": 94631
+        },
+        {
+          "circuitName": "private_kernel_tail",
+          "gateCount": 50911
+        }
+      ],
+      "gas": {
+        "gasLimits": {
+          "daGas": 12954,
+          "l2Gas": 66780
+        },
+        "teardownGasLimits": {
+          "daGas": 0,
+          "l2Gas": 0
+        }
+      }
+    },
+    {
+      "name": "transfer_public_to_public",
+      "totalGateCount": 208476,
+      "gateCounts": [
+        {
+          "circuitName": "SchnorrAccount:entrypoint",
+          "gateCount": 21784
+        },
+        {
+          "circuitName": "private_kernel_init",
+          "gateCount": 41150
+        },
+        {
+          "circuitName": "private_kernel_reset",
+          "gateCount": 94631
+        },
+        {
+          "circuitName": "private_kernel_tail",
+          "gateCount": 50911
+        }
+      ],
+      "gas": {
+        "gasLimits": {
+          "daGas": 2253,
+          "l2Gas": 92841
+        },
+        "teardownGasLimits": {
+          "daGas": 0,
+          "l2Gas": 0
+        }
+      }
+    },
+    {
+      "name": "burn_private",
+      "totalGateCount": 325195,
+      "gateCounts": [
+        {
+          "circuitName": "SchnorrAccount:entrypoint",
+          "gateCount": 21784
+        },
+        {
+          "circuitName": "private_kernel_init",
+          "gateCount": 41150
+        },
+        {
+          "circuitName": "Token:burn_private",
+          "gateCount": 36607
+        },
+        {
+          "circuitName": "private_kernel_inner",
+          "gateCount": 80112
+        },
+        {
+          "circuitName": "private_kernel_reset",
+          "gateCount": 94631
+        },
+        {
+          "circuitName": "private_kernel_tail",
+          "gateCount": 50911
+        }
+      ],
+      "gas": {
+        "gasLimits": {
+          "daGas": 13517,
+          "l2Gas": 53588
+        },
+        "teardownGasLimits": {
+          "daGas": 0,
+          "l2Gas": 0
+        }
+      }
+    },
+    {
+      "name": "burn_public",
+      "totalGateCount": 208476,
+      "gateCounts": [
+        {
+          "circuitName": "SchnorrAccount:entrypoint",
+          "gateCount": 21784
+        },
+        {
+          "circuitName": "private_kernel_init",
+          "gateCount": 41150
+        },
+        {
+          "circuitName": "private_kernel_reset",
+          "gateCount": 94631
+        },
+        {
+          "circuitName": "private_kernel_tail",
+          "gateCount": 50911
+        }
+      ],
+      "gas": {
+        "gasLimits": {
+          "daGas": 2253,
+          "l2Gas": 73271
+        },
+        "teardownGasLimits": {
+          "daGas": 0,
+          "l2Gas": 0
+        }
+      }
+    }
+  ],
+  "gasSummary": {
+    "mint_to_private": 60558,
+    "mint_to_public": 76290,
+    "transfer_private_to_public": 86123,
+    "transfer_private_to_public_with_commitment": 131304,
+    "transfer_private_to_private": 45127,
+    "transfer_public_to_private": 79734,
+    "transfer_public_to_public": 95094,
+    "initialize_transfer_commitment": 52750,
+    "burn_private": 67105,
+    "burn_public": 75524
+  }
+}
