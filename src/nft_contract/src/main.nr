@@ -240,12 +240,6 @@ pub contract NFT {
         storage.public_owners.at(token_id).read()
     }
 
-    #[public]
-    #[view]
-    fn public_minter() -> pub AztecAddress {
-        storage.minter.read()
-    }
-
     /** ==========================================================
      * ===================== UNCONSTRAINED =======================
      * ======================================================== */

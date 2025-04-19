@@ -2,16 +2,6 @@ use crate::NFT;
 use crate::test::utils;
 use compressed_string::FieldCompressedString;
 
-
-
-#[test]
-unconstrained fn minter_is_set() {
-    let (env, nft_contract_address, owner, minter, recipient) = utils::setup_with_minter(false);
-
-    let minter_address = NFT::at(nft_contract_address).public_minter().view(&mut env.public());
-    assert(minter_address == minter, "minter is not set");
-}
-
 #[test]
 unconstrained fn name_is_set() {
     let (env, nft_contract_address, owner, minter, recipient) = utils::setup_with_minter(false);
