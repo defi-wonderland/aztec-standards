@@ -236,8 +236,14 @@ pub contract NFT {
 
     #[public]
     #[view]
-    fn owner_of(token_id: Field) -> AztecAddress {
+    fn public_owner_of(token_id: Field) -> pub AztecAddress {
         storage.public_owners.at(token_id).read()
+    }
+
+    #[public]
+    #[view]
+    fn public_minter() -> pub AztecAddress {
+        storage.minter.read()
     }
 
     /** ==========================================================
@@ -273,28 +279,30 @@ pub contract NFT {
 
     #[private]
     fn mint_private(to: AztecAddress, token_id: Field) {
+        assert(token_id != 0, "zero token ID not supported");
         _validate_minter(context.msg_sender(), storage.minter.read());
+        NFT::at(context.this_address()).token_exists_internal(token_id).enqueue(&mut context);
 
-        let nft = NFT::at(context.this_address());
-        nft.validate_token_to_mint_internal(token_id).enqueue(&mut context);
-        nft.update_nft_exists_internal(token_id, true).enqueue(&mut context);
+        NFT::at(context.this_address()).update_nft_exists_internal(token_id, true).enqueue(
+            &mut context,
+        );
         storage.private_nfts.at(to).insert(NFTNote::new(token_id, to));
     }
 
     #[public]
     fn mint_public(to: AztecAddress, token_id: Field) {
+        assert(token_id != 0, "zero token ID not supported");
         _validate_minter(context.msg_sender(), storage.minter.read());
+        assert(!storage.nft_exists.at(token_id).read(), "token already exists");
 
-        validate_token_to_mint_internal(token_id);
-        update_nft_exists_internal(token_id, true);
+        storage.nft_exists.at(token_id).write(true);
         storage.public_owners.at(token_id).write(to);
     }
 
     #[public]
     #[internal]
-    fn validate_token_to_mint_internal(token_id: Field) {
-        assert(token_id != 0, "zero token ID not supported");
-        assert(storage.nft_exists.at(token_id).read() == false, "token already exists");
+    fn token_exists_internal(token_id: Field) {
+        assert(!storage.nft_exists.at(token_id).read(), "token already exists");
     }
 
     /** ==========================================================
@@ -409,6 +417,14 @@ pub contract NFT {
     #[contract_library_method]
     fn _validate_minter(sender: AztecAddress, minter: AztecAddress) {
         assert(minter.eq(sender), "caller is not minter");
+    }
+
+    #[contract_library_method]
+    fn _token_exists(
+        nft_exists: Map<Field, PublicMutable<bool, &mut PublicContext>, &mut PublicContext>,
+        token_id: Field,
+    ) -> bool {
+        nft_exists.at(token_id).read()
     }
 
     /** ==========================================================
