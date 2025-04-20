@@ -267,7 +267,7 @@ pub contract NFT {
         _update_public_token_owner(storage.public_owners, from, to, token_id);
     }
 
-    /// @notice Updates the nft exists public map
+    /// @notice Initializes the public token owner from zero address
     /// @param token_id The id of the token to update
     /// @param exists The new exists value
     #[public]
@@ -303,7 +303,7 @@ pub contract NFT {
     /// @return owner The owner of a token by id
     #[public]
     #[view]
-    fn owner_of(token_id: Field) -> AztecAddress {
+    fn public_owner_of(token_id: Field) -> pub AztecAddress {
         storage.public_owners.at(token_id).read()
     }
 
@@ -347,12 +347,14 @@ pub contract NFT {
     /// @param token_id The id of the token to mint
     #[private]
     fn mint_private(to: AztecAddress, token_id: Field) {
+        assert(token_id != 0, "zero token ID not supported");
         _validate_minter(context.msg_sender(), storage.minter.read());
 
-        let nft = NFT::at(context.this_address());
-        nft.validate_token_to_mint_internal(token_id).enqueue(&mut context);
-        nft.update_nft_exists_internal(token_id, true).enqueue(&mut context);
-        storage.private_nfts.at(to).insert(NFTNote::new(token_id, to));
+        NFT::at(context.this_address()).token_exists_internal(token_id).enqueue(&mut context);
+        NFT::at(context.this_address()).update_nft_exists_internal(token_id, true).enqueue(
+            &mut context,
+        );
+        storage.private_nfts.at(to).insert(NFTNote::new(token_id, to)).emit(encode_and_encrypt_note(&mut context, to, to));
     }
 
     /// @notice Mints a token to a public address
@@ -361,10 +363,11 @@ pub contract NFT {
     /// @param token_id The id of the token to mint
     #[public]
     fn mint_public(to: AztecAddress, token_id: Field) {
+        assert(token_id != 0, "zero token ID not supported");
         _validate_minter(context.msg_sender(), storage.minter.read());
+        assert(!storage.nft_exists.at(token_id).read(), "token already exists");
 
-        validate_token_to_mint_internal(token_id);
-        update_nft_exists_internal(token_id, true);
+        storage.nft_exists.at(token_id).write(true);
         storage.public_owners.at(token_id).write(to);
     }
 
@@ -372,9 +375,8 @@ pub contract NFT {
     /// @param token_id The id of the token to mint
     #[public]
     #[internal]
-    fn validate_token_to_mint_internal(token_id: Field) {
-        assert(token_id != 0, "zero token ID not supported");
-        assert(storage.nft_exists.at(token_id).read() == false, "token already exists");
+    fn token_exists_internal(token_id: Field) {
+        assert(!storage.nft_exists.at(token_id).read(), "token already exists");
     }
 
     /** ==========================================================
@@ -492,6 +494,10 @@ pub contract NFT {
         public_owners.at(token_id).write(to);
     }
 
+    /// @notice Initializes the public token owner from zero address
+    /// @param public_owners The public owners map
+    /// @param to The address of the recipient
+    /// @param token_id The id of the token to update
     #[contract_library_method]
     fn _initialize_public_token_owner(
         public_owners: Map<Field, PublicMutable<AztecAddress, &mut PublicContext>, &mut PublicContext>,
