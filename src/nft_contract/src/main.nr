@@ -193,12 +193,10 @@ pub contract NFT {
     /// @param from The address of the sender
     /// @param to The address of the recipient
     /// @return commitment The partial nft note utilized for the transfer commitment (privacy entrance)
-
-    // TODO: Remove?
-    // #[private]
-    // fn initialize_transfer_commitment(from: AztecAddress, to: AztecAddress) -> PartialNFTNote {
-    //     _initialize_transfer_commitment(&mut context, storage.private_nfts, from, to)
-    // }
+    #[private]
+    fn initialize_transfer_commitment(from: AztecAddress, to: AztecAddress) -> PartialNFTNote {
+        _initialize_transfer_commitment(&mut context, storage.private_nfts, from, to)
+    }
 
     /** ==========================================================
      * ========================= PUBLIC ==========================
@@ -430,21 +428,19 @@ pub contract NFT {
     /// @param from The address of the sender
     /// @param to The address of the recipient
     /// @return commitment The partial nft note utilized for the transfer commitment (privacy entrance)
-
-    // TODO: Remove?
-    // #[contract_library_method]
-    // fn _initialize_transfer_commitment(
-    //     context: &mut PrivateContext,
-    //     private_nfts: Map<AztecAddress, PrivateSet<NFTNote, &mut PrivateContext>, &mut PrivateContext>,
-    //     from: AztecAddress,
-    //     to: AztecAddress,
-    // ) -> PartialNFTNote {
-    //     let commitment = NFTNote::partial(to, private_nfts.at(to).storage_slot, context, to, from);
-    //     NFT::at(context.this_address()).store_commitment_in_storage_internal(commitment).enqueue(
-    //         context,
-    //     );
-    //     commitment
-    // }
+    #[contract_library_method]
+    fn _initialize_transfer_commitment(
+        context: &mut PrivateContext,
+        private_nfts: Map<AztecAddress, PrivateSet<NFTNote, &mut PrivateContext>, &mut PrivateContext>,
+        from: AztecAddress,
+        to: AztecAddress,
+    ) -> PartialNFTNote {
+        let commitment = NFTNote::partial(to, private_nfts.at(to).storage_slot, context, to, from);
+        NFT::at(context.this_address()).store_commitment_in_storage_internal(commitment).enqueue(
+            context,
+        );
+        commitment
+    }
 
     /// @notice Updates the private token owner
     /// @param context The context of the private call
