@@ -152,11 +152,10 @@ pub contract NFT {
         );
     }
 
-    // TODO: Remove?
-    // #[private]
-    // fn initialize_transfer_commitment(from: AztecAddress, to: AztecAddress) -> PartialNFTNote {
-    //     _initialize_transfer_commitment(&mut context, storage.private_nfts, from, to)
-    // }
+    #[private]
+    fn initialize_transfer_commitment(from: AztecAddress, to: AztecAddress) -> PartialNFTNote {
+        _initialize_transfer_commitment(&mut context, storage.private_nfts, from, to)
+    }
 
     /** ==========================================================
      * ========================= PUBLIC ==========================
@@ -235,7 +234,7 @@ pub contract NFT {
 
     #[public]
     #[view]
-    fn owner_of(token_id: Field) -> AztecAddress {
+    fn public_owner_of(token_id: Field) -> pub AztecAddress {
         storage.public_owners.at(token_id).read()
     }
 
@@ -272,28 +271,30 @@ pub contract NFT {
 
     #[private]
     fn mint_private(to: AztecAddress, token_id: Field) {
+        assert(token_id != 0, "zero token ID not supported");
         _validate_minter(context.msg_sender(), storage.minter.read());
 
-        let nft = NFT::at(context.this_address());
-        nft.validate_token_to_mint_internal(token_id).enqueue(&mut context);
-        nft.update_nft_exists_internal(token_id, true).enqueue(&mut context);
-        storage.private_nfts.at(to).insert(NFTNote::new(token_id, to));
+        NFT::at(context.this_address()).token_exists_internal(token_id).enqueue(&mut context);
+        NFT::at(context.this_address()).update_nft_exists_internal(token_id, true).enqueue(
+            &mut context,
+        );
+        storage.private_nfts.at(to).insert(NFTNote::new(token_id, to)).emit(encode_and_encrypt_note(&mut context, to, to));
     }
 
     #[public]
     fn mint_public(to: AztecAddress, token_id: Field) {
+        assert(token_id != 0, "zero token ID not supported");
         _validate_minter(context.msg_sender(), storage.minter.read());
+        assert(!storage.nft_exists.at(token_id).read(), "token already exists");
 
-        validate_token_to_mint_internal(token_id);
-        update_nft_exists_internal(token_id, true);
+        storage.nft_exists.at(token_id).write(true);
         storage.public_owners.at(token_id).write(to);
     }
 
     #[public]
     #[internal]
-    fn validate_token_to_mint_internal(token_id: Field) {
-        assert(token_id != 0, "zero token ID not supported");
-        assert(storage.nft_exists.at(token_id).read() == false, "token already exists");
+    fn token_exists_internal(token_id: Field) {
+        assert(!storage.nft_exists.at(token_id).read(), "token already exists");
     }
 
     /** ==========================================================
@@ -329,20 +330,19 @@ pub contract NFT {
         context.storage_write(commitment.commitment(), true);
     }
 
-    // TODO: Remove?
-    // #[contract_library_method]
-    // fn _initialize_transfer_commitment(
-    //     context: &mut PrivateContext,
-    //     private_nfts: Map<AztecAddress, PrivateSet<NFTNote, &mut PrivateContext>, &mut PrivateContext>,
-    //     from: AztecAddress,
-    //     to: AztecAddress,
-    // ) -> PartialNFTNote {
-    //     let commitment = NFTNote::partial(to, private_nfts.at(to).storage_slot, context, to, from);
-    //     NFT::at(context.this_address()).store_commitment_in_storage_internal(commitment).enqueue(
-    //         context,
-    //     );
-    //     commitment
-    // }
+    #[contract_library_method]
+    fn _initialize_transfer_commitment(
+        context: &mut PrivateContext,
+        private_nfts: Map<AztecAddress, PrivateSet<NFTNote, &mut PrivateContext>, &mut PrivateContext>,
+        from: AztecAddress,
+        to: AztecAddress,
+    ) -> PartialNFTNote {
+        let commitment = NFTNote::partial(to, private_nfts.at(to).storage_slot, context, to, from);
+        NFT::at(context.this_address()).store_commitment_in_storage_internal(commitment).enqueue(
+            context,
+        );
+        commitment
+    }
 
     #[contract_library_method]
     fn _update_private_token_owner(
