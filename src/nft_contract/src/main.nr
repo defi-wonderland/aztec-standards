@@ -153,11 +153,10 @@ pub contract NFT {
         );
     }
 
-    // TODO: Remove?
-    // #[private]
-    // fn initialize_transfer_commitment(from: AztecAddress, to: AztecAddress) -> PartialNFTNote {
-    //     _initialize_transfer_commitment(&mut context, storage.private_nfts, from, to)
-    // }
+    #[private]
+    fn initialize_transfer_commitment(from: AztecAddress, to: AztecAddress) -> PartialNFTNote {
+        _initialize_transfer_commitment(&mut context, storage.private_nfts, from, to)
+    }
 
     /** ==========================================================
      * ========================= PUBLIC ==========================
@@ -275,12 +274,12 @@ pub contract NFT {
     fn mint_private(to: AztecAddress, token_id: Field) {
         assert(token_id != 0, "zero token ID not supported");
         _validate_minter(context.msg_sender(), storage.minter.read());
-        NFT::at(context.this_address()).token_exists_internal(token_id).enqueue(&mut context);
 
+        NFT::at(context.this_address()).token_exists_internal(token_id).enqueue(&mut context);
         NFT::at(context.this_address()).update_nft_exists_internal(token_id, true).enqueue(
             &mut context,
         );
-        storage.private_nfts.at(to).insert(NFTNote::new(token_id, to));
+        storage.private_nfts.at(to).insert(NFTNote::new(token_id, to)).emit(encode_and_encrypt_note(&mut context, to, to));
     }
 
     #[public]
@@ -332,20 +331,19 @@ pub contract NFT {
         context.storage_write(commitment.commitment(), true);
     }
 
-    // TODO: Remove?
-    // #[contract_library_method]
-    // fn _initialize_transfer_commitment(
-    //     context: &mut PrivateContext,
-    //     private_nfts: Map<AztecAddress, PrivateSet<NFTNote, &mut PrivateContext>, &mut PrivateContext>,
-    //     from: AztecAddress,
-    //     to: AztecAddress,
-    // ) -> PartialNFTNote {
-    //     let commitment = NFTNote::partial(to, private_nfts.at(to).storage_slot, context, to, from);
-    //     NFT::at(context.this_address()).store_commitment_in_storage_internal(commitment).enqueue(
-    //         context,
-    //     );
-    //     commitment
-    // }
+    #[contract_library_method]
+    fn _initialize_transfer_commitment(
+        context: &mut PrivateContext,
+        private_nfts: Map<AztecAddress, PrivateSet<NFTNote, &mut PrivateContext>, &mut PrivateContext>,
+        from: AztecAddress,
+        to: AztecAddress,
+    ) -> PartialNFTNote {
+        let commitment = NFTNote::partial(to, private_nfts.at(to).storage_slot, context, to, from);
+        NFT::at(context.this_address()).store_commitment_in_storage_internal(commitment).enqueue(
+            context,
+        );
+        commitment
+    }
 
     #[contract_library_method]
     fn _update_private_token_owner(

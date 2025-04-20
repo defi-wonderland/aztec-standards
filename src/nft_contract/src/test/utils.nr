@@ -104,7 +104,7 @@ pub unconstrained fn assert_owns_public_nft(
     token_id: Field,
 ) {
     let obtained_owner = NFT::at(nft_contract_address).public_owner_of(token_id).view(&mut env.public());
-    assert(owner == obtained_owner, "Incorrect NFT owner");
+    assert(owner == obtained_owner, "incorrect NFT owner");
 }
 
 pub unconstrained fn assert_owns_private_nft(

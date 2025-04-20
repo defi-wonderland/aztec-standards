@@ -2,7 +2,7 @@ use crate::NFT;
 use crate::test::utils;
 
 #[test]
-unconstrained fn mint_success() {
+unconstrained fn mint_public_success() {
     // Setup without account contracts. We are not using authwits here, so dummy accounts are enough
     let (env, nft_contract_address, owner, minter, _) =
         utils::setup_with_minter(/* with_account_contracts */ false);
@@ -17,7 +17,7 @@ unconstrained fn mint_success() {
 }
 
 #[test(should_fail_with = "caller is not minter")]
-unconstrained fn mint_fail_non_minter() {
+unconstrained fn mint_public_fail_non_minter() {
     let (env, nft_contract_address, owner, _, recipient) =
         utils::setup_with_minter(/* with_account_contracts */ false);
 
@@ -27,7 +27,7 @@ unconstrained fn mint_fail_non_minter() {
 }
 
 #[test(should_fail_with = "token already exists")]
-unconstrained fn mint_fail_same_nft_twice() {
+unconstrained fn mint_public_fail_same_nft_twice() {
     let (env, nft_contract_address, owner, minter, recipient) =
         utils::setup_with_minter(/* with_account_contracts */ false);
 
@@ -46,7 +46,7 @@ unconstrained fn mint_fail_same_nft_twice() {
 }
 
 #[test(should_fail_with = "zero token ID not supported")]
-unconstrained fn mint_fail_token_id_zero() {
+unconstrained fn mint_public_fail_token_id_zero() {
     let (env, nft_contract_address, owner, minter, _) =
         utils::setup_with_minter(/* with_account_contracts */ false);
 
