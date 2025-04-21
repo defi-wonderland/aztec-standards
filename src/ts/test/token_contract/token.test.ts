@@ -1,4 +1,4 @@
-import { TokenContractArtifact, TokenContract } from '../../artifacts/Token.js';
+import { TokenContractArtifact, TokenContract } from '../../../artifacts/Token.js';
 import {
   AccountWallet,
   CompleteAddress,
@@ -12,7 +12,7 @@ import {
   IntentAction,
 } from '@aztec/aztec.js';
 import { getInitialTestAccountsWallets } from '@aztec/accounts/testing';
-import { AMOUNT, createPXE, expectTokenBalances, expectUintNote, setupSandbox, wad } from './utils.js';
+import { AMOUNT, createPXE, expectTokenBalances, expectUintNote, setupSandbox, wad } from '../utils.js';
 
 export async function deployTokenWithInitialSupply(deployer: AccountWallet) {
   const contract = await Contract.deploy(

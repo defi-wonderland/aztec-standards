@@ -13,10 +13,10 @@ unconstrained fn test_private_payment_success() {
     utils::mint_to_private(env, token_address, minter, user, max_fee);
     utils::check_private_balance(token_address, user, max_fee);
 
-    //    utils::add_token_note(env, token_address, user, max_fee, note_randomness);
-    //    utils::check_private_balance(token_address, user, max_fee * 2);
+    utils::add_token_note(env, token_address, user, max_fee, note_randomness);
+    utils::check_private_balance(token_address, user, max_fee);
 
-    utils::prepare_private_transfer_authwit(token_address, user, fpc_address, 1 as u128, nonce);
+    utils::prepare_private_transfer_authwit(token_address, user, fpc_address, max_fee, nonce);
 
     env.impersonate(user);
     FPC::at(fpc_address).fee_entrypoint_private(max_fee, nonce).call(&mut env.private());
