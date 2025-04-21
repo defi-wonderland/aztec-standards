@@ -111,6 +111,12 @@ pub contract NFT {
     //     commitment
     // }
 
+    /// @notice Transfers token by id from private owner to another private owner
+    /// @dev Removes token by id from private owner, and sends a nft note with id to the recipient
+    /// @param from The address of the sender
+    /// @param to The address of the recipient
+    /// @param token_id The id of the token to transfer
+    /// @param nonce The nonce used for authwitness
     #[private]
     fn transfer_private_to_private(
         from: AztecAddress,
@@ -130,11 +136,11 @@ pub contract NFT {
         );
     }
 
-    /// @notice Transfers token by id from private owner to another private owner
-    /// @dev Removes token by id from private owner, and sends a nft note with id to the recipient
+    /// @notice Transfers token by id from private owner to the recipient commitment (recipient must create a commitment first)
+    /// @dev Removes token by id from private owner, and enqueues a public call to complete the commitment
     /// @param from The address of the sender
-    /// @param to The address of the recipient
     /// @param token_id The id of the token to transfer
+    /// @param commitment The commitment to use for the transfer
     /// @param nonce The nonce used for authwitness
     #[private]
     fn transfer_private_to_commitment(
@@ -143,16 +149,6 @@ pub contract NFT {
         commitment: PartialNFTNote,
         nonce: Field,
     ) {
-        _validate_from_private(&mut context, from, nonce);
-
-    /// @notice Transfers token by id from private owner to the recipient commitment (recipient must create a commitment first)
-    /// @dev Removes token by id from private owner, and enqueues a public call to complete the commitment
-    /// @param from The address of the sender
-    /// @param token_id The id of the token to transfer
-    /// @param commitment The commitment to use for the transfer
-    /// @param nonce The nonce used for authwitness
-    #[private]
-    fn transfer_private_to_commitment(from: AztecAddress, token_id: Field, commitment: PartialNFTNote, nonce: Field) {
         _validate_from_private(&mut context, from, nonce);
 
         _remove_private_token_owner(storage.private_nfts.at(from), token_id);
@@ -354,7 +350,11 @@ pub contract NFT {
         NFT::at(context.this_address()).update_nft_exists_internal(token_id, true).enqueue(
             &mut context,
         );
-        storage.private_nfts.at(to).insert(NFTNote::new(token_id, to)).emit(encode_and_encrypt_note(&mut context, to, to));
+        storage.private_nfts.at(to).insert(NFTNote::new(token_id, to)).emit(encode_and_encrypt_note(
+            &mut context,
+            to,
+            to,
+        ));
     }
 
     /// @notice Mints a token to a public address
