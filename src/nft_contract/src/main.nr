@@ -346,7 +346,8 @@ pub contract NFT {
         assert(token_id != 0, "zero token ID not supported");
         _validate_minter(context.msg_sender(), storage.minter.read());
 
-        NFT::at(context.this_address()).token_exists_internal(token_id).enqueue(&mut context);
+       let nft = NFT::at(context.this_address())
+       nft.token_exists_internal(token_id).enqueue(&mut context);
         NFT::at(context.this_address()).update_nft_exists_internal(token_id, true).enqueue(
             &mut context,
         );
