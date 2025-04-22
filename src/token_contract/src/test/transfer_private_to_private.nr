@@ -2,7 +2,7 @@ use crate::test::utils;
 use crate::Token;
 use authwit::cheatcodes as authwit_cheatcodes;
 use aztec::note::constants::MAX_NOTES_PER_PAGE;
-use uint_note::uint_note::{PartialUintNote, UintNote};
+use uint_note::uint_note::UintNote;
 
 #[test]
 unconstrained fn transfer_private_on_behalf_of_other() {

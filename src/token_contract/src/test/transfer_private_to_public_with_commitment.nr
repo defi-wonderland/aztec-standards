@@ -15,7 +15,7 @@ unconstrained fn transfer_private_to_public_with_commitment() {
     // Transfer tokens
     let transfer_amount = mint_amount;
     env.impersonate(owner);
-    let commitment = Token::at(token_contract_address)
+    let _ = Token::at(token_contract_address)
         .transfer_private_to_public_with_commitment(owner, recipient, transfer_amount, 0)
         .call(&mut env.private());
     env.advance_block_by(1);
@@ -53,7 +53,7 @@ unconstrained fn transfer_private_to_public_with_commitment_and_non_zero_nonce()
     // Transfer tokens
     let transfer_amount = mint_amount;
     env.impersonate(owner);
-    Token::at(token_contract_address)
+    let _ = Token::at(token_contract_address)
         .transfer_private_to_public_with_commitment(owner, recipient, transfer_amount, random())
         .call(&mut env.private());
 }
@@ -80,7 +80,7 @@ unconstrained fn transfer_private_to_public_with_commitment_on_behalf_of_other()
 
     // Transfer tokens
     env.impersonate(recipient);
-    transfer_private_to_public_commitment_call_interface.call(&mut env.private());
+    let _ = transfer_private_to_public_commitment_call_interface.call(&mut env.private());
     env.advance_block_by(1);
 
     // Check balances

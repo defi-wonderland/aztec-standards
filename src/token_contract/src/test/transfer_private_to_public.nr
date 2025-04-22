@@ -2,7 +2,6 @@ use crate::test::utils;
 use crate::Token;
 use authwit::cheatcodes as authwit_cheatcodes;
 use aztec::{note::constants::MAX_NOTES_PER_PAGE, oracle::random::random};
-use aztec::protocol_types::traits::ToField;
 use uint_note::uint_note::UintNote;
 
 #[test]

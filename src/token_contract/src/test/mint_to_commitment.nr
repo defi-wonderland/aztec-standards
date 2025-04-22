@@ -1,11 +1,11 @@
 use crate::{test::utils, Token};
 use aztec::oracle::random::random;
-use uint_note::uint_note::{PartialUintNote, UintNote};
+use uint_note::uint_note::PartialUintNote;
 
 #[test]
 unconstrained fn mint_to_commitment_success() {
     // Setup without account contracts. We are not using authwits here, so dummy accounts are enough
-    let (env, token_contract_address, owner, recipient, minter) = utils::setup_with_minter(false);
+    let (env, token_contract_address, _, recipient, minter) = utils::setup_with_minter(false);
 
     let commitment = Token::at(token_contract_address)
         .initialize_transfer_commitment(recipient, recipient)
@@ -102,7 +102,7 @@ unconstrained fn mint_to_private_failure_total_supply_overflow() {
 
 #[test(should_fail_with = "Invalid commitment 'context.storage_read(commitment.commitment())'")]
 unconstrained fn mint_to_private_failure_invalid_commitments_random() {
-    let (env, token_contract_address, owner, recipient, minter) = utils::setup_with_minter(false);
+    let (env, token_contract_address, _, _, minter) = utils::setup_with_minter(false);
 
     let mint_amount: u128 = 10_000;
     env.impersonate(minter);
@@ -114,7 +114,7 @@ unconstrained fn mint_to_private_failure_invalid_commitments_random() {
 
 #[test(should_fail_with = "Invalid commitment 'context.storage_read(commitment.commitment())'")]
 unconstrained fn mint_to_private_failure_invalid_commitments_zero() {
-    let (env, token_contract_address, owner, recipient, minter) = utils::setup_with_minter(false);
+    let (env, token_contract_address, _, _, minter) = utils::setup_with_minter(false);
 
     let mint_amount: u128 = 10_000;
     env.impersonate(minter);

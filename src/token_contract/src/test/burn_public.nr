@@ -5,7 +5,7 @@ use aztec::oracle::random::random;
 
 #[test]
 unconstrained fn burn_public_success() {
-    let (env, token_contract_address, owner, recipient, mint_amount) =
+    let (env, token_contract_address, owner, _, mint_amount) =
         utils::setup_and_mint_to_public_without_minter(/* with_account_contracts */ false);
     let burn_amount = mint_amount / 10 as u128;
 
@@ -16,7 +16,7 @@ unconstrained fn burn_public_success() {
 
 #[test]
 unconstrained fn burn_public_decrease_total_supply() {
-    let (env, token_contract_address, owner, recipient, mint_amount) =
+    let (env, token_contract_address, owner, _, mint_amount) =
         utils::setup_and_mint_to_public_without_minter(/* with_account_contracts */ false);
     let burn_amount = mint_amount / 10 as u128;
 
