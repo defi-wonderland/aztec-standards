@@ -9,9 +9,9 @@ pub contract NFT {
     use crate::types::nft_note::{NFTNote, PartialNFTNote};
     // aztec library
     use aztec::{
-        encrypted_logs::log_assembly_strategies::default_aes128::note::encode_and_encrypt_note,
+        messages::logs::note::encode_and_encrypt_note,
         macros::{
-            functions::{initializer, internal, private, public, view},
+            functions::{initializer, internal, private, public, view, utility},
             storage::storage,
         },
         note::{constants::MAX_NOTES_PER_PAGE, note_interface::NoteProperties},
@@ -195,6 +195,7 @@ pub contract NFT {
     /// Returns an array of token IDs owned by `owner` in private and a flag indicating whether a page limit was
     /// reached. Starts getting the notes from page with index `page_index`. Zero values in the array are placeholder
     /// values for non-existing notes.
+    #[utility]
     unconstrained fn get_private_nfts(
         owner: AztecAddress,
         page_index: u32,
