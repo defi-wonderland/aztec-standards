@@ -8,6 +8,7 @@ use aztec::{
     prelude::AztecAddress,
     protocol_types::storage::map::derive_storage_slot_in_map,
     test::helpers::{cheatcodes, test_environment::TestEnvironment},
+    note::constants::MAX_NOTES_PER_PAGE,
 };
 use std::test::OracleMock;
 
@@ -20,8 +21,10 @@ pub unconstrained fn setup_with_minter(
         let owner = env.create_account_contract(1);
         let minter = env.create_account_contract(2);
         let recipient = env.create_account_contract(3);
+        env.advance_block_by(1); // Ensure contracts are deployed before proceeding
         (owner, minter, recipient)
     } else {
+        // For simple tests without authorization, use regular accounts
         let owner = env.create_account(1);
         let minter = env.create_account(2);
         let recipient = env.create_account(3);
@@ -29,6 +32,7 @@ pub unconstrained fn setup_with_minter(
     };
 
     let nft_contract_address = deploy_nft_with_minter(&mut env, owner, minter);
+    env.advance_block_by(1); // Ensure NFT contract is deployed before returning
 
     (&mut env, nft_contract_address, owner, minter, recipient)
 }
@@ -112,6 +116,24 @@ pub unconstrained fn assert_owns_private_nft(
     owner: AztecAddress,
     token_id: Field,
 ) {
+    let nft_found = owns_private_nft(nft_contract_address, owner, token_id);
+    assert(nft_found, "NFT not found in private nfts");
+}
+
+pub unconstrained fn assert_private_nft_nullified(
+    nft_contract_address: AztecAddress,
+    owner: AztecAddress,
+    token_id: Field,
+) {
+    let nft_found = owns_private_nft(nft_contract_address, owner, token_id);
+    assert(!nft_found, "NFT found in private notes when it should have been nullified");
+}
+
+pub unconstrained fn owns_private_nft(
+    nft_contract_address: AztecAddress,
+    owner: AztecAddress,
+    token_id: Field,
+) -> bool {
     let current_contract_address = get_contract_address();
     cheatcodes::set_contract_address(nft_contract_address);
     // Direct call to unconstrained
@@ -124,5 +146,5 @@ pub unconstrained fn assert_owns_private_nft(
         }
     }
     cheatcodes::set_contract_address(current_contract_address);
-    assert(nft_found, "NFT not found in private nfts");
+    nft_found
 }
