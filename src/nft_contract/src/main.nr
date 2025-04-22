@@ -20,7 +20,6 @@ pub contract NFT {
             AztecAddress, Map, NoteGetterOptions, NoteViewerOptions, PrivateSet, PublicContext,
             PublicImmutable, PublicMutable,
         },
-        protocol_types::traits::Serialize,
         utils::comparison::Comparator,
     };
     // authorized witness library
@@ -346,11 +345,9 @@ pub contract NFT {
         assert(token_id != 0, "zero token ID not supported");
         _validate_minter(context.msg_sender(), storage.minter.read());
 
-       let nft = NFT::at(context.this_address())
-       nft.token_exists_internal(token_id).enqueue(&mut context);
-        NFT::at(context.this_address()).update_nft_exists_internal(token_id, true).enqueue(
-            &mut context,
-        );
+        let nft = NFT::at(context.this_address());
+        nft.token_exists_internal(token_id).enqueue(&mut context);
+        nft.set_nft_exists_internal(token_id, true).enqueue(&mut context);
         storage.private_nfts.at(to).insert(NFTNote::new(token_id, to)).emit(encode_and_encrypt_note(
             &mut context,
             to,
@@ -394,7 +391,7 @@ pub contract NFT {
         _validate_from_private(&mut context, from, nonce);
 
         _remove_private_token_owner(storage.private_nfts.at(from), token_id);
-        NFT::at(context.this_address()).update_nft_exists_internal(token_id, false).enqueue(
+        NFT::at(context.this_address()).set_nft_exists_internal(token_id, false).enqueue(
             &mut context,
         );
     }
