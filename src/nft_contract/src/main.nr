@@ -274,7 +274,7 @@ pub contract NFT {
 
     #[public]
     #[internal]
-    fn update_nft_exists_internal(token_id: Field, exists: bool) {
+    fn set_nft_exists_internal(token_id: Field, exists: bool) {
         storage.nft_exists.at(token_id).write(exists);
     }
 
