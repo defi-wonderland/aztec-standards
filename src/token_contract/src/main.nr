@@ -549,7 +549,7 @@ pub contract Token {
         // slot, and it is internally consistent). We *could* clear the storage since each partial note should only be
         // used once, but since the AVM offers no gas refunds for doing so this would just make the transaction be more
         // expensive.
-        assert(context.storage_read(commitment.commitment()), "invalid commitment");
+        assert(context.storage_read(commitment.commitment()), "Invalid commitment");
         commitment.complete(amount, context);
     }
 
