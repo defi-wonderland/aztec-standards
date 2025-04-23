@@ -1,3 +1,5 @@
+.env
+
 # Only include specific directories in aztec-packages we want to keep
 !aztec-packages/noir-projects/
 !aztec-packages/yarn-project/
