@@ -7,3 +7,7 @@ log/
 codegenCache.json
 .env
 .cursor
+
+# Locally generated benchmark files
+src/**/*benchmark_latest.json
+bench_diff.md
