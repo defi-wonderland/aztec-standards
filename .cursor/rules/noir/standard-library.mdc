@@ -1,0 +1,28 @@
+---
+description: Summarizes the Noir Standard Library modules (crypto, containers, traits, options, logging, memory) based on Noir documentation and source code links.
+globs: 
+alwaysApply: false
+---
+# Noir Standard Library Overview
+
+This rule summarizes the Noir Standard Library based on the documentation found in [`noir/docs/docs/noir/standard_library/`](mdc:noir/docs/docs/noir/standard_library).
+
+The standard library (`std`) provides commonly used functions, types, and traits for Noir programs. Source code is primarily in [`noir/noir_stdlib/src/`](mdc:noir/noir_stdlib/src). It must be explicitly imported (`use std::module::Item;`).
+
+**Key Modules & Features:**
+
+*   **Cryptographic Primitives:**
+    *   Hashing: [`std::hash`](mdc:noir/noir_stdlib/src/hash) provides Pedersen, SHA256, Blake2s, Keccak256. Source: [`hash/`](mdc:noir/noir_stdlib/src/hash).
+    *   Elliptic Curve Operations: Includes ECDSA for Secp256k1/r1 ([`ecdsa_secp256k1.nr`](mdc:noir/noir_stdlib/src/ecdsa_secp256k1.nr), [`ecdsa_secp256r1.nr`](mdc:noir/noir_stdlib/src/ecdsa_secp256r1.nr)) and BN254 operations ([`embedded_curve_ops.nr`](mdc:noir/noir_stdlib/src/embedded_curve_ops.nr)). See also Docs: [`cryptographic_primitives/`](mdc:noir/docs/docs/noir/standard_library/cryptographic_primitives), [`bn254.md`](mdc:noir/docs/docs/noir/standard_library/bn254.md).
+*   **Containers:** Primarily `Vec<T>` (dynamic arrays). Source: [`collections/vec.nr`](mdc:noir/noir_stdlib/src/collections/vec.nr). See also Docs: [`containers/`](mdc:noir/docs/docs/noir/standard_library/containers).
+*   **Traits:** Defines standard traits like `Eq`, `Ord` (Source: [`cmp.nr`](mdc:noir/noir_stdlib/src/cmp.nr)), `ToString`, `Serialize`, `Deserialize`, `Add`, `Sub`, `Mul`, `Div` (Source: [`ops/`](mdc:noir/noir_stdlib/src/ops)). See also Docs: [`traits.md`](mdc:noir/docs/docs/noir/standard_library/traits.md).
+*   **Options:** `Option<T>` enum (`Some(T)` or `None`). Source: [`option.nr`](mdc:noir/noir_stdlib/src/option.nr). See also Docs: [`options.md`](mdc:noir/docs/docs/noir/standard_library/options.md).
+*   **Recursion:** Support for verifying proofs within circuits. See Docs: [`recursion.mdx`](mdc:noir/docs/docs/noir/standard_library/recursion.mdx).
+*   **Logging:** `std::println(value)`. Source: [`lib.nr`](mdc:noir/noir_stdlib/src/lib.nr). See also Docs: [`logging.md`](mdc:noir/docs/docs/noir/standard_library/logging.md).
+*   **Memory Operations:** Functions like `std::mem::swap`. Source: [`mem.nr`](mdc:noir/noir_stdlib/src/mem.nr). See also Docs: [`mem.md`](mdc:noir/docs/docs/noir/standard_library/mem.md).
+*   **Black Box Functions:** Interface for backend-provided functions. See Docs: [`black_box_fns.md`](mdc:noir/docs/docs/noir/standard_library/black_box_fns.md).
+*   **Metadata:** Compile-time reflection via `std::meta`. Source: [`meta/`](mdc:noir/noir_stdlib/src/meta). See also Docs: [`meta/`](mdc:noir/docs/docs/noir/standard_library/meta), [`is_unconstrained.md`](mdc:noir/docs/docs/noir/standard_library/is_unconstrained.md).
+*   **Formatting:** Experimental `fmtstr`. Source: `string.nr`? See Docs: [`fmtstr.md`](mdc:noir/docs/docs/noir/standard_library/fmtstr.md).
+*   **Arrays/Slices:** Utilities for fixed-size arrays and slices. Source: [`array/`](mdc:noir/noir_stdlib/src/array), [`slice.nr`](mdc:noir/noir_stdlib/src/slice.nr).
+
+Refer to the specific documentation pages and source files for details.

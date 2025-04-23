@@ -1,0 +1,26 @@
+---
+description: Summarizes Noir development tooling (Nargo, testing, debugger, profiler, LSP, formatter, fuzzing, JS bindings) based on Noir documentation and source code links.
+globs: 
+alwaysApply: false
+---
+# Noir Development Tooling Overview
+
+This rule summarizes Noir's development tooling based on the documentation found in [`noir/docs/docs/tooling/`](mdc:noir/docs/docs/tooling) and the source code in [`noir/tooling/`](mdc:noir/tooling).
+
+**Key Tools & Features:**
+
+*   **Nargo (`nargo`, `nargo_cli`):** The build system, package manager, and primary command-line interface for Noir.
+    *   Handles compiling (`nargo build`), proving (`nargo prove`), verifying (`nargo verify`), testing (`nargo test`), dependency management (`Nargo.toml`), etc.
+    *   Source: [`tooling/nargo/`](mdc:noir/tooling/nargo), [`tooling/nargo_cli/`](mdc:noir/tooling/nargo_cli).
+    *   `Nargo.toml` format definition: [`tooling/nargo_toml/`](mdc:noir/tooling/nargo_toml).
+*   **Testing:** Built-in test framework run via `nargo test`. See Docs: [`testing.md`](mdc:noir/docs/docs/tooling/testing.md).
+*   **Debugger:** Allows stepping through execution (`nargo debug`). Source: [`tooling/debugger/`](mdc:noir/tooling/debugger). See Docs: [`debugger.md`](mdc:noir/docs/docs/tooling/debugger.md).
+*   **Profiler:** Measures ACIR gate count per line (`nargo profile`). Source: [`tooling/profiler/`](mdc:noir/tooling/profiler). See Docs: [`profiler.md`](mdc:noir/docs/docs/tooling/profiler.md).
+*   **Language Server (LSP):** Provides IDE features. Source: [`tooling/lsp/`](mdc:noir/tooling/lsp). See Docs: [`language_server.md`](mdc:noir/docs/docs/tooling/language_server.md).
+*   **Formatter:** Formats Noir code (`nargo fmt`). Source: [`tooling/nargo_fmt/`](mdc:noir/tooling/nargo_fmt).
+*   **Fuzzing:** Tools and infrastructure for fuzz testing. Source: [`tooling/fuzzer/`](mdc:noir/tooling/fuzzer), [`tooling/ast_fuzzer/`](mdc:noir/tooling/ast_fuzzer), [`tooling/ssa_fuzzer/`](mdc:noir/tooling/ssa_fuzzer), [`tooling/greybox_fuzzer/`](mdc:noir/tooling/greybox_fuzzer). See Docs: [`fuzzing.md`](mdc:noir/docs/docs/tooling/fuzzing.md).
+*   **JavaScript Bindings (`noir_js`, `noir_js_types`, `noirc_abi_wasm`):** Allow using the compiler and ACVM from JavaScript/TypeScript environments (e.g., browsers, Node.js). Source: [`tooling/noir_js/`](mdc:noir/tooling/noir_js), [`tooling/noir_js_types/`](mdc:noir/tooling/noir_js_types), [`tooling/noirc_abi_wasm/`](mdc:noir/tooling/noirc_abi_wasm).
+*   **ABI and Artifacts (`noirc_abi`, `noirc_artifacts`, `noirc_artifacts_info`):** Libraries for handling contract ABIs and compilation artifacts (ACIR, debug symbols). Source: [`tooling/noirc_abi/`](mdc:noir/tooling/noirc_abi), [`tooling/noirc_artifacts/`](mdc:noir/tooling/noirc_artifacts), [`tooling/noirc_artifacts_info/`](mdc:noir/tooling/noirc_artifacts_info).
+*   **Other Tools:** `acvm_cli` (direct ACVM interaction), `inspector` (circuit inspection), `noir_codegen`. Source: [`tooling/`](mdc:noir/tooling).
+
+Consult the linked source directories and documentation files for specific implementation details and usage instructions.

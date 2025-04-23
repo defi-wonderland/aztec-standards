@@ -1,0 +1,54 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+# Coding Best Practices and Conventions
+
+This document outlines the coding standards and best practices to follow in this project.
+
+## General Principles
+
+- **Composition over inheritance**: Favor composing behavior over inheriting it.
+- **Dependency Injection**: Use dependency injection to manage dependencies.
+- **SOLID**: Adhere to SOLID principles.
+- **Avoid `any`**: Use `unknown` instead of `any` for type safety.
+- **Runtime Type Checking**: Use runtime type checking (e.g., Zod) for environment variables and external API data.
+- **Internal Module Pattern**: Use the internal module pattern to prevent circular dependencies.
+- **Library Structure**: When building libraries:
+    - Define an `external.ts` file listing explicitly exported components/types/interfaces.
+    - Import/export these from the entry `index.ts` file.
+- **Monorepo Structure**: Use tools like Turborepo with pnpm workspaces for large codebases, splitting code into packages.
+- **Async Constructors**: Prefer static async factory functions for asynchronous initialization.
+- **Handle `bigint`**: Preserve the `bigint` type from external APIs; avoid casting to `Number` unless necessary for an exposed API.
+- **Documentation**: Document all code elements (functions, methods, classes, interfaces) using JSDoc.
+
+## Naming and Structure
+
+- **Services**: Encapsulate broader business workflows, orchestrating components or interacting with multiple data sources/APIs. Example: `MetricsService`.
+- **Providers**: Supply specific data or resources, narrowly scoped. Example: `GithubProvider`, `JsonFileProvider`, `IpfsProvider`.
+    - Providers interacting with metadata sources (like GitHub, JSON files, IPFS) should implement an `IMetadataProvider` interface.
+- **Aggregators/Services**: Classes aggregating multiple sources (Metadata, Pricing, BlockchainEvents) should be named descriptively, often ending in `Service`. Example: `AggregatorService`, `MetricsService`.
+- **Composability**: Services can be composed of Providers, applying business logic and orchestration.
+
+## Dependencies
+
+- **Avoid Carets**: Do not use carets (`^`) for dependency versions in `package.json`. Specify exact versions.
+
+## Testing
+
+- **`it` Statements**: Avoid using the word "should" in `it` block descriptions.
+
+## Scripting
+
+- **Root Directory**: Use `process.cwd()` to reference the root directory within scripts.
+- **`package.json` Scripts**: Organize scripts using prefixes:
+    - Infrastructure: `script:infra:{name}`
+    - Utility: `script:util:{name}`
+- **Scripts Folder**: Create a `scripts` folder with `infra/` and `utilities/` subdirectories.
+
+## Error Handling
+
+- **Custom Errors**: Create custom error classes.
+- **Descriptive Names**: Use declarative and descriptive names for error classes.
+- **Avoid Suffixes**: Do not use suffixes like `Exception` or `Error` (e.g., use `EmptyArray` instead of `EmptyArrayError`).

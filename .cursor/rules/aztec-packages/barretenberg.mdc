@@ -1,0 +1,37 @@
+---
+description: Describes the \barretenberg\ C++/WASM/TS cryptographic library, covering its components (cpp, ts, sol) and role in Aztec's proving and cryptography.
+globs: 
+alwaysApply: false
+---
+# Barretenberg Cryptography Library Overview
+
+Location: [`aztec-packages/barretenberg/`](mdc:aztec-packages/barretenberg)
+
+Barretenberg is the core C++ cryptographic library underpinning Aztec. It provides the low-level primitives and proving system components.
+
+**Key Components:**
+
+*   **`cpp/`**: The main C++ source code.
+    *   [`src/`](mdc:aztec-packages/barretenberg/cpp/src): Contains implementations of:
+        *   Elliptic curve cryptography (Grumpkin, BN254).
+        *   Hashing algorithms (Pedersen, Poseidon, SHA256).
+        *   Finite field arithmetic.
+        *   Proving systems (Plonk, Honk).
+        *   Standard library circuits (Merkle tree operations, basic gates).
+    *   [`srs_db/`](mdc:aztec-packages/barretenberg/cpp/srs_db): Structured Reference String (SRS) data required for the proving system.
+*   **`ts/`**: TypeScript bindings for the C++ library, compiled to WebAssembly (WASM).
+    *   Provides a JavaScript/TypeScript interface to Barretenberg's cryptographic functions (hashing, signing, encryption, Pedersen commitments).
+    *   Wraps the WASM prover and verifier components.
+    *   Used extensively by [`@aztec/foundation`](mdc:aztec-packages/yarn-project/foundation) and other `yarn-project` packages.
+*   **`bb-prover` (`yarn-project/bb-prover/`)**: A separate TypeScript package that specifically manages interaction with the Barretenberg WASM prover for generating proofs based on ACIR.
+*   **`sol/`**: Solidity verifier contracts generated from the C++ code. Allows verifying Aztec proofs on Ethereum.
+*   **`acir_tests/`**: Tests for verifying ACIR execution using Barretenberg.
+
+Barretenberg is fundamental for:
+
+*   Hashing data for commitments and nullifiers.
+*   Encrypting/decrypting notes and logs.
+*   Generating and verifying transaction proofs.
+*   Elliptic curve operations for keys and signatures.
+
+Direct interaction is usually abstracted away by higher-level libraries like `@aztec/foundation` or `@aztec/aztec.js`

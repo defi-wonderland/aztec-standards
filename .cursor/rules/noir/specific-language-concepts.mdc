@@ -1,0 +1,30 @@
+---
+description: Summarizes core Noir language concepts (types, functions, control flow, traits, generics, comptime, oracles) based on Noir documentation.
+globs: 
+alwaysApply: false
+---
+# Noir Language Concepts Overview
+
+This rule summarizes core Noir language concepts based on the documentation found in [`noir/docs/docs/noir/concepts/`](mdc:noir/docs/docs/noir/concepts).
+
+**Core Features & Syntax:**
+
+*   **Data Types:** Noir has primitive types like `Field` (the native field of the proving curve), integers (`u8`, `i32`, etc.), `bool`. It also supports compound types like arrays (`[T; N]`), tuples (`(T, U)`), structs (`struct MyStruct { field: T }`), and Strings (`str<N>`). See [`concepts/data_types/`](mdc:noir/docs/docs/noir/concepts/data_types).
+*   **Functions:** Defined using `fn`. Can take arguments and return values. Support for generics and traits allows for polymorphism. Unconstrained functions (`unconstrained fn`) execute outside the circuit and are useful for non-deterministic computations or setup. Lambdas (anonymous functions) are also supported. See [`concepts/functions.md`](mdc:noir/docs/docs/noir/concepts/functions.md), [`concepts/unconstrained.md`](mdc:noir/docs/docs/noir/concepts/unconstrained.md), [`concepts/lambdas.md`](mdc:noir/docs/docs/noir/concepts/lambdas.md).
+*   **Control Flow:** Supports `if`/`else` conditional execution and `for` loops for iteration. See [`concepts/control_flow.md`](mdc:noir/docs/docs/noir/concepts/control_flow.md).
+*   **Mutability:** Variables are immutable by default. Use the `mut` keyword to declare mutable variables (`let mut x = 5;`). See [`concepts/mutability.md`](mdc:noir/docs/docs/noir/concepts/mutability.md).
+*   **Operators (`ops.md`):** Standard arithmetic (`+`, `-`, `*`, `/`, `%`), comparison (`==`, `!=`, `<`, `>`, `<=`, `>=`), logical (`&&`, `||`, `!`), and bitwise (`&`, `|`, `^`, `<<`, `>>`) operators are available. See [`concepts/ops.md`](mdc:noir/docs/docs/noir/concepts/ops.md).
+*   **Assertions (`assert.md`):** The `assert(condition, message?)` statement constrains a boolean expression to be true at runtime. `constrain` is an alias. Essential for defining circuit logic. See [`concepts/assert.md`](mdc:noir/docs/docs/noir/concepts/assert.md).
+*   **Comments:** Use `//` for single-line comments and `/* */` for multi-line comments. See [`concepts/comments.md`](mdc:noir/docs/docs/noir/concepts/comments.md).
+*   **Shadowing:** Variables can be re-declared within the same scope, shadowing the previous binding. See [`concepts/shadowing.md`](mdc:noir/docs/docs/noir/concepts/shadowing.md).
+
+**Advanced Features:**
+
+*   **Generics:** Allow writing code that operates on abstract types, specialized at compile time. Used in functions, structs, and traits. See [`concepts/generics.md`](mdc:noir/docs/docs/noir/concepts/generics.md).
+*   **Traits:** Define shared functionality (interfaces) that types can implement. Enable ad-hoc polymorphism. See [`concepts/traits.md`](mdc:noir/docs/docs/noir/concepts/traits.md).
+*   **Compile-time Execution (`comptime`):** The `comptime` keyword forces code blocks or expressions to be evaluated at compile time. Useful for meta-programming, generating constraints based on constants, or improving performance. See [`concepts/comptime.md`](mdc:noir/docs/docs/noir/concepts/comptime.md).
+*   **Oracles:** Functions declared with the `oracle` keyword. Their implementation is provided by the execution environment (Prover/Backend). Used to introduce external information or non-determinism into a circuit (e.g., getting private inputs, calling external APIs). See [`concepts/oracles.mdx`](mdc:noir/docs/docs/noir/concepts/oracles.mdx).
+*   **Globals:** Allows defining global values within a crate using `global NAME: TYPE = VALUE;`. Useful for constants needed across multiple functions. See [`concepts/globals.md`](mdc:noir/docs/docs/noir/concepts/globals.md).
+*   **Data Bus:** An experimental feature related to passing data between circuits. See [`concepts/data_bus.mdx`](mdc:noir/docs/docs/noir/concepts/data_bus.mdx).
+
+**Modules, Packages, Crates:** Noir organizes code using modules, packages (defined by `Nargo.toml`), and crates (compilation units). See [`noir/modules_packages_crates/`](mdc:noir/docs/docs/noir/modules_packages_crates).

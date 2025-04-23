@@ -1,0 +1,38 @@
+---
+description: Describes the \@aztec/aztec.js\ SDK package, detailing its purpose, key classes (\AztecRPC\, \Wallet\, \Contract\), and typical developer workflow.
+globs: 
+alwaysApply: false
+---
+# Aztec.js SDK Overview
+
+Package: [`@aztec/aztec.js`](mdc:aztec-packages/yarn-project/aztec.js)
+
+This package is the main TypeScript SDK for developers building applications on or interacting with the Aztec network.
+
+**Purpose:**
+
+Provides an API to abstract away the complexities of interacting with the Aztec protocol components (PXE, Node, Contracts).
+
+**Key Modules & Classes:**
+
+*   **`AztecRPC` / `PXEClient`:** An interface (often implemented via `createPXEClient(url)`) to communicate with a Private Execution Environment (PXE). This is the **primary entry point** for most SDK operations.
+    *   Used for: deploying contracts, registering accounts, sending transactions, simulating calls, getting private state (notes, events), etc.
+*   **`Wallet` / `AccountWallet` (`wallet/`):** Represents a user's account and provides methods for transaction creation and signing.
+    *   Often instantiated with an `AztecRPC` client and an [`AccountContract`](mdc:aztec-packages/yarn-project/accounts) implementation.
+    *   Handles nonce management, transaction signing, and interaction with the associated account contract.
+*   **`Contract` / `ContractFunctionInteraction` (`contract/`):** Represents a deployed Aztec contract (Noir contract).
+    *   Provides methods to interact with the contract's functions (both private and public).
+    *   `Contract.at(address, wallet)`: Connects to an existing contract.
+    *   `Contract.deploy(...)`: Deploys a new contract instance.
+    *   `contract.methods.myFunction(...).send()`: Creates and sends a transaction to call a function.
+    *   `contract.methods.myFunction(...).simulate()`: Simulates a function call.
+    *   `contract.methods.myFunction(...).view()`: Calls a read-only (unconstrained) function.
+*   **Account Management (`accounts/`):** Utilities related to account contracts (e.g., creating deployment proofs).
+*   **Utilities (`utils/`):** Helper functions for common tasks (e.g., address formatting).
+
+**Typical Workflow:**
+
+1.  Connect to a PXE: `const pxe = createPXEClient(PXE_URL);`
+2.  Create or connect a Wallet: `const wallet = await getWallet(pxe, accountContract);`
+3.  Deploy or connect to a Contract: `const contract = await MyContract.deploy(wallet, ...args).send().wait();` or `const contract = await MyContract.at(address, wallet);`
+4.  Interact with the contract: `const tx = await contract.methods.transfer(to, amount).send().wait();`

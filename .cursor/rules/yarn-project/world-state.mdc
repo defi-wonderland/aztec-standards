@@ -1,0 +1,34 @@
+---
+description: Describes the \@aztec/world-state\ package, responsible for managing Aztec's state Merkle trees (Note Hash, Nullifier, Public Data, L1->L2 Messages).
+globs: 
+alwaysApply: false
+---
+# World State Overview
+
+Package: [`@aztec/world-state`](mdc:aztec-packages/yarn-project/world-state)
+
+This package is responsible for managing the persistent state of the Aztec network, primarily through the use of Merkle trees.
+
+**Responsibilities:**
+
+*   **Merkle Tree Implementations:** Provides implementations for the core Aztec state trees:
+    *   **Note Hash Tree:** Stores commitments (hashes) of all created private notes. Used to prove existence of notes.
+    *   **Nullifier Tree:** Stores all spent note nullifiers. Used to prevent double-spending.
+    *   **Public Data Tree:** Stores the public state of all contracts (analogous to Ethereum's storage trie).
+    *   **L1-to-L2 Message Tree:** Stores commitments of messages sent from L1 to L2 via the Inbox.
+    *   **(Potentially) Contract Tree:** Stores information about deployed L2 contracts.
+*   **Tree Updates:** Handles the insertion of new leaves (note hashes, nullifiers, messages, public data updates) into the trees based on processed L2 blocks.
+*   **Root Calculation:** Computes the root hash for each tree after updates.
+*   **State Synchronization:** Provides mechanisms to synchronize the state trees with the canonical chain data, usually by processing blocks from an [`Archiver`](mdc:aztec-packages/yarn-project/archiver) or [`AztecNode`](mdc:aztec-packages/yarn-project/aztec-node).
+*   **Sibling Path Generation:** Provides methods to generate Merkle membership proofs (sibling paths) for leaves within the trees. These proofs are essential for:
+    *   Proving note existence (using Note Hash Tree).
+    *   Proving non-revocation of nullifiers (using Nullifier Tree).
+    *   Reading public state (using Public Data Tree).
+*   **Data Persistence:** Manages the storage of the tree data, often using a key-value store ([`@aztec/kv-store`](mdc:aztec-packages/yarn-project/kv-store)) or database.
+
+**Usage:**
+
+*   The [`AztecNode`](mdc:aztec-packages/yarn-project/aztec-node) uses this package to maintain the canonical world state.
+*   The [`PXE`](mdc:aztec-packages/yarn-project/pxe) might use parts of this or interact with a Node's world state view to get data needed for simulation and proof generation (e.g., membership witnesses).
+
+This package is fundamental to Aztec's state management and privacy model.

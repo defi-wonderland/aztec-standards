@@ -1,0 +1,41 @@
+# Only include specific directories in aztec-packages we want to keep
+!aztec-packages/noir-projects/
+!aztec-packages/yarn-project/
+!aztec-packages/docs/
+!aztec-packages/barretenberg/
+
+# Ignore all other files and directories in aztec-packages
+aztec-packages/.devcontainer/
+aztec-packages/.github/
+aztec-packages/.vscode/
+aztec-packages/avm-transpiler/
+aztec-packages/aztec-nargo/
+aztec-packages/aztec-up/
+aztec-packages/bb-pilcom/
+aztec-packages/boxes/
+aztec-packages/build-images/
+aztec-packages/ci3/
+aztec-packages/iac/
+aztec-packages/l1-contracts/
+aztec-packages/metrics/
+aztec-packages/noir/
+aztec-packages/playground/
+aztec-packages/release-image/
+aztec-packages/scripts/
+aztec-packages/spartan/
+
+# ignore root level files too
+aztec-packages/bootstrap.sh
+aztec-packages/CHANGELOG.md
+aztec-packages/CI.md
+aztec-packages/ci.sh
+aztec-packages/CODEOWNERS
+aztec-packages/CONTRIBUTING.md
+aztec-packages/cspell.json
+aztec-packages/DISCLAIMER.md
+aztec-packages/docker-compose.yml
+aztec-packages/LICENSE
+aztec-packages/proving-systems.code-workspace
+aztec-packages/README.md
+aztec-packages/release-please-config.json
+

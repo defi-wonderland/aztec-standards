@@ -1,0 +1,46 @@
+---
+description: Describes the \@aztec/stdlib\ package, covering core types, interfaces, kernel/block/log data structures, constants, and Merkle tree interfaces.
+globs: 
+alwaysApply: false
+---
+# stdlib Overview
+
+Package: [`@aztec/stdlib`](mdc:aztec-packages/yarn-project/stdlib)
+
+This package provides standard libraries, common types, interfaces, and utilities used across many other TypeScript packages in the `yarn-project`.
+
+**Key Contents:**
+
+*   **Core Types:** Definitions for fundamental Aztec types like `AztecAddress`, `EthAddress`, `Fr` (Field element), `Point`, `GrumpkinPrivateKey`, `CompleteAddress`. Often builds upon types from [`@aztec/foundation`](mdc:.cursor/rules/yarn-project/foundation.mdc).
+*   **Interfaces:** TypeScript interfaces defining the expected shape of core components like `PXE`, `AztecNode`, `Archiver`, `L2BlockSource`, `L2LogsSource`, etc. ([`interfaces/`](mdc:aztec-packages/yarn-project/stdlib/src/interfaces)).
+*   **Data Structures:** Definitions for crucial data structures that flow through the system and circuits:
+    *   **Kernel Structures (`kernel/`):** Defines the inputs and outputs passed between different phases of transaction execution (the kernel circuits).
+        *   `PrivateKernelInputs`, `PublicKernelInputs`: Inputs to the private and public phases of the kernel circuit.
+        *   `KernelCircuitPublicInputs`: The public output of a kernel circuit iteration, containing accumulated data (new notes, nullifiers, logs, state changes, etc.).
+        *   `CombinedAccumulatedData`: Aggregated results from function calls within a transaction.
+        *   `PrivateCallStackItem`, `PublicCallStackItem`: Represent calls between functions.
+        *   `PreviousKernelData`: Links iterations of the kernel circuit together.
+    *   **Log Structures (`logs/`):**
+        *   [`PrivateLog`](mdc:aztec-packages/yarn-project/stdlib/src/logs/private_log.ts): Represents an encrypted log emitted from a private function.
+        *   [`PrivateLogData`](mdc:aztec-packages/yarn-project/stdlib/src/kernel/private_log_data.ts): The structure containing a `PrivateLog` and associated metadata (counters) included in circuit public inputs.
+        *   `UnencryptedLog`: Represents a publicly visible log.
+        *   `TxL2Logs`: Contains logs for a single transaction.
+    *   **Block Structures (`block/`):**
+        *   `L2Block`: Represents a full Layer 2 block.
+        *   `Header`: The header of an L2 block, containing state roots and other metadata.
+        *   `TxEffect`: Summarizes the effects of a single transaction (new notes, nullifiers, logs, etc.).
+    *   **State Structures:**
+        *   `Note`: Represents a piece of private state (UTXO).
+        *   `Nullifier`: Represents a spent note identifier.
+        *   `ContractStorageRead`, `ContractStorageUpdateRequest`: Represent interactions with public contract storage.
+    *   **Merkle Trees (`merkle/`):** Defines interfaces and utilities related to the state trees (Note Hash Tree, Nullifier Tree, Public Data Tree, L1->L2 Message Tree). Actual tree implementations are often in [`@aztec/merkle-tree`](mdc:aztec-packages/yarn-project/merkle-tree) or [`@aztec/world-state`](mdc:.cursor/rules/yarn-project/world-state.mdc).
+*   **Constants (`constants.ts`):** Shared constants like circuit size limits (`MAX_PRIVATE_CALLS_PER_TX`, `MAX_PRIVATE_LOGS_PER_CALL`, `NUMBER_OF_L1_L2_MESSAGES_PER_ROLLUP`, etc.).
+*   **Utilities:** Common utility functions (e.g., serialization helpers, array manipulation, event parsing).
+
+**Relevance to Core Concepts:**
+
+*   **`PrivateLog` / `PrivateLogData`:** Defines the TS representation of encrypted logs.
+*   **Kernel Circuits:** Defines the data structures passed between kernel circuit phases.
+*   **Merkle Trees:** Defines interfaces related to the core state trees.
+
+Think of `stdlib` as the common language and data dictionary for the Aztec TypeScript implementation.

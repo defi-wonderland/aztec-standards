@@ -1,0 +1,77 @@
+---
+description: Overview of the Aztec packages monorepo (\aztec-packages\), linking to rules for key sub-packages like yarn-project, noir-projects, barretenberg, and l1-contracts.
+globs: 
+alwaysApply: false
+---
+# Aztec Packages Monorepo Overview
+
+This document provides an overview of the Aztec Packages monorepo structure and key development areas.
+
+## Core Packages
+
+### `yarn-project/`
+The TypeScript/JavaScript implementation of the Aztec protocol, containing:
+- `aztec.js/` - Main SDK for interacting with Aztec
+- `aztec-node/` - Node implementation
+- `pxe/` - Private eXecution Environment
+- `accounts/` - Account management
+- `cli/` - Command-line interface tools
+- `end-to-end/` - Integration tests
+
+### `noir-projects/`
+Zero-knowledge circuit implementations in Noir:
+- `aztec-nr/` - Core Aztec circuits
+- `noir-protocol-circuits/` - Protocol-specific circuits
+- `noir-contracts/` - Smart contract interfaces
+
+### `barretenberg/`
+Core cryptographic implementation:
+- `cpp/` - C++ cryptographic primitives
+- `ts/` - TypeScript bindings
+- `sol/` - Solidity contracts
+
+### `l1-contracts/`
+Layer 1 smart contracts:
+- `src/core/` - Core protocol contracts
+- `src/periphery/` - Peripheral contracts
+- `src/governance/` - Governance contracts
+
+## Supporting Infrastructure
+
+### `boxes/`
+Project templates and development environments:
+- `react/` - React.js template
+- `vanilla/` - Vanilla JS template
+- `contract-only/` - Smart contract template
+
+### `scripts/`
+Development and deployment utilities:
+- Build scripts
+- Deployment tools
+- Development utilities
+
+### `iac/`
+Infrastructure as Code:
+- `network/` - Network deployment
+- Cloud infrastructure templates
+
+### `spartan/`
+Testing and deployment infrastructure:
+- Chaos testing scenarios
+- Network deployment templates
+- Metrics and monitoring
+
+### `docs/`
+Project documentation:
+- Protocol specifications
+- Developer guides
+- API references
+
+## Development Guidelines
+
+Refer to the main `README.md` for:
+- Setup instructions
+- Contribution guidelines
+- Development workflow
+- Testing requirements
+

@@ -1,0 +1,39 @@
+---
+description: Describes the \@aztec/foundation\ package, providing low-level types (\Fr\, \Point\), crypto wrappers (over Barretenberg), serialization, and constants.
+globs: 
+alwaysApply: false
+---
+# Foundation Package Overview
+
+Package: [`@aztec/foundation`](mdc:aztec-packages/yarn-project/foundation)
+
+This package provides foundational data types, cryptographic primitive wrappers, serialization functions, and constants used throughout the Aztec TypeScript codebase.
+
+**Purpose:**
+
+*   To establish common, low-level building blocks.
+*   To provide a cleaner TypeScript interface over raw cryptographic operations (often implemented in Barretenberg WASM).
+*   To ensure consistent serialization and hashing across different parts of the system.
+
+**Key Contents:**
+
+*   **Core Types:**
+    *   `Fr`: Represents a field element in the BN254 scalar field. The fundamental unit of data in circuits.
+    *   `Fq`: Represents a field element in the BN254 base field.
+    *   `Point`: Represents a point on the Grumpkin elliptic curve (used for keys, commitments).
+    *   `BufferReader`: Utility for reading structured data from buffers.
+    *   Basic TypeScript types (`num`, `bool`, etc.) used in interfaces.
+*   **Cryptography Wrappers:**
+    *   Interfaces and potentially wrapper implementations for cryptographic primitives provided by Barretenberg (via WASM):
+        *   Hashing (Pedersen, Poseidon, SHA256).
+        *   Elliptic Curve Operations (Grumpkin key generation, ECDSA/Schnorr signatures - although higher-level account logic is in `@aztec/accounts`).
+        *   Encryption/Decryption primitives.
+*   **Serialization:** Functions for serializing and deserializing core data structures to/from Buffers or field element arrays (`toBuffer`, `fromBuffer`, `toFields`, `fromFields`). Follows standardized formats expected by circuits and other components.
+*   **Constants:** Fundamental constants related to field sizes, curve parameters, serialization lengths, etc.
+*   **Logging/Debugging:** Basic logging utilities.
+
+**Relationship to Other Packages:**
+
+*   **`@aztec/barretenberg`:** `foundation` often wraps WASM functions exposed by Barretenberg's TypeScript bindings ([`barretenberg/ts/`](mdc:aztec-packages/barretenberg/ts)).
+*   **`@aztec/stdlib`:** Builds upon `foundation` by defining more complex data structures (like `AztecAddress`, `KernelCircuitPublicInputs`) using the primitive types and serialization defined here.
+*   **Most other `@aztec/*` packages:** Depend on `foundation` for core types and utilities.

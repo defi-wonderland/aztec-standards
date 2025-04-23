@@ -1,0 +1,36 @@
+---
+description: Overview of the core Noir language repository (\noir/\), linking to rules for language concepts, standard library, tooling, and source directories.
+globs: 
+alwaysApply: false
+---
+# Noir Language Core Overview
+
+Location: [`noir/`](mdc:noir)
+
+This directory contains the core implementation of the Noir programming language itself, separate from Aztec-specific applications of the language. It includes the compiler, virtual machine, standard library, and developer tooling.
+
+**Key Components & Concepts (Refer to Nested Rules for Details):**
+
+*   **Language Concepts:** Syntax, data types, functions, control flow, traits, generics, comptime, oracles, etc.
+    *   **See:** [`Noir Language Concepts Rule`](mdc:.cursor/rules/noir/language_concepts.mdc)
+*   **Standard Library (`noir_stdlib/`):** Provides common utilities, cryptographic primitives, containers, standard traits, etc.
+    *   **See:** [`Noir Standard Library Rule`](mdc:.cursor/rules/noir/standard_library.mdc)
+    *   Source: [`noir/noir_stdlib/`](mdc:noir/noir_stdlib)
+*   **Compiler (`compiler/`):** Parses Noir code and generates ACIR (Abstract Circuit Intermediate Representation).
+    *   Source: [`noir/compiler/`](mdc:noir/compiler)
+*   **ACVM (`acvm-repo/`):** The Abstract Circuit Virtual Machine executes ACIR bytecode, interacting with backend proving systems.
+    *   Source: [`noir/acvm-repo/`](mdc:noir/acvm-repo)
+*   **Tooling (`tooling/`):** Includes the Nargo build system/package manager, debugger, profiler, language server (LSP), etc.
+    *   **See:** [`Noir Development Tooling Rule`](mdc:.cursor/rules/noir/tooling.mdc)
+    *   Source: [`noir/tooling/`](mdc:noir/tooling) (contains `nargo/`, `lsp/`, etc.)
+*   **Examples (`examples/`):** Contains example Noir programs illustrating language features and standard library usage.
+    *   Source: [`noir/examples/`](mdc:noir/examples)
+*   **Test Programs (`test_programs/`):** Contains a suite of Noir programs used for testing the compiler, ACVM, and tooling across various success and failure scenarios.
+    *   Source: [`noir/test_programs/`](mdc:noir/test_programs)
+
+**Distinction from `aztec-packages/noir-projects/`:**
+
+*   This `noir/` directory contains the **language itself, its generic standard library, and its tooling**.
+*   [`aztec-packages/noir-projects/`](mdc:aztec-packages/noir-projects) (especially [`aztec-nr/`](mdc:.cursor/rules/noir-projects/aztec-nr.mdc)) contains the **Aztec-specific libraries, framework, and protocol circuits** built *using* the Noir language defined here.
+
+For questions about core Noir language features, the generic standard library, or `nargo` and other tools, consult the nested rules linked above and the source directories. For Aztec-specific Noir development, refer to the `aztec-nr` rule.

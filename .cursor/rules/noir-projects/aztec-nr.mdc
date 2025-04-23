@@ -1,0 +1,39 @@
+---
+description: Detailed overview of the \aztec-nr\ Noir library for Aztec contract development, covering context, storage, notes, nullifiers, oracles, logging, and known documentation limitations.
+globs: 
+alwaysApply: false
+---
+# aztec-nr Library Overview
+
+Location: [`aztec-packages/noir-projects/aztec-nr/`](mdc:aztec-packages/noir-projects/aztec-nr)
+
+`aztec-nr` is the core Noir library for developing Aztec contracts. It provides the building blocks, standard interfaces, and utilities needed to write application logic that runs within the Aztec privacy-preserving execution environment.
+
+**Key Concepts & Modules:**
+
+*   **Context (`context.nr`):** Provides access to execution context information (e.g., `msg_sender`, block information) and allows interaction with the environment (e.g., reading state, calling other contracts, emitting logs).
+*   **Storage (`state_vars/`):** Defines patterns for interacting with contract state:
+    *   `PublicState<T>`: For public state variables.
+    *   `PrivateSet<NoteInterface>`: For collections of private notes (UTXOs). Requires a `NoteInterface` implementation (see below).
+    *   `Map<K, V>`: For key-value mappings in private or public state.
+*   **Notes (`note/`, `value-note/`, `address-note/`, etc.):**
+    *   Represent private state using the UTXO model. Notes contain data (e.g., value, owner) and are encrypted.
+    *   A **Note Hash** (commitment) is computed and inserted into the global Note Hash Tree when a note is created.
+    *   A **Nullifier** is computed (deterministically based on the note and user keys) and inserted into the Nullifier Tree when a note is spent/consumed. This prevents double-spends.
+    *   Noir contracts define note structures (`struct MyNote { ... }`) and implement the `NoteInterface` trait ([`note/note_interface.nr`](mdc:aztec-packages/noir-projects/aztec-nr/note/src/note_interface.nr)) which defines how to compute the note hash and nullifier.
+    *   `context.push_new_note(...)` is used to emit new notes.
+    *   `context.notify_nullified(...)` is used to signal note consumption (although nullifiers might be added implicitly by kernel circuits based on note reads).
+*   **Oracles:** The `context` provides functions (oracle calls) to request data from the execution environment (PXE/Node), such as fetching existing notes (`get_notes`, `get_note_with_authentication_witness`), reading public state (`read_public_storage`), or contract data.
+*   **Logging/Events:**
+    *   The mechanism for emitting **encrypted logs** (which become `PrivateLog` in TS) is typically via `context.emit_encrypted_log(...)` or specific note types that implicitly log data (e.g., [`PrivateUintPartialNotePrivateLogContent`](mdc:aztec-packages/noir-projects/aztec-nr/uint-note/src/uint_note.nr)). These low-level logs are intended for the kernel circuits and the user's PXE.
+    *   There isn't a direct Noir equivalent of a high-level `PrivateEvent` like in the TS/PXE layer. Events users observe are typically derived by the PXE decrypting and interpreting the low-level encrypted logs.
+*   **Accounts (`authwit/`, `account/`):** Defines the interface for account contracts (`Account.nr` trait) responsible for validating user actions (e.g., checking signatures, validating witnesses via `authwit`).
+*   **Standard Libraries (`easy-private-state/`, `value-note/`, etc.):** Provide common patterns and abstractions for developers.
+
+**Important Considerations (Based on Feedback):**
+
+*   **Documentation:** Internal documentation (comments) may be limited. Focus on function signatures, struct definitions, and usage patterns in tests or other contracts ([`noir-contracts/`](mdc:aztec-packages/noir-projects/noir-contracts)) for understanding.
+*   **Methods:** Be cautious about assuming method existence. Verify against the actual Noir code in this library.
+*   **Log Encryption:** Log encryption happens implicitly when emitting logs via context or specific note types. The details are abstracted from the Noir developer but handled by the underlying execution environment and circuits.
+
+This library is the foundation for *writing* Aztec contracts in Noir.

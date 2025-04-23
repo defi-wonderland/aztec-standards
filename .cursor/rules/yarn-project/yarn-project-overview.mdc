@@ -1,0 +1,29 @@
+---
+description: Overview of the \yarn-project\ directory within \aztec-packages\, detailing key TypeScript packages (SDK, PXE, Node, Stdlib, etc.) and core concepts like PrivateLog/PrivateEvent.
+globs: 
+alwaysApply: false
+---
+# yarn-project Overview
+
+This directory contains the core TypeScript packages for the Aztec network.
+
+**Key Packages:**
+
+*   **[`@aztec/aztec.js`](mdc:.cursor/rules/yarn-project/aztec-js.mdc)**: The main Software Development Kit (SDK) for developers to interact with the Aztec network. Provides interfaces for wallets, accounts, contract deployment, and interaction. **See:** [`aztec.js/ Rule`](mdc:.cursor/rules/yarn-project/aztec-js.mdc).
+*   **[`@aztec/pxe`](mdc:.cursor/rules/yarn-project/pxe.mdc)**: The Private Execution Environment (PXE). Manages user keys, state, and executes private functions locally. Responsible for transaction simulation, proving, and submission. **See:** [`pxe/ Rule`](mdc:.cursor/rules/yarn-project/pxe.mdc).
+*   **[`@aztec/aztec-node`](mdc:.cursor/rules/yarn-project/aztec-node.mdc)**: Implementation of an Aztec Node, responsible for participating in the P2P network, sequencing transactions, and interacting with L1. **See:** [`aztec-node/ Rule`](mdc:.cursor/rules/yarn-project/aztec-node.mdc).
+*   **[`@aztec/simulator`](mdc:.cursor/rules/yarn-project/simulator.mdc)**: Simulates public and private function execution. Used by the PXE and potentially the Node. **See:** [`simulator/ Rule`](mdc:.cursor/rules/yarn-project/simulator.mdc).
+*   **[`@aztec/accounts`](mdc:aztec-packages/yarn-project/accounts)**: Contains implementations for different account contract types (e.g., ECDSA, Schnorr).
+*   **[`@aztec/foundation`](mdc:.cursor/rules/yarn-project/foundation.mdc)**: Core data structures, serialization logic, and cryptographic primitives (wrapping Barretenberg WASM often). **See:** [`foundation/ Rule`](mdc:.cursor/rules/yarn-project/foundation.mdc).
+*   **[`@aztec/stdlib`](mdc:.cursor/rules/yarn-project/stdlib.mdc)**: Common types, interfaces, and utilities used across multiple packages. Includes definitions for kernel data structures like `PrivateLogData` used in circuit inputs/outputs. **See:** [`stdlib/ Rule`](mdc:.cursor/rules/yarn-project/stdlib.mdc).
+*   **[`@aztec/circuit-types`](mdc:aztec-packages/yarn-project/circuit-types)** (if exists, or similar): Typescript representations of Noir circuit inputs and outputs.
+*   **[`@aztec/key-store`](mdc:aztec-packages/yarn-project/key-store)**: Manages user cryptographic keys.
+*   **[`@aztec/p2p`](mdc:aztec-packages/yarn-project/p2p)**: Peer-to-peer networking logic.
+*   **[`@aztec/archiver`](mdc:aztec-packages/yarn-project/archiver)**: Stores and serves historical L2 block data.
+*   **[`@aztec/world-state`](mdc:.cursor/rules/yarn-project/world-state.mdc)**: Manages the world state Merkle trees (Note Hash Tree, Nullifier Tree, etc.). **See:** [`world-state/ Rule`](mdc:.cursor/rules/yarn-project/world-state.mdc).
+*   **[`@aztec/protocol-contracts`](mdc:aztec-packages/yarn-project/protocol-contracts)**: TypeScript interfaces and utilities for interacting with the core L1 protocol contracts.
+
+**Core Concepts Implemented Here:**
+
+*   **`PrivateLog`**: A low-level data structure ([`PrivateLogData`](mdc:aztec-packages/yarn-project/stdlib/src/kernel/private_log_data.ts)) representing encrypted logs emitted during private function execution. These are embedded within circuit outputs and transactions.
+*   **`PrivateEvent`**: A higher-level concept representing decrypted logs emitted by specific contracts that a user can query via the PXE ([`pxe.getPrivateEvents`](mdc:aztec-packages/yarn-project/aztec.js/src/wallet/base_wallet.ts)). Often derived from `PrivateLog` data after decryption and filtering.

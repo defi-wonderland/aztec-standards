@@ -1,0 +1,36 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+## Function Ordering
+
+1. Constructors
+2. Private functions
+3. Private internal functions
+4. Public functions
+5. Public internal functions
+6. Views
+7. Library methods
+8. Utility functions
+
+## Storage Modification
+
+- When possible, use contract library methods to modify storage
+
+## Self-Referencing
+
+- When enqueuing public calls to self, use: `Contract::at(address)`
+
+## Naming Conventions
+
+- Use `_internal` suffix for internal functions
+- Use `_` prefix for contract library methods
+
+## Parameter Ordering
+
+- Context and storage parameters should be the first parameters in library methods
+
+## Testing Structure
+
+- One test file per contract entrypoint

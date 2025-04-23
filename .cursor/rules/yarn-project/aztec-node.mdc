@@ -1,0 +1,24 @@
+---
+description: Details the responsibilities of the Aztec Node package (\@aztec/aztec-node\), including P2P networking, transaction pool, block building, and L1 interaction.
+globs: 
+alwaysApply: false
+---
+# Aztec Node Overview
+
+Package: [`@aztec/aztec-node`](mdc:aztec-packages/yarn-project/aztec-node)
+
+The Aztec Node is a core piece of the network infrastructure.
+
+**Responsibilities:**
+
+*   **P2P Networking:** Connects to other Aztec Nodes via the [`@aztec/p2p`](mdc:aztec-packages/yarn-project/p2p) layer to gossip transactions and blocks.
+*   **Transaction Pool:** Maintains a pool of pending transactions received from users (via PXEs) or peers.
+*   **Sequencing (Potentially):** Selects transactions from the pool to form L2 blocks. (Note: The exact Sequencer role might be separate or within the Node).
+*   **Public State Execution:** Executes the public function calls within transactions, likely using the [`@aztec/simulator`](mdc:aztec-packages/yarn-project/simulator).
+*   **Block Building:** Constructs L2 blocks containing transaction effects (note hashes, nullifiers, public state changes, logs, etc.).
+*   **Rollup Interaction:** Interacts with the L1 Rollup contract ([`l1-contracts/`](mdc:aztec-packages/l1-contracts)) to submit block commitments and proofs.
+*   **Archiver Interaction:** May send finalized blocks to an [`@aztec/archiver`](mdc:aztec-packages/yarn-project/archiver) for historical storage.
+*   **Synchronization:** Syncs chain data (blocks, state) from L1 and peers.
+*   **Serving Data:** Provides data to connected PXEs (e.g., block headers, public state, encrypted logs).
+
+The node exposes an API (likely JSON-RPC) for PXEs and other clients to interact with.

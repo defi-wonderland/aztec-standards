@@ -1,0 +1,24 @@
+---
+description: Overview of the \noir-projects\ directory within \aztec-packages\, containing Aztec-specific Noir circuits like \aztec-nr\ and protocol circuits.
+globs: 
+alwaysApply: false
+---
+# noir-projects Overview
+
+Location: [`aztec-packages/noir-projects/`](mdc:aztec-packages/noir-projects)
+
+This directory contains Noir language projects specifically related to the Aztec protocol. It's distinct from the core Noir compiler and standard library found in the top-level [`noir/`](mdc:noir) directory.
+
+**Key Subdirectories:**
+
+*   **[`aztec-nr/`](mdc:aztec-packages/noir-projects/aztec-nr)**: The most important package here. Contains the core Aztec Noir library/framework, including:
+    *   Standard contract interfaces and implementations (e.g., Account Contracts, basic patterns).
+    *   Libraries for common Aztec concepts (Notes, State Variables, Context, Oracles).
+    *   Implementations related to Aztec's specific execution environment and privacy features.
+    *   **Note:** As per developer feedback, documentation within `aztec-nr` might be sparse, leading to potential AI inaccuracies. Rely on code structure and explicit types.
+    *   **See:** [`aztec-nr/ Rule`](mdc:.cursor/rules/noir-projects/aztec-nr.mdc).
+*   **[`noir-contracts/`](mdc:aztec-packages/noir-projects/noir-contracts)**: Contains example application-level Noir contracts built using `aztec-nr`.
+*   **[`noir-protocol-circuits/`](mdc:aztec-packages/noir-projects/noir-protocol-circuits)**: Implementations of the core Aztec protocol circuits (Kernel Circuits, Rollup Circuits) in Noir.
+*   **[`mock-protocol-circuits/`](mdc:aztec-packages/noir-projects/mock-protocol-circuits)**: Mock implementations of protocol circuits, likely used for testing the TS stack without requiring full proofs.
+
+When dealing with Noir code *within the context of Aztec*, this directory (especially `aztec-nr/`) is the primary place to look.

@@ -1,0 +1,18 @@
+---
+description: Describes the \aztec-standards\ repository, focusing on standard Noir contract implementations like the Token contract.
+globs: 
+alwaysApply: false
+---
+# Aztec Standards (Wonderland code) Overview
+
+Location: [`aztec-standards/`](mdc:aztec-standards)
+
+This directory (`aztec-standards`) contains a collection of smart contracts, mostly written in Noir and developed by Wonderland.
+These contracts are designed to adhere to standards and patterns suitable for the Aztec Network ecosystem, likely interacting with or built upon the components found in the main `aztec-packages` monorepo.
+
+**Key Contents:**
+
+*   **[`src/token_contract/`](mdc:aztec-standards/src/token_contract)**: A standard implementation of a private token contract in Noir. This serves as a common interface (`Token.nr`) and a reference implementation (`TokenContract.nr`) for fungible tokens on Aztec.
+*   **[`src/libs/`](mdc:aztec-standards/src/libs)**: Contains shared Noir libraries used by the standard contracts, such as:
+    *   [`balance-set/`](mdc:aztec-standards/src/libs/balance-set): Likely manages private balances using notes.
+*   **[`src/ts/`](mdc:aztec-standards/src/ts)**: TypeScript code, primarily for testing ([`test/`](mdc:aztec-standards/src/ts/test)) the standard Noir contracts using the Aztec SDK.

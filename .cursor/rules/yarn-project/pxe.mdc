@@ -1,0 +1,22 @@
+---
+description: Details the responsibilities of the Private Execution Environment (PXE) package (\@aztec/pxe\), including key management, private state, execution, and proving.
+globs: 
+alwaysApply: false
+---
+# PXE (Private Execution Environment) Overview
+
+Package: [`@aztec/pxe`](mdc:aztec-packages/yarn-project/pxe)
+
+The PXE is a crucial component run locally by users (or applications on their behalf).
+
+**Responsibilities:**
+
+*   **Key Management:** Securely stores and manages user private keys via the [`@aztec/key-store`](mdc:aztec-packages/yarn-project/key-store).
+*   **Private State Management:** Maintains the user's private state (notes, nullifiers) synchronized with the network, often using a local database.
+*   **Private Function Execution:** Executes the bytecode of private functions locally using the [`@aztec/simulator`](mdc:aztec-packages/yarn-project/simulator).
+*   **Transaction Simulation:** Simulates entire transactions (including public parts) to ensure validity before submission.
+*   **Proof Generation:** Coordinates with the [`@aztec/prover-client`](mdc:aztec-packages/yarn-project/prover-client) (which interfaces with [`@aztec/bb-prover`](mdc:aztec-packages/yarn-project/bb-prover)/Barretenberg) to generate proofs for private execution.
+*   **Transaction Submission:** Sends valid, proven transactions to an Aztec Node.
+*   **Note Decryption and Event Handling:** Scans blocks received from the node, attempts decryption of logs and notes using user keys, stores relevant private state, and makes decrypted `PrivateEvent`s available to the user/application.
+
+The main interface is often the `PXE` class/service within the package.
