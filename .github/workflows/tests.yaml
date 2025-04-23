@@ -47,14 +47,8 @@ jobs:
         - name: Codegen
           run: script -e -c "aztec codegen target --outdir src/artifacts"
         
-        - name: Bench
-          run: |
-            mv bench.json bench_main.json
-            script -e -c "yarn bench bench.json"
-
-        - name: Run compare-bench
-          run: |
-            yarn tsx src/ts/scripts/compare-bench.ts bench_main.json bench.json bench_diff.md 0.024
+        - name: Benchmark
+          run: yarn bench
 
         - name: Comment diff
           uses: peter-evans/create-or-update-comment@v4
