@@ -271,9 +271,18 @@ pub contract NFT {
         _initialize_public_token_owner(storage.public_owners, to, token_id);
     }
 
+    /// @notice Sets the existence of a token
+    /// @dev Asserts token does not exist when setting `exists` to true (minting) and that token exist when setting `exists` to false (burning)
+    /// @param token_id The id of the token to set
+    /// @param exists The new exists value
     #[public]
     #[internal]
     fn set_nft_exists_internal(token_id: Field, exists: bool) {
+        if exists {
+            assert(!storage.nft_exists.at(token_id).read(), "token already exists");
+        } else {
+            assert(storage.nft_exists.at(token_id).read(), "token does not exist");
+        }
         storage.nft_exists.at(token_id).write(exists);
     }
 
@@ -346,7 +355,6 @@ pub contract NFT {
         _validate_minter(context.msg_sender(), storage.minter.read());
 
         let nft = NFT::at(context.this_address());
-        nft.token_exists_internal(token_id).enqueue(&mut context);
         nft.set_nft_exists_internal(token_id, true).enqueue(&mut context);
         storage.private_nfts.at(to).insert(NFTNote::new(token_id, to)).emit(encode_and_encrypt_note(
             &mut context,
@@ -367,14 +375,6 @@ pub contract NFT {
 
         storage.nft_exists.at(token_id).write(true);
         storage.public_owners.at(token_id).write(to);
-    }
-
-    /// @notice Validates the token id to be minted
-    /// @param token_id The id of the token to mint
-    #[public]
-    #[internal]
-    fn token_exists_internal(token_id: Field) {
-        assert(!storage.nft_exists.at(token_id).read(), "token already exists");
     }
 
     /** ==========================================================
@@ -403,7 +403,6 @@ pub contract NFT {
     /// @param nonce The nonce used for authwitness
     #[public]
     fn burn_public(from: AztecAddress, token_id: Field, nonce: Field) {
-        assert(storage.nft_exists.at(token_id).read(), "token does not exist");
         _validate_from_public(&mut context, from, nonce);
 
         _update_public_token_owner(storage.public_owners, from, AztecAddress::zero(), token_id);
@@ -502,8 +501,6 @@ pub contract NFT {
         to: AztecAddress,
         token_id: Field,
     ) {
-        let owner = public_owners.at(token_id).read();
-        assert(owner.eq(AztecAddress::zero()), "token has public owner");
         public_owners.at(token_id).write(to);
     }
 
