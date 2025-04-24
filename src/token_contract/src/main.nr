@@ -47,6 +47,27 @@ pub contract Token {
         total_supply: PublicMutable<u128, Context>,
         public_balances: Map<AztecAddress, PublicMutable<u128, Context>, Context>,
         minter: PublicImmutable<AztecAddress, Context>,
+        asset: PublicImmutable<AztecAddress, Context>
+    }
+
+    /// @notice Initializes the token with an asset
+    /// @dev Since this constructor doesn't set a minter address the mint functions will be disabled
+    /// @param name The name of the token
+    /// @param symbol The symbol of the token
+    /// @param decimals The number of decimals of the token
+    /// @param asset The asset of the token
+    #[public]
+    #[initializer]
+    fn constructor_with_asset(
+        name: str<31>,
+        symbol: str<31>,
+        decimals: u8,
+        asset: AztecAddress
+    ) {
+        storage.name.initialize(FieldCompressedString::from_string(name));
+        storage.symbol.initialize(FieldCompressedString::from_string(symbol));
+        storage.decimals.initialize(decimals);
+        storage.asset.initialize(asset);
     }
 
     /// @notice Initializes the token with an initial supply
@@ -675,5 +696,78 @@ pub contract Token {
         } else {
             assert(nonce == 0, "invalid nonce");
         }
+    }
+
+      /** ==========================================================
+     * ================== VAULT ==================================
+     * ======================================================== */
+
+    #[public]
+    fn deposit_public_to_public(assets: u128, receiver: AztecAddress, transfer_public_to_public_nonce: Field) {
+        let max_shares = _max_mint();
+        assert(assets <= max_shares, "Max mint exceeded");
+
+        let total_assets = Token::at(storage.asset.read()).balance_of_public(context.this_address()).call(&mut context);
+
+        let ten_to_the_power_of_decimal_offset = 10.pow_32(0);  
+        let _shares = assets * (storage.total_supply.read() + ten_to_the_power_of_decimal_offset) / (total_assets + 1)
+
+        // Take the asset from the caller
+        Token::at(storage.asset.read()).transfer_public_to_public(context.msg_sender(), context.this_address(), _shares, transfer_public_to_public_nonce).call(&mut context);
+
+        // mint shares to the receiver
+        _increase_public_balance(storage.public_balance, receiver, _shares);
+        _increase_total_supply(storage.total_supply, _shares);
+    }
+
+    #[private]
+    fn deposit_public_to_private(assets: u128, receiver: AztecAddress, total_supply: u128, total_assets: u128, transfer_private_to_public_nonce: Field) {
+        let max_shares = _max_mint();
+        assert(assets <= max_shares, "Max mint exceeded");
+
+        let ten_to_the_power_of_decimal_offset = 10.pow_32(0);  
+        let _shares = assets * (total_supply + ten_to_the_power_of_decimal_offset) / (total_assets + 1)
+
+        // Take the asset from the caller
+        Token::at(storage.asset.read()).transfer_private_to_public(context.msg_sender(), context.this_address(), assets, transfer_private_to_public_nonce).call(&mut context);
+        
+        Token::at(context.this_address()).validate_total_supply_and_assets_and_increase_internal(total_supply, total_assets, _shares).enqueue(
+            &mut context,
+        );
+
+        // mint shares to the receiver
+        _increase_private_balance(
+            &mut context,
+            storage.private_balance,
+            receiver,
+            _shares,
+        );
+    }
+
+    #[public]
+    fn validate_total_supply_and_assets_and_increase_internal(total_supply_received: u128, total_assets_received: u128, amount: u128) {
+        let current_total_supply = storage.total_supply.read();
+
+        // Check that the total supply received is greater than or equal to the current total supply
+        // The depositing user might not have the exact total supply meaning they could have received 
+        // less shares than they could have received if they had the exact total supply
+        // This is done to avoid a lot of reverts and improve user experience
+        assert(total_supply_received >= current_total_supply, "Total supply mismatch");
+
+        let current_total_assets = Token::at(storage.asset.read()).balance_of_public(context.this_address()).call(&mut context);
+
+        // Check that the total assets received is less than or equal to the current total assets
+        // The depositing user might not have the exact total assets meaning they could have received 
+        // less shares than they could have received if they had the exact total assets
+        // This is done to avoid a lot of reverts and improve user experience
+        assert(total_assets_received <= current_total_assets, "Total assets mismatch");
+
+        // Increase the total supply by the amount received
+        storage.total_supply.write(current_total_supply + amount);
+    }
+
+    #[contract_library_method]
+    fn _max_mint() -> u128 {
+        (-1 as u128)
     }
 }
