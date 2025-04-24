@@ -1,0 +1,16 @@
+{
+  "summary": {
+    "error": 1
+  },
+  "results": [
+    {
+      "name": "BENCHMARK_RUNNER_ERROR",
+      "totalGateCount": 0,
+      "gateCounts": [],
+      "gas": {}
+    }
+  ],
+  "gasSummary": {
+    "error": 1
+  }
+}

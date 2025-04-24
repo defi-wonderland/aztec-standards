@@ -1,4 +1,7 @@
 [workspace]
 members = [
-"src/token_contract"
+  "src/token_contract"
 ]
+
+[benchmark]
+regression_threshold_percentage = 5

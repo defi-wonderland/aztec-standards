@@ -7,12 +7,12 @@ import {
 import { getInitialTestAccountsWallets } from '@aztec/accounts/testing';
 import { parseUnits } from 'viem';
 
-import { TokenContract } from '../artifacts/Token.js';
-import { deployTokenWithMinter } from '../ts/test/utils.js';
-import { type BenchmarkConfig } from '../../scripts/common.benchmark.js';
+import { TokenContract } from '../src/artifacts/Token.js';
+import { deployTokenWithMinter } from '../src/ts/test/utils.js';
+import { type BenchmarkConfig, type BenchmarkRunContext } from '../scripts/benchmark.js';
 
 // Token-specific context extending the generic BenchmarkRunContext
-interface TokenBenchmarkContext {
+interface TokenBenchmarkContext extends BenchmarkRunContext {
   pxe: PXE;
   deployer: AccountWallet;
   accounts: AccountWallet[];

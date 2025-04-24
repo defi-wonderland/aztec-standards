@@ -49,12 +49,13 @@ jobs:
         
         - name: Benchmark
           run: yarn bench
+          uses: defi-wonderalnd/aztec-benchmark-diff@dev
 
         - name: Comment diff
           uses: peter-evans/create-or-update-comment@v4
           with:
             issue-number: ${{ github.event.pull_request.number }}
-            body-file: bench_diff.md
+            body-file: benchmark_diff.md
 
         - name: Start PXE
           run: |
