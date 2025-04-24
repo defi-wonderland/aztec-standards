@@ -48,7 +48,7 @@ jobs:
           run: script -e -c "aztec codegen target --outdir src/artifacts"
         
         - name: Benchmark
-          uses: defi-wonderland/aztec-benchmark-diff@7130cd504acf2467da0c5496c890d476096de847
+          uses: defi-wonderland/aztec-benchmark-diff@6be0bdd562b642f60c5233dd83277ba4805b27af
 
         - name: Comment diff
           uses: peter-evans/create-or-update-comment@v4
