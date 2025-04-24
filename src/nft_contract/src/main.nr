@@ -529,14 +529,6 @@ pub contract NFT {
         assert(minter.eq(sender), "caller is not minter");
     }
 
-    #[contract_library_method]
-    fn _token_exists(
-        nft_exists: Map<Field, PublicMutable<bool, &mut PublicContext>, &mut PublicContext>,
-        token_id: Field,
-    ) -> bool {
-        nft_exists.at(token_id).read()
-    }
-
     /** ==========================================================
      * ================== AUTH LIBRARIES =========================
      * ======================================================== */
