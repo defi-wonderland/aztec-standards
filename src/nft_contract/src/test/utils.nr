@@ -148,3 +148,14 @@ pub unconstrained fn owns_private_nft(
     cheatcodes::set_contract_address(current_contract_address);
     nft_found
 }
+
+pub unconstrained fn get_commitment_stored(nft_contract_address: AztecAddress, commitment: Field) -> bool {
+    let current_contract_address = get_contract_address();
+    cheatcodes::set_contract_address(nft_contract_address);
+    let block_number = get_block_number();
+
+    let stored: bool = storage_read(nft_contract_address, commitment, block_number);
+
+    cheatcodes::set_contract_address(current_contract_address);
+    stored
+}

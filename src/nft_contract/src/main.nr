@@ -101,7 +101,7 @@ pub contract NFT {
 
         _remove_private_token_owner(storage.private_nfts.at(from), token_id);
         NFT::at(context.this_address())
-            .update_public_token_owner_internal(from, to, token_id)
+            .initialize_public_token_owner_internal(to, token_id)
             .enqueue(&mut context);
         let commitment =
             _initialize_transfer_commitment(&mut context, storage.private_nfts, from, to);
