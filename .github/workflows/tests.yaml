@@ -48,7 +48,6 @@ jobs:
           run: script -e -c "aztec codegen target --outdir src/artifacts"
         
         - name: Benchmark
-          run: yarn bench
           uses: defi-wonderalnd/aztec-benchmark-diff@dev
 
         - name: Comment diff
