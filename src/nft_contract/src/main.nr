@@ -211,7 +211,7 @@ pub contract NFT {
         _validate_from_public(&mut context, from, nonce);
         _validate_public_token_owner(storage.public_owners, from, token_id);
 
-        _update_public_token_owner(storage.public_owners, from, to, token_id);
+        _update_public_token_owner(storage.public_owners, to, token_id);
     }
 
     /// @notice Transfers a token to a commitment
@@ -229,8 +229,8 @@ pub contract NFT {
     ) {
         _validate_from_public(&mut context, from, nonce);
         _validate_public_token_owner(storage.public_owners, from, token_id);
-        
-        _update_public_token_owner(storage.public_owners, from, AztecAddress::zero(), token_id);
+
+        _update_public_token_owner(storage.public_owners, AztecAddress::zero(), token_id);
         _transfer_token_to_commitment(&mut context, commitment, token_id);
     }
 
