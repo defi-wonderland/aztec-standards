@@ -703,7 +703,7 @@ pub contract Token {
      * ======================================================== */
 
     #[public]
-    fn deposit_public_to_public(assets: u128, receiver: AztecAddress, transfer_public_to_public_nonce: Field) {
+    fn deposit_public_to_public(assets: u128, receiver: AztecAddress, nonce: Field) {
         let max_shares = _max_mint();
         assert(assets <= max_shares, "Max mint exceeded");
 
@@ -713,7 +713,7 @@ pub contract Token {
         let _shares = assets * (storage.total_supply.read() + ten_to_the_power_of_decimal_offset) / (total_assets + 1)
 
         // Take the asset from the caller
-        Token::at(storage.asset.read()).transfer_public_to_public(context.msg_sender(), context.this_address(), _shares, transfer_public_to_public_nonce).call(&mut context);
+        Token::at(storage.asset.read()).transfer_public_to_public(context.msg_sender(), context.this_address(), _shares, nonce).call(&mut context);
 
         // mint shares to the receiver
         _increase_public_balance(storage.public_balance, receiver, _shares);
@@ -721,7 +721,7 @@ pub contract Token {
     }
 
     #[private]
-    fn deposit_public_to_private(assets: u128, receiver: AztecAddress, total_supply: u128, total_assets: u128, transfer_private_to_public_nonce: Field) {
+    fn deposit_private_to_public(assets: u128, receiver: AztecAddress, total_supply: u128, total_assets: u128, nonce: Field) {
         let max_shares = _max_mint();
         assert(assets <= max_shares, "Max mint exceeded");
 
@@ -729,8 +729,29 @@ pub contract Token {
         let _shares = assets * (total_supply + ten_to_the_power_of_decimal_offset) / (total_assets + 1)
 
         // Take the asset from the caller
-        Token::at(storage.asset.read()).transfer_private_to_public(context.msg_sender(), context.this_address(), assets, transfer_private_to_public_nonce).call(&mut context);
+        Token::at(storage.asset.read()).transfer_private_to_public(context.msg_sender(), context.this_address(), assets, nonce).call(&mut context);
         
+        Token::at(context.this_address()).validate_total_supply_and_assets_and_increase_internal(total_supply, total_assets, _shares).enqueue(
+            &mut context,
+        );
+
+        // mint shares to the receiver in public
+        Token::at(context.this_address()).increase_public_balance_internal(receiver, _shares).enqueue(
+            &mut context,
+        );
+    }
+
+    #[private]
+    fn deposit_private_to_private(assets: u128, receiver: AztecAddress, total_supply: u128, total_assets: u128, nonce: Field) {
+        let max_shares = _max_mint();
+        assert(assets <= max_shares, "Max mint exceeded");
+
+        let ten_to_the_power_of_decimal_offset = 10.pow_32(0);  
+        let _shares = assets * (total_supply + ten_to_the_power_of_decimal_offset) / (total_assets + 1)
+
+        // Take the asset from the caller
+        Token::at(storage.asset.read()).transfer_private_to_public(context.msg_sender(), context.this_address(), assets, nonce).call(&mut context);
+
         Token::at(context.this_address()).validate_total_supply_and_assets_and_increase_internal(total_supply, total_assets, _shares).enqueue(
             &mut context,
         );
