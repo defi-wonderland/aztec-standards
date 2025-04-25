@@ -78,7 +78,7 @@ pub contract NFT {
 
         _remove_private_token_owner(storage.private_nfts.at(from), token_id);
         NFT::at(context.this_address())
-            .initialize_public_token_owner_internal(to, token_id)
+            .update_public_token_owner_from_zero_internal(to, token_id)
             .enqueue(&mut context);
     }
 
@@ -101,7 +101,7 @@ pub contract NFT {
 
         _remove_private_token_owner(storage.private_nfts.at(from), token_id);
         NFT::at(context.this_address())
-            .initialize_public_token_owner_internal(to, token_id)
+            .update_public_token_owner_from_zero_internal(to, token_id)
             .enqueue(&mut context);
         let commitment =
             _initialize_transfer_commitment(&mut context, storage.private_nfts, from, to);
@@ -209,8 +209,9 @@ pub contract NFT {
         nonce: Field,
     ) {
         _validate_from_public(&mut context, from, nonce);
+        _validate_public_token_owner(storage.public_owners, from, token_id);
 
-        _update_public_token_owner(storage.public_owners, from, to, token_id);
+        _update_public_token_owner(storage.public_owners, to, token_id);
     }
 
     /// @notice Transfers a token to a commitment
@@ -227,8 +228,9 @@ pub contract NFT {
         nonce: Field,
     ) {
         _validate_from_public(&mut context, from, nonce);
+        _validate_public_token_owner(storage.public_owners, from, token_id);
 
-        _update_public_token_owner(storage.public_owners, from, AztecAddress::zero(), token_id);
+        _update_public_token_owner(storage.public_owners, AztecAddress::zero(), token_id);
         _transfer_token_to_commitment(&mut context, commitment, token_id);
     }
 
@@ -253,11 +255,11 @@ pub contract NFT {
     /// @param from The address of the sender
     /// @param to The address of the recipient
     /// @param token_id The id of the token to update
-    /// @param from_private A flag indicating if the token is from a private address
     #[public]
     #[internal]
     fn update_public_token_owner_internal(from: AztecAddress, to: AztecAddress, token_id: Field) {
-        _update_public_token_owner(storage.public_owners, from, to, token_id);
+        _validate_public_token_owner(storage.public_owners, from, token_id);
+        _update_public_token_owner(storage.public_owners, to, token_id);
     }
 
     /// @notice Initializes the public token owner from zero address
@@ -265,8 +267,8 @@ pub contract NFT {
     /// @param exists The new exists value
     #[public]
     #[internal]
-    fn initialize_public_token_owner_internal(to: AztecAddress, token_id: Field) {
-        _initialize_public_token_owner(storage.public_owners, to, token_id);
+    fn update_public_token_owner_from_zero_internal(to: AztecAddress, token_id: Field) {
+        _update_public_token_owner(storage.public_owners, to, token_id);
     }
 
     /// @notice Sets the existence of a token
@@ -403,7 +405,8 @@ pub contract NFT {
     fn burn_public(from: AztecAddress, token_id: Field, nonce: Field) {
         _validate_from_public(&mut context, from, nonce);
 
-        _update_public_token_owner(storage.public_owners, from, AztecAddress::zero(), token_id);
+        _validate_public_token_owner(storage.public_owners, from, token_id);
+        _update_public_token_owner(storage.public_owners, AztecAddress::zero(), token_id);
         storage.nft_exists.at(token_id).write(false);
     }
 
@@ -473,28 +476,10 @@ pub contract NFT {
 
     /// @notice Updates the public token owner
     /// @param public_owners The public owners map
-    /// @param from The address of the sender
     /// @param to The address of the recipient
     /// @param token_id The id of the token to update
-    /// @param from_private A flag indicating if the token is from a private address
     #[contract_library_method]
     fn _update_public_token_owner(
-        public_owners: Map<Field, PublicMutable<AztecAddress, &mut PublicContext>, &mut PublicContext>,
-        from: AztecAddress,
-        to: AztecAddress,
-        token_id: Field,
-    ) {
-        let owner = public_owners.at(token_id).read();
-        assert(owner.eq(from), "caller is not owner");
-        public_owners.at(token_id).write(to);
-    }
-
-    /// @notice Initializes the public token owner from zero address
-    /// @param public_owners The public owners map
-    /// @param to The address of the recipient
-    /// @param token_id The id of the token to update
-    #[contract_library_method]
-    fn _initialize_public_token_owner(
         public_owners: Map<Field, PublicMutable<AztecAddress, &mut PublicContext>, &mut PublicContext>,
         to: AztecAddress,
         token_id: Field,
@@ -519,6 +504,20 @@ pub contract NFT {
         // expensive.
         assert(context.storage_read(commitment.commitment()), "invalid commitment");
         commitment.complete(token_id, context);
+    }
+
+    /// @notice Validates that the caller is the owner of a token
+    /// @param public_owners The public owners map
+    /// @param from The address of the sender
+    /// @param token_id The id of the token to validate
+    #[contract_library_method]
+    fn _validate_public_token_owner(
+        public_owners: Map<Field, PublicMutable<AztecAddress, &mut PublicContext>, &mut PublicContext>,
+        from: AztecAddress,
+        token_id: Field,
+    ) {
+        let owner = public_owners.at(token_id).read();
+        assert(owner.eq(from), "caller is not owner");
     }
 
     /// @notice Validates that the caller is an authorized minter
