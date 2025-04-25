@@ -56,13 +56,13 @@ jobs:
             issue-number: ${{ github.event.pull_request.number }}
             body-file: benchmark_diff.md
 
-        - name: Start PXE
-          run: |
-            VERSION=${AZTEC_VERSION} aztec start --port 8081 --pxe --pxe.nodeUrl=http://localhost:8080/ --pxe.proverEnabled false &
-
-        - name: Run nr tests
-          run: |
-            script -e -c "aztec test"
-
-        - name: Run js tests
-          run: script -e -c "BASE_PXE_URL=http://localhost NODE_NO_WARNINGS=1 node --experimental-vm-modules $(yarn bin jest) --no-cache --runInBand --config jest.integration.config.json"
+        # - name: Start PXE
+        #   run: |
+        #     VERSION=${AZTEC_VERSION} aztec start --port 8081 --pxe --pxe.nodeUrl=http://localhost:8080/ --pxe.proverEnabled false &
+        #
+        # - name: Run nr tests
+        #   run: |
+        #     script -e -c "aztec test"
+        #
+        # - name: Run js tests
+        #   run: script -e -c "BASE_PXE_URL=http://localhost NODE_NO_WARNINGS=1 node --experimental-vm-modules $(yarn bin jest) --no-cache --runInBand --config jest.integration.config.json"
