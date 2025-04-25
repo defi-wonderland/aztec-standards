@@ -94,7 +94,6 @@ pub contract NFT {
         from: AztecAddress,
         to: AztecAddress,
         token_id: Field,
-        commitment: PartialNFTNote,
         nonce: Field,
     ) -> PartialNFTNote {
         _validate_from_private(&mut context, from, nonce);
