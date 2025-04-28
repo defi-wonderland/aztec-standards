@@ -246,7 +246,7 @@ describe('Token - Single PXE', () => {
         .methods.transfer_private_to_public(alice.getAddress(), alice.getAddress(), AMOUNT + 1n, 0)
         .send()
         .wait(),
-    ).rejects.toThrow(/balance too low/);
+    ).rejects.toThrow(/Balance too low/);
   }, 300_000);
 
   it('can transfer tokens between private balances', async () => {
@@ -272,7 +272,7 @@ describe('Token - Single PXE', () => {
         .methods.transfer_private_to_private(alice.getAddress(), bob.getAddress(), AMOUNT + 1n, 0)
         .send()
         .wait(),
-    ).rejects.toThrow(/balance too low/);
+    ).rejects.toThrow(/Balance too low/);
 
     // Check total supply hasn't changed
     const totalSupply = await token.methods.total_supply().simulate();
