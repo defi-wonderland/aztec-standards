@@ -164,6 +164,7 @@ impl Packable<3> for BigNumField {
 
     fn unpack(fields: [Field; 3]) -> Self {
         if fields[2] == 0 {
+            // Reading uninitialized variable from storage, which was never packed.
             Self { limbs: [fields[0], fields[1], fields[2]] }
         } else {
             Self { limbs: [fields[0], fields[1], fields[2] - 0x80000000000000000000000000000000] }
