@@ -4,4 +4,4 @@ members = [
 ]
 
 [benchmark]
-regression_threshold_percentage = 5
+token = 'benchmarks/token_contract.benchmark.ts'

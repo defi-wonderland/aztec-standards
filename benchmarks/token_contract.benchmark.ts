@@ -7,12 +7,14 @@ import {
 import { getInitialTestAccountsWallets } from '@aztec/accounts/testing';
 import { parseUnits } from 'viem';
 
+// Import the new Benchmark base class and context
+import { Benchmark, BenchmarkContext } from 'benchmark-cli';
+
 import { TokenContract } from '../src/artifacts/Token.js';
 import { deployTokenWithMinter } from '../src/ts/test/utils.js';
-import { type BenchmarkConfig, type BenchmarkRunContext } from '../scripts/benchmark.js';
 
-// Token-specific context extending the generic BenchmarkRunContext
-interface TokenBenchmarkContext extends BenchmarkRunContext {
+// Extend the BenchmarkContext from the new package
+interface TokenBenchmarkContext extends BenchmarkContext {
   pxe: PXE;
   deployer: AccountWallet;
   accounts: AccountWallet[];
@@ -26,25 +28,26 @@ function amt(x: bigint | number | string) {
   return parseUnits(x.toString(), 18);
 }
 
-export const benchmarkConfig: BenchmarkConfig = {
+// Use export default class extending Benchmark
+export default class TokenContractBenchmark extends Benchmark {
   /**
    * Sets up the benchmark environment for the TokenContract.
    * Creates PXE client, gets accounts, and deploys the contract.
    */
-  setup: async (): Promise<TokenBenchmarkContext> => {
+  async setup(): Promise<TokenBenchmarkContext> {
     const pxe = createPXEClient('http://localhost:8080');
     const accounts = await getInitialTestAccountsWallets(pxe);
     const deployer = accounts[0]!;
     const deployedBaseContract = await deployTokenWithMinter(deployer);
     const tokenContract = await TokenContract.at(deployedBaseContract.address, deployer);
     return { pxe, deployer, accounts, tokenContract };
-  },
+  }
 
   /**
    * Returns the list of TokenContract methods to be benchmarked.
    */
-  getMethods: (context): ContractFunctionInteraction[] => {
-    const { tokenContract, deployer, accounts } = context as TokenBenchmarkContext;
+  getMethods(context: TokenBenchmarkContext): ContractFunctionInteraction[] {
+    const { tokenContract, deployer, accounts } = context;
     const alice = deployer;
     const bob = accounts[1];
     const owner = alice.getAddress();
@@ -67,5 +70,5 @@ export const benchmarkConfig: BenchmarkConfig = {
     ];
 
     return methods.filter(Boolean);
-  },
-};
+  }
+}
