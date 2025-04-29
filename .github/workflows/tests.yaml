@@ -48,7 +48,7 @@ jobs:
           run: script -e -c "aztec codegen target --outdir src/artifacts"
         
         - name: Benchmark
-          uses: defi-wonderland/aztec-benchmark-diff/action@dev
+          uses: defi-wonderland/aztec-benchmark-diff/action@fix/troubleshoot
           with:
             threshold: '2.0' 
             output_markdown_path: 'benchmark_diff.md' 
