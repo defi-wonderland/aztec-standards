@@ -37,19 +37,34 @@ impl BigNumField {
     }
 
     // Multiplies two Field values without overflow checks - use with caution
-    // pub fn mul_unchecked(self, other: Self) -> Self {
-    //     Self { value: self.value * other.value }
-    // }
+    pub fn mul_unchecked(self, other: Self) -> Self {
+        let self_bn: U256 = U256::from_limbs([self.limbs[0] as u128, self.limbs[1] as u128, self.limbs[2] as u128]);
+        let other_bn: U256 = U256::from_limbs([other.limbs[0] as u128, other.limbs[1] as u128, other.limbs[2] as u128]);
+        
+        let result: U256 = self_bn * other_bn;
 
-    // // Adds two Field values without overflow checks - use with caution
-    // pub fn add_unchecked(self, other: Self) -> Self {
-    //     Self { value: self.value + other.value }
-    // }
+        Self { limbs: [result.limbs[0] as Field, result.limbs[1] as Field, result.limbs[2] as Field] } 
+    }
 
-    // // Subtracts two Field values without underflow checks - use with caution
-    // pub fn sub_unchecked(self, other: Self) -> Self {
-    //     Self { value: self.value - other.value }
-    // }
+    // Adds two Field values without overflow checks - use with caution
+    pub fn add_unchecked(self, other: Self) -> Self {
+        let self_bn: U256 = U256::from_limbs([self.limbs[0] as u128, self.limbs[1] as u128, self.limbs[2] as u128]);
+        let other_bn: U256 = U256::from_limbs([other.limbs[0] as u128, other.limbs[1] as u128, other.limbs[2] as u128]);
+        
+        let result: U256 = self_bn + other_bn;
+        
+        Self { limbs: [result.limbs[0] as Field, result.limbs[1] as Field, result.limbs[2] as Field] }   
+    }
+
+    // Subtracts two Field values without underflow checks - use with caution
+    pub fn sub_unchecked(self, other: Self) -> Self {
+        let self_bn: U256 = U256::from_limbs([self.limbs[0] as u128, self.limbs[1] as u128, self.limbs[2] as u128]);
+        let other_bn: U256 = U256::from_limbs([other.limbs[0] as u128, other.limbs[1] as u128, other.limbs[2] as u128]);
+        
+        let result: U256 = self_bn - other_bn;
+        
+        Self { limbs: [result.limbs[0] as Field, result.limbs[1] as Field, result.limbs[2] as Field] }  
+    }
 }
 
 impl ToField for BigNumField {
@@ -131,18 +146,6 @@ impl Eq for BigNumField {
     }
 }
 
-// impl Serialize<3> for BigNumField {
-//     fn serialize(self) -> [Field; 3] {
-//         [self.limbs[0], self.limbs[1], self.limbs[2] + 0x80000000000000000000000000000000]
-//     }
-// }
-
-// impl Deserialize<3> for BigNumField {
-//     fn deserialize(fields: [Field; 3]) -> BigNumField {
-//         Self { limbs: [fields[0], fields[1], fields[2] - 0x80000000000000000000000000000000] }
-//     }
-// }
-
 impl Serialize<3> for BigNumField {
     fn serialize(self) -> [Field; 3] {
         [self.limbs[0], self.limbs[1], self.limbs[2]]
@@ -171,12 +174,4 @@ impl Packable<3> for BigNumField {
         }
         
     }
-
-    // fn pack(self) -> [Field; 3] {
-    //     [self.limbs[0], self.limbs[1], self.limbs[2]]
-    // }
-
-    // fn unpack(fields: [Field; 3]) -> Self {
-    //     Self { limbs: [fields[0], fields[1], fields[2]] }
-    // }
 }
