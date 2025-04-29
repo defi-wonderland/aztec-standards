@@ -4,7 +4,7 @@ use authwit::cheatcodes as authwit_cheatcodes;
 use aztec::prelude::AztecAddress;
 
 #[test]
-unconstrained fn burn_public_success() {
+unconstrained fn nft_burn_public_success() {
     // Setup and mint NFT to owner in public state
     let token_id = 10000;
     let (env, nft_contract_address, owner, minter, recipient, token_id) = 
@@ -12,7 +12,7 @@ unconstrained fn burn_public_success() {
 
     // Verify initial state
     utils::assert_owns_public_nft(env, nft_contract_address, owner, token_id);
-    assert(utils::get_nft_exists(nft_contract_address, token_id), "NFT should exist before burn");
+    utils::assert_nft_exists(nft_contract_address, token_id);
 
     // Burn the NFT
     env.impersonate(owner);
@@ -23,11 +23,11 @@ unconstrained fn burn_public_success() {
 
     // Verify NFT is burned (owner is zero address and NFT doesn't exist)
     utils::assert_owns_public_nft(env, nft_contract_address, AztecAddress::zero(), token_id);
-    assert(!utils::get_nft_exists(nft_contract_address, token_id), "NFT should not exist after burn");
+    utils::assert_nft_does_not_exist(nft_contract_address, token_id);
 }
 
 #[test]
-unconstrained fn burn_public_authorized_success() {
+unconstrained fn nft_burn_public_authorized_success() {
     // Setup with account contracts and mint NFT to owner
     let token_id = 10000;
     let (env, nft_contract_address, owner, minter, recipient, token_id) = 
@@ -51,11 +51,11 @@ unconstrained fn burn_public_authorized_success() {
 
     // Verify NFT is burned
     utils::assert_owns_public_nft(env, nft_contract_address, AztecAddress::zero(), token_id);
-    assert(!utils::get_nft_exists(nft_contract_address, token_id), "NFT should not exist after burn");
+    utils::assert_nft_does_not_exist(nft_contract_address, token_id);
 }
 
 #[test(should_fail_with = "invalid nonce")]
-unconstrained fn burn_public_self_non_zero_nonce_fail() {
+unconstrained fn nft_burn_public_self_non_zero_nonce_fail() {
     // Setup and mint NFT to owner
     let token_id = 10000;
     let (env, nft_contract_address, owner, minter, recipient, token_id) = 
@@ -69,7 +69,7 @@ unconstrained fn burn_public_self_non_zero_nonce_fail() {
 }
 
 #[test(should_fail_with = "unauthorized")]
-unconstrained fn burn_public_unauthorized_fail() {
+unconstrained fn nft_burn_public_unauthorized_fail() {
     // Setup with account contracts
     let token_id = 10000;
     let (env, nft_contract_address, owner, minter, recipient, token_id) = 
@@ -85,7 +85,7 @@ unconstrained fn burn_public_unauthorized_fail() {
 }
 
 #[test(should_fail_with = "unauthorized")]
-unconstrained fn burn_public_wrong_authwit_fail() {
+unconstrained fn nft_burn_public_wrong_authwit_fail() {
     // Setup with account contracts
     let token_id = 10000;
     let (env, nft_contract_address, owner, minter, recipient, token_id) = 
@@ -108,7 +108,7 @@ unconstrained fn burn_public_wrong_authwit_fail() {
 }
 
 #[test(should_fail_with = "caller is not owner")]
-unconstrained fn burn_public_non_existent_fail() {
+unconstrained fn nft_burn_public_non_existent_fail() {
     // Setup but don't mint any NFT
     let (env, nft_contract_address, owner, minter, recipient) = utils::setup_with_minter(false);
     let non_existent_token_id = 12345;

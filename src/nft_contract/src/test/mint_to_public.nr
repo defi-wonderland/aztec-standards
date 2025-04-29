@@ -2,7 +2,7 @@ use crate::NFT;
 use crate::test::utils;
 
 #[test]
-unconstrained fn mint_public_success() {
+unconstrained fn nft_mint_public_success() {
     // Setup without account contracts. We are not using authwits here, so dummy accounts are enough
     let (env, nft_contract_address, owner, minter, _) =
         utils::setup_with_minter(/* with_account_contracts */ false);
@@ -17,7 +17,7 @@ unconstrained fn mint_public_success() {
 }
 
 #[test(should_fail_with = "caller is not minter")]
-unconstrained fn mint_public_fail_non_minter() {
+unconstrained fn nft_mint_public_fail_non_minter() {
     let (env, nft_contract_address, owner, _, recipient) =
         utils::setup_with_minter(/* with_account_contracts */ false);
 
@@ -27,7 +27,7 @@ unconstrained fn mint_public_fail_non_minter() {
 }
 
 #[test(should_fail_with = "token already exists")]
-unconstrained fn mint_public_fail_same_nft_twice() {
+unconstrained fn nft_mint_public_fail_same_nft_twice() {
     let (env, nft_contract_address, owner, minter, recipient) =
         utils::setup_with_minter(/* with_account_contracts */ false);
 
@@ -39,14 +39,14 @@ unconstrained fn mint_public_fail_same_nft_twice() {
     let actual_owner = NFT::at(nft_contract_address).public_owner_of(token_id).view(&mut env.public());
     assert(actual_owner == owner, "NFT not minted to correct owner");
 
-    assert(utils::get_nft_exists(nft_contract_address, token_id) == true, "NFT not minted");
+    utils::assert_nft_exists(nft_contract_address, token_id);
 
     // Second call should fail
     mint_call_interface.call(&mut env.public());
 }
 
 #[test(should_fail_with = "zero token ID not supported")]
-unconstrained fn mint_public_fail_token_id_zero() {
+unconstrained fn nft_mint_public_fail_token_id_zero() {
     let (env, nft_contract_address, owner, minter, _) =
         utils::setup_with_minter(/* with_account_contracts */ false);
 

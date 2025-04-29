@@ -4,7 +4,7 @@ use authwit::cheatcodes as authwit_cheatcodes;
 use aztec::prelude::AztecAddress;
 
 #[test]
-unconstrained fn transfer_private_to_public_self_success() {
+unconstrained fn nft_transfer_private_to_public_self_success() {
     // Setup and mint NFT to owner in private state
     let token_id = 10000;
     let (env, nft_contract_address, owner, minter, recipient, token_id) = 
@@ -29,7 +29,7 @@ unconstrained fn transfer_private_to_public_self_success() {
 }
 
 #[test]
-unconstrained fn transfer_private_to_public_authorized_success() {
+unconstrained fn nft_transfer_private_to_public_authorized_success() {
     // Setup with account contracts (needed for authwits) and mint NFT to owner
     let token_id = 10000;
     let (env, nft_contract_address, owner, minter, recipient, token_id) = 
@@ -64,7 +64,7 @@ unconstrained fn transfer_private_to_public_authorized_success() {
 }
 
 #[test(should_fail_with = "Unknown auth witness for message hash")]
-unconstrained fn transfer_private_to_public_unauthorized_fail() {
+unconstrained fn nft_transfer_private_to_public_unauthorized_fail() {
     // Setup with account contracts for proper authorization testing
     let token_id = 10000;
     let (env, nft_contract_address, owner, minter, recipient, token_id) = 
@@ -82,7 +82,7 @@ unconstrained fn transfer_private_to_public_unauthorized_fail() {
 }
 
 #[test(should_fail_with = "invalid nonce")]
-unconstrained fn transfer_private_to_public_self_non_zero_nonce_fail() {
+unconstrained fn nft_transfer_private_to_public_self_non_zero_nonce_fail() {
     // Setup and mint NFT to owner in private state
     let token_id = 10000;
     let (env, nft_contract_address, owner, minter, recipient, token_id) = 
@@ -96,7 +96,7 @@ unconstrained fn transfer_private_to_public_self_non_zero_nonce_fail() {
 }
 
 #[test(should_fail_with = "nft not found in private to public")]
-unconstrained fn transfer_private_to_public_non_existent_nft_fail() {
+unconstrained fn nft_transfer_private_to_public_non_existent_nft_fail() {
     // Setup environment but don't mint any NFT
     let (env, nft_contract_address, owner, minter, recipient) = utils::setup_with_minter(false);
     let non_existent_token_id = 12345;
@@ -109,7 +109,7 @@ unconstrained fn transfer_private_to_public_non_existent_nft_fail() {
 }
 
 #[test(should_fail_with = "nft not found in private to public")]
-unconstrained fn transfer_private_to_public_already_public_fail() {
+unconstrained fn nft_transfer_private_to_public_already_public_fail() {
     // Setup and mint NFT to owner in public state
     let token_id = 10000;
     let (env, nft_contract_address, owner, minter, recipient, token_id) = 
