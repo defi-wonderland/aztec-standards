@@ -586,7 +586,7 @@ pub contract Token {
     ) -> BigNumField {
         let subtracted = private_balances.at(account).try_sub(amount, max_notes);
         // Failing to subtract any amount means that the owner was unable to produce more notes that could be nullified.
-        // assert(subtracted > 0, "Balance too low");
+        assert(subtracted > BigNumField::zero(), "Balance too low");
         if subtracted >= amount {
             // We have achieved our goal of nullifying notes that add up to more than amount, so we return the change.
             subtracted - amount
