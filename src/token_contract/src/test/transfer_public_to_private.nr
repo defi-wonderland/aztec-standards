@@ -16,7 +16,7 @@ unconstrained fn transfer_public_to_private_success() {
     utils::check_private_balance(token_contract_address, recipient, BigNumField::zero());
 
     let nonce = 0;
-    let transfer_amount = mint_amount;
+    let transfer_amount = mint_amount / BigNumField::new(2);
 
     let note_randomness = random();
 

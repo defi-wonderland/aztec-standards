@@ -117,7 +117,7 @@ pub unconstrained fn setup_and_mint_to_public_with_minter(
 
     // Mint some tokens
     env.impersonate(minter);
-    let mint_amount = (BigNumField::new_with_offset(10_000));
+    let mint_amount = (BigNumField::new(10_000));
     Token::at(token_contract_address).mint_to_public(owner, mint_amount).call(&mut env.public());
 
     env.advance_block_by(1);
@@ -129,7 +129,7 @@ pub unconstrained fn setup_and_mint_to_public_without_minter(
     with_account_contracts: bool,
 ) -> (&mut TestEnvironment, AztecAddress, AztecAddress, AztecAddress, BigNumField) {
     // Setup
-    let mint_amount = (BigNumField::new_with_offset(10_000));
+    let mint_amount = (BigNumField::new(10_000));
     let (env, token_contract_address, owner, recipient) =
         setup_with_initial_supply(with_account_contracts, mint_amount);
 
@@ -146,7 +146,7 @@ pub unconstrained fn setup_and_mint_to_private_with_minter(
 
     // Mint some tokens
     env.impersonate(minter);
-    let mint_amount = (BigNumField::new_with_offset(10_000));
+    let mint_amount = (BigNumField::new(10_000));
     mint_to_private(env, token_contract_address, owner, mint_amount);
 
     env.advance_block_by(1);
@@ -158,7 +158,7 @@ pub unconstrained fn setup_and_mint_to_private_without_minter(
     with_account_contracts: bool,
 ) -> (&mut TestEnvironment, AztecAddress, AztecAddress, AztecAddress, BigNumField) {
     // Setup
-    let mint_amount = BigNumField::new_with_offset(10_000);
+    let mint_amount = BigNumField::new(10_000);
     let (env, token_contract_address, owner, recipient) =
         setup_with_initial_supply(with_account_contracts, mint_amount);
 

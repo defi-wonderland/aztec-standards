@@ -8,7 +8,7 @@ unconstrained fn mint_to_public_success() {
         utils::setup_with_minter(/* with_account_contracts */ false);
 
     env.impersonate(minter);
-    let mint_amount: BigNumField = BigNumField::new_with_offset(10_000);
+    let mint_amount: BigNumField = BigNumField::new(10_000);
     Token::at(token_contract_address).mint_to_public(owner, mint_amount).call(&mut env.public());
 
     utils::check_public_balance(token_contract_address, owner, mint_amount);
@@ -24,7 +24,7 @@ unconstrained fn mint_to_public_failures() {
         utils::setup_with_minter(/* with_account_contracts */ false);
 
     // As non-minter
-    let mint_amount: BigNumField = BigNumField::new_with_offset(10_000);
+    let mint_amount: BigNumField = BigNumField::new(10_000);
     env.impersonate(recipient);
     let mint_to_public_call_interface =
         Token::at(token_contract_address).mint_to_public(owner, mint_amount);

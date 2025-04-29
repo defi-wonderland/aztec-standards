@@ -5,8 +5,7 @@ use std::cmp::{Eq, Ord, Ordering};
 use std::ops::{Add, Div, Mul, Sub};
 use bignum::{
     fields::U256::U256,
-    bignum::to_field,
-    bignum::BigNumTrait,
+    bignum::{to_field, BigNum},
 };
 
 pub struct BigNumField {
@@ -14,6 +13,7 @@ pub struct BigNumField {
 }
 
 impl BigNumField {
+
     pub fn new(value: Field) -> Self {
         let value256 = U256::from(value);
         Self { limbs: [value256.limbs[0] as Field, value256.limbs[1] as Field, value256.limbs[2] as Field] }
@@ -27,18 +27,13 @@ impl BigNumField {
         Self { limbs: [1,0,0] }
     }
 
-    pub fn new_with_offset(value: Field) -> Self {
-        // TODO(#11636): to avoid zero fields in logs
-        Self { limbs: [1+value,1,1] }
-    }
-
     pub fn max() -> Self {
         // [0xffffffffffffffffffffffffffffff, 0xffffffffffffffffffffffffffffff, 0xffff]
         Self { limbs: [1329227995784915872903807060280344575, 1329227995784915872903807060280344575, 65535] }
     }
 
     pub fn is_zero(self) -> bool {
-        U256::from_slice([self.limbs[0] as u128, self.limbs[1] as u128, self.limbs[2] as u128]) == U256::zero()
+        U256::from_limbs([self.limbs[0] as u128, self.limbs[1] as u128, self.limbs[2] as u128]) == U256::zero()
     }
 
     // Multiplies two Field values without overflow checks - use with caution
@@ -59,7 +54,7 @@ impl BigNumField {
 
 impl ToField for BigNumField {
     fn to_field(self) -> Field {
-        to_field(U256::from_slice([self.limbs[0] as u128, self.limbs[1] as u128, self.limbs[2] as u128]))
+        to_field(U256::from_limbs([self.limbs[0] as u128, self.limbs[1] as u128, self.limbs[2] as u128]))
     }
 }
 
@@ -69,27 +64,13 @@ impl FromField for BigNumField {
         Self { limbs: [value256.limbs[0] as Field, value256.limbs[1] as Field, value256.limbs[2] as Field] }    }
 }
 
-impl Serialize<3> for BigNumField {
-    fn serialize(self) -> [Field; 3] {
-        [self.limbs[0] as Field, self.limbs[1] as Field, self.limbs[2] as Field]
-    }
-}
-
-impl Deserialize<3> for BigNumField {
-    fn deserialize(fields: [Field; 3]) -> BigNumField {
-        Self { limbs: [fields[0], fields[1], fields[2]] }
-    }
-}
-
 impl Add for BigNumField {
     fn add(self, other: Self) -> Self {
-        let self_bn: U256 = U256::from_slice([self.limbs[0] as u128, self.limbs[1] as u128, self.limbs[2] as u128]);
-        let other_bn: U256 = U256::from_slice([other.limbs[0] as u128, other.limbs[1] as u128, other.limbs[2] as u128]);
+        let self_bn: U256 = U256::from_limbs([self.limbs[0] as u128, self.limbs[1] as u128, self.limbs[2] as u128]);
+        let other_bn: U256 = U256::from_limbs([other.limbs[0] as u128, other.limbs[1] as u128, other.limbs[2] as u128]);
         
         let result: U256 = self_bn + other_bn;
-        if result != self_bn {
-            assert(result > self_bn, "U256 addition overflow");
-        }
+        assert(result >= self_bn, "U256 addition overflow");
         
         Self { limbs: [result.limbs[0] as Field, result.limbs[1] as Field, result.limbs[2] as Field] }    
     }
@@ -97,12 +78,10 @@ impl Add for BigNumField {
 
 impl Sub for BigNumField {
     fn sub(self, other: Self) -> Self {
-        let self_bn: U256 = U256::from_slice([self.limbs[0] as u128, self.limbs[1] as u128, self.limbs[2] as u128]);
-        let other_bn: U256 = U256::from_slice([other.limbs[0] as u128, other.limbs[1] as u128, other.limbs[2] as u128]);
+        let self_bn: U256 = U256::from_limbs([self.limbs[0] as u128, self.limbs[1] as u128, self.limbs[2] as u128]);
+        let other_bn: U256 = U256::from_limbs([other.limbs[0] as u128, other.limbs[1] as u128, other.limbs[2] as u128]);
         
-        if other_bn != self_bn {
-            assert(self_bn > other_bn, "U256 subtraction underflow");
-        }
+        assert(self_bn >= other_bn, "U256 subtraction underflow");
         let result: U256 = self_bn - other_bn;
         
         Self { limbs: [result.limbs[0] as Field, result.limbs[1] as Field, result.limbs[2] as Field] }  
@@ -111,8 +90,8 @@ impl Sub for BigNumField {
 
 impl Mul for BigNumField {
     fn mul(self, other: Self) -> Self {
-        let self_bn: U256 = U256::from_slice([self.limbs[0] as u128, self.limbs[1] as u128, self.limbs[2] as u128]);
-        let other_bn: U256 = U256::from_slice([other.limbs[0] as u128, other.limbs[1] as u128, other.limbs[2] as u128]);
+        let self_bn: U256 = U256::from_limbs([self.limbs[0] as u128, self.limbs[1] as u128, self.limbs[2] as u128]);
+        let other_bn: U256 = U256::from_limbs([other.limbs[0] as u128, other.limbs[1] as u128, other.limbs[2] as u128]);
         
         let result: U256 = self_bn * other_bn;
         assert(result.udiv(self_bn) == other_bn, "U256 multiplication overflow");
@@ -123,8 +102,8 @@ impl Mul for BigNumField {
 
 impl Div for BigNumField {
     fn div(self, other: Self) -> Self {
-        let self_bn: U256 = U256::from_slice([self.limbs[0] as u128, self.limbs[1] as u128, self.limbs[2] as u128]);
-        let other_bn: U256 = U256::from_slice([other.limbs[0] as u128, other.limbs[1] as u128, other.limbs[2] as u128]);
+        let self_bn: U256 = U256::from_limbs([self.limbs[0] as u128, self.limbs[1] as u128, self.limbs[2] as u128]);
+        let other_bn: U256 = U256::from_limbs([other.limbs[0] as u128, other.limbs[1] as u128, other.limbs[2] as u128]);
         
         let result: U256 = self_bn.udiv(other_bn);
         Self { limbs: [result.limbs[0] as Field, result.limbs[1] as Field, result.limbs[2] as Field] }  
@@ -133,8 +112,8 @@ impl Div for BigNumField {
 
 impl Ord for BigNumField {
     fn cmp(self, other: Self) -> Ordering {
-        let bn_self = U256::from_slice([self.limbs[0] as u128, self.limbs[1] as u128, self.limbs[2] as u128]);
-        let bn_other = U256::from_slice([other.limbs[0] as u128, other.limbs[1] as u128, other.limbs[2] as u128]);
+        let bn_self = U256::from_limbs([self.limbs[0] as u128, self.limbs[1] as u128, self.limbs[2] as u128]);
+        let bn_other = U256::from_limbs([other.limbs[0] as u128, other.limbs[1] as u128, other.limbs[2] as u128]);
 
         if bn_self < bn_other {
             Ordering::less()
@@ -148,16 +127,55 @@ impl Ord for BigNumField {
 
 impl Eq for BigNumField {
     fn eq(self, other: Self) -> bool {
-        U256::from_slice([self.limbs[0] as u128, self.limbs[1] as u128, self.limbs[2] as u128]) == U256::from_slice([other.limbs[0] as u128, other.limbs[1] as u128, other.limbs[2] as u128])
+        U256::from_limbs([self.limbs[0] as u128, self.limbs[1] as u128, self.limbs[2] as u128]) == U256::from_limbs([other.limbs[0] as u128, other.limbs[1] as u128, other.limbs[2] as u128])
+    }
+}
+
+// impl Serialize<3> for BigNumField {
+//     fn serialize(self) -> [Field; 3] {
+//         [self.limbs[0], self.limbs[1], self.limbs[2] + 0x80000000000000000000000000000000]
+//     }
+// }
+
+// impl Deserialize<3> for BigNumField {
+//     fn deserialize(fields: [Field; 3]) -> BigNumField {
+//         Self { limbs: [fields[0], fields[1], fields[2] - 0x80000000000000000000000000000000] }
+//     }
+// }
+
+impl Serialize<3> for BigNumField {
+    fn serialize(self) -> [Field; 3] {
+        [self.limbs[0], self.limbs[1], self.limbs[2]]
+    }
+}
+
+impl Deserialize<3> for BigNumField {
+    fn deserialize(fields: [Field; 3]) -> BigNumField {
+        Self { limbs: [fields[0], fields[1], fields[2]] }
     }
 }
 
 impl Packable<3> for BigNumField {
+    // The size of each limb is 120 bits even though the type is u128. 
+    // Turning the MSB on does not interfere with the limb's actual value.
     fn pack(self) -> [Field; 3] {
-        [self.limbs[0] as Field, self.limbs[1] as Field, self.limbs[2] as Field]
+        [self.limbs[0], self.limbs[1], self.limbs[2] + 0x80000000000000000000000000000000]
     }
 
     fn unpack(fields: [Field; 3]) -> Self {
-        Self { limbs: [fields[0], fields[1], fields[2]] }
+        if fields[2] == 0 {
+            Self { limbs: [fields[0], fields[1], fields[2]] }
+        } else {
+            Self { limbs: [fields[0], fields[1], fields[2] - 0x80000000000000000000000000000000] }
+        }
+        
     }
+
+    // fn pack(self) -> [Field; 3] {
+    //     [self.limbs[0], self.limbs[1], self.limbs[2]]
+    // }
+
+    // fn unpack(fields: [Field; 3]) -> Self {
+    //     Self { limbs: [fields[0], fields[1], fields[2]] }
+    // }
 }

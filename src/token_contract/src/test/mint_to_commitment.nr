@@ -12,7 +12,7 @@ unconstrained fn mint_to_commitment_success() {
         .initialize_transfer_commitment(recipient, recipient)
         .call(&mut env.private());
 
-    let mint_amount: BigNumField = BigNumField::new_with_offset(10_000);
+    let mint_amount: BigNumField = BigNumField::new(10_000);
     env.impersonate(minter);
     Token::at(token_contract_address).mint_to_commitment(mint_amount, commitment).call(
         &mut env.public(),
@@ -34,7 +34,7 @@ unconstrained fn mint_to_private_failure_unauthorized() {
         .initialize_transfer_commitment(recipient, recipient)
         .call(&mut env.private());
 
-    let mint_amount: BigNumField = BigNumField::new_with_offset(10_000);
+    let mint_amount: BigNumField = BigNumField::new(10_000);
     env.impersonate(recipient);
     let mint_to_commitment_call_interface =
         Token::at(token_contract_address).mint_to_commitment(mint_amount, commitment);
@@ -70,7 +70,7 @@ unconstrained fn mint_to_private_failure_total_supply_overflow() {
         .initialize_transfer_commitment(recipient, recipient)
         .call(&mut env.private());
 
-    let mint_amount: BigNumField = BigNumField::new_with_offset(10_000);
+    let mint_amount: BigNumField = BigNumField::new(10_000);
 
     env.impersonate(minter);
     Token::at(token_contract_address).mint_to_commitment(BigNumField::max(), commitment).call(
@@ -93,7 +93,7 @@ unconstrained fn mint_to_private_failure_total_supply_overflow() {
 unconstrained fn mint_to_private_failure_invalid_commitments_random() {
     let (env, token_contract_address, owner, recipient, minter) = utils::setup_with_minter(false);
 
-    let mint_amount: BigNumField = BigNumField::new_with_offset(10_000);
+    let mint_amount: BigNumField = BigNumField::new(10_000);
     env.impersonate(minter);
 
     Token::at(token_contract_address)
@@ -105,7 +105,7 @@ unconstrained fn mint_to_private_failure_invalid_commitments_random() {
 unconstrained fn mint_to_private_failure_invalid_commitments_zero() {
     let (env, token_contract_address, owner, recipient, minter) = utils::setup_with_minter(false);
 
-    let mint_amount: BigNumField = BigNumField::new_with_offset(10_000);
+    let mint_amount: BigNumField = BigNumField::new(10_000);
     env.impersonate(minter);
     Token::at(token_contract_address)
         .mint_to_commitment(mint_amount, PartialBigNumFieldNote { commitment: 0 })
@@ -121,7 +121,7 @@ unconstrained fn mint_to_private_failure_already_completed_partial_note() {
         .initialize_transfer_commitment(recipient, recipient)
         .call(&mut env.private());
 
-    let mint_amount: BigNumField = BigNumField::new_with_offset(10_000);
+    let mint_amount: BigNumField = BigNumField::new(10_000);
 
     // mint to a commitment once
     env.impersonate(minter);
