@@ -101,6 +101,14 @@ pub unconstrained fn get_nft_exists(nft_contract_address: AztecAddress, token_id
     exists
 }
 
+pub unconstrained fn assert_nft_exists(nft_contract_address: AztecAddress, token_id: Field) {
+    assert(get_nft_exists(nft_contract_address, token_id), "NFT does not exist");
+}
+
+pub unconstrained fn assert_nft_does_not_exist(nft_contract_address: AztecAddress, token_id: Field) {
+    assert(!get_nft_exists(nft_contract_address, token_id), "NFT exists when it should not");
+}
+
 pub unconstrained fn assert_owns_public_nft(
     env: &mut TestEnvironment,
     nft_contract_address: AztecAddress,

@@ -10,11 +10,10 @@ use aztec::{
 };
 
 #[test]
-unconstrained fn minter_is_set() {
+unconstrained fn nft_minter_is_set() {
     let (env, nft_contract_address, owner, minter, recipient) = utils::setup_with_minter(false);
     cheatcodes::set_contract_address(nft_contract_address);
     let minter_slot = NFT::storage_layout().minter.slot;
     let minter_address: AztecAddress = storage_read(nft_contract_address, minter_slot, get_block_number());
-    // cheatcodes::set_contract_address(get_contract_address());
     assert(minter_address == minter, "minter is not set");
 }

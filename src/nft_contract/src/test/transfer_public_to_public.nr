@@ -3,7 +3,7 @@ use crate::test::utils;
 use authwit::cheatcodes as authwit_cheatcodes;
 
 #[test]
-unconstrained fn transfer_public_to_public_success() {
+unconstrained fn nft_transfer_public_to_public_success() {
     // Setup and mint NFT to owner
     let token_id = 10000;
     let (env, nft_contract_address, owner, minter, recipient, token_id) = 
@@ -21,7 +21,7 @@ unconstrained fn transfer_public_to_public_success() {
 }
 
 #[test]
-unconstrained fn transfer_public_to_public_self_success() {
+unconstrained fn nft_transfer_public_to_public_self_success() {
     // Setup and mint NFT to owner
     let token_id = 10000;
     let (env, nft_contract_address, owner, minter, _, token_id) = 
@@ -39,7 +39,7 @@ unconstrained fn transfer_public_to_public_self_success() {
 }
 
 #[test]
-unconstrained fn transfer_public_to_public_authorized_success() {
+unconstrained fn nft_transfer_public_to_public_authorized_success() {
     // Setup with account contracts (needed for authwits) and mint NFT to owner
     let token_id = 10000;
     let (env, nft_contract_address, owner, minter, recipient, token_id) = 
@@ -63,10 +63,13 @@ unconstrained fn transfer_public_to_public_authorized_success() {
 
     // Verify recipient now owns the NFT
     utils::assert_owns_public_nft(env, nft_contract_address, recipient, token_id);
+    // Verify the NFT is no longer owned by the previous owner
+    let cur_owner = NFT::at(nft_contract_address).public_owner_of(token_id).view(&mut env.public());
+    assert(owner != cur_owner, "incorrect NFT owner");
 }
 
 #[test(should_fail_with = "caller is not owner")]
-unconstrained fn transfer_public_to_public_non_existent_fail() {
+unconstrained fn nft_transfer_public_to_public_non_existent_fail() {
     // Setup environment but don't mint the NFT
     let (env, nft_contract_address, owner, minter, recipient) = utils::setup_with_minter(false);
     let non_existent_token_id = 12345;
@@ -79,7 +82,7 @@ unconstrained fn transfer_public_to_public_non_existent_fail() {
 }
 
 #[test(should_fail_with = "invalid nonce")]
-unconstrained fn transfer_public_to_public_self_non_zero_nonce_fail() {
+unconstrained fn nft_transfer_public_to_public_self_non_zero_nonce_fail() {
     // Setup and mint NFT to owner
     let token_id = 10000;
     let (env, nft_contract_address, owner, minter, recipient, token_id) = 
@@ -102,7 +105,7 @@ unconstrained fn transfer_public_to_public_self_non_zero_nonce_fail() {
 }
 
 #[test(should_fail_with = "unauthorized")]
-unconstrained fn transfer_public_to_public_unauthorized_fail() {
+unconstrained fn nft_transfer_public_to_public_unauthorized_fail() {
     // Setup with account contracts for proper authorization testing
     let token_id = 10000;
     let (env, nft_contract_address, owner, minter, recipient, token_id) = 
@@ -122,7 +125,7 @@ unconstrained fn transfer_public_to_public_unauthorized_fail() {
 }
 
 #[test(should_fail_with = "unauthorized")]
-unconstrained fn transfer_public_to_public_wrong_authwit_fail() {
+unconstrained fn nft_transfer_public_to_public_wrong_authwit_fail() {
     // Setup with account contracts for proper authorization testing
     let token_id = 10000;
     let (env, nft_contract_address, owner, minter, recipient, token_id) = 

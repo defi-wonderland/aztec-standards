@@ -3,7 +3,7 @@ use crate::test::utils;
 use aztec::prelude::AztecAddress;
 
 #[test]
-unconstrained fn initialize_transfer_commitment_success() {
+unconstrained fn nft_initialize_transfer_commitment_success() {
     // Setup with NFT in private state
     let token_id = 10000;
     let (env, nft_contract_address, owner, minter, recipient, token_id) = 
@@ -24,7 +24,7 @@ unconstrained fn initialize_transfer_commitment_success() {
 }
 
 #[test]
-unconstrained fn initialize_transfer_commitment_by_recipient_success() {
+unconstrained fn nft_initialize_transfer_commitment_by_recipient_success() {
     // Setup with NFT in private state
     let token_id = 10000;
     let (env, nft_contract_address, owner, minter, recipient, token_id) = 
@@ -45,7 +45,7 @@ unconstrained fn initialize_transfer_commitment_by_recipient_success() {
 }
 
 #[test]
-unconstrained fn initialize_transfer_commitment_self_success() {
+unconstrained fn nft_initialize_transfer_commitment_self_success() {
     // Setup with NFT in private state
     let token_id = 10000;
     let (env, nft_contract_address, owner, minter, recipient, token_id) = 
@@ -66,7 +66,7 @@ unconstrained fn initialize_transfer_commitment_self_success() {
 }
 
 #[test]
-unconstrained fn initialize_transfer_commitment_by_third_party_success() {
+unconstrained fn nft_initialize_transfer_commitment_by_third_party_success() {
     // Setup with NFT in private state
     let token_id = 10000;
     let (env, nft_contract_address, owner, minter, recipient, token_id) = 
