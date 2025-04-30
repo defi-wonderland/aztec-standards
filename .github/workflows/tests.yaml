@@ -63,7 +63,7 @@ jobs:
           run: script -e -c "BASE_PXE_URL=http://localhost NODE_NO_WARNINGS=1 node --experimental-vm-modules $(yarn bin jest) --no-cache --runInBand --config jest.integration.config.json"
         
         - name: Benchmark
-          uses: defi-wonderland/aztec-benchmark-diff/action@fix/troubleshoot
+          uses: defi-wonderland/aztec-benchmark-diff/action@dev
           if: steps.changes.outputs.src == 'true'
           with:
             threshold: '2.0'
