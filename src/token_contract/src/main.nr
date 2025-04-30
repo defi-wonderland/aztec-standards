@@ -710,6 +710,7 @@ pub contract Token {
         let total_assets = Token::at(storage.asset.read()).balance_of_public(context.this_address()).call(&mut context);
 
         let ten_to_the_power_of_decimal_offset = 10.pow_32(0);  
+
         let _shares = assets * (storage.total_supply.read() + ten_to_the_power_of_decimal_offset) / (total_assets + 1)
 
         // Take the asset from the caller
@@ -721,19 +722,18 @@ pub contract Token {
     }
 
     #[private]
-    fn deposit_private_to_public(assets: u128, receiver: AztecAddress, total_supply: u128, total_assets: u128, nonce: Field) {
+    fn deposit_private_to_public(assets: u128, receiver: AztecAddress, expected_ratio: u128, nonce: Field) {
         let max_shares = _max_mint();
         assert(assets <= max_shares, "Max mint exceeded");
 
-        let ten_to_the_power_of_decimal_offset = 10.pow_32(0);  
-        let _shares = assets * (total_supply + ten_to_the_power_of_decimal_offset) / (total_assets + 1)
+        let _shares = assets * expected_ratio;
+        
+        Token::at(context.this_address()).validate_total_supply_and_assets_and_increase_internal(expected_ratio, _shares).enqueue(
+            &mut context,
+        );
 
         // Take the asset from the caller
         Token::at(storage.asset.read()).transfer_private_to_public(context.msg_sender(), context.this_address(), assets, nonce).call(&mut context);
-        
-        Token::at(context.this_address()).validate_total_supply_and_assets_and_increase_internal(total_supply, total_assets, _shares).enqueue(
-            &mut context,
-        );
 
         // mint shares to the receiver in public
         Token::at(context.this_address()).increase_public_balance_internal(receiver, _shares).enqueue(
@@ -742,19 +742,18 @@ pub contract Token {
     }
 
     #[private]
-    fn deposit_private_to_private(assets: u128, receiver: AztecAddress, total_supply: u128, total_assets: u128, nonce: Field) {
+    fn deposit_private_to_private(assets: u128, receiver: AztecAddress, expected_ratio: u128, nonce: Field) {
         let max_shares = _max_mint();
         assert(assets <= max_shares, "Max mint exceeded");
 
-        let ten_to_the_power_of_decimal_offset = 10.pow_32(0);  
-        let _shares = assets * (total_supply + ten_to_the_power_of_decimal_offset) / (total_assets + 1)
+        let _shares = assets * expected_ratio;
+
+        Token::at(context.this_address()).validate_total_supply_and_assets_and_increase_internal(expected_ratio, _shares).enqueue(
+            &mut context,
+        );
 
         // Take the asset from the caller
         Token::at(storage.asset.read()).transfer_private_to_public(context.msg_sender(), context.this_address(), assets, nonce).call(&mut context);
-
-        Token::at(context.this_address()).validate_total_supply_and_assets_and_increase_internal(total_supply, total_assets, _shares).enqueue(
-            &mut context,
-        );
 
         // mint shares to the receiver
         _increase_private_balance(
@@ -766,22 +765,12 @@ pub contract Token {
     }
 
     #[public]
-    fn validate_total_supply_and_assets_and_increase_internal(total_supply_received: u128, total_assets_received: u128, amount: u128) {
+    fn validate_total_supply_and_assets_and_increase_internal(expected_ratio: u128, amount: u128) {
         let current_total_supply = storage.total_supply.read();
+        let calculated_ratio = (current_total_supply + 10.pow_32(0)) / (storage.total_assets.read() + 1);
 
-        // Check that the total supply received is greater than or equal to the current total supply
-        // The depositing user might not have the exact total supply meaning they could have received 
-        // less shares than they could have received if they had the exact total supply
-        // This is done to avoid a lot of reverts and improve user experience
-        assert(total_supply_received >= current_total_supply, "Total supply mismatch");
-
-        let current_total_assets = Token::at(storage.asset.read()).balance_of_public(context.this_address()).call(&mut context);
-
-        // Check that the total assets received is less than or equal to the current total assets
-        // The depositing user might not have the exact total assets meaning they could have received 
-        // less shares than they could have received if they had the exact total assets
-        // This is done to avoid a lot of reverts and improve user experience
-        assert(total_assets_received <= current_total_assets, "Total assets mismatch");
+        // Check that the ratio the user expects is equal or lower than the actual ratio
+        assert(calculated_ratio >= expected_ratio, "Invalid ratio");
 
         // Increase the total supply by the amount received
         storage.total_supply.write(current_total_supply + amount);
