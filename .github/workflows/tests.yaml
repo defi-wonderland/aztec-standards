@@ -50,7 +50,6 @@ jobs:
   
         - name: Codegen
           run: script -e -c "aztec codegen target --outdir src/artifacts"
-<<<<<<< Updated upstream
 
         - name: Start PXE
           run: |
@@ -62,7 +61,6 @@ jobs:
 
         - name: Run js tests
           run: script -e -c "BASE_PXE_URL=http://localhost NODE_NO_WARNINGS=1 node --experimental-vm-modules $(yarn bin jest) --no-cache --runInBand --config jest.integration.config.json"
-=======
         
         - name: Benchmark
           uses: defi-wonderland/aztec-benchmark-diff/action@fix/troubleshoot
@@ -77,5 +75,4 @@ jobs:
           with:
             issue-number: ${{ github.event.pull_request.number }}
             body-file: benchmark_diff.md
->>>>>>> Stashed changes
 
