@@ -1753,10 +1753,10 @@ axios@^1.8.2:
     form-data "^4.0.0"
     proxy-from-env "^1.1.0"
 
-aztec-benchmark@1.0.12:
-  version "1.0.12"
-  resolved "https://registry.yarnpkg.com/aztec-benchmark/-/aztec-benchmark-1.0.12.tgz#b750a83ae33210c19958ab002d9640acb339e467"
-  integrity sha512-ZJZVTvbdKrLQ98K5G+GTiprvz1TPy9N3IU48bUrl25FK5vJbMIatoai8MLScyWkyEKxPhSmZ7bZxWfvQfgneZA==
+aztec-benchmark@1.0.13:
+  version "1.0.13"
+  resolved "https://registry.yarnpkg.com/aztec-benchmark/-/aztec-benchmark-1.0.13.tgz#4549e6a173a4e15b6f036c8f0cc335d7f86a1d92"
+  integrity sha512-h9mR4Gx3TgBY0Wg7WrU4XDex63IDhWbDBSh2dB2XSq+N6Ozf1jJcrabe1aPSLeYEkrmG9Ie3JyU/6z/If9t3yQ==
   dependencies:
     "@actions/core" "^1.10.1"
     "@actions/exec" "^1.1.1"
