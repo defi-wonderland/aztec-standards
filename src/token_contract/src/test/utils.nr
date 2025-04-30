@@ -1,10 +1,6 @@
 use crate::Token;
 use aztec::{
-    note::{
-        constants::MAX_NOTES_PER_PAGE,
-        note_getter::view_notes,
-        note_getter_options::NoteStatus,
-    },
+    note::{constants::MAX_NOTES_PER_PAGE, note_getter::view_notes, note_getter_options::NoteStatus},
     oracle::{
         execution::{get_block_number, get_contract_address},
         random::random,
@@ -14,10 +10,7 @@ use aztec::{
     protocol_types::storage::map::derive_storage_slot_in_map,
     test::helpers::{cheatcodes, test_environment::TestEnvironment},
 };
-use bignum_field::{
-    bignum_field::BigNumField,
-    bignum_field_note::BigNumFieldNote,
-};
+use bignum_field::{bignum_field::BigNumField, bignum_field_note::BigNumFieldNote};
 use std::test::OracleMock;
 
 pub unconstrained fn setup_with_initial_supply(
