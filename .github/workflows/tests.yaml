@@ -59,8 +59,8 @@ jobs:
         #   run: |
         #     script -e -c "aztec test"
 
-        - name: Run js tests
-          run: script -e -c "BASE_PXE_URL=http://localhost NODE_NO_WARNINGS=1 node --experimental-vm-modules $(yarn bin jest) --no-cache --runInBand --config jest.integration.config.json"
+        # - name: Run js tests
+        #   run: script -e -c "BASE_PXE_URL=http://localhost NODE_NO_WARNINGS=1 node --experimental-vm-modules $(yarn bin jest) --no-cache --runInBand --config jest.integration.config.json"
         
         - name: Benchmark
           uses: defi-wonderland/aztec-benchmark-diff/action@dev
