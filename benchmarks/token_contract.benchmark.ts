@@ -52,21 +52,24 @@ export default class TokenContractBenchmark extends Benchmark {
     const bob = accounts[1];
     const owner = alice.getAddress();
 
+    const amount_mint = [amt(100), 0, 0];
+    const amount = [amt(10), 0, 0];
+
     const methods: ContractFunctionInteraction[] = [
       // Mint methods
-      tokenContract.withWallet(alice).methods.mint_to_private(owner, owner, amt(100)),
-      tokenContract.withWallet(alice).methods.mint_to_public(owner, amt(100)),
+      tokenContract.withWallet(alice).methods.mint_to_private(owner, owner, amount_mint),
+      tokenContract.withWallet(alice).methods.mint_to_public(owner, amount_mint),
 
       // Transfer methods
-      tokenContract.withWallet(alice).methods.transfer_private_to_public(owner, bob.getAddress(), amt(10), 0),
-      tokenContract.withWallet(alice).methods.transfer_private_to_public_with_commitment(owner, bob.getAddress(), amt(10), 0),
-      tokenContract.withWallet(alice).methods.transfer_private_to_private(owner, bob.getAddress(), amt(10), 0),
-      tokenContract.withWallet(alice).methods.transfer_public_to_private(owner, bob.getAddress(), amt(10), 0),
-      tokenContract.withWallet(alice).methods.transfer_public_to_public(owner, bob.getAddress(), amt(10), 0),
+      tokenContract.withWallet(alice).methods.transfer_private_to_public(owner, bob.getAddress(), amount, 0),
+      tokenContract.withWallet(alice).methods.transfer_private_to_public_with_commitment(owner, bob.getAddress(), amount, 0),
+      tokenContract.withWallet(alice).methods.transfer_private_to_private(owner, bob.getAddress(), amount, 0),
+      tokenContract.withWallet(alice).methods.transfer_public_to_private(owner, bob.getAddress(), amount, 0),
+      tokenContract.withWallet(alice).methods.transfer_public_to_public(owner, bob.getAddress(), amount, 0),
 
       // Burn methods
-      tokenContract.withWallet(alice).methods.burn_private(owner, amt(10), 0),
-      tokenContract.withWallet(alice).methods.burn_public(owner, amt(10), 0),
+      tokenContract.withWallet(alice).methods.burn_private(owner, amount, 0),
+      tokenContract.withWallet(alice).methods.burn_public(owner, amount, 0),
     ];
 
     return methods.filter(Boolean);
