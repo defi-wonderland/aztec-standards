@@ -43,7 +43,7 @@ unconstrained fn mint_to_private_failure_unauthorized() {
     mint_to_commitment_call_interface.call(&mut env.public());
 }
 
-#[test(should_fail_with = "attempt to add with overflow 'total_supply.read() + amount'")]
+#[test(should_fail_with = "Field addition overflow")]
 unconstrained fn mint_to_private_failure_balance_overflow() {
     let (env, token_contract_address, owner, recipient, minter) = utils::setup_with_minter(false);
 
@@ -68,7 +68,7 @@ unconstrained fn mint_to_private_failure_balance_overflow() {
     utils::check_total_supply(token_contract_address, max_BigNumField);
 }
 
-#[test(should_fail_with = "attempt to add with overflow 'total_supply.read() + amount'")]
+#[test(should_fail_with = "Field addition overflow")]
 unconstrained fn mint_to_private_failure_total_supply_overflow() {
     let (env, token_contract_address, owner, recipient, minter) = utils::setup_with_minter(false);
 

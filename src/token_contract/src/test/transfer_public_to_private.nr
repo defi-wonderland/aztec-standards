@@ -47,7 +47,7 @@ unconstrained fn transfer_public_to_private_success_invalid_nonce() {
         .call(&mut env.private());
 }
 
-#[test(should_fail_with = "Assertion failed: attempt to subtract with overflow 'public_balances.at(from).read() - amount'")]
+#[test(should_fail_with = "Assertion failed: Field subtraction underflow")]
 unconstrained fn transfer_public_to_private_not_enough_balance() {
     let (env, token_contract_address, sender, recipient, mint_amount) =
         utils::setup_and_mint_to_public_without_minter(false);

@@ -66,7 +66,7 @@ unconstrained fn transfer_public_to_commitment_transfer_not_initialized() {
         .call(&mut env.public());
 }
 
-#[test(should_fail_with = "attempt to subtract with overflow 'public_balances.at(from).read() - amount'")]
+#[test(should_fail_with = "Field subtraction underflow")]
 unconstrained fn transfer_public_to_commitment_failure_not_an_owner() {
     // Setup without account contracts. We are not using authwits here, so dummy accounts are enough
     let (env, token_contract_address, owner, not_owner, amount) =
