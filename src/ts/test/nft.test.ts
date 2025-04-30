@@ -673,16 +673,14 @@ describe('NFT - Single PXE', () => {
   it('returns correct name and symbol', async () => {
     const name = await nft.methods.public_get_name().simulate();
     const symbol = await nft.methods.public_get_symbol().simulate();
-    const nameStr = name.toString();
-    const symbolStr = symbol.toString();
+    const nameStr = bigIntToAsciiString(name.value);
+    const symbolStr = bigIntToAsciiString(symbol.value);
     
-    // TODO: convert from FieldCompressedString to string
     console.log('NFT Name:', nameStr);
     console.log('NFT Symbol:', symbolStr);
     
-    // TODO: Pass this test
-    // expect(nameStr).toBe('TestNFT');
-    // expect(symbolStr).toBe('TNFT');
+    expect(nameStr).toBe('TestNFT');
+    expect(symbolStr).toBe('TNFT');
   }, 300_000);
 
   it('returns correct public owner', async () => {
@@ -814,3 +812,27 @@ describe('NFT - Single PXE', () => {
     await assertOwnsPublicNFT(nft, tokenId, alice.getAddress());
   }, 300_000);
 });
+
+function bigIntToAsciiString(bigInt: any): string {
+  // Convert the BigInt to hex string, remove '0x' prefix if present
+  let hexString = bigInt.toString(16);
+    
+  // Split into pairs of characters (bytes)
+  const pairs = [];
+  for (let i = 0; i < hexString.length; i += 2) {
+    // If we have an odd number of characters, pad with 0
+    const pair = hexString.slice(i, i + 2).padStart(2, '0');
+    pairs.push(pair);
+  }
+
+  // Convert each byte to its ASCII character
+  let asciiString = '';
+  for (const pair of pairs) {
+    const charCode = parseInt(pair, 16);
+    // Only add printable ASCII characters
+    if (charCode >= 32 && charCode <= 126) {
+      asciiString += String.fromCharCode(charCode);
+    }
+  }
+    return asciiString;
+}
