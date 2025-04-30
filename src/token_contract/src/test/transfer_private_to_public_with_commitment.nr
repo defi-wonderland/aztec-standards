@@ -28,6 +28,23 @@ unconstrained fn transfer_private_to_public_with_commitment() {
     utils::check_public_balance(token_contract_address, recipient, transfer_amount);
 }
 
+#[test]
+unconstrained fn transfer_private_to_public_with_commitment_stores_commitment() {
+    let (env, token_contract_address, owner, recipient, mint_amount) =
+        utils::setup_and_mint_to_private_without_minter(false);
+
+    env.impersonate(owner);
+    let commitment = Token::at(token_contract_address)
+        .transfer_private_to_public_with_commitment(owner, recipient, mint_amount, 0)
+        .call(&mut env.private());
+    env.advance_block_by(1);
+
+    assert(
+        utils::_commitment_storage_read(token_contract_address, commitment.commitment()) == true,
+        "Commitment not stored",
+    );
+}
+
 #[test(should_fail_with = "invalid nonce")]
 unconstrained fn transfer_private_to_public_with_commitment_and_non_zero_nonce() {
     let (env, token_contract_address, owner, recipient, mint_amount) =
@@ -96,7 +113,7 @@ unconstrained fn transfer_private_to_public_with_commitment_and_finalize() {
     // Transfer tokens
     env.impersonate(recipient);
     Token::at(token_contract_address)
-        .finalize_transfer_public_to_private(recipient, transfer_amount, commitment, 0)
+        .transfer_public_to_commitment(recipient, transfer_amount, commitment, 0)
         .call(&mut env.public());
     env.advance_block_by(1);
 
@@ -106,51 +123,65 @@ unconstrained fn transfer_private_to_public_with_commitment_and_finalize() {
     utils::check_private_balance(token_contract_address, recipient, transfer_amount);
 }
 
-// #[test(should_fail_with = "transfer not prepared")]
-// unconstrained fn transfer_private_to_public_with_hiding_point_and_finalize_with_invalid_hiding_point() {
-//     let (env, token_contract_address, owner, recipient, mint_amount) =
-//         utils::setup_and_mint_to_private_without_minter(false);
+#[test(should_fail_with = "Invalid commitment")]
+unconstrained fn transfer_private_to_public_with_commitment_and_finalize_with_invalid_commitment() {
+    let (env, token_contract_address, owner, recipient, mint_amount) =
+        utils::setup_and_mint_to_private_without_minter(false);
 
-//     utils::check_private_balance(token_contract_address, owner, mint_amount);
-//     utils::check_private_balance(token_contract_address, recipient, BigNumField::zero());
+    utils::check_private_balance(token_contract_address, owner, mint_amount);
+    utils::check_private_balance(token_contract_address, recipient, BigNumField::zero());
 
-//     // Transfer tokens
-//     let transfer_amount = mint_amount;
+    // Transfer tokens
+    let transfer_amount = mint_amount;
 
-//     env.impersonate(owner);
-//     let hiding_point_slot = Token::at(token_contract_address)
-//         .transfer_private_to_public_with_hiding_point(owner, recipient, transfer_amount, 0)
-//         .call(&mut env.private());
+    env.impersonate(owner);
+    // we ignore the returned commitment
+    let _ = Token::at(token_contract_address)
+        .transfer_private_to_public_with_commitment(owner, recipient, transfer_amount, 0)
+        .call(&mut env.private());
 
-//     let invalid_hiding_point = 1337;
+    let invalid_commitment = PartialBigNumFieldNote { commitment: 0xdeadbeef };
 
-//     // Transfer tokens
-//     env.impersonate(recipient);
-//     Token::at(token_contract_address)
-//         .finalize_transfer_public_to_private(recipient, transfer_amount, invalid_hiding_point, 0)
-//         .call(&mut env.public());
-// }
+    // finalize transfer to an invalid commitment
+    env.impersonate(recipient);
+    Token::at(token_contract_address)
+        .transfer_public_to_commitment(recipient, transfer_amount, invalid_commitment, 0)
+        .call(&mut env.public());
 
-// This test is passing although we pass `0` as `hiding_point_slot`
-// #[test]
-// unconstrained fn transfer_private_to_public_with_hiding_point_and_finalize_with_invalid_hiding_point_literals() {
-//     let (env, token_contract_address, owner, recipient, mint_amount) =
-//         utils::setup_and_mint_to_private_without_minter(false);
+    // you can finalize but the recipient will not have tokens
+    utils::check_public_balance(token_contract_address, owner, BigNumField::zero());
+    utils::check_private_balance(token_contract_address, owner, BigNumField::zero());
+    utils::check_public_balance(token_contract_address, recipient, BigNumField::zero());
+    utils::check_private_balance(token_contract_address, recipient, BigNumField::zero());
+}
 
-//     utils::check_private_balance(token_contract_address, owner, mint_amount);
-//     utils::check_private_balance(token_contract_address, recipient, BigNumField::zero());
+#[test(should_fail_with = "Invalid commitment")]
+unconstrained fn transfer_private_to_public_with_commitment_and_finalize_with_commitment_zero() {
+    let (env, token_contract_address, owner, recipient, mint_amount) =
+        utils::setup_and_mint_to_private_without_minter(false);
 
-//     // Transfer tokens
-//     let transfer_amount = mint_amount;
+    utils::check_private_balance(token_contract_address, owner, mint_amount);
+    utils::check_private_balance(token_contract_address, recipient, BigNumField::zero());
 
-//     env.impersonate(owner);
-//     let partial_note: PartialBigNumFieldNote = Token::at(token_contract_address)
-//         .transfer_private_to_public_with_hiding_point(owner, recipient, transfer_amount, 0)
-//         .call(&mut env.private());
+    // Transfer tokens
+    let transfer_amount = mint_amount;
 
-//     // Transfer tokens
-//     env.impersonate(recipient);
-//     Token::at(token_contract_address)
-//         .finalize_transfer_public_to_private(recipient, transfer_amount, partial_note, 0)
-//         .call(&mut env.public());
-// }
+    env.impersonate(owner);
+    // we ignore the returned commitment
+    let _ = Token::at(token_contract_address)
+        .transfer_private_to_public_with_commitment(owner, recipient, transfer_amount, 0)
+        .call(&mut env.private());
+
+    let invalid_commitment = PartialBigNumFieldNote { commitment: 0 };
+    // Transfer tokens
+    env.impersonate(recipient);
+    Token::at(token_contract_address)
+        .transfer_public_to_commitment(recipient, transfer_amount, invalid_commitment, 0)
+        .call(&mut env.public());
+
+    // check that both owner and recipient have no tokens
+    utils::check_public_balance(token_contract_address, owner, BigNumField::zero());
+    utils::check_private_balance(token_contract_address, owner, BigNumField::zero());
+    utils::check_public_balance(token_contract_address, recipient, BigNumField::zero());
+    utils::check_private_balance(token_contract_address, recipient, BigNumField::zero());
+}

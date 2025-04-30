@@ -1,16 +1,15 @@
-use dep::aztec::{
-    context::{PrivateContext, UnconstrainedContext},
+use aztec::{
+    context::{PrivateContext, UtilityContext},
+    macros::functions::utility,
     note::{note_emission::OuterNoteEmission, retrieved_note::RetrievedNote},
+    prelude::{NoteGetterOptions, NoteViewerOptions, PrivateSet},
     protocol_types::{address::AztecAddress, constants::MAX_NOTE_HASH_READ_REQUESTS_PER_CALL},
 };
-use dep::aztec::prelude::{NoteGetterOptions, NoteViewerOptions, PrivateSet};
 use std::ops::Add;
 use bignum_field::{
     bignum_field::BigNumField,
     bignum_field_note::BigNumFieldNote,
 };
-
-// use aztec::prelude::{NoteGetterOptions, NoteViewerOptions, PrivateSet};
 
 pub struct BalanceSet<Context> {
     pub set: PrivateSet<BigNumFieldNote, Context>,
@@ -23,7 +22,7 @@ impl<Context> BalanceSet<Context> {
     }
 }
 
-impl BalanceSet<UnconstrainedContext> {
+impl BalanceSet<UtilityContext> {
     pub unconstrained fn balance_of(self: Self) -> BigNumField {
         self.balance_of_with_offset(0)
     }

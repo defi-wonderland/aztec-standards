@@ -1,85 +1,107 @@
 use crate::{test::utils, Token};
+use authwit::cheatcodes as authwit_cheatcodes;
 use aztec::oracle::random::random;
-use bignum_field::bignum_field_note::PartialBigNumFieldNote;
 use std::test::OracleMock;
+use bignum_field::{
+    bignum_field::BigNumField,
+    bignum_field_note::{BigNumFieldNote},
+};
 
-/// Internal orchestration means that the calls to `prepare_transfer_public_to_private`
-/// and `finalize_transfer_public_to_private` are done by the TOKEN contract itself.
-/// In this test's case this is done by the `Token::transfer_public_to_private(...)` function called
-/// in `utils::setup_mint_and_transfer_public_to_private`.
 #[test]
-unconstrained fn transfer_public_to_private_internal_orchestration() {
-    // The transfer to private is done in `utils::setup_and_mint_to_private_without_minter` and for this reason
-    // in this test we just call it and check the outcome.
-    // Setup without account contracts. We are not using authwits here, so dummy accounts are enough
-    let (_, token_contract_address, user, _, amount) =
-        utils::setup_and_mint_to_private_without_minter(/* with_account_contracts */ false);
+unconstrained fn transfer_public_to_private_success() {
+    let (env, token_contract_address, sender, recipient, mint_amount) =
+        utils::setup_and_mint_to_public_without_minter(false);
 
-    // User's private balance should be equal to the amount
-    utils::check_private_balance(token_contract_address, user, amount);
-}
+    utils::check_public_balance(token_contract_address, sender, mint_amount);
+    utils::check_private_balance(token_contract_address, recipient, BigNumField::zero());
 
-/// External orchestration means that the calls to prepare and finalize are not done by the Token contract. This flow
-/// will typically be used by a DEX.
-#[test]
-unconstrained fn transfer_public_to_private_external_orchestration() {
-    // Setup without account contracts. We are not using authwits here, so dummy accounts are enough
-    let (env, token_contract_address, owner, recipient, amount) =
-        utils::setup_and_mint_to_public_without_minter(/* with_account_contracts */ false);
+    let nonce = 0;
+    let transfer_amount = mint_amount / BigNumField::new(2);
 
-    let note_randomness = random();
-
-    // We mock the Oracle to return the note randomness such that later on we can manually add the note
-    let _ = OracleMock::mock("getRandomField").returns(note_randomness);
-
-    // We prepare the transfer
-    let partial_note: PartialBigNumFieldNote = Token::at(token_contract_address)
-        .prepare_transfer_public_to_private(owner, recipient)
-        .call(&mut env.private());
-
-    // Finalize the transfer of the tokens (message sender owns the tokens in public)
+    env.impersonate(sender);
     Token::at(token_contract_address)
-        .finalize_transfer_public_to_private(owner, amount, partial_note, 0)
-        .call(&mut env.public());
-
+        .transfer_public_to_private(sender, recipient, transfer_amount, nonce)
+        .call(&mut env.private());
     env.advance_block_by(1);
 
-    // Recipient's private balance should be equal to the amount
-    utils::check_private_balance(token_contract_address, recipient, amount);
+    // sender public balance decreases
+    utils::check_public_balance(token_contract_address, sender, transfer_amount);
+    // recipient private balance incre ases
+    utils::check_private_balance(token_contract_address, recipient, transfer_amount);
 }
 
-// #[test(should_fail_with = "transfer not prepared")]
-// unconstrained fn transfer_public_to_private_transfer_not_prepared() {
-//     // Setup without account contracts. We are not using authwits here, so dummy accounts are enough
-//     let (env, token_contract_address, owner, _, amount) =
-//         utils::setup_and_mint_to_public_without_minter(/* with_account_contracts */ false);
+#[test(should_fail_with = "invalid nonce")]
+unconstrained fn transfer_public_to_private_success_invalid_nonce() {
+    let (env, token_contract_address, sender, recipient, mint_amount) =
+        utils::setup_and_mint_to_public_without_minter(false);
 
-//     // Transfer was not prepared so we can use random value for the hiding point slot
-//     let hiding_point_slot = random();
+    utils::check_public_balance(token_contract_address, sender, mint_amount);
+    utils::check_private_balance(token_contract_address, recipient, BigNumField::zero());
 
-//     // Try finalizing the transfer without preparing it
-//     Token::at(token_contract_address)
-//         .finalize_transfer_public_to_private(owner, amount, hiding_point_slot, 0)
-//         .call(&mut env.public());
-// }
+    let nonce = random();
+    let transfer_amount = mint_amount / BigNumField::new(2);
 
-// #[test(should_fail_with = "Assertion failed: attempt to subtract with underflow 'hi == high'")]
-#[test(should_fail_with = "Assertion failed: Field subtraction underflow")]
-unconstrained fn transfer_public_to_private_failure_not_an_owner() {
-    // Setup without account contracts. We are not using authwits here, so dummy accounts are enough
-    let (env, token_contract_address, owner, not_owner, amount) =
-        utils::setup_and_mint_to_public_without_minter(/* with_account_contracts */ false);
-
-    // (For this specific test we could set a random value for the commitment and not do the call to `prepare...`
-    // as the token balance check is before we use the value but that would made the test less robust against changes
-    // in the contract.)
-    let partial_note: PartialBigNumFieldNote = Token::at(token_contract_address)
-        .prepare_transfer_public_to_private(owner, not_owner)
-        .call(&mut env.private());
-
-    // Try transferring someone else's token balance
-    env.impersonate(not_owner);
+    env.impersonate(sender);
     Token::at(token_contract_address)
-        .finalize_transfer_public_to_private(not_owner, amount, partial_note, 0)
-        .call(&mut env.public());
+        .transfer_public_to_private(sender, recipient, transfer_amount, nonce)
+        .call(&mut env.private());
+}
+
+#[test(should_fail_with = "Assertion failed: attempt to subtract with overflow 'public_balances.at(from).read() - amount'")]
+unconstrained fn transfer_public_to_private_not_enough_balance() {
+    let (env, token_contract_address, sender, recipient, mint_amount) =
+        utils::setup_and_mint_to_public_without_minter(false);
+
+    utils::check_public_balance(token_contract_address, sender, mint_amount);
+    utils::check_private_balance(token_contract_address, recipient, BigNumField::zero());
+
+    let nonce = 0;
+    let transfer_amount = mint_amount * BigNumField::new(2);
+
+    env.impersonate(sender);
+    Token::at(token_contract_address)
+        .transfer_public_to_private(sender, recipient, transfer_amount, nonce)
+        .call(&mut env.private());
+}
+
+#[test]
+unconstrained fn transfer_public_to_private_authwitness_success() {
+    let (env, token_contract_address, sender, recipient, mint_amount) =
+        utils::setup_and_mint_to_public_without_minter(true);
+
+    let transfer_amount = mint_amount / BigNumField::new(2);
+
+    env.impersonate(sender);
+    let transfer_public_to_private_call_interface = Token::at(token_contract_address)
+        .transfer_public_to_private(sender, recipient, transfer_amount, 0);
+    authwit_cheatcodes::add_private_authwit_from_call_interface(
+        sender,
+        recipient,
+        transfer_public_to_private_call_interface,
+    );
+
+    env.impersonate(recipient);
+    transfer_public_to_private_call_interface.call(&mut env.private());
+    env.advance_block_by(1);
+
+    // Check balances changes as expected
+    utils::check_private_balance(token_contract_address, recipient, transfer_amount);
+    utils::check_public_balance(token_contract_address, sender, transfer_amount);
+}
+
+#[test(should_fail_with = "Unknown auth witness for message hash")]
+unconstrained fn transfer_public_to_private_authwitness_unauthorized() {
+    let (env, token_contract_address, sender, recipient, mint_amount) =
+        utils::setup_and_mint_to_public_without_minter(true);
+
+    let transfer_amount = mint_amount / BigNumField::new(2);
+
+    env.impersonate(sender);
+    let transfer_public_to_private_call_interface = Token::at(token_contract_address)
+        .transfer_public_to_private(sender, recipient, transfer_amount, 0);
+
+    // no authwit added
+
+    env.impersonate(recipient);
+    transfer_public_to_private_call_interface.call(&mut env.private());
 }
