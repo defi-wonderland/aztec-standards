@@ -52,8 +52,8 @@ export default class TokenContractBenchmark extends Benchmark {
     const bob = accounts[1];
     const owner = alice.getAddress();
 
-    const amount_mint = [amt(100), 0, 0];
-    const amount = [amt(10), 0, 0];
+    const amount_mint = {limbs: [amt(100), 0, 0]};
+    const amount = {limbs: [amt(10), 0, 0]};
 
     const methods: ContractFunctionInteraction[] = [
       // Mint methods
