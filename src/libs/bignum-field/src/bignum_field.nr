@@ -5,10 +5,8 @@ use aztec::protocol_types::{
 use std::cmp::{Eq, Ord, Ordering};
 use std::ops::{Add, Div, Mul, Rem, Sub, Neg};
 use bignum::{
-    fields::bn254Fq::{BN254_Fq, BN254_Fq_Params},
-    bignum::to_field,
-    BigNum,
-    BigNumTrait,
+    fields::bn254Fq::BN254_Fq,
+    bignum::{to_field, BigNum},
 };
 
 pub struct BigNumField {
@@ -108,7 +106,7 @@ impl Mul for BigNumField {
         let other_bn: BN254_Fq = BN254_Fq::from(other.value);
 
         let result: BN254_Fq = self_bn * other_bn;
-        assert(result.div(self_bn) == other_bn, "U256 multiplication overflow");
+        assert(result.div(self_bn) == other_bn, "Field multiplication overflow");
         Self { value: to_field(result) }
     }
 }

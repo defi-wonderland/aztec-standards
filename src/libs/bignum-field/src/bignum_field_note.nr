@@ -2,16 +2,16 @@ use aztec::{
     context::{PrivateContext, PublicContext},
     keys::getters::{get_nsk_app, get_public_keys},
     macros::notes::custom_note,
+    messages::logs::note,
     note::note_interface::{NoteHash, NoteType},
     oracle::random::random,
     protocol_types::{
         address::AztecAddress,
         constants::{GENERATOR_INDEX__NOTE_HASH, GENERATOR_INDEX__NOTE_NULLIFIER},
         hash::poseidon2_hash_with_separator,
-        traits::{Deserialize, Hash, Packable, Serialize, ToField},
+        traits::{Deserialize, Hash, Packable, Serialize},
         utils::arrays::array_concat,
     },
-    encrypted_logs::log_assembly_strategies::default_aes128,
 };
 
 use crate::bignum_field::BigNumField;
@@ -133,7 +133,7 @@ impl BigNumFieldNote {
         // id that the recipient will realize that these are the private fields of a partial note. Ideally we'd not rely
         // on this crude mechanism and we'd instead compute it as a proper event log. However, given the current state
         // of the log library it's far easier to do it this way.
-        let encrypted_log = default_aes128::note::compute_partial_note_log(
+        let encrypted_log = note::compute_partial_note_log(
             private_log_content,
             storage_slot,
             recipient,
@@ -222,20 +222,6 @@ impl PartialBigNumFieldNote {
             GENERATOR_INDEX__NOTE_HASH,
         )
     }
-    // fn compute_note_completion_log(self, value: BigNumField) -> [Field; 4] {
-    //     // The first field of this log must be the tag that the recipient of the partial note private field logs
-    //     // expects, which is equal to the partial note commitment.
-    //     [self.commitment, value.limbs[0] as Field, value.limbs[1] as Field, value.limbs[2] as Field]
-    // }
-
-    // fn compute_complete_note_hash(self, value: BigNumField) -> Field {
-    //     // Here we finalize the note hash by including the (public) value into the partial note commitment. Note that we
-    //     // use the same generator index as we used for the first round of poseidon - this is not an issue.
-    //     poseidon2_hash_with_separator(
-    //         [self.commitment, value.limbs[0] as Field, value.limbs[1] as Field, value.limbs[2] as Field],
-    //         GENERATOR_INDEX__NOTE_HASH,
-    //     )
-    // }
 }
 
 #[derive(Packable)]
