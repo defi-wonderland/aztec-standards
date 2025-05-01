@@ -702,6 +702,10 @@ pub contract Token {
      * ================== VAULT ==================================
      * ======================================================== */
 
+    /// @notice Deposits the underlying asset from a public balance and receives shares to a public balance
+    /// @param assets The amount of assets to deposit
+    /// @param receiver The address of the receiver
+    /// @param nonce The nonce used for authwitness
     #[public]
     fn deposit_public_to_public(assets: u128, receiver: AztecAddress, nonce: Field) {
         let max_shares = _max_mint();
@@ -721,6 +725,13 @@ pub contract Token {
         _increase_total_supply(storage.total_supply, _shares);
     }
 
+    /// @notice Deposits the underlying asset from a private balance and receives shares to a public balance
+    /// @dev The expected_ratio is calculated with (total_supply + 1) / (total_assets + 1) and is the ratio the user will get 
+    ///      when depositing assets. This ratio can only be lower than or equal to the actual ratio in public.
+    /// @param assets The amount of assets to deposit
+    /// @param receiver The address of the receiver
+    /// @param expected_ratio The ratio of the expected total supply to the total assets
+    /// @param nonce The nonce used for authwitness
     #[private]
     fn deposit_private_to_public(assets: u128, receiver: AztecAddress, expected_ratio: u128, nonce: Field) {
         let max_shares = _max_mint();
@@ -741,6 +752,13 @@ pub contract Token {
         );
     }
 
+    /// @notice Deposits the underlying asset from a private balance and receives shares to a private balance
+    /// @dev The expected_ratio is calculated with (total_supply + 1) / (total_assets + 1) and is the ratio the user will get 
+    ///      when depositing assets. This ratio can only be lower than or equal to the actual ratio in public.
+    /// @param assets The amount of assets to deposit
+    /// @param receiver The address of the receiver
+    /// @param expected_ratio The ratio of the expected total supply to the total assets
+    /// @param nonce The nonce used for authwitness
     #[private]
     fn deposit_private_to_private(assets: u128, receiver: AztecAddress, expected_ratio: u128, nonce: Field) {
         let max_shares = _max_mint();
@@ -754,6 +772,36 @@ pub contract Token {
 
         // Take the asset from the caller
         Token::at(storage.asset.read()).transfer_private_to_public(context.msg_sender(), context.this_address(), assets, nonce).call(&mut context);
+
+        // mint shares to the receiver
+        _increase_private_balance(
+            &mut context,
+            storage.private_balance,
+            receiver,
+            _shares,
+        );
+    }
+
+    /// @notice Deposits the underlying asset from a public balance and receives shares to a private balance
+    /// @dev The expected_ratio is calculated with (total_supply + 1) / (total_assets + 1) and is the ratio the user will get 
+    ///      when depositing assets. This ratio can only be lower than or equal to the actual ratio in public.
+    /// @param assets The amount of assets to deposit
+    /// @param receiver The address of the receiver
+    /// @param expected_ratio The ratio of the expected total supply to the total assets
+    /// @param nonce The nonce used for authwitness
+    #[private]
+    fn deposit_public_to_private(assets: u128, receiver: AztecAddress, expected_ratio: u128, nonce: Field) {
+        let max_shares = _max_mint();
+        assert(assets <= max_shares, "Max mint exceeded");
+
+        let _shares = assets * expected_ratio;
+
+        Token::at(context.this_address()).validate_total_supply_and_assets_and_increase_internal(expected_ratio, _shares).enqueue(
+            &mut context,
+        );
+
+        // Take the asset from the caller
+        Token::at(storage.asset.read()).transfer_public_to_public(context.msg_sender(), context.this_address(), assets, nonce).enqueue(&mut context);
 
         // mint shares to the receiver
         _increase_private_balance(
