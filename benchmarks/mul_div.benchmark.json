@@ -1,0 +1,84 @@
+{
+  "summary": {
+    "mul_div_in_private": 295006,
+    "mul_div_in_public": 207273
+  },
+  "results": [
+    {
+      "name": "mul_div_in_private",
+      "totalGateCount": 295006,
+      "gateCounts": [
+        {
+          "circuitName": "SchnorrAccount:entrypoint",
+          "gateCount": 21784
+        },
+        {
+          "circuitName": "private_kernel_init",
+          "gateCount": 40749
+        },
+        {
+          "circuitName": "MulDiv:mul_div_in_private",
+          "gateCount": 27660
+        },
+        {
+          "circuitName": "private_kernel_inner",
+          "gateCount": 79310
+        },
+        {
+          "circuitName": "private_kernel_reset",
+          "gateCount": 94230
+        },
+        {
+          "circuitName": "private_kernel_tail",
+          "gateCount": 31273
+        }
+      ],
+      "gas": {
+        "gasLimits": {
+          "daGas": 12391,
+          "l2Gas": 10736
+        },
+        "teardownGasLimits": {
+          "daGas": 0,
+          "l2Gas": 0
+        }
+      }
+    },
+    {
+      "name": "mul_div_in_public",
+      "totalGateCount": 207273,
+      "gateCounts": [
+        {
+          "circuitName": "SchnorrAccount:entrypoint",
+          "gateCount": 21784
+        },
+        {
+          "circuitName": "private_kernel_init",
+          "gateCount": 40749
+        },
+        {
+          "circuitName": "private_kernel_reset",
+          "gateCount": 94230
+        },
+        {
+          "circuitName": "private_kernel_tail",
+          "gateCount": 50510
+        }
+      ],
+      "gas": {
+        "gasLimits": {
+          "daGas": 1690,
+          "l2Gas": 42201
+        },
+        "teardownGasLimits": {
+          "daGas": 0,
+          "l2Gas": 0
+        }
+      }
+    }
+  ],
+  "gasSummary": {
+    "mul_div_in_private": 23127,
+    "mul_div_in_public": 43891
+  }
+}

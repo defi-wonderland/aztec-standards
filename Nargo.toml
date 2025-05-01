@@ -1,8 +1,8 @@
 [workspace]
 members = [
-  "src/token_contract"
+  "src/mul_div"
 ]
 
 [benchmark]
-token = "benchmarks/token_contract.benchmark.ts"
+mul_div = "benchmarks/mul_div.benchmark.ts"
 
