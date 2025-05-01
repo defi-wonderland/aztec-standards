@@ -49,9 +49,9 @@ export default class MulDivContractBenchmark extends Benchmark {
   getMethods(context: MulDivBenchmarkContext): ContractFunctionInteraction[] {
     const { mulDivContract, deployer, accounts } = context;
     const alice = deployer;
-    const x = amt(10);
-    const y = amt(5);
-    const z = amt(12);
+    const x = { value: amt(10) };
+    const y = { value: amt(5) };
+    const z = { value: amt(12) };
 
     const methods: ContractFunctionInteraction[] = [
       mulDivContract.withWallet(alice).methods.mul_div_in_private(x, y, z),

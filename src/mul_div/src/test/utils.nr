@@ -10,7 +10,6 @@ use aztec::{
     test::helpers::{cheatcodes, test_environment::TestEnvironment},
 };
 use std::test::OracleMock;
-use uint_note::uint_note::UintNote;
 
 pub unconstrained fn setup(
     with_account_contracts: bool,
