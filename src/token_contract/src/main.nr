@@ -698,7 +698,7 @@ pub contract Token {
         }
     }
 
-      /** ==========================================================
+    /** ==========================================================
      * ================== VAULT ==================================
      * ======================================================== */
 
@@ -809,6 +809,110 @@ pub contract Token {
             storage.private_balance,
             receiver,
             _shares,
+        );
+    }
+    
+    /// @notice Mints new shares by depositing assets from a public balance, receiving shares to a public balance
+    /// @param shares The amount of shares to mint
+    /// @param receiver The address of the receiver of shares
+    /// @param nonce The nonce used for authwitness on the asset transfer
+    #[public]
+    fn mint_public_to_public(shares: u128, receiver: AztecAddress, nonce: Field) {
+        let max_shares = _max_mint();
+        assert(shares <= max_shares, "Max mint exceeded");
+        // compute required assets: shares * (total_assets + 1) / (total_supply + 10^decimals)
+        let total_assets = Token::at(storage.asset.read()).balance_of_public(context.this_address()).call(&mut context);
+        let ten_to_the_power_of_decimal = 10.pow_32(0);
+        let assets = shares * (total_assets + 1) / (storage.total_supply.read() + ten_to_the_power_of_decimal);
+
+        // transfer assets in
+        Token::at(storage.asset.read())
+            .transfer_public_to_public(context.msg_sender(), context.this_address(), assets, nonce)
+            .call(&mut context);
+
+        // mint shares
+        _increase_public_balance(storage.public_balances, receiver, shares);
+        _increase_total_supply(storage.total_supply, shares);
+    }
+
+    /// @notice Mints new shares by depositing assets from a private balance, receiving shares to a public balance
+    /// @param shares The amount of shares to mint
+    /// @param receiver The address of the receiver of shares
+    /// @param expected_ratio The expected ratio between (total_supply+1)/(total_assets+1)
+    /// @param nonce The nonce used for authwitness on the asset transfer
+    #[private]
+    fn mint_private_to_public(shares: u128, receiver: AztecAddress, expected_ratio: u128, nonce: Field) {
+        let max_shares = _max_mint();
+        assert(shares <= max_shares, "Max mint exceeded");
+        // compute required assets via inverse ratio
+        let assets = shares / expected_ratio;
+        // validate and increase total supply
+        Token::at(context.this_address())
+            .validate_total_supply_and_assets_and_increase_internal(expected_ratio, shares)
+            .enqueue(&mut context);
+        // transfer assets in
+        Token::at(storage.asset.read())
+            .transfer_private_to_public(context.msg_sender(), context.this_address(), assets, nonce)
+            .call(&mut context);
+        // mint shares to public
+        Token::at(context.this_address())
+            .increase_public_balance_internal(receiver, shares)
+            .enqueue(&mut context);
+    }
+
+    /// @notice Mints new shares by depositing assets from a private balance, receiving shares to a private balance
+    /// @param shares The amount of shares to mint
+    /// @param receiver The address of the receiver of shares
+    /// @param expected_ratio The expected ratio between (total_supply+1)/(total_assets+1)
+    /// @param nonce The nonce used for authwitness on the asset transfer
+    #[private]
+    fn mint_private_to_private(shares: u128, receiver: AztecAddress, expected_ratio: u128, nonce: Field) {
+        let max_shares = _max_mint();
+        assert(shares <= max_shares, "Max mint exceeded");
+        // compute required assets via inverse ratio
+        let assets = shares / expected_ratio;
+        // validate and increase total supply
+        Token::at(context.this_address())
+            .validate_total_supply_and_assets_and_increase_internal(expected_ratio, shares)
+            .enqueue(&mut context);
+        // transfer assets in
+        Token::at(storage.asset.read())
+            .transfer_private_to_public(context.msg_sender(), context.this_address(), assets, nonce)
+            .call(&mut context);
+        // mint shares to private
+        _increase_private_balance(
+            &mut context,
+            storage.private_balances,
+            receiver,
+            shares,
+        );
+    }
+
+    /// @notice Mints new shares by depositing assets from a public balance, receiving shares to a private balance
+    /// @param shares The amount of shares to mint
+    /// @param receiver The address of the receiver of shares
+    /// @param expected_ratio The expected ratio between (total_supply+1)/(total_assets+1)
+    /// @param nonce The nonce used for authwitness on the asset transfer
+    #[private]
+    fn mint_public_to_private(shares: u128, receiver: AztecAddress, expected_ratio: u128, nonce: Field) {
+        let max_shares = _max_mint();
+        assert(shares <= max_shares, "Max mint exceeded");
+        // compute required assets via inverse ratio
+        let assets = shares / expected_ratio;
+        // validate and increase total supply
+        Token::at(context.this_address())
+            .validate_total_supply_and_assets_and_increase_internal(expected_ratio, shares)
+            .enqueue(&mut context);
+        // transfer assets in
+        Token::at(storage.asset.read())
+            .transfer_public_to_public(context.msg_sender(), context.this_address(), assets, nonce)
+            .enqueue(&mut context);
+        // mint shares to private
+        _increase_private_balance(
+            &mut context,
+            storage.private_balances,
+            receiver,
+            shares,
         );
     }
 
