@@ -26,7 +26,7 @@ jobs:
   
         - name: Set Aztec version
           run: |
-            VERSION=0.85.0 aztec-up
+            VERSION=0.86.0 aztec-up
         
         - name: Start sandbox
           run: |
@@ -43,7 +43,7 @@ jobs:
 
         - name: Start PXE
           run: |
-            VERSION=0.85.0 aztec start --port 8081 --pxe --pxe.nodeUrl=http://localhost:8080/ --pxe.proverEnabled false &
+            VERSION=0.86.0 aztec start --port 8081 --pxe --pxe.nodeUrl=http://localhost:8080/ --pxe.proverEnabled false &
 
         - name: Run nr tests
           run: |
