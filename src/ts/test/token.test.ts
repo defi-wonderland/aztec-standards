@@ -178,7 +178,6 @@ describe('Token - Single PXE', () => {
     expect(bobBalance).toBe(AMOUNT);
   }, 300_000);
 
-  // TODO(#29): burn was nuked because of this PR, re-enable it
   it('burns public tokens', async () => {
     // First mint 2 tokens to alice
     await token
@@ -265,7 +264,6 @@ describe('Token - Single PXE', () => {
       .wait();
 
     // Try to transfer more than available balance
-    // TODO(#29): fix "Invalid arguments size: expected 3, got 2" error handling
     await expect(
       token
         .withWallet(alice)
@@ -296,7 +294,6 @@ describe('Token - Single PXE', () => {
     expect(alicePublicBalance).toBe(0n);
   }, 300_000);
 
-  // TODO(#29): burn was nuked because of this PR, re-enable it
   it('can burn tokens from private balance', async () => {
     // Mint 2 tokens privately to alice
     await token
@@ -341,15 +338,13 @@ describe('Token - Single PXE', () => {
       .send()
       .wait();
 
-    // Try to transfer more than available public balance
-    // TODO(#29): fix "Invalid arguments size: expected 3, got 2" error handling
-    // await expect(
-    //   token
-    //     .withWallet(alice)
-    //     .methods.transfer_public_to_private(alice.getAddress(), alice.getAddress(), AMOUNT * 2n, 0)
-    //     .send()
-    //     .wait(),
-    // ).rejects.toThrow(/attempt to subtract with underflow/);
+    await expect(
+      token
+        .withWallet(alice)
+        .methods.transfer_public_to_private(alice.getAddress(), alice.getAddress(), AMOUNT * 2n, 0)
+        .send()
+        .wait(),
+    ).rejects.toThrow(/attempt to subtract with underflow/);
 
     // Check total supply stayed the same
     const totalSupply = await token.methods.total_supply().simulate();
