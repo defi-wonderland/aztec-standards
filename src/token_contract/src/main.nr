@@ -334,6 +334,30 @@ pub contract Token {
     * ====================== VIEW FUNCTIONS =====================
     * ======================================================== */
 
+    /// @notice Returns the name of the token
+    /// @return The name of the token
+    #[public]
+    #[view]
+    fn name() -> FieldCompressedString {
+        storage.name.read()
+    }
+
+    /// @notice Returns the symbol of the token
+    /// @return The symbol of the token
+    #[public]
+    #[view]
+    fn symbol() -> FieldCompressedString {
+        storage.symbol.read()
+    }
+
+    /// @notice Returns the decimals of the token
+    /// @return The decimals of the token
+    #[public]
+    #[view]
+    fn decimals() -> u8 {
+        storage.decimals.read()
+    }
+
     /// @notice Returns the public balance of `owner`
     /// @param owner The address of the owner
     /// @return The balance of the public balance of `owner`
@@ -349,6 +373,14 @@ pub contract Token {
     #[view]
     fn total_supply() -> u128 {
         storage.total_supply.read()
+    }
+
+    /// @notice Returns the minter of the token
+    /// @return The minter of the token
+    #[public]
+    #[view]
+    fn minter() -> AztecAddress {
+        storage.minter.read()
     }
 
     /** ==========================================================
