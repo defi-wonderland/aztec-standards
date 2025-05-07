@@ -1,9 +1,10 @@
 mod access_control;
-mod mint_to_public;
-mod mint_to_private;
 mod burn_public;
 mod burn_private;
 mod initialize_transfer_commitment;
+mod mint_to_public;
+mod mint_to_private;
+mod nft_note_hash_and_encoding;
 mod transfer_private_to_commitment;
 mod transfer_private_to_private;
 mod transfer_private_to_public_with_commitment;
