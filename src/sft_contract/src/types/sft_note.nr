@@ -13,6 +13,8 @@ use dep::aztec::{
     },
 };
 
+use crate::types::nft_note::{NFTPartialNotePrivateContent, PartialNFTNote};
+
 /// A private note representing a specific amount of a specific token ID owned by an account.
 /// @dev Similar to NFTNote but with an additional amount field for tracking quantities
 #[custom_note]
@@ -25,9 +27,17 @@ pub struct SFTNote {
     amount: u128,  // New field for tracking token amounts
 }
 
-impl NoteType for SFTNote {
+#[derive(Packable)]
+struct PrivateSFTPartialNotePrivateLogContent {
+    public_log_tag: Field,
+    owner: AztecAddress,
+    randomness: Field,
+}
+
+impl NoteType for PrivateSFTPartialNotePrivateLogContent {
     fn get_id() -> Field {
-        0x50 // Unique type ID for SFT notes
+        // Follow the same pattern as NFT - use 8th bit to indicate partial note log
+        SFTNote::get_id() + 128
     }
 }
 
@@ -98,28 +108,12 @@ impl SFTNote {
         // Safety: random is safe here as it's only used for note initialization
         let randomness = unsafe { random() };
 
-        // Create commitment to private data
-        let commitment = SFTPartialNotePrivateContent { owner, randomness }
+        // Create commitment to private data using NFT's private content structure
+        let commitment = NFTPartialNotePrivateContent { owner, randomness }
             .compute_partial_commitment(storage_slot);
 
         // Create and return partial note
         PartialSFTNote { commitment }
-    }
-}
-
-/// The private content of a partial SFTNote
-#[derive(Packable)]
-struct SFTPartialNotePrivateContent {
-    owner: AztecAddress,
-    randomness: Field,
-}
-
-impl SFTPartialNotePrivateContent {
-    fn compute_partial_commitment(self, storage_slot: Field) -> Field {
-        poseidon2_hash_with_separator(
-            array_concat(self.pack(), [storage_slot]),
-            GENERATOR_INDEX__NOTE_HASH,
-        )
     }
 }
 
