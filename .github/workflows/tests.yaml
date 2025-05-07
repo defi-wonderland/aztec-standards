@@ -7,7 +7,7 @@ on:
 jobs:
     setup-and-run:
       runs-on: ubuntu-latest
-      timeout-minutes: 30
+      timeout-minutes: 60
   
       steps:
         - name: Checkout repository
@@ -45,9 +45,9 @@ jobs:
           run: |
             VERSION=0.85.0 aztec start --port 8081 --pxe --pxe.nodeUrl=http://localhost:8080/ --pxe.proverEnabled false &
 
-        # - name: Run nr tests
-        #   run: |
-        #     script -e -c "aztec test"
+        - name: Run nr tests
+          run: |
+            script -e -c "aztec test"
 
         - name: Run js tests
           run: script -e -c "BASE_PXE_URL=http://localhost NODE_NO_WARNINGS=1 node --experimental-vm-modules $(yarn bin jest) --no-cache --runInBand --config jest.integration.config.json"
