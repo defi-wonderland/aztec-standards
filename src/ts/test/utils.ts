@@ -7,6 +7,7 @@ import {
   AccountWallet,
   createPXEClient,
   FieldLike,
+  Contract,
 } from '@aztec/aztec.js';
 import { TokenContract } from '../../artifacts/Token.js';
 
@@ -24,6 +25,8 @@ export const createPXE = async (id: number = 0) => {
 export const setupSandbox = async () => {
   return createPXE();
 };
+
+// --- Token Utils ---
 
 export const expectUintNote = (note: UniqueNote, amount: bigint, owner: AztecAddress) => {
   expect(note.note.items[0]).toEqual(new Fr(owner.toBigInt()));
