@@ -5,8 +5,12 @@ use aztec::protocol_types::{
 use std::cmp::{Eq, Ord, Ordering};
 use std::ops::{Add, Div, Mul, Rem, Sub, Neg};
 use bignum::{
-    fields::bn254Fq::BN254_Fq,
+    fields::bn254Fq::{BN254_Fq, BN254_Fq_PARAMS},
     bignum::{to_field, BigNum},
+    fns::{
+        expressions::evaluate_quadratic_expression, 
+        unconstrained_ops::{__mul_with_quotient, __udiv_mod},
+    },
 };
 
 pub struct BigNumField {
@@ -42,11 +46,6 @@ impl BigNumField {
         self.value == 0
     }
 
-    // Multiplies two Field values without overflow checks - use with caution
-    pub fn mul_unchecked(self, other: Self) -> Self {
-        Self { value: self.value * other.value }
-    }
-
     // Adds two Field values without overflow checks - use with caution
     pub fn add_unchecked(self, other: Self) -> Self {
         Self { value: self.value + other.value }
@@ -55,6 +54,33 @@ impl BigNumField {
     // Subtracts two Field values without underflow checks - use with caution
     pub fn sub_unchecked(self, other: Self) -> Self {
         Self { value: self.value - other.value }
+    }
+
+    // Multiplies two Field values without overflow checks - use with caution
+    pub fn mul_unchecked(self, other: Self) -> Self {
+        Self { value: self.value * other.value }
+    }
+
+    // Multiplies two Field values without overflow checks - use with caution
+    pub unconstrained fn mul_in_public(self, other: Self) -> Self {
+        let result = Self { value: self.value * other.value };
+
+        let self_bn: BN254_Fq = BN254_Fq::from(self.value);
+
+        // let assert_remainder = BN254_Fq { limbs: result.__division_remainder(self) };
+        let (q, remainder) = __udiv_mod(BN254_Fq::from(result.value).limbs, self_bn.limbs);
+        assert(BN254_Fq { limbs: remainder } == BN254_Fq::zero(), "Field multiplication overflow");
+
+        result
+    }
+
+    // Multiplies two Field values without overflow checks - use with caution
+    pub unconstrained fn div_in_public(self, other: Self) -> Self {
+        let self_bn: BN254_Fq = BN254_Fq::from(self.value);
+        let other_bn: BN254_Fq = BN254_Fq::from(other.value);
+
+        let (quotient, remainder) = __udiv_mod(self_bn.limbs, other_bn.limbs);
+        Self { value: to_field(BN254_Fq { limbs: quotient }) }
     }
 }
 
@@ -86,6 +112,7 @@ impl Add for BigNumField {
     fn add(self, other: Self) -> Self {
         // No need to use BigNum limbs
         let result = self.value + other.value;
+        // TODO: check if this assertion can be optimized by looking at parity. The result's parity changes when an overflow happens.
         assert(!result.lt(self.value), "Field addition overflow");
         Self { value: result }
     }
@@ -93,7 +120,7 @@ impl Add for BigNumField {
 
 impl Sub for BigNumField {
     fn sub(self, other: Self) -> Self {
-        // No need to use BigNum limbs
+        // TODO: check if this assertion can be optimized by looking at parity. The result's parity changes when an underflow happens.
         assert(!self.value.lt(other.value), "Field subtraction underflow");
         let result = self.value - other.value;
         Self { value: result }
@@ -105,15 +132,29 @@ impl Mul for BigNumField {
         let self_bn: BN254_Fq = BN254_Fq::from(self.value);
         let other_bn: BN254_Fq = BN254_Fq::from(other.value);
 
-        let result: BN254_Fq = self_bn * other_bn;
-        assert(result.div(self_bn) == other_bn, "Field multiplication overflow");
-        Self { value: to_field(result) }
+        let (q, result) = unsafe { __mul_with_quotient(BN254_Fq_PARAMS, self_bn.limbs, other_bn.limbs) };
+        if !std::runtime::is_unconstrained() {
+            evaluate_quadratic_expression(
+                BN254_Fq_PARAMS,
+                [[self_bn.limbs]],
+                [[false]],
+                [[other_bn.limbs]],
+                [[false]],
+                [result],
+                [true],
+            );
+        }
+        assert(BN254_Fq { limbs: q } == BN254_Fq::zero(), "Field multiplication overflow");
+        Self { value: to_field(BN254_Fq { limbs: result }) }
     }
 }
 
 impl Div for BigNumField {
     fn div(self, other: Self) -> Self {
-        let result: BN254_Fq = BN254_Fq::from(self.value) / BN254_Fq::from(other.value);
+        let self_bn: BN254_Fq = BN254_Fq::from(self.value);
+        let other_bn: BN254_Fq = BN254_Fq::from(other.value);
+
+        let result: BN254_Fq = self_bn / other_bn;
         Self { value: to_field(result) }
     }
 }

@@ -40,9 +40,13 @@ pub contract MulDiv {
     #[private]
     fn mul_div_in_private(x: BigNumField, y: BigNumField, z: BigNumField) {
         let account = context.msg_sender();
-        let result = x.mul_unchecked(y) / z;
+        let result = x * y / z;
 
-        storage.private_results.at(account).add(account, result).emit(encode_and_encrypt_note(&mut context, account, account));
+        storage.private_results.at(account).add(account, result).emit(encode_and_encrypt_note(
+            &mut context,
+            account,
+            account,
+        ));
     }
 
     /// @notice Transfer tokens from private balance to public balance
@@ -51,30 +55,11 @@ pub contract MulDiv {
     /// @param z The amount of tokens to transfer
     #[public]
     fn mul_div_in_public(x: BigNumField, y: BigNumField, z: BigNumField) {
-        let result = x.mul_unchecked(y); // / z;
+        // let result = x.mul_unchecked(y);
+        let result = x.mul_in_public(y).div_in_public(z);
 
         let new_balance = storage.public_results.read() + result;
         storage.public_results.write(new_balance);
     }
 
-    // /// @notice Transfer tokens from private balance to public balance
-    // /// @param x The address of the sender
-    // /// @param y The address of the recipient
-    // #[public]
-    // fn only_div_in_public(x: BigNumField, y: BigNumField) {
-    //     let result = x / y;
-
-    //     storage.public_results.write(result);
-    // }
-
-    // /// @notice Transfer tokens from private balance to public balance
-    // /// @param x The address of the sender
-    // /// @param y The address of the recipient
-    // #[private]
-    // fn only_div_in_private(x: BigNumField, y: BigNumField) {
-    //     let account = context.msg_sender();
-    //     let result = x / y;
-
-    //     storage.private_results.at(account).add(account, result).emit(encode_and_encrypt_note(&mut context, account, account));
-    // }
 }

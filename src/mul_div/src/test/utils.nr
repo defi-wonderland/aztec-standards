@@ -26,9 +26,8 @@ pub unconstrained fn setup(
 
     // Deploy MulDiv contract
     let initializer_call_interface = MulDiv::interface().constructor();
-    let mul_div_contract = env.deploy("./@mul_div", "MulDiv").with_public_void_initializer(
-        initializer_call_interface,
-    );
+    let mul_div_contract =
+        env.deploy("./@mul_div", "MulDiv").with_public_void_initializer(initializer_call_interface);
     env.advance_block_by(1);
 
     let mul_div_contract_address = mul_div_contract.to_address();
