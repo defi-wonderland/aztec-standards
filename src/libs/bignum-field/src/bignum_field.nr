@@ -61,7 +61,7 @@ impl BigNumField {
         Self { value: self.value * other.value }
     }
 
-    // Multiplies two Field values without overflow checks - use with caution
+    // Multiplies two Field values and uses BigNum's __udiv_mod to check for overflow.
     pub unconstrained fn mul_in_public(self, other: Self) -> Self {
         let result = Self { value: self.value * other.value };
 
@@ -74,7 +74,7 @@ impl BigNumField {
         result
     }
 
-    // Multiplies two Field values without overflow checks - use with caution
+    // Divides two Field values using BigNum's __udiv_mod instead of BigNum's div, which is suboptimal in public contetxt.
     pub unconstrained fn div_in_public(self, other: Self) -> Self {
         let self_bn: BN254_Fq = BN254_Fq::from(self.value);
         let other_bn: BN254_Fq = BN254_Fq::from(other.value);
