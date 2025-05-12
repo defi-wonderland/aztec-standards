@@ -3,3 +3,7 @@ members = [
 "src/token_contract",
 "src/dripper"
 ]
+
+[benchmark]
+token = "benchmarks/token_contract.benchmark.ts"
+
