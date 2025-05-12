@@ -35,7 +35,8 @@ export default class TokenContractBenchmark extends Benchmark {
    * Creates PXE client, gets accounts, and deploys the contract.
    */
   async setup(): Promise<TokenBenchmarkContext> {
-    const pxe = createPXEClient('http://localhost:8080');
+    const { BASE_PXE_URL = 'http://localhost' } = process.env;
+    const pxe = createPXEClient(`${BASE_PXE_URL}:8080`);
     const accounts = await getInitialTestAccountsWallets(pxe);
     const deployer = accounts[0]!;
     const deployedBaseContract = await deployTokenWithMinter(deployer);
