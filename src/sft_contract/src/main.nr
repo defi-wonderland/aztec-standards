@@ -87,6 +87,213 @@ pub contract SFT {
         storage.minter.initialize(minter);
     }
 
+     /** ==========================================================
+    * ======================= PRIVATE ==========================
+    * ======================================================== */
+
+    #[private]
+    fn transfer_private_to_public(
+        from: AztecAddress,
+        to: AztecAddress,
+        token_id: Field,
+        amount: u128,
+        nonce: Field,
+    ) {
+        _validate_from_private(&mut context, from, nonce);
+
+        // Remove tokens from sender's private balance
+        _remove_private_token_amount(storage.private_balances.at(from), token_id, amount);
+        
+        // Enqueue public call to increase recipient's public balance
+        SFT::at(context.this_address())
+            .update_public_balance_from_private_internal(to, token_id, amount)
+            .enqueue(&mut context);
+    }
+
+    #[private]
+    fn transfer_private_to_public_with_commitment(
+        from: AztecAddress,
+        to: AztecAddress,
+        token_id: Field,
+        amount: u128,
+        nonce: Field,
+    ) -> PartialSFTNote {
+        _validate_from_private(&mut context, from, nonce);
+
+        // Remove tokens from sender's private balance
+        _remove_private_token_amount(storage.private_balances.at(from), token_id, amount);
+        
+        // Enqueue public call to increase recipient's public balance
+        SFT::at(context.this_address())
+            .update_public_balance_from_private_internal(to, token_id, amount)
+            .enqueue(&mut context);
+        
+        // Create commitment for privacy entrance
+        let commitment = _initialize_transfer_commitment(&mut context, storage.private_balances, from, to);
+        commitment
+    }
+
+    #[private]
+    fn transfer_private_to_private(
+        from: AztecAddress,
+        to: AztecAddress,
+        token_id: Field,
+        amount: u128,
+        nonce: Field,
+    ) {
+        _validate_from_private(&mut context, from, nonce);
+        
+        // Remove tokens from sender
+        _remove_private_token_amount(storage.private_balances.at(from), token_id, amount);
+        
+        // Add tokens to recipient
+        _add_private_tokens(
+            &mut context,
+            storage.private_balances.at(to),
+            from,
+            to,
+            token_id,
+            amount,
+        );
+    }
+
+    #[private]
+    fn transfer_private_to_commitment(
+        from: AztecAddress,
+        token_id: Field,
+        amount: u128,
+        commitment: PartialSFTNote,
+        nonce: Field,
+    ) {
+        _validate_from_private(&mut context, from, nonce);
+        
+        // Remove tokens from sender
+        _remove_private_token_amount(storage.private_balances.at(from), token_id, amount);
+        
+        // Enqueue public call to complete commitment with token ID and amount
+        SFT::at(context.this_address())
+            .transfer_token_to_commitment_internal(commitment, token_id, amount)
+            .enqueue(&mut context);
+    }
+
+    #[private]
+    fn transfer_public_to_private(
+        from: AztecAddress,
+        to: AztecAddress,
+        token_id: Field,
+        amount: u128,
+        nonce: Field,
+    ) {
+        _validate_from_private(&mut context, from, nonce);
+        
+        // Enqueue public call to decrease sender's public balance
+        SFT::at(context.this_address())
+            .update_public_balance_internal(from, AztecAddress::zero(), token_id, amount)
+            .enqueue(&mut context);
+        
+        // Add tokens to recipient's private balance
+        _add_private_tokens(
+            &mut context,
+            storage.private_balances.at(to),
+            from,
+            to,
+            token_id,
+            amount,
+        );
+    }
+
+    /// @notice Initializes a transfer commitment
+    /// @param context The context
+    /// @param private_balances The private balances map
+    /// @param from The sender address
+    /// @param to The recipient address
+    /// @return The partial SFT note for commitment
+    #[contract_library_method]
+    fn _initialize_transfer_commitment(
+        context: &mut PrivateContext,
+        private_balances: Map<AztecAddress, PrivateSet<SFTNote, &mut PrivateContext>, &mut PrivateContext>,
+        from: AztecAddress,
+        to: AztecAddress,
+    ) -> PartialSFTNote {
+        // Create partial note for commitment from sender to recipient
+        let storage_slot = context.compute_slot_for_type(SFTNote::get_type_id(), 3);
+        SFTNote::partial(to, storage_slot, context, to, from)
+    }
+
+    #[private]
+    fn initialize_transfer_commitment(from: AztecAddress, to: AztecAddress) -> PartialSFTNote {
+        _initialize_transfer_commitment(&mut context, storage.private_balances, from, to)
+    }
+
+    /** ==========================================================
+    * ======================= PUBLIC ==========================
+    * ======================================================== */
+
+    #[public]
+    #[public]
+    fn transfer_public_to_public(
+        from: AztecAddress,
+        to: AztecAddress,
+        token_id: Field,
+        amount: u128,
+        nonce: Field,
+    ) {}
+
+    #[public]
+    fn transfer_public_to_commitment(
+        from: AztecAddress,
+        token_id: Field,
+        amount: u128,
+        commitment: PartialSFTNote,
+        nonce: Field,
+    ) {}
+
+    #[public]
+    #[internal]
+    fn store_commitment_in_storage_internal(commitment: PartialSFTNote) {}
+
+    #[public]
+    #[internal]
+    fn transfer_token_to_commitment_internal(commitment: PartialSFTNote, token_id: Field, amount: u128) {
+        // Verify token exists
+        assert(storage.token_exists.at(token_id).read(), "token does not exist");
+        
+        // Complete the commitment with token ID and amount
+        commitment.complete(token_id, amount, &mut context);
+    }
+
+    #[public]
+    #[internal]
+    fn update_public_balance_internal(from: AztecAddress, to: AztecAddress, token_id: Field, amount: u128) {
+        // Verify token exists
+        assert(storage.token_exists.at(token_id).read(), "token does not exist");
+        
+        // If from address is not zero, decrease their balance
+        if (!from.eq(AztecAddress::zero())) {
+            _decrease_public_balance(storage.public_balances, from, token_id, amount);
+        }
+        
+        // If to address is not zero, increase their balance
+        if (!to.eq(AztecAddress::zero())) {
+            _increase_public_balance(storage.public_balances, to, token_id, amount);
+        }
+    }
+
+    #[public]
+    #[internal]
+    fn update_public_token_owner_from_zero_internal(to: AztecAddress, token_id: Field, amount: u128) {
+        // Verify token exists
+        assert(storage.token_exists.at(token_id).read(), "token does not exist");
+        
+        // Update recipient's public balance
+        _increase_public_balance(storage.public_balances, to, token_id, amount);
+    }
+
+    #[public]
+    #[internal]
+    fn set_sft_exists_internal(token_id: Field, exists: bool) {}
+    
+        
     /** ==========================================================
     * ======================= MINTABLE ==========================
     * ======================================================== */
@@ -335,5 +542,35 @@ pub contract SFT {
     #[contract_library_method]
     fn _validate_minter(caller: AztecAddress, minter: AztecAddress) {
         assert(minter.eq(caller), "caller is not minter");
+    }
+
+    /// @notice Adds tokens to a recipient's private balance
+    /// @param context The context of the private call
+    /// @param private_set The private note set
+    /// @param from The address of the sender
+    /// @param to The address of the recipient
+    /// @param token_id The token ID to add
+    /// @param amount The amount to add
+    #[contract_library_method]
+    fn _add_private_tokens(
+        context: &mut PrivateContext,
+        private_set: PrivateSet<SFTNote, &mut PrivateContext>,
+        from: AztecAddress,
+        to: AztecAddress,
+        token_id: Field,
+        amount: u128,
+    ) {
+        let new_note = SFTNote::new(token_id, amount, to);
+        private_set.insert(new_note).emit(encode_and_encrypt_note(context, to, from));
+    }
+
+    #[public]
+    #[internal]
+    fn update_public_balance_from_private_internal(to: AztecAddress, token_id: Field, amount: u128) {
+        // Verify token exists
+        assert(storage.token_exists.at(token_id).read(), "token does not exist");
+        
+        // Increase recipient's public balance
+        _increase_public_balance(storage.public_balances, to, token_id, amount);
     }
 }
