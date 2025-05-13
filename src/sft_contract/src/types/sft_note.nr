@@ -13,10 +13,7 @@ use dep::aztec::{
     },
 };
 
-use crate::types::nft_note::{NFTPartialNotePrivateContent, PartialNFTNote};
-
 /// A private note representing a specific amount of a specific token ID owned by an account.
-/// @dev Similar to NFTNote but with an additional amount field for tracking quantities
 #[custom_note]
 #[derive(Eq, Serialize)]
 pub struct SFTNote {
@@ -24,7 +21,23 @@ pub struct SFTNote {
     owner: AztecAddress,
     randomness: Field,
     token_id: Field,
-    amount: u128,  // New field for tracking token amounts
+    amount: u128,  // Field for tracking token amounts
+}
+
+/// Private content structure for partial notes
+#[derive(Packable)]
+struct SFTPartialNotePrivateContent {
+    owner: AztecAddress,
+    randomness: Field,
+}
+
+impl SFTPartialNotePrivateContent {
+    fn compute_partial_commitment(self, storage_slot: Field) -> Field {
+        poseidon2_hash_with_separator(
+            array_concat(self.pack(), [storage_slot]),
+            GENERATOR_INDEX__NOTE_HASH,
+        )
+    }
 }
 
 #[derive(Packable)]
@@ -36,23 +49,19 @@ struct PrivateSFTPartialNotePrivateLogContent {
 
 impl NoteType for PrivateSFTPartialNotePrivateLogContent {
     fn get_id() -> Field {
-        // Follow the same pattern as NFT - use 8th bit to indicate partial note log
+        // Use 8th bit to indicate partial note log
         SFTNote::get_id() + 128
     }
 }
 
 impl NoteHash for SFTNote {
-    /// Computes the hash of this note for a given storage slot
     fn compute_note_hash(self, storage_slot: Field) -> Field {
-        // Hash all note fields together with the storage slot
         poseidon2_hash_with_separator(
             array_concat(self.pack(), [storage_slot]),
             GENERATOR_INDEX__NOTE_HASH,
         )
     }
 
-    /// Computes the nullifier for this note using the provided note hash
-    /// @dev The nullifier is used to prevent double-spending of notes
     fn compute_nullifier(self, context: &mut PrivateContext, note_hash_for_nullify: Field) -> Field {
         // Safety: get_public_keys is safe here as we're only accessing public key data
         let owner_npk_m = unsafe { get_public_keys(self.owner).npk_m };
@@ -67,7 +76,6 @@ impl NoteHash for SFTNote {
         )
     }
 
-    /// Unconstrained version of compute_nullifier for use in view functions
     unconstrained fn compute_nullifier_unconstrained(self, note_hash_for_nullify: Field) -> Field {
         // Safety: get_public_keys is safe in unconstrained context for view operations
         let owner_npk_m = unsafe { get_public_keys(self.owner).npk_m };
@@ -82,9 +90,7 @@ impl NoteHash for SFTNote {
 }
 
 impl SFTNote {
-    /// Creates a new SFT note
     pub fn new(token_id: Field, amount: u128, owner: AztecAddress) -> Self {
-        // Safety: random is safe here as it's only used for note initialization
         let randomness = unsafe { random() };
         Self { token_id, amount, owner, randomness }
     }
@@ -97,7 +103,6 @@ impl SFTNote {
         self.amount
     }
 
-    /// Creates a partial note for privacy-preserving transfers
     pub fn partial(
         owner: AztecAddress,
         storage_slot: Field,
@@ -105,14 +110,31 @@ impl SFTNote {
         recipient: AztecAddress,
         sender: AztecAddress,
     ) -> PartialSFTNote {
-        // Safety: random is safe here as it's only used for note initialization
         let randomness = unsafe { random() };
 
-        // Create commitment to private data using NFT's private content structure
-        let commitment = NFTPartialNotePrivateContent { owner, randomness }
+        // Create commitment to private data
+        let commitment = SFTPartialNotePrivateContent { owner, randomness }
             .compute_partial_commitment(storage_slot);
 
-        // Create and return partial note
+        // Create and emit private log
+        let private_log_content = PrivateSFTPartialNotePrivateLogContent {
+            owner,
+            randomness,
+            public_log_tag: commitment,
+        };
+
+        // Get note type ID and pack content
+        let note_type_id = PrivateSFTPartialNotePrivateLogContent::get_id();
+        let packed_content = private_log_content.pack();
+
+        // Create and emit log
+        let mut log = [0; 18];
+        log[0] = note_type_id;
+        for i in 0..packed_content.len() {
+            log[i + 1] = packed_content[i];
+        }
+        context.emit_private_log(log);
+
         PartialSFTNote { commitment }
     }
 }
@@ -128,12 +150,9 @@ impl PartialSFTNote {
         self.commitment
     }
 
-    /// Completes the partial note by adding token_id and amount
     pub fn complete(self, token_id: Field, amount: u128, context: &mut PublicContext) {
-        // Ensure non-zero amount
         assert(amount != 0, "Cannot complete a PartialSFTNote with amount of 0");
 
-        // Emit public log and insert note hash
         context.emit_public_log(self.compute_note_completion_log(token_id, amount));
         context.push_note_hash(self.compute_complete_note_hash(token_id, amount));
     }
