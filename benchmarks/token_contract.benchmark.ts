@@ -8,7 +8,7 @@ import { getInitialTestAccountsWallets } from '@aztec/accounts/testing';
 import { parseUnits } from 'viem';
 
 // Import the new Benchmark base class and context
-import { Benchmark, BenchmarkContext } from 'aztec-benchmark';
+import { Benchmark, BenchmarkContext } from '@defi-wonderland/aztec-benchmark';
 
 import { TokenContract } from '../src/artifacts/Token.js';
 import { deployTokenWithMinter } from '../src/ts/test/utils.js';
