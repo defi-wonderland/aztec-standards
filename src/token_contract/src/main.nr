@@ -705,7 +705,7 @@ pub contract Token {
     fn deposit_public_to_public(assets: u128, receiver: AztecAddress, nonce: Field) {
         let total_assets = Token::at(storage.asset.read())
             .balance_of_public(context.this_address())
-            .call(&mut context);
+            .view(&mut context);
         let shares = convertToShares(assets, total_assets, storage.total_supply.read());
 
         // Take the assets from the caller
@@ -801,7 +801,7 @@ pub contract Token {
     fn mint_public_to_public(shares: u128, receiver: AztecAddress, nonce: Field) {
         let total_assets = Token::at(storage.asset.read())
             .balance_of_public(context.this_address())
-            .call(&mut context);
+            .view(&mut context);
         let assets = convertToAssets(shares, total_assets, storage.total_supply.read());
 
         // transfer assets in
@@ -910,7 +910,7 @@ pub contract Token {
     fn mint_shares_from_assets_internal(to: AztecAddress, assets: u128) {
         let total_assets = Token::at(storage.asset.read())
             .balance_of_public(context.this_address())
-            .call(&mut context);
+            .view(&mut context);
         let shares = convertToShares(assets, total_assets, storage.total_supply.read());
 
         _increase_public_balance(storage.public_balances, to, shares);
@@ -935,7 +935,7 @@ pub contract Token {
     fn mint_commitment_internal(commitment: PartialUintNote, assets: u128) {
         let total_assets = Token::at(storage.asset.read())
             .balance_of_public(context.this_address())
-            .call(&mut context);
+            .view(&mut context);
         let shares = convertToShares(assets, total_assets, storage.total_supply.read());
         _increase_commitment_balance(&mut context, commitment, shares);
         _increase_total_supply(storage.total_supply, shares);
@@ -956,7 +956,7 @@ pub contract Token {
     ) {
         let total_assets = Token::at(storage.asset.read())
             .balance_of_public(context.this_address())
-            .call(&mut context);
+            .view(&mut context);
         let assets = convertToAssets(shares, total_assets - max_assets, storage.total_supply.read());
         assert(assets <= max_assets, "Insufficient assets transferred");
 
@@ -982,7 +982,7 @@ pub contract Token {
     ) {
         let total_assets = Token::at(storage.asset.read())
             .balance_of_public(context.this_address())
-            .call(&mut context);
+            .view(&mut context);
         let assets = convertToAssets(shares, total_assets - max_assets, storage.total_supply.read());
         assert(assets <= max_assets, "Insufficient assets transferred");
 
@@ -1003,7 +1003,7 @@ pub contract Token {
     fn process_mint(from: AztecAddress, shares: u128, max_assets: u128) {
         let total_assets = Token::at(storage.asset.read())
             .balance_of_public(context.this_address())
-            .call(&mut context);
+            .view(&mut context);
         let assets = convertToAssets(shares, total_assets - max_assets, storage.total_supply.read());
         assert(assets <= max_assets, "Insufficient assets transferred");
 
