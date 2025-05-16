@@ -703,16 +703,16 @@ pub contract Token {
     /// @param nonce The nonce used for authwitness
     #[public]
     fn deposit_public_to_public(assets: u128, receiver: AztecAddress, nonce: Field) {
-        let _shares = convertToShares(assets);
+        let shares = convertToShares(&mut context, assets);
 
         // Take the assets from the caller
-        asset_contract
+        Token::at(storage.asset.read())
             .transfer_public_to_public(context.msg_sender(), context.this_address(), assets, nonce)
             .call(&mut context);
 
         // mint shares to the receiver
-        _increase_public_balance(storage.public_balance, receiver, _shares);
-        _increase_total_supply(storage.total_supply, _shares);
+        _increase_public_balance(storage.public_balances, receiver, shares);
+        _increase_total_supply(storage.total_supply, shares);
     }
 
     /// @notice Deposits the underlying asset from a private balance and receives shares to a public balance
@@ -722,12 +722,12 @@ pub contract Token {
     #[private]
     fn deposit_private_to_public(assets: u128, receiver: AztecAddress, nonce: Field) {
         // mint shares to the receiver in public
-        Token::at(context.this_address()).mint_shares_internal(receiver, assets).enqueue(
-            &mut context,
-        );
+        Token::at(context.this_address())
+            .mint_shares_from_assets_internal(receiver, assets)
+            .enqueue(&mut context);
 
         // Take the assets from the caller.
-        // Called after minting shares so that mint_shares_internal computes the amount of shares based on previous state.
+        // Called after minting shares so that mint_shares_from_assets_internal computes the amount of shares based on previous state.
         Token::at(storage.asset.read())
             .transfer_private_to_public(context.msg_sender(), context.this_address(), assets, nonce)
             .call(&mut context);
@@ -744,7 +744,7 @@ pub contract Token {
         expected_ratio: u128,
         nonce: Field,
     ) {
-        // TODO: do we actually need to emit the partial note log, which happens inside uint_note::partial?
+        // TODO: do we actually need to emit the partial note log, emitted inside uint_note::partial?
         let commitment = _initialize_transfer_commitment(
             &mut context,
             storage.private_balances,
@@ -770,7 +770,7 @@ pub contract Token {
     /// @param nonce The nonce used for authwitness
     #[private]
     fn deposit_public_to_private(assets: u128, receiver: AztecAddress, nonce: Field) {
-        // TODO: do we actually need to emit the partial note log, which happens inside uint_note::partial?
+        // TODO: do we actually need to emit the partial note log, emitted inside uint_note::partial?
         let commitment = _initialize_transfer_commitment(
             &mut context,
             storage.private_balances,
@@ -796,13 +796,7 @@ pub contract Token {
     /// @param nonce The nonce used for authwitness on the asset transfer
     #[public]
     fn mint_public_to_public(shares: u128, receiver: AztecAddress, nonce: Field) {
-        let max_shares = _max_mint();
-        assert(shares <= max_shares, "Max mint exceeded");
-        // compute required assets: shares * (total_assets + 1) / (total_supply + 10^decimals)
-        let total_assets = Token::at(storage.asset.read())
-            .balance_of_public(context.this_address())
-            .call(&mut context);
-        let assets = shares * (total_assets + 1) / (storage.total_supply.read() + offset());
+        let assets = convertToAssets(&mut context, shares);
 
         // transfer assets in
         Token::at(storage.asset.read())
@@ -816,101 +810,90 @@ pub contract Token {
 
     /// @notice Mints new shares by depositing assets from a private balance, receiving shares to a public balance
     /// @param shares The amount of shares to mint
+    /// @param max_assets The maximum amount of assets to deposit. If the amount is greater then needed, the excess will be returned to the caller in private.
     /// @param receiver The address of the receiver of shares
-    /// @param expected_ratio The expected ratio between (total_supply+1)/(total_assets+1)
     /// @param nonce The nonce used for authwitness on the asset transfer
     #[private]
     fn mint_private_to_public(
         shares: u128,
+        max_assets: u128,
         receiver: AztecAddress,
-        expected_ratio: u128,
         nonce: Field,
     ) {
-        let max_shares = _max_mint();
-        assert(shares <= max_shares, "Max mint exceeded");
-        // compute required assets via inverse ratio
-        let assets = shares / expected_ratio;
-        // validate and increase total supply
-        Token::at(context.this_address())
-            .validate_total_supply_and_assets_and_increase_internal(expected_ratio, shares)
-            .enqueue(&mut context);
-        // transfer assets in
-        Token::at(storage.asset.read())
-            .transfer_private_to_public(context.msg_sender(), context.this_address(), assets, nonce)
+        // Transfer assets in
+        let commitment = Token::at(storage.asset.read())
+            .transfer_private_to_public_with_commitment(
+                context.msg_sender(),
+                context.this_address(),
+                max_assets,
+                nonce,
+            )
             .call(&mut context);
-        // mint shares to public
+
+        // mint shares to the receiver in public
         Token::at(context.this_address())
-            .increase_public_balance_internal(receiver, shares)
+            .mint_commitment_from_shares_internal(receiver, commitment, shares, max_assets)
             .enqueue(&mut context);
     }
 
     /// @notice Mints new shares by depositing assets from a private balance, receiving shares to a private balance
     /// @param shares The amount of shares to mint
+    /// @param max_assets The maximum amount of assets to deposit. If the amount is greater then needed, the excess will be returned to the caller in private.
     /// @param receiver The address of the receiver of shares
-    /// @param expected_ratio The expected ratio between (total_supply+1)/(total_assets+1)
     /// @param nonce The nonce used for authwitness on the asset transfer
     #[private]
     fn mint_private_to_private(
         shares: u128,
+        max_assets: u128,
         receiver: AztecAddress,
-        expected_ratio: u128,
         nonce: Field,
     ) {
-        let max_shares = _max_mint();
-        assert(shares <= max_shares, "Max mint exceeded");
-        // compute required assets via inverse ratio
-        let assets = shares / expected_ratio;
-        // validate and increase total supply
-        Token::at(context.this_address())
-            .validate_total_supply_and_assets_and_increase_internal(expected_ratio, shares)
-            .enqueue(&mut context);
-        // transfer assets in
-        Token::at(storage.asset.read())
-            .transfer_private_to_public(context.msg_sender(), context.this_address(), assets, nonce)
+        _increase_private_balance(&mut context, storage.private_balances, context.msg_sender(), receiver, shares);
+
+        // Transfer assets in
+        let assets_commitment = Token::at(storage.asset.read())
+            .transfer_private_to_public_with_commitment(
+                context.msg_sender(),
+                context.this_address(),
+                max_assets,
+                nonce,
+            )
             .call(&mut context);
-        // mint shares to private
-        _increase_private_balance(&mut context, storage.private_balances, receiver, shares);
+
+        // mint shares to the receiver in public
+        Token::at(context.this_address())
+            .mint_commitments_from_shares_internal(assets_commitment, shares, max_assets)
+            .enqueue(&mut context);
     }
 
     /// @notice Mints new shares by depositing assets from a public balance, receiving shares to a private balance
     /// @param shares The amount of shares to mint
+    /// @param max_assets The maximum amount of assets to deposit. If the amount is greater then needed, the excess will be returned to the caller in private.
     /// @param receiver The address of the receiver of shares
-    /// @param expected_ratio The expected ratio between (total_supply+1)/(total_assets+1)
     /// @param nonce The nonce used for authwitness on the asset transfer
     #[private]
     fn mint_public_to_private(
         shares: u128,
+        max_assets: u128,
         receiver: AztecAddress,
-        expected_ratio: u128,
         nonce: Field,
     ) {
-        let max_shares = _max_mint();
-        assert(shares <= max_shares, "Max mint exceeded");
-        // compute required assets via inverse ratio
-        let assets = shares / expected_ratio;
-        // validate and increase total supply
-        Token::at(context.this_address())
-            .validate_total_supply_and_assets_and_increase_internal(expected_ratio, shares)
-            .enqueue(&mut context);
-        // transfer assets in
+        _increase_private_balance(&mut context, storage.private_balances, context.msg_sender(), receiver, shares);
+
+        // Take the asset from the caller
         Token::at(storage.asset.read())
-            .transfer_public_to_public(context.msg_sender(), context.this_address(), assets, nonce)
+            .transfer_public_to_public(
+                context.msg_sender(),
+                context.this_address(),
+                max_assets,
+                nonce,
+            )
             .enqueue(&mut context);
-        // mint shares to private
-        _increase_private_balance(&mut context, storage.private_balances, receiver, shares);
-    }
 
-    #[public]
-    fn validate_total_supply_and_assets_and_increase_internal(expected_ratio: u128, amount: u128) {
-        let current_total_supply = storage.total_supply.read();
-        let calculated_ratio =
-            (current_total_supply + offset()) / (storage.total_assets.read() + 1);
-
-        // Check that the ratio the user expects is equal or lower than the actual ratio
-        assert(calculated_ratio >= expected_ratio, "Invalid ratio");
-
-        // Increase the total supply by the amount received
-        storage.total_supply.write(current_total_supply + amount);
+        // mint shares to the receiver in public
+        Token::at(context.this_address())
+            .process_mint(context.msg_sender(), shares, max_assets)
+            .enqueue(&mut context);
     }
 
     /// @notice Increases the public balance of `to` by `amount`
@@ -918,11 +901,21 @@ pub contract Token {
     /// @param amount The amount of tokens to increase the balance by
     #[public]
     #[internal]
-    fn mint_shares_internal(to: AztecAddress, assets: u128) {
-        let _shares = convertToShares(assets);
+    fn mint_shares_from_assets_internal(to: AztecAddress, assets: u128) {
+        let shares = convertToShares(&mut context, assets);
 
-        _increase_public_balance(storage.public_balances, to, _shares);
-        _increase_total_supply(storage.total_supply, _shares);
+        _increase_public_balance(storage.public_balances, to, shares);
+        _increase_total_supply(storage.total_supply, shares);
+    }
+
+    /// @notice Increases the public balance of `to` by `amount`
+    /// @param to The address of the recipient
+    /// @param shares The amount of tokens to increase the balance by
+    #[public]
+    #[internal]
+    fn mint_shares_with_commitment_internal(to: AztecAddress, shares: u128) {
+        _increase_public_balance(storage.public_balances, to, shares);
+        _increase_total_supply(storage.total_supply, shares);
     }
 
     /// @notice Increases the balance of the commitment by `amount`
@@ -931,23 +924,112 @@ pub contract Token {
     #[public]
     #[internal]
     fn mint_commitment_internal(commitment: PartialUintNote, assets: u128) {
-        let _shares = convertToShares(assets);
-        _increase_commitment_balance(&mut context, commitment, _shares);
-        _increase_total_supply(storage.total_supply, _shares);
+        let shares = convertToShares(&mut context, assets);
+        _increase_commitment_balance(&mut context, commitment, shares);
+        _increase_total_supply(storage.total_supply, shares);
+    }
+
+    /// @notice Increases the balance of the commitment by `amount`
+    /// @param to The address of the recipient
+    /// @param commitment The partial note representing the commitment (privacy entrance)
+    /// @param shares The amount of tokens to increase the balance by
+    /// @param max_assets The maximum amount of assets to deposit. If the amount is greater then needed, the excess will be returned to the caller in private.
+    #[public]
+    #[internal]
+    fn mint_commitment_from_shares_internal(
+        to: AztecAddress,
+        commitment: PartialUintNote,
+        shares: u128,
+        max_assets: u128,
+    ) {
+        // let assets = convertToAssets(shares);
+        // The public asset balance of the contract was already updated in the mint_private_to_private's transfer_private_to_public_with_commitment call.
+        let total_assets = Token::at(storage.asset.read())
+            .balance_of_public(context.this_address())
+            .call(&mut context);
+        let assets =
+            shares * (total_assets - max_assets + 1) / (storage.total_supply.read() + offset());
+        assert(assets <= max_assets, "Insufficient assets transferred");
+
+        _increase_public_balance(storage.public_balances, to, shares);
+        _increase_total_supply(storage.total_supply, shares);
+
+        let excess = max_assets - assets;
+        Token::at(storage.asset.read())
+            .transfer_public_to_commitment(context.this_address(), excess, commitment, 0)
+            .call(&mut context);
+    }
+
+    /// @notice Increases the balance of the commitment by `amount`
+    /// @param assets_commitment The partial note representing the commitment (privacy entrance)
+    /// @param shares The amount of tokens to increase the balance by
+    /// @param max_assets The maximum amount of assets to deposit. If the amount is greater then needed, the excess will be returned to the caller in private.
+    #[public]
+    #[internal]
+    fn mint_commitments_from_shares_internal(
+        assets_commitment: PartialUintNote,
+        shares: u128,
+        max_assets: u128,
+    ) {
+        // let assets = convertToAssets(shares);
+        // The public asset balance of the contract was already updated in the mint_private_to_private's transfer_private_to_public_with_commitment call.
+        let total_assets = Token::at(storage.asset.read())
+            .balance_of_public(context.this_address())
+            .call(&mut context);
+        let assets =
+            shares * (total_assets - max_assets + 1) / (storage.total_supply.read() + offset());
+        assert(assets <= max_assets, "Insufficient assets transferred");
+
+        _increase_total_supply(storage.total_supply, shares);
+
+        let excess = max_assets - assets;
+        Token::at(storage.asset.read())
+            .transfer_public_to_commitment(context.this_address(), excess, assets_commitment, 0)
+            .call(&mut context);
+    }
+
+    /// @notice Increases the balance of the commitment by `amount`
+    /// @param from The address of the sender
+    /// @param shares The amount of tokens to increase the balance by
+    /// @param max_assets The maximum amount of assets to deposit. If the amount is greater then needed, the excess will be returned to the caller in private.
+    #[public]
+    #[internal]
+    fn process_mint(from: AztecAddress, shares: u128, max_assets: u128) {
+        // let assets = convertToAssets(shares);
+        // The public asset balance of the contract was already updated in the mint_private_to_private's transfer_private_to_public_with_commitment call.
+        let total_assets = Token::at(storage.asset.read())
+            .balance_of_public(context.this_address())
+            .call(&mut context);
+        let assets =
+            shares * (total_assets - max_assets + 1) / (storage.total_supply.read() + offset());
+        assert(assets <= max_assets, "Insufficient assets transferred");
+
+        _increase_total_supply(storage.total_supply, shares);
+
+        let excess = max_assets - assets;
+        Token::at(storage.asset.read())
+            .transfer_public_to_public(context.this_address(), from, excess, 0)
+            .call(&mut context);
     }
 
     #[contract_library_method]
-    fn convertToShares(assets: u128) -> u128 {
+    fn convertToShares(context: &mut PublicContext, assets: u128) -> u128 {
         // TODO: handle overflow
-        let asset_contract = Token::at(storage.asset.read());
-        let total_assets =
-            asset_contract.balance_of_public(context.this_address()).call(&mut context);
-        let _shares = assets * (storage.total_supply.read() + offset()) / (total_assets + 1);
+        let total_assets = Token::at(storage.asset.read())
+            .balance_of_public(context.this_address())
+            .call(context);
+        let shares = assets * (storage.total_supply.read() + offset()) / (total_assets + 1);
+        shares
     }
 
     #[contract_library_method]
-    fn _max_mint() -> u128 {
-        (-1 as u128)
+    fn convertToAssets(context: &mut PublicContext, shares: u128) -> u128 {
+        // TODO: handle overflow
+        let total_assets = Token::at(storage.asset.read())
+            .balance_of_public(context.this_address())
+            .call(context);
+        let assets = shares * (total_assets + 1) / (storage.total_supply.read() + offset());
+        assets
     }
 
     #[contract_library_method]
