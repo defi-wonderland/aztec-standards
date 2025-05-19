@@ -741,12 +741,7 @@ pub contract Token {
     /// @param receiver The address of the receiver
     /// @param nonce The nonce used for authwitness
     #[private]
-    fn deposit_private_to_private(
-        assets: u128,
-        receiver: AztecAddress,
-        expected_ratio: u128,
-        nonce: Field,
-    ) {
+    fn deposit_private_to_private(assets: u128, receiver: AztecAddress, nonce: Field) {
         // TODO: do we actually need to emit the partial note log, emitted inside uint_note::partial?
         let commitment = _initialize_transfer_commitment(
             &mut context,
