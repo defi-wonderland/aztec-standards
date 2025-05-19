@@ -622,6 +622,21 @@
   dependencies:
     "@jridgewell/trace-mapping" "0.3.9"
 
+"@defi-wonderland/aztec-benchmark@1.0.0":
+  version "1.0.0"
+  resolved "https://registry.yarnpkg.com/@defi-wonderland/aztec-benchmark/-/aztec-benchmark-1.0.0.tgz#786dab6ac80192bcc45ff5fecdf5df6d8f29b105"
+  integrity sha512-l9a97dKtDMd4ezTANIvA7IMcxns8HhzISPFAHlEtAuto2EqbXA2Olo0B//hCGf43Ppo9szlNF1zSubRX0hqTiw==
+  dependencies:
+    "@actions/core" "^1.10.1"
+    "@actions/exec" "^1.1.1"
+    "@aztec/aztec.js" "^0.86.0"
+    "@iarna/toml" "^2.2.5"
+    "@types/node" "^22.15.3"
+    commander "^13.1.0"
+    esbuild "^0.23.1"
+    tsx "^4.19.4"
+    typescript "^5.8.3"
+
 "@esbuild/aix-ppc64@0.23.1":
   version "0.23.1"
   resolved "https://registry.yarnpkg.com/@esbuild/aix-ppc64/-/aix-ppc64-0.23.1.tgz#51299374de171dbd80bb7d838e1cfce9af36f353"
@@ -1416,6 +1431,13 @@
   dependencies:
     undici-types "~6.19.2"
 
+"@types/node@^22.15.3":
+  version "22.15.17"
+  resolved "https://registry.yarnpkg.com/@types/node/-/node-22.15.17.tgz#355ccec95f705b664e4332bb64a7f07db30b7055"
+  integrity sha512-wIX2aSZL5FE+MR0JlvF87BNVrtFWf6AE6rxSE9X7OwnVvoyCQjpzSRJ+M87se/4QCkCiebQAqrJ0y6fwIyi7nw==
+  dependencies:
+    undici-types "~6.21.0"
+
 "@types/request@^2.48.8":
   version "2.48.12"
   resolved "https://registry.yarnpkg.com/@types/request/-/request-2.48.12.tgz#0f590f615a10f87da18e9790ac94c29ec4c5ef30"
@@ -1610,21 +1632,6 @@ axios@^1.7.2, axios@^1.8.2:
     follow-redirects "^1.15.6"
     form-data "^4.0.0"
     proxy-from-env "^1.1.0"
-
-aztec-benchmark@^1.0.13:
-  version "1.0.13"
-  resolved "https://registry.yarnpkg.com/aztec-benchmark/-/aztec-benchmark-1.0.13.tgz#4549e6a173a4e15b6f036c8f0cc335d7f86a1d92"
-  integrity sha512-h9mR4Gx3TgBY0Wg7WrU4XDex63IDhWbDBSh2dB2XSq+N6Ozf1jJcrabe1aPSLeYEkrmG9Ie3JyU/6z/If9t3yQ==
-  dependencies:
-    "@actions/core" "^1.10.1"
-    "@actions/exec" "^1.1.1"
-    "@aztec/aztec.js" "^0.86.0"
-    "@iarna/toml" "^2.2.5"
-    "@types/node" "^22.15.3"
-    commander "^13.1.0"
-    esbuild "^0.23.1"
-    tsx "^4.19.4"
-    typescript "^5.8.3"
 
 babel-jest@^29.7.0:
   version "29.7.0"
