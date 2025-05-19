@@ -70,7 +70,7 @@ export async function deployTokenWithMinter(deployer: AccountWallet) {
   const contract = await Contract.deploy(
     deployer,
     TokenContractArtifact,
-    ['PrivateToken', 'PT', 18, deployer.getAddress()],
+    ['PrivateToken', 'PT', 18, deployer.getAddress(), AztecAddress.ZERO],
     'constructor_with_minter',
   )
     .send()
