@@ -73,5 +73,5 @@ jobs:
           if: steps.changes.outputs.src == 'true'
           with:
             issue-number: ${{ github.event.pull_request.number }}
-            body-file: benchmark_diff.md
+            body-file: benchmark-comparison.md
 
