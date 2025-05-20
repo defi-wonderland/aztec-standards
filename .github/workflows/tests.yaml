@@ -36,7 +36,7 @@ jobs:
   
         - name: Set Aztec version
           run: |
-            VERSION=0.86.0 aztec-up
+            VERSION=0.85.0 aztec-up
         
         - name: Start sandbox
           run: |
@@ -53,7 +53,7 @@ jobs:
 
         - name: Start PXE
           run: |
-            VERSION=0.86.0 aztec start --port 8081 --pxe --pxe.nodeUrl=http://localhost:8080/ --pxe.proverEnabled false &
+            VERSION=0.85.0 aztec start --port 8081 --pxe --pxe.nodeUrl=http://localhost:8080/ --pxe.proverEnabled false &
 
         - name: Run nr tests
           run: |
@@ -63,7 +63,7 @@ jobs:
           run: script -e -c "BASE_PXE_URL=http://localhost NODE_NO_WARNINGS=1 node --experimental-vm-modules $(yarn bin jest) --no-cache --runInBand --config jest.integration.config.json"
         
         - name: Benchmark
-          uses: defi-wonderland/aztec-benchmark/action
+          uses: defi-wonderland/aztec-benchmark/action@main
           if: steps.changes.outputs.src == 'true'
           with:
             threshold: '2.0' # Using the default values for the rest of action parameters
@@ -73,5 +73,5 @@ jobs:
           if: steps.changes.outputs.src == 'true'
           with:
             issue-number: ${{ github.event.pull_request.number }}
-            body-file: benchmark_diff.md
+            body-file: benchmark-comparison.md
 
