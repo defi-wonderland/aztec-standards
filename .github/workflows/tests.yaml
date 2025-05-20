@@ -55,9 +55,21 @@ jobs:
           run: |
             VERSION=0.86.0 aztec start --port 8081 --pxe --pxe.nodeUrl=http://localhost:8080/ --pxe.proverEnabled false &
 
+        - name: Extract package from PR title
+          if: github.event_name == 'pull_request'
+          id: extract_package
+          run: |
+            TITLE="${{ github.event.pull_request.title }}"
+            PACKAGE=$(echo $TITLE | sed -n 's/.*(\([^)]*\)).*/\1/p')
+            echo "package=$PACKAGE" >> $GITHUB_OUTPUT
+
         - name: Run nr tests
           run: |
-            script -e -c "aztec test"
+            if [[ -n "${{ steps.extract_package.outputs.package }}" ]]; then
+              script -e -c "aztec test --package ${{ steps.extract_package.outputs.package }}"
+            else
+              script -e -c "aztec test"
+            fi
 
         - name: Run js tests
           run: script -e -c "BASE_PXE_URL=http://localhost NODE_NO_WARNINGS=1 node --experimental-vm-modules $(yarn bin jest) --no-cache --runInBand --config jest.integration.config.json"
