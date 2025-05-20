@@ -194,6 +194,18 @@ fn mint_to_private(
     to: AztecAddress,
     amount: u128,
 ) { /* ... */ }
+
+/// @notice Burns tokens from a private balance
+/// @dev Burns tokens from a private balance and enqueues a public call to update the total supply
+/// @param from The address of the sender
+/// @param amount The amount of tokens to burn
+/// @param nonce The nonce used for authwitness
+#[private]
+fn burn_private(
+    from: AztecAddress,
+    amount: u128,
+    nonce: Field,
+) { /* ... */ }
 ```
 
 ### Public Functions
@@ -291,6 +303,18 @@ fn mint_to_commitment(
     commitment: Field,
     amount: u128,
 ) { /* ... */ }
+
+/// @notice Burns tokens from a public balance
+/// @dev Burns tokens from a public balance and updates the total supply
+/// @param from The address of the sender
+/// @param amount The amount of tokens to burn
+/// @param nonce The nonce used for authwitness
+#[public]
+fn burn_public(
+    from: AztecAddress,
+    amount: u128,
+    nonce: Field,
+) { /* ... */ }
 ```
 
 ### View Functions
@@ -303,6 +327,7 @@ fn mint_to_commitment(
 fn balance_of_public(owner: AztecAddress) -> u128 { /* ... */ }
 
 /// @notice Returns the total supply of the token
+/// @return The total supply of the token
 #[public]
 #[view]
 fn total_supply() -> u128 { /* ... */ }
