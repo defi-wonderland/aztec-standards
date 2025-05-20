@@ -26,6 +26,8 @@ export const setupSandbox = async () => {
   return createPXE();
 };
 
+// --- Token Utils ---
+
 export const expectUintNote = (note: UniqueNote, amount: bigint, owner: AztecAddress) => {
   expect(note.note.items[0]).toEqual(new Fr(owner.toBigInt()));
   expect(note.note.items[2]).toEqual(new Fr(amount));
