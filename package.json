@@ -17,7 +17,7 @@
     "test:js": "NODE_NO_WARNINGS=1 node --experimental-vm-modules $(yarn bin jest) --no-cache --runInBand --config jest.integration.config.json",
     "test:nr": "aztec test",
     "lint:prettier": "prettier '**/*.{js,ts}' --write",
-    "bench": "benchmark-cli"
+    "bench": "NODE_NO_WARNINGS=1 aztec-benchmark --suffix _base"
   },
   "lint-staged": {
     "*.ts": "prettier --write -u"
@@ -26,6 +26,7 @@
     "@aztec/accounts": "0.85.0-alpha-testnet.9",
     "@aztec/aztec.js": "0.85.0-alpha-testnet.9",
     "@aztec/noir-contracts.js": "0.85.0-alpha-testnet.9",
+    "@defi-wonderland/aztec-benchmark": "1.0.0",
     "@types/node": "22.5.1"
   },
   "devDependencies": {
@@ -38,8 +39,7 @@
     "prettier": "3.4.2",
     "ts-jest": "29.2.5",
     "ts-node": "10.9.2",
-    "typescript": "5.7.2",
-    "aztec-benchmark": "^1.0.13"
+    "typescript": "5.7.2"
   },
   "jest": {
     "testTimeout": 200000
