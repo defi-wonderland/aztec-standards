@@ -1,0 +1,100 @@
+name: Canary Release
+
+on: workflow_dispatch
+
+jobs:
+  export:
+    name: Generate Canary Release
+    environment: Production
+    runs-on: ubuntu-latest
+
+    env:
+      PROJECT_NAME: '@defi-wonderland/aztec-standards'
+      AZTEC_VERSION: 0.85.0-alpha-testnet.9
+
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v4
+
+      - name: Install Node
+        uses: actions/setup-node@v4
+        with:
+          registry-url: "https://registry.npmjs.org"
+          cache: "yarn"
+
+      - name: Set up Docker
+        uses: docker/setup-buildx-action@v2
+
+      - name: Install Aztec CLI
+        run: |
+          curl -s https://install.aztec.network > tmp.sh
+          bash tmp.sh <<< yes "yes"
+
+      - name: Update path
+        run: echo "/home/runner/.aztec/bin" >> $GITHUB_PATH
+
+      - name: Set Aztec version
+        run: |
+          VERSION=${AZTEC_VERSION} aztec-up
+      
+      # Install dependencies AND the current canary version of the package we're releasing now.
+      - name: Install dependencies
+        run: |
+          yarn
+          yarn add @defi-wonderland/aztec-standards@canary
+
+      - name: Compile
+        run: yarn compile
+
+      - name: Codegen
+        run: aztec codegen target --outdir artifacts
+
+      - name: Compile artifacts to JS
+        run: |
+          mkdir -p dist/artifacts
+          yarn tsc artifacts/*.ts --outDir dist/artifacts --skipLibCheck --target es2020 --module nodenext --moduleResolution nodenext --resolveJsonModule
+
+      - name: Update version
+        run: yarn version --new-version "0.0.0-${GITHUB_SHA::8}" --no-git-tag-version
+
+      # TODO: We do several things here:
+      # 1. Create current and historical directories
+      # 2. Copy historical versions from existing package to /historical
+      # 3. Move this version's artifacts and circuits to historical/ as well.
+      # 4. Move this version's artifacts and circuits to current/
+      # 5. Copy deployments.json to current/
+      # 6. README.md, and LICENSE to current/
+      # 7. Trim info from package.json
+      - name: Prepare files for release
+        run: |
+          VERSION="0.0.0-${GITHUB_SHA::8}"
+          mkdir -p export/${{ env.PROJECT_NAME }}/current
+          mkdir -p export/${{ env.PROJECT_NAME }}/historical
+          
+          if [ -d "node_modules/${{ env.PROJECT_NAME }}/historical" ]; then
+            cp -r node_modules/${{ env.PROJECT_NAME }}/historical/** export/${{ env.PROJECT_NAME }}/historical/
+          else
+            echo "No historical directory found, skipping copy"
+          fi
+
+          cp -r dist/artifacts export/${{ env.PROJECT_NAME }}/current/
+          cp -r target export/${{ env.PROJECT_NAME }}/current/
+
+          # Copy deployments.json if it exists
+          if [ -f "src/deployments.json" ]; then
+            cp src/deployments.json export/${{ env.PROJECT_NAME }}/current/
+          else
+            echo "src/deployments.json not found, skipping copy"
+          fi
+          
+          cp -r export/${{ env.PROJECT_NAME }}/current export/${{ env.PROJECT_NAME }}/historical/$VERSION
+
+          cp README.md export/${{ env.PROJECT_NAME }}/
+          cp LICENSE export/${{ env.PROJECT_NAME }}/
+          cat package.json | jq 'del(.scripts, .jest, ."lint-staged", .packageManager, .devDependencies, .dependencies, .engines, .resolutions)' > export/${{ env.PROJECT_NAME }}/package.json
+
+
+      - name: Publish to NPM
+        run: cd export/${{ env.PROJECT_NAME }} && npm publish --access public --tag canary
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
