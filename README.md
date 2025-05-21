@@ -87,8 +87,84 @@ fn constructor_with_minter(
 ) { /* ... */ }
 ```
 
+### View & Utility
+```rust
+/// @notice Returns the public balance of `owner`
+/// @param owner The address of the owner
+/// @return The public balance of `owner`
+#[public] #[view]
+fn balance_of_public(owner: AztecAddress) -> u128
+
+/// @notice Returns the total supply of the token
+/// @return The total supply of the token
+#[public] #[view]
+fn total_supply() -> u128
+
+/// @notice Returns the name of the token
+/// @return The name of the token
+#[public] #[view]
+fn name() -> FieldCompressedString
+
+/// @notice Returns the symbol of the token
+/// @return The symbol of the token
+#[public] #[view]
+fn symbol() -> FieldCompressedString
+
+/// @notice Returns the decimals of the token
+/// @return The decimals of the token
+#[public] #[view]
+fn decimals() -> u8
+
+/// @notice Returns the private balance of `owner`
+/// @param owner The address of the owner
+/// @return The private balance of `owner`
+#[utility]
+unconstrained fn balance_of_private(owner: AztecAddress) -> u128
+```
+
+### Public Functions
+```rust
+/// @notice Mints tokens into the public balance of `to`
+/// @dev Increases public balance and total supply
+/// @param to The address of the recipient
+/// @param amount The amount of tokens to mint
+#[public]
+fn mint_to_public(to: AztecAddress, amount: u128)
+
+/// @notice Finalizes a mint to a commitment
+/// @dev Updates total supply and increases commitment balance
+/// @param commitment The commitment note for the mint
+/// @param amount The amount of tokens to mint
+#[public]
+fn mint_to_commitment(commitment: Field, amount: u128)
+
+/// @notice Burns tokens from a public balance
+/// @dev Decreases public balance and total supply
+/// @param from The address of the sender
+/// @param amount The amount of tokens to burn
+/// @param nonce The nonce used for auth witness
+#[public]
+fn burn_public(from: AztecAddress, amount: u128, nonce: Field)
+```
+
 ### Private Functions
 ```rust
+/// @notice Mints tokens into a private balance
+/// @dev Requires minter, enqueues supply update
+/// @param from The address of the sender
+/// @param to The address of the recipient
+/// @param amount The amount of tokens to mint
+#[private]
+fn mint_to_private(from: AztecAddress, to: AztecAddress, amount: u128)
+
+/// @notice Burns tokens from a private balance
+/// @dev Requires auth witness, enqueues supply update
+/// @param from The address of the sender
+/// @param amount The amount of tokens to burn
+/// @param nonce The nonce used for auth witness
+#[private]
+fn burn_private(from: AztecAddress, amount: u128, nonce: Field)
+
 /// @notice Transfer tokens from private balance to public balance
 /// @dev Spends notes, emits a new note (UintNote) with any remaining change, and enqueues a public call
 /// @param from The address of the sender
@@ -166,34 +242,8 @@ fn transfer_public_to_private(
 /// @param to The address of the recipient
 /// @return commitment The partial note initialized for the transfer/mint commitment
 #[private]
-fn initialize_transfer_commitment(
-    from: AztecAddress,
-    to: AztecAddress,
-) -> Field { /* ... */ }
-
-/// @notice Recursively subtracts balance from commitment
-/// @dev Used to subtract balances that exceed the max notes limit
-/// @param account The address of the account to subtract the balance from
-/// @param amount The amount of tokens to subtract
-/// @return The change to return to the owner
-#[private]
-#[internal]
-fn recurse_subtract_balance_internal(
-    account: AztecAddress,
-    amount: u128,
-) -> u128 { /* ... */ }
-
-/// @notice Mints tokens to a commitment
-/// @dev Mints tokens to a commitment and enqueues a public call to increase the total supply
-/// @param from The address of the sender
-/// @param to The address of the recipient
-/// @param amount The amount of tokens to mint
-#[private]
-fn mint_to_private(
-    from: AztecAddress,
-    to: AztecAddress,
-    amount: u128,
-) { /* ... */ }
+fn initialize_transfer_commitment(from: AztecAddress, to: AztecAddress) -> Field
+```
 
 /// @notice Burns tokens from a private balance
 /// @dev Burns tokens from a private balance and enqueues a public call to update the total supply
