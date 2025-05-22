@@ -71,7 +71,9 @@ jobs:
           mkdir -p export/${{ env.PROJECT_NAME }}/current/artifacts
           mkdir -p export/${{ env.PROJECT_NAME }}/historical
           
-          # Fix historical versions structure if they have double-nested artifacts
+          # This snippet copies the contents of the nested directory artifacts/artifacts
+          # and moves them up one level to artifacts/. Then it removes the now empty nested directory.
+          # After we run this once, this won't be needed anymore.
           if [ -d "node_modules/${{ env.PROJECT_NAME }}/historical" ]; then
             # First copy all historical versions
             cp -r node_modules/${{ env.PROJECT_NAME }}/historical/** export/${{ env.PROJECT_NAME }}/historical/
