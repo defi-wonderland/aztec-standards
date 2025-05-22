@@ -92,27 +92,32 @@ fn constructor_with_minter(
 /// @notice Returns the public balance of `owner`
 /// @param owner The address of the owner
 /// @return The public balance of `owner`
-#[public] #[view]
+#[public]
+#[view]
 fn balance_of_public(owner: AztecAddress) -> u128
 
 /// @notice Returns the total supply of the token
 /// @return The total supply of the token
-#[public] #[view]
+#[public]
+#[view]
 fn total_supply() -> u128
 
 /// @notice Returns the name of the token
 /// @return The name of the token
-#[public] #[view]
+#[public]
+#[view]
 fn name() -> FieldCompressedString
 
 /// @notice Returns the symbol of the token
 /// @return The symbol of the token
-#[public] #[view]
+#[public]
+#[view]
 fn symbol() -> FieldCompressedString
 
 /// @notice Returns the decimals of the token
 /// @return The decimals of the token
-#[public] #[view]
+#[public]
+#[view]
 fn decimals() -> u8
 
 /// @notice Returns the private balance of `owner`
@@ -124,19 +129,86 @@ unconstrained fn balance_of_private(owner: AztecAddress) -> u128
 
 ### Public Functions
 ```rust
+/// @notice Transfers tokens from public balance to public balance
+/// @dev Public call to decrease account balance and a public call to increase recipient balance
+/// @param from The address of the sender
+/// @param to The address of the recipient
+/// @param amount The amount of tokens to transfer
+/// @param nonce The nonce used for authwitness
+#[public]
+fn transfer_public_to_public(
+    from: AztecAddress,
+    to: AztecAddress,
+    amount: u128,
+    nonce: Field,
+) { /* ... */ }
+
+/// @notice Upgrades the contract to a new contract class id
+/// @dev Only callable by the `upgrade_authority` and effective after the upgrade delay
+/// @param new_contract_class_id The new contract class id
+#[public]
+fn upgrade_contract(new_contract_class_id: Field) { /* ... */ }
+
+/// @notice Finalizes a transfer of token `amount` from public balance of `from` to a commitment of `to`
+/// @dev The transfer must be prepared by calling `initialize_transfer_commitment` first and the resulting
+/// `commitment` must be passed as an argument to this function
+/// @param from The address of the sender
+/// @param commitment The Field representing the commitment (privacy entrance)
+/// @param amount The amount of tokens to transfer
+/// @param nonce The nonce used for authwitness
+#[public]
+fn transfer_public_to_commitment(
+    from: AztecAddress,
+    commitment: Field,
+    amount: u128,
+    nonce: Field,
+) { /* ... */ }
+
+/// @notice Mints tokens to a public balance
+/// @dev Increases the public balance of `to` by `amount` and the total supply
+/// @param to The address of the recipient
+/// @param amount The amount of tokens to mint
+#[public]
+fn mint_to_public(
+    to: AztecAddress,
+    amount: u128,
+) { /* ... */ }
+
+/// @notice Finalizes a mint to a commitment
+/// @dev Finalizes a mint to a commitment and updates the total supply
+/// @param commitment The Field representing the mint commitment (privacy entrance)
+/// @param amount The amount of tokens to mint
+#[public]
+fn mint_to_commitment(
+    commitment: Field,
+    amount: u128,
+) { /* ... */ }
+
+/// @notice Burns tokens from a public balance
+/// @dev Burns tokens from a public balance and updates the total supply
+/// @param from The address of the sender
+/// @param amount The amount of tokens to burn
+/// @param nonce The nonce used for authwitness
+#[public]
+fn burn_public(
+    from: AztecAddress,
+    amount: u128,
+    nonce: Field,
+) { /* ... */ }
+
 /// @notice Mints tokens into the public balance of `to`
 /// @dev Increases public balance and total supply
 /// @param to The address of the recipient
 /// @param amount The amount of tokens to mint
 #[public]
-fn mint_to_public(to: AztecAddress, amount: u128)
+fn mint_to_public(to: AztecAddress, amount: u128) { /* ... */ }
 
 /// @notice Finalizes a mint to a commitment
 /// @dev Updates total supply and increases commitment balance
 /// @param commitment The commitment note for the mint
 /// @param amount The amount of tokens to mint
 #[public]
-fn mint_to_commitment(commitment: Field, amount: u128)
+fn mint_to_commitment(commitment: Field, amount: u128) { /* ... */ }
 
 /// @notice Burns tokens from a public balance
 /// @dev Decreases public balance and total supply
@@ -144,27 +216,11 @@ fn mint_to_commitment(commitment: Field, amount: u128)
 /// @param amount The amount of tokens to burn
 /// @param nonce The nonce used for auth witness
 #[public]
-fn burn_public(from: AztecAddress, amount: u128, nonce: Field)
+fn burn_public(from: AztecAddress, amount: u128, nonce: Field) { /* ... */ }
 ```
 
 ### Private Functions
 ```rust
-/// @notice Mints tokens into a private balance
-/// @dev Requires minter, enqueues supply update
-/// @param from The address of the sender
-/// @param to The address of the recipient
-/// @param amount The amount of tokens to mint
-#[private]
-fn mint_to_private(from: AztecAddress, to: AztecAddress, amount: u128)
-
-/// @notice Burns tokens from a private balance
-/// @dev Requires auth witness, enqueues supply update
-/// @param from The address of the sender
-/// @param amount The amount of tokens to burn
-/// @param nonce The nonce used for auth witness
-#[private]
-fn burn_private(from: AztecAddress, amount: u128, nonce: Field)
-
 /// @notice Transfer tokens from private balance to public balance
 /// @dev Spends notes, emits a new note (UintNote) with any remaining change, and enqueues a public call
 /// @param from The address of the sender
@@ -242,129 +298,23 @@ fn transfer_public_to_private(
 /// @param to The address of the recipient
 /// @return commitment The partial note initialized for the transfer/mint commitment
 #[private]
-fn initialize_transfer_commitment(from: AztecAddress, to: AztecAddress) -> Field
-```
+fn initialize_transfer_commitment(from: AztecAddress, to: AztecAddress) -> Field { /* ... */ }
+
+/// @notice Mints tokens into a private balance
+/// @dev Requires minter, enqueues supply update
+/// @param from The address of the sender
+/// @param to The address of the recipient
+/// @param amount The amount of tokens to mint
+#[private]
+fn mint_to_private(from: AztecAddress, to: AztecAddress, amount: u128) { /* ... */ }
 
 /// @notice Burns tokens from a private balance
-/// @dev Burns tokens from a private balance and enqueues a public call to update the total supply
+/// @dev Requires auth witness, enqueues supply update
 /// @param from The address of the sender
 /// @param amount The amount of tokens to burn
-/// @param nonce The nonce used for authwitness
+/// @param nonce The nonce used for auth witness
 #[private]
-fn burn_private(
-    from: AztecAddress,
-    amount: u128,
-    nonce: Field,
-) { /* ... */ }
-```
-
-### Public Functions
-```rust
-/// @notice Transfers tokens from public balance to public balance
-/// @dev Public call to decrease account balance and a public call to increase recipient balance
-/// @param from The address of the sender
-/// @param to The address of the recipient
-/// @param amount The amount of tokens to transfer
-/// @param nonce The nonce used for authwitness
-#[public]
-fn transfer_public_to_public(
-    from: AztecAddress,
-    to: AztecAddress,
-    amount: u128,
-    nonce: Field,
-) { /* ... */ }
-
-/// @notice Upgrades the contract to a new contract class id
-/// @dev Only callable by the `upgrade_authority` and effective after the upgrade delay
-/// @param new_contract_class_id The new contract class id
-#[public]
-fn upgrade_contract(new_contract_class_id: Field) { /* ... */ }
-
-/// @notice Finalizes a transfer of token `amount` from public balance of `from` to a commitment of `to`
-/// @dev The transfer must be prepared by calling `initialize_transfer_commitment` first and the resulting
-/// `commitment` must be passed as an argument to this function
-/// @param from The address of the sender
-/// @param commitment The Field representing the commitment (privacy entrance)
-/// @param amount The amount of tokens to transfer
-/// @param nonce The nonce used for authwitness
-#[public]
-fn transfer_public_to_commitment(
-    from: AztecAddress,
-    commitment: Field,
-    amount: u128,
-    nonce: Field,
-) { /* ... */ }
-
-/// @notice Stores a partial note in storage
-/// @dev Used to store the commitment (privacy entrance)
-/// @param commitment The partial note to store
-#[public]
-#[internal]
-fn store_commitment_in_storage_internal(
-    commitment: PartialUintNote,
-) { /* ... */ }
-
-/// @notice Increases the public balance of `to` by `amount`
-/// @param to The address of the recipient
-/// @param amount The amount of tokens to increase the balance by
-#[public]
-#[internal]
-fn increase_public_balance_internal(
-    to: AztecAddress,
-    amount: u128,
-) { /* ... */ }
-
-/// @notice Decreases the public balance of `from` by `amount`
-/// @param from The address of the sender
-/// @param amount The amount of tokens to decrease the balance by
-#[public]
-#[internal]
-fn decrease_public_balance_internal(
-    from: AztecAddress,
-    amount: u128,
-) { /* ... */ }
-
-/// @notice Increases the balance of the commitment by `amount`
-/// @param commitment The partial note representing the commitment
-/// @param amount The amount of tokens to increase the balance by
-#[public]
-#[internal]
-fn increase_commitment_balance_internal(
-    commitment: PartialUintNote,
-    amount: u128,
-) { /* ... */ }
-
-/// @notice Mints tokens to a public balance
-/// @dev Increases the public balance of `to` by `amount` and the total supply
-/// @param to The address of the recipient
-/// @param amount The amount of tokens to mint
-#[public]
-fn mint_to_public(
-    to: AztecAddress,
-    amount: u128,
-) { /* ... */ }
-
-/// @notice Finalizes a mint to a commitment
-/// @dev Finalizes a mint to a commitment and updates the total supply
-/// @param commitment The Field representing the mint commitment (privacy entrance)
-/// @param amount The amount of tokens to mint
-#[public]
-fn mint_to_commitment(
-    commitment: Field,
-    amount: u128,
-) { /* ... */ }
-
-/// @notice Burns tokens from a public balance
-/// @dev Burns tokens from a public balance and updates the total supply
-/// @param from The address of the sender
-/// @param amount The amount of tokens to burn
-/// @param nonce The nonce used for authwitness
-#[public]
-fn burn_public(
-    from: AztecAddress,
-    amount: u128,
-    nonce: Field,
-) { /* ... */ }
+fn burn_private(from: AztecAddress, amount: u128, nonce: Field) { /* ... */ }
 ```
 
 ### View Functions

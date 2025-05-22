@@ -8,7 +8,6 @@ use aztec::{
     prelude::AztecAddress,
     protocol_types::storage::map::derive_storage_slot_in_map,
     test::helpers::{cheatcodes, test_environment::TestEnvironment},
-    note::constants::MAX_NOTES_PER_PAGE,
 };
 use std::test::OracleMock;
 
