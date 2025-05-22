@@ -75,6 +75,7 @@ pub unconstrained fn deploy_token_with_initial_supply(
         to,
     );
     let token_contract = env.deploy("./@token_contract", "Token").with_public_void_initializer(
+        owner,
         initializer_call_interface,
     );
     env.advance_block_by(1);
@@ -98,6 +99,7 @@ pub unconstrained fn deploy_token_with_minter(
         minter,
     );
     let token_contract = env.deploy("./@token_contract", "Token").with_public_void_initializer(
+        owner,
         initializer_call_interface,
     );
     env.advance_block_by(1);
