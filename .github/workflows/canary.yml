@@ -42,6 +42,7 @@ jobs:
         run: |
           yarn
           yarn add @defi-wonderland/aztec-standards@canary
+
       - name: Compile
         run: yarn compile
 
@@ -50,8 +51,8 @@ jobs:
 
       - name: Compile artifacts to JS
         run: |
-          mkdir -p dist/artifacts
-          yarn tsc artifacts/*.ts --outDir dist/artifacts --skipLibCheck --target es2020 --module nodenext --moduleResolution nodenext --resolveJsonModule --declaration
+          mkdir -p dist/
+          yarn tsc artifacts/*.ts --outDir dist/ --skipLibCheck --target es2020 --module nodenext --moduleResolution nodenext --resolveJsonModule --declaration
 
       - name: Update version
         run: yarn version --new-version "0.0.0-${GITHUB_SHA::8}" --no-git-tag-version
@@ -67,7 +68,7 @@ jobs:
       - name: Prepare files for release
         run: |
           VERSION="0.0.0-${GITHUB_SHA::8}"
-          mkdir -p export/${{ env.PROJECT_NAME }}/current
+          mkdir -p export/${{ env.PROJECT_NAME }}/current/artifacts
           mkdir -p export/${{ env.PROJECT_NAME }}/historical
           
           if [ -d "node_modules/${{ env.PROJECT_NAME }}/historical" ]; then
@@ -76,7 +77,8 @@ jobs:
             echo "No historical directory found, skipping copy"
           fi
 
-          cp -r dist/artifacts export/${{ env.PROJECT_NAME }}/current/
+          # Copy the compiled JS files directly to artifacts directory
+          cp -r dist/* export/${{ env.PROJECT_NAME }}/current/artifacts
           cp -r target export/${{ env.PROJECT_NAME }}/current/
 
           # Copy deployments.json if it exists
