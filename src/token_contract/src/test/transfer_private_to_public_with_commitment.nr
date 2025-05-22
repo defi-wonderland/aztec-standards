@@ -37,7 +37,7 @@ unconstrained fn transfer_private_to_public_with_commitment_stores_commitment() 
     env.advance_block_by(1);
 
     assert(
-        utils::_commitment_storage_read(token_contract_address, commitment.commitment()) == true,
+        utils::_commitment_storage_read(token_contract_address, commitment) == true,
         "Commitment not stored",
     );
 }
@@ -110,7 +110,7 @@ unconstrained fn transfer_private_to_public_with_commitment_and_finalize() {
     // Transfer tokens
     env.impersonate(recipient);
     Token::at(token_contract_address)
-        .transfer_public_to_commitment(recipient, transfer_amount, commitment, 0)
+        .transfer_public_to_commitment(recipient, commitment, transfer_amount, 0)
         .call(&mut env.public());
     env.advance_block_by(1);
 
@@ -137,12 +137,12 @@ unconstrained fn transfer_private_to_public_with_commitment_and_finalize_with_in
         .transfer_private_to_public_with_commitment(owner, recipient, transfer_amount, 0)
         .call(&mut env.private());
 
-    let invalid_commitment = PartialUintNote { commitment: 0xdeadbeef };
+    let invalid_commitment: Field = 0xdeadbeef;
 
     // finalize transfer to an invalid commitment
     env.impersonate(recipient);
     Token::at(token_contract_address)
-        .transfer_public_to_commitment(recipient, transfer_amount, invalid_commitment, 0)
+        .transfer_public_to_commitment(recipient, invalid_commitment, transfer_amount, 0)
         .call(&mut env.public());
 
     // you can finalize but the recipient will not have tokens
@@ -169,11 +169,11 @@ unconstrained fn transfer_private_to_public_with_commitment_and_finalize_with_co
         .transfer_private_to_public_with_commitment(owner, recipient, transfer_amount, 0)
         .call(&mut env.private());
 
-    let invalid_commitment = PartialUintNote { commitment: 0 };
+    let invalid_commitment = 0;
     // Transfer tokens
     env.impersonate(recipient);
     Token::at(token_contract_address)
-        .transfer_public_to_commitment(recipient, transfer_amount, invalid_commitment, 0)
+        .transfer_public_to_commitment(recipient, invalid_commitment, transfer_amount, 0)
         .call(&mut env.public());
 
     // check that both owner and recipient have no tokens
