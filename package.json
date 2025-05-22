@@ -1,10 +1,12 @@
 {
-  "name": "aztec_standards",
+  "name": "@defi-wonderland/aztec-standards",
   "version": "0.0.0",
-  "repository": "https://github.com/defi-wonderland/aztec-standards.git",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/defi-wonderland/aztec-standards.git"
+  },
   "author": "Wonderland",
   "license": "MIT",
-  "private": true,
   "type": "module",
   "scripts": {
     "clean": "rm -rf ./src/artifacts ./target",
@@ -21,9 +23,9 @@
     "*.ts": "prettier --write -u"
   },
   "dependencies": {
-    "@aztec/accounts": "0.85.0",
-    "@aztec/aztec.js": "0.85.0",
-    "@aztec/noir-contracts.js": "0.85.0",
+    "@aztec/accounts": "0.85.0-alpha-testnet.9",
+    "@aztec/aztec.js": "0.85.0-alpha-testnet.9",
+    "@aztec/noir-contracts.js": "0.85.0-alpha-testnet.9",
     "@defi-wonderland/aztec-benchmark": "1.0.0",
     "@types/node": "22.5.1"
   },

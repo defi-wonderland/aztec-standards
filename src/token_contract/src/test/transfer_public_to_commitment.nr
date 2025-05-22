@@ -33,13 +33,13 @@ unconstrained fn transfer_public_to_commitment_external_orchestration() {
     let _ = OracleMock::mock("getRandomField").returns(note_randomness);
 
     // We prepare the transfer
-    let partial_note: PartialUintNote = Token::at(token_contract_address)
+    let commitment = Token::at(token_contract_address)
         .initialize_transfer_commitment(owner, recipient)
         .call(&mut env.private());
 
     // Finalize the transfer of the tokens (message sender owns the tokens in public)
     Token::at(token_contract_address)
-        .transfer_public_to_commitment(owner, amount, partial_note, 0)
+        .transfer_public_to_commitment(owner, commitment, amount, 0)
         .call(&mut env.public());
 
     env.advance_block_by(1);
@@ -55,11 +55,11 @@ unconstrained fn transfer_public_to_commitment_transfer_not_initialized() {
         utils::setup_and_mint_to_public_without_minter(/* with_account_contracts */ false);
 
     // Transfer was not prepared, so we can use a random value for the commitment
-    let commitment = PartialUintNote { commitment: random() };
+    let commitment = random();
 
     // Try finalizing the transfer without preparing it first
     Token::at(token_contract_address)
-        .transfer_public_to_commitment(owner, amount, commitment, 0)
+        .transfer_public_to_commitment(owner, commitment, amount, 0)
         .call(&mut env.public());
 }
 
@@ -72,13 +72,13 @@ unconstrained fn transfer_public_to_commitment_failure_not_an_owner() {
     // (For this specific test we could set a random value for the commitment and not do the call to `prepare...`
     // as the token balance check is before we use the value but that would made the test less robust against changes
     // in the contract.)
-    let partial_note: PartialUintNote = Token::at(token_contract_address)
+    let commitment = Token::at(token_contract_address)
         .initialize_transfer_commitment(owner, not_owner)
         .call(&mut env.private());
 
     // Try transferring someone else's token balance
     env.impersonate(not_owner);
     Token::at(token_contract_address)
-        .transfer_public_to_commitment(not_owner, amount, partial_note, 0)
+        .transfer_public_to_commitment(not_owner, commitment, amount, 0)
         .call(&mut env.public());
 }

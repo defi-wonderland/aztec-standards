@@ -12,6 +12,10 @@ pub contract Token {
             storage::storage,
         },
         prelude::{AztecAddress, Map, PublicContext, PublicImmutable, PublicMutable},
+        protocol_types::{
+            constants::DEPLOYER_CONTRACT_ADDRESS, contract_class_id::ContractClassId,
+            traits::FromField,
+        },
     };
     // authorized witness library
     use authwit::auth::{
@@ -25,6 +29,9 @@ pub contract Token {
     use aztec::messages::logs::note::encode_and_encrypt_note;
     // balance library
     use balance_set::balance_set::BalanceSet;
+
+    // contract instance deployer
+    use contract_instance_deployer::ContractInstanceDeployer;
 
     // gas-optimized max notes for initial transfer call
     global INITIAL_TRANSFER_CALL_MAX_NOTES: u32 = 2;
@@ -47,6 +54,7 @@ pub contract Token {
         total_supply: PublicMutable<u128, Context>,
         public_balances: Map<AztecAddress, PublicMutable<u128, Context>, Context>,
         minter: PublicImmutable<AztecAddress, Context>,
+        upgrade_authority: PublicImmutable<AztecAddress, Context>,
     }
 
     /// @notice Initializes the token with an initial supply
@@ -56,6 +64,7 @@ pub contract Token {
     /// @param decimals The number of decimals of the token
     /// @param initial_supply The initial supply of the token
     /// @param to The address to mint the initial supply to
+    /// @param upgrade_authority The address of the upgrade authority (zero address if not upgradeable)
     #[public]
     #[initializer]
     fn constructor_with_initial_supply(
@@ -64,6 +73,7 @@ pub contract Token {
         decimals: u8,
         initial_supply: u128,
         to: AztecAddress,
+        upgrade_authority: AztecAddress,
     ) {
         storage.name.initialize(FieldCompressedString::from_string(name));
         storage.symbol.initialize(FieldCompressedString::from_string(symbol));
@@ -71,6 +81,8 @@ pub contract Token {
 
         _increase_public_balance(storage.public_balances, to, initial_supply);
         _increase_total_supply(storage.total_supply, initial_supply);
+
+        storage.upgrade_authority.initialize(upgrade_authority);
     }
 
     /// @notice Initializes the token with a minter
@@ -78,14 +90,22 @@ pub contract Token {
     /// @param symbol The symbol of the token
     /// @param decimals The number of decimals of the token
     /// @param minter The address of the minter
+    /// @param upgrade_authority The address of the upgrade authority (zero address if not upgradeable)
     #[public]
     #[initializer]
-    fn constructor_with_minter(name: str<31>, symbol: str<31>, decimals: u8, minter: AztecAddress) {
+    fn constructor_with_minter(
+        name: str<31>,
+        symbol: str<31>,
+        decimals: u8,
+        minter: AztecAddress,
+        upgrade_authority: AztecAddress,
+    ) {
         storage.name.initialize(FieldCompressedString::from_string(name));
         storage.symbol.initialize(FieldCompressedString::from_string(symbol));
         storage.decimals.initialize(decimals);
 
         storage.minter.initialize(minter);
+        storage.upgrade_authority.initialize(upgrade_authority);
     }
 
     /** ==========================================================
@@ -133,7 +153,7 @@ pub contract Token {
         to: AztecAddress,
         amount: u128,
         nonce: Field,
-    ) -> PartialUintNote {
+    ) -> Field {
         _validate_from_private(&mut context, from, nonce);
 
         _decrease_private_balance(
@@ -150,7 +170,7 @@ pub contract Token {
 
         let commitment =
             _initialize_transfer_commitment(&mut context, storage.private_balances, from, to);
-        commitment
+        commitment.commitment()
     }
 
     /// @notice Transfer tokens from private balance to another private balance
@@ -182,14 +202,14 @@ pub contract Token {
     /// @notice Transfer tokens from private balance to the recipient commitment (recipient must create a commitment first)
     /// @dev Spends notes, emits a new note (UintNote) with any remaining change, and enqueues a public call
     /// @param from The address of the sender
-    /// @param amount The amount of tokens to transfer
     /// @param commitment The partial note representing the commitment (privacy entrance that the recipient shares with the sender)
+    /// @param amount The amount of tokens to transfer
     /// @param nonce The nonce used for authwitness
     #[private]
     fn transfer_private_to_commitment(
         from: AztecAddress,
+        commitment: Field,
         amount: u128,
-        commitment: PartialUintNote,
         nonce: Field,
     ) {
         _validate_from_private(&mut context, from, nonce);
@@ -203,7 +223,7 @@ pub contract Token {
         );
 
         Token::at(context.this_address())
-            .increase_commitment_balance_internal(commitment, amount)
+            .increase_commitment_balance_internal(PartialUintNote { commitment }, amount)
             .enqueue(&mut context);
     }
 
@@ -235,8 +255,10 @@ pub contract Token {
     /// @param to The address of the recipient
     /// @return commitment The partial note initialized for the transfer/mint commitment
     #[private]
-    fn initialize_transfer_commitment(from: AztecAddress, to: AztecAddress) -> PartialUintNote {
-        _initialize_transfer_commitment(&mut context, storage.private_balances, from, to)
+    fn initialize_transfer_commitment(from: AztecAddress, to: AztecAddress) -> Field {
+        let commitment =
+            _initialize_transfer_commitment(&mut context, storage.private_balances, from, to);
+        commitment.commitment()
     }
 
     /// @notice Recursively subtracts balance from commitment
@@ -278,29 +300,29 @@ pub contract Token {
     /// @dev The transfer must be prepared by calling `initialize_transfer_commitment` first and the resulting
     /// `commitment` must be passed as an argument to this function
     /// @param from The address of the sender
-    /// @param amount The amount of tokens to transfer
     /// @param commitment The partial note representing the commitment (privacy entrance)
+    /// @param amount The amount of tokens to transfer
     /// @param nonce The nonce used for authwitness
     #[public]
     fn transfer_public_to_commitment(
         from: AztecAddress,
+        commitment: Field,
         amount: u128,
-        commitment: PartialUintNote,
         nonce: Field,
     ) {
         _validate_from_public(&mut context, from, nonce);
 
         _decrease_public_balance(storage.public_balances, from, amount);
-        _increase_commitment_balance(&mut context, commitment, amount);
+        _increase_commitment_balance(&mut context, PartialUintNote { commitment }, amount);
     }
 
     /// @notice Stores a partial note in storage
     /// @dev Used to store the commitment (privacy entrance)
-    /// @param slot The partial note to store
+    /// @param commitment The partial note to store
     #[public]
     #[internal]
-    fn store_commitment_in_storage_internal(slot: PartialUintNote) {
-        _store_commitment_in_storage(&mut context, slot);
+    fn store_commitment_in_storage_internal(commitment: PartialUintNote) {
+        _store_commitment_in_storage(&mut context, commitment);
     }
 
     /// @notice Increases the public balance of `to` by `amount`
@@ -351,6 +373,30 @@ pub contract Token {
         storage.total_supply.read()
     }
 
+    /// @notice Returns the name of the token
+    /// @return The name of the token
+    #[public]
+    #[view]
+    fn name() -> FieldCompressedString {
+        storage.name.read()
+    }
+
+    /// @notice Returns the symbol of the token
+    /// @return The symbol of the token
+    #[public]
+    #[view]
+    fn symbol() -> FieldCompressedString {
+        storage.symbol.read()
+    }
+
+    /// @notice Returns the decimals of the token
+    /// @return The decimals of the token
+    #[public]
+    #[view]
+    fn decimals() -> u8 {
+        storage.decimals.read()
+    }
+
     /** ==========================================================
      * ===================== UNCONSTRAINED =======================
      * ======================================================== */
@@ -394,14 +440,14 @@ pub contract Token {
 
     /// @notice Finalizes a mint to a commitment
     /// @dev Finalizes a mint to a commitment and updates the total supply
-    /// @param amount The amount of tokens to mint
     /// @param commitment The partial note representing the mint commitment (privacy entrance)
+    /// @param amount The amount of tokens to mint
     #[public]
-    fn mint_to_commitment(amount: u128, commitment: PartialUintNote) {
+    fn mint_to_commitment(commitment: Field, amount: u128) {
         _validate_minter(context.msg_sender(), storage.minter.read());
 
         _increase_total_supply(storage.total_supply, amount);
-        _increase_commitment_balance(&mut context, commitment, amount);
+        _increase_commitment_balance(&mut context, PartialUintNote { commitment }, amount);
     }
 
     #[public]
@@ -639,6 +685,26 @@ pub contract Token {
             context,
         );
         commitment
+    }
+
+    /** ==========================================================
+     * ===================  UPGRADEABLE  =========================
+     * ======================================================== */
+
+    /// @notice Upgrades the contract to a new contract class id
+    /// @dev The upgrade authority must be set
+    /// @dev The upgrade will only be effective after the upgrade delay has passed
+    /// @param new_contract_class_id The new contract class id
+    #[public]
+    fn upgrade_contract(new_contract_class_id: Field) {
+        let upgrade_authority = storage.upgrade_authority.read();
+
+        assert(!upgrade_authority.eq(AztecAddress::zero()), "upgrade authority not set");
+        assert(context.msg_sender().eq(upgrade_authority), "caller is not upgrade authority");
+
+        ContractInstanceDeployer::at(DEPLOYER_CONTRACT_ADDRESS)
+            .update(ContractClassId::from_field(new_contract_class_id))
+            .call(&mut context);
     }
 
     /** ==========================================================

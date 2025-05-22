@@ -1,8 +1,14 @@
+name: Tests
+
 on:
     push:
       branches:
         - main
     pull_request:
+
+concurrency:
+  group: pr-${{ github.head_ref }}
+  cancel-in-progress: true
 
 jobs:
     setup-and-run:
@@ -36,7 +42,7 @@ jobs:
   
         - name: Set Aztec version
           run: |
-            VERSION=0.85.0 aztec-up
+            VERSION=0.85.0-alpha-testnet.9 aztec-up
         
         - name: Start sandbox
           run: |
@@ -53,7 +59,7 @@ jobs:
 
         - name: Start PXE
           run: |
-            VERSION=0.85.0 aztec start --port 8081 --pxe --pxe.nodeUrl=http://localhost:8080/ --pxe.proverEnabled false &
+            VERSION=0.85.0-alpha-testnet.9 aztec start --port 8081 --pxe --pxe.nodeUrl=http://localhost:8080/ --pxe.proverEnabled false &
 
         - name: Run nr tests
           run: |

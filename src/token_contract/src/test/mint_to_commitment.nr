@@ -13,7 +13,7 @@ unconstrained fn mint_to_commitment_success() {
 
     let mint_amount: u128 = 10_000;
     env.impersonate(minter);
-    Token::at(token_contract_address).mint_to_commitment(mint_amount, commitment).call(
+    Token::at(token_contract_address).mint_to_commitment(commitment, mint_amount).call(
         &mut env.public(),
     );
     env.advance_block_by(1);
@@ -36,7 +36,7 @@ unconstrained fn mint_to_private_failure_unauthorized() {
     let mint_amount: u128 = 10_000;
     env.impersonate(recipient);
     let mint_to_commitment_call_interface =
-        Token::at(token_contract_address).mint_to_commitment(mint_amount, commitment);
+        Token::at(token_contract_address).mint_to_commitment(commitment, mint_amount);
     mint_to_commitment_call_interface.call(&mut env.public());
 }
 
@@ -55,13 +55,13 @@ unconstrained fn mint_to_private_failure_balance_overflow() {
     let two_pow_127_minus_one = two_pow_127 - 1;
     let max_u128 = (two_pow_127 + two_pow_127_minus_one) as u128;
     env.impersonate(minter);
-    Token::at(token_contract_address).mint_to_commitment(max_u128, commitment).call(
+    Token::at(token_contract_address).mint_to_commitment(commitment, max_u128).call(
         &mut env.public(),
     );
     env.advance_block_by(1);
 
     let mint_to_commitment_call_interface =
-        Token::at(token_contract_address).mint_to_commitment(2 as u128, commitment);
+        Token::at(token_contract_address).mint_to_commitment(commitment, 2 as u128);
     mint_to_commitment_call_interface.call(&mut env.public());
     // env.assert_private_call_fails(mint_to_private_call_interface);
 
@@ -84,7 +84,7 @@ unconstrained fn mint_to_private_failure_total_supply_overflow() {
     let max_u128 = (two_pow_127 + two_pow_127_minus_one) as u128;
 
     env.impersonate(minter);
-    Token::at(token_contract_address).mint_to_commitment(max_u128, commitment).call(
+    Token::at(token_contract_address).mint_to_commitment(commitment, max_u128).call(
         &mut env.public(),
     );
 
@@ -95,7 +95,7 @@ unconstrained fn mint_to_private_failure_total_supply_overflow() {
         .call(&mut env.private());
 
     env.impersonate(minter);
-    Token::at(token_contract_address).mint_to_commitment(mint_amount, another_commitment).call(
+    Token::at(token_contract_address).mint_to_commitment(another_commitment, mint_amount).call(
         &mut env.public(),
     );
 }
@@ -107,9 +107,9 @@ unconstrained fn mint_to_private_failure_invalid_commitments_random() {
     let mint_amount: u128 = 10_000;
     env.impersonate(minter);
 
-    Token::at(token_contract_address)
-        .mint_to_commitment(mint_amount, PartialUintNote { commitment: random() })
-        .call(&mut env.public());
+    Token::at(token_contract_address).mint_to_commitment(random(), mint_amount).call(
+        &mut env.public(),
+    );
 }
 
 #[test(should_fail_with = "Invalid commitment 'context.storage_read(commitment.commitment())'")]
@@ -118,13 +118,11 @@ unconstrained fn mint_to_private_failure_invalid_commitments_zero() {
 
     let mint_amount: u128 = 10_000;
     env.impersonate(minter);
-    Token::at(token_contract_address)
-        .mint_to_commitment(mint_amount, PartialUintNote { commitment: 0 })
-        .call(&mut env.public());
+    Token::at(token_contract_address).mint_to_commitment(0, mint_amount).call(&mut env.public());
 }
 
 #[test(should_fail_with = "Got 2 logs for tag")]
-unconstrained fn mint_to_private_failure_already_completed_partial_note() {
+unconstrained fn mint_to_private_failure_already_completed_commitment() {
     let (env, token_contract_address, _, recipient, minter) = utils::setup_with_minter(false);
 
     env.impersonate(recipient);
@@ -136,7 +134,7 @@ unconstrained fn mint_to_private_failure_already_completed_partial_note() {
 
     // mint to a commitment once
     env.impersonate(minter);
-    Token::at(token_contract_address).mint_to_commitment(mint_amount, commitment).call(
+    Token::at(token_contract_address).mint_to_commitment(commitment, mint_amount).call(
         &mut env.public(),
     );
     env.advance_block_by(1);
@@ -146,7 +144,7 @@ unconstrained fn mint_to_private_failure_already_completed_partial_note() {
     // balance should be equal to total supply
     utils::check_total_supply(token_contract_address, mint_amount);
     // mint to the same commitment again
-    Token::at(token_contract_address).mint_to_commitment(mint_amount, commitment).call(
+    Token::at(token_contract_address).mint_to_commitment(commitment, mint_amount).call(
         &mut env.public(),
     );
 
