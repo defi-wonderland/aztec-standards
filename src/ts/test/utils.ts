@@ -7,8 +7,9 @@ import {
   AccountWallet,
   createPXEClient,
   FieldLike,
+  Contract,
 } from '@aztec/aztec.js';
-import { TokenContract } from '../../artifacts/Token.js';
+import { TokenContract, TokenContractArtifact } from '../../artifacts/Token.js';
 
 export const logger = createLogger('aztec:aztec-standards');
 
@@ -24,6 +25,8 @@ export const createPXE = async (id: number = 0) => {
 export const setupSandbox = async () => {
   return createPXE();
 };
+
+// --- Token Utils ---
 
 export const expectUintNote = (note: UniqueNote, amount: bigint, owner: AztecAddress) => {
   expect(note.note.items[0]).toEqual(new Fr(owner.toBigInt()));
@@ -59,3 +62,20 @@ export const expectTokenBalances = async (
 
 export const AMOUNT = 1000n;
 export const wad = (n: number = 1) => AMOUNT * BigInt(n);
+
+/**
+ * Deploys the Token contract with a specified minter.
+ * @param deployer - The wallet to deploy the contract with.
+ * @returns A deployed contract instance.
+ */
+export async function deployTokenWithMinter(deployer: AccountWallet) {
+  const contract = await Contract.deploy(
+    deployer,
+    TokenContractArtifact,
+    ['PrivateToken', 'PT', 18, deployer.getAddress()],
+    'constructor_with_minter',
+  )
+    .send()
+    .deployed();
+  return contract;
+}

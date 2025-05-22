@@ -7,14 +7,24 @@ on:
 jobs:
     setup-and-run:
       runs-on: ubuntu-latest
-      timeout-minutes: 30
+      timeout-minutes: 60
   
       steps:
         - name: Checkout repository
           uses: actions/checkout@v3
+          with:
+            fetch-depth: 0 # Fetch all history for comparison
   
         - name: Set up Docker
           uses: docker/setup-buildx-action@v2
+  
+        - name: Check for changes in src/
+          uses: dorny/paths-filter@v3
+          id: changes
+          with:
+            filters: |
+              src:
+                - 'src/**'
   
         - name: Install Aztec CLI
           run: |
@@ -51,4 +61,17 @@ jobs:
 
         - name: Run js tests
           run: script -e -c "BASE_PXE_URL=http://localhost NODE_NO_WARNINGS=1 node --experimental-vm-modules $(yarn bin jest) --no-cache --runInBand --config jest.integration.config.json"
+        
+        - name: Benchmark
+          uses: defi-wonderland/aztec-benchmark/action@main
+          if: steps.changes.outputs.src == 'true'
+          with:
+            threshold: '2.0' # Using the default values for the rest of action parameters
+
+        - name: Comment diff
+          uses: peter-evans/create-or-update-comment@v4
+          if: steps.changes.outputs.src == 'true'
+          with:
+            issue-number: ${{ github.event.pull_request.number }}
+            body-file: benchmark-comparison.md
 
