@@ -3,29 +3,29 @@
         {
             "name": "ETH",
             "symbol": "ETH",
-            "address": "0x286f531a6406b26bb76dbb0c7f66fe793c184ab718b3e81a654855c3e32651ea",
+            "address": "0x18ed66507c579e5602a4dbad057b80eebaaf73a53787f677a3836c70f9306033",
             "decimals": 18,
             "minter": "contracts:dripper",
-            "upgrade_authority": "0x0eb1e6450cd74aaf5ef51ddbbad80beeb020c8aa79e18573ef383285b5dfb495"
+            "upgrade_authority": "0x0c32bcb53051a576683f860c152ba7f71b3e9e03fb1a925fe0c7e0dd4e3af7af"
         },
         {
             "name": "DAI",
             "symbol": "DAI",    
-            "address": "0x0fb5144f2518c5501dfde73723cad1d1ac7f5a3ab15486ae4d444d228a205448",
+            "address": "0x246039104fd44cdaf3188e42f2016930ec8cab3337f32e646590906e4f51e1c8",
             "decimals": 9,
             "minter": "contracts:dripper",
-            "upgrade_authority": "0x0eb1e6450cd74aaf5ef51ddbbad80beeb020c8aa79e18573ef383285b5dfb495"
+            "upgrade_authority": "0x0c32bcb53051a576683f860c152ba7f71b3e9e03fb1a925fe0c7e0dd4e3af7af"
         },
         {
             "name": "USDC",
             "symbol": "USDC",
-            "address": "0x23f971468e69efee017ba90210586a9d7d0ba5529f77c65af5611bdcbdc8aaf8",
+            "address": "0x07f802223ee5e84c008b892823e0a924062dfac5f41ee0f4d43c4c3285ba4367",
             "decimals": 6,
             "minter": "contracts:dripper",
-            "upgrade_authority": "0x0eb1e6450cd74aaf5ef51ddbbad80beeb020c8aa79e18573ef383285b5dfb495"
+            "upgrade_authority": "0x0c32bcb53051a576683f860c152ba7f71b3e9e03fb1a925fe0c7e0dd4e3af7af"
         }
     ],
     "dripper" : {
-        "address": "0x238510660459eb433d2dd54a33bc42b7b46c361540203efdca6ba974244ded8d"
+        "address": "0x0a9fdecc57984d6b0c6c6367f997d43beb8c7c84ff6fbe89bb6d0e78486ea5f9"
     }
 }
