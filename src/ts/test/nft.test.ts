@@ -1,3 +1,4 @@
+/*
 import { NFTContractArtifact, NFTContract } from '../../artifacts/NFT.js';
 import {
   AccountWallet,
@@ -836,3 +837,4 @@ function bigIntToAsciiString(bigInt: any): string {
   }
     return asciiString;
 }
+*/
