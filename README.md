@@ -143,12 +143,6 @@ fn transfer_public_to_public(
     nonce: Field,
 ) { /* ... */ }
 
-/// @notice Upgrades the contract to a new contract class id
-/// @dev Only callable by the `upgrade_authority` and effective after the upgrade delay
-/// @param new_contract_class_id The new contract class id
-#[public]
-fn upgrade_contract(new_contract_class_id: Field) { /* ... */ }
-
 /// @notice Finalizes a transfer of token `amount` from public balance of `from` to a commitment of `to`
 /// @dev The transfer must be prepared by calling `initialize_transfer_commitment` first and the resulting
 /// `commitment` must be passed as an argument to this function
@@ -217,6 +211,12 @@ fn mint_to_commitment(commitment: Field, amount: u128) { /* ... */ }
 /// @param nonce The nonce used for auth witness
 #[public]
 fn burn_public(from: AztecAddress, amount: u128, nonce: Field) { /* ... */ }
+
+/// @notice Upgrades the contract to a new contract class id
+/// @dev Only callable by the `upgrade_authority` and effective after the upgrade delay
+/// @param new_contract_class_id The new contract class id
+#[public]
+fn upgrade_contract(new_contract_class_id: Field) { /* ... */ }
 ```
 
 ### Private Functions
