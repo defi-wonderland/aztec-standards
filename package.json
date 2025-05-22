@@ -1,10 +1,12 @@
 {
-  "name": "aztec_standards",
+  "name": "@defi-wonderland/aztec-standards",
   "version": "0.0.0",
-  "repository": "https://github.com/defi-wonderland/aztec-standards.git",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/defi-wonderland/aztec-standards.git"
+  },
   "author": "Wonderland",
   "license": "MIT",
-  "private": true,
   "type": "module",
   "scripts": {
     "clean": "rm -rf ./src/artifacts ./target",

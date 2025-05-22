@@ -10,3 +10,4 @@ uint_note = { git = "https://github.com/AztecProtocol/aztec-packages/", tag = "v
 balance_set = { path = "../libs/balance-set" }
 authwit = { git = "https://github.com/AztecProtocol/aztec-packages/", tag = "v0.87.2", directory = "noir-projects/aztec-nr/authwit" }
 compressed_string = { git = "https://github.com/AztecProtocol/aztec-packages/", tag = "v0.87.2", directory = "noir-projects/aztec-nr/compressed-string" }
+contract_instance_deployer = { git = "https://github.com/AztecProtocol/aztec-packages/", tag = "v0.87.2", directory = "noir-projects/noir-contracts/contracts/protocol/contract_instance_deployer_contract" }

@@ -18,7 +18,7 @@ export async function deployTokenWithInitialSupply(deployer: AccountWallet) {
   const contract = await Contract.deploy(
     deployer,
     TokenContractArtifact,
-    ['PrivateToken', 'PT', 18, 0, deployer.getAddress()],
+    ['PrivateToken', 'PT', 18, 0, deployer.getAddress(), deployer.getAddress()],
     'constructor_with_initial_supply',
   )
     .send()
@@ -63,13 +63,13 @@ describe('Token - Single PXE', () => {
 
     const deploymentData = await getContractInstanceFromDeployParams(TokenContractArtifact, {
       constructorArtifact: 'constructor_with_minter',
-      constructorArgs: ['PrivateToken', 'PT', 18, deployerWallet.getAddress()],
+      constructorArgs: ['PrivateToken', 'PT', 18, deployerWallet.getAddress(), deployerWallet.getAddress()],
       salt,
       deployer: deployerWallet.getAddress(),
     });
     const deployer = new ContractDeployer(TokenContractArtifact, deployerWallet, undefined, 'constructor_with_minter');
     const tx = deployer
-      .deploy('PrivateToken', 'PT', 18, deployerWallet.getAddress())
+      .deploy('PrivateToken', 'PT', 18, deployerWallet.getAddress(), deployerWallet.getAddress())
       .send({ contractAddressSalt: salt });
     const receipt = await tx.getReceipt();
 
@@ -100,7 +100,7 @@ describe('Token - Single PXE', () => {
 
     const deploymentData = await getContractInstanceFromDeployParams(TokenContractArtifact, {
       constructorArtifact: 'constructor_with_initial_supply',
-      constructorArgs: ['PrivateToken', 'PT', 18, 1, deployerWallet.getAddress()],
+      constructorArgs: ['PrivateToken', 'PT', 18, 1, deployerWallet.getAddress(), deployerWallet.getAddress()],
       salt,
       deployer: deployerWallet.getAddress(),
     });
@@ -111,7 +111,7 @@ describe('Token - Single PXE', () => {
       'constructor_with_initial_supply',
     );
     const tx = deployer
-      .deploy('PrivateToken', 'PT', 18, 1, deployerWallet.getAddress())
+      .deploy('PrivateToken', 'PT', 18, 1, deployerWallet.getAddress(), deployerWallet.getAddress())
       .send({ contractAddressSalt: salt });
     const receipt = await tx.getReceipt();
 
