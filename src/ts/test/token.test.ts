@@ -504,7 +504,7 @@ describe('Token - Multi PXE', () => {
       .methods.transfer_public_to_private(alice.getAddress(), alice.getAddress(), wad(5), 0)
       .send()
       .wait();
-    await token.methods.sync_notes().simulate({});
+    await token.withWallet(alice).methods.sync_private_state().simulate({});
 
     // assert balances
     await expectTokenBalances(token, alice.getAddress(), wad(5), wad(5));
@@ -521,8 +521,8 @@ describe('Token - Multi PXE', () => {
       .send()
       .wait();
 
-    await token.withWallet(alice).methods.sync_notes().simulate({});
-    await token.withWallet(bob).methods.sync_notes().simulate({});
+    await token.withWallet(alice).methods.sync_private_state().simulate({});
+    await token.withWallet(bob).methods.sync_private_state().simulate({});
 
     notes = await alicePXE.getNotes({ txHash: fundBobTx.txHash });
     expect(notes.length).toBe(1);
@@ -540,8 +540,8 @@ describe('Token - Multi PXE', () => {
       .send()
       .wait();
 
-    await token.withWallet(alice).methods.sync_notes().simulate({});
-    await token.withWallet(bob).methods.sync_notes().simulate({});
+    await token.withWallet(alice).methods.sync_private_state().simulate({});
+    await token.withWallet(bob).methods.sync_private_state().simulate({});
 
     // assert balances
     await expectTokenBalances(token, alice.getAddress(), wad(0), wad(0));
