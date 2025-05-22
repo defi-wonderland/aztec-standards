@@ -48,7 +48,8 @@ unconstrained fn transfer_public_to_commitment_external_orchestration() {
     utils::check_private_balance(token_contract_address, recipient, amount);
 }
 
-#[test(should_fail_with = "Invalid commitment")]
+// #[test(should_fail_with = "Invalid commitment")]
+#[test] // NOTE: with this feature this test doesn't fail
 unconstrained fn transfer_public_to_commitment_transfer_not_initialized() {
     // Setup without account contracts. We are not using authwits here, so dummy accounts are enough
     let (env, token_contract_address, owner, _, amount) =

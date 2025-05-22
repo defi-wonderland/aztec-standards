@@ -294,15 +294,6 @@ pub contract Token {
         _increase_commitment_balance(&mut context, commitment, amount);
     }
 
-    /// @notice Stores a partial note in storage
-    /// @dev Used to store the commitment (privacy entrance)
-    /// @param slot The partial note to store
-    #[public]
-    #[internal]
-    fn store_commitment_in_storage_internal(slot: PartialUintNote) {
-        _store_commitment_in_storage(&mut context, slot);
-    }
-
     /// @notice Increases the public balance of `to` by `amount`
     /// @param to The address of the recipient
     /// @param amount The amount of tokens to increase the balance by
@@ -545,11 +536,6 @@ pub contract Token {
         commitment: PartialUintNote,
         amount: u128,
     ) {
-        // We verify that the partial note we're completing is valid (i.e. it uses the correct state variable's storage
-        // slot, and it is internally consistent). We *could* clear the storage since each partial note should only be
-        // used once, but since the AVM offers no gas refunds for doing so this would just make the transaction be more
-        // expensive.
-        assert(context.storage_read(commitment.commitment()), "Invalid commitment");
         commitment.complete(amount, context);
     }
 
@@ -601,14 +587,6 @@ pub contract Token {
         total_supply.write(new_supply);
     }
 
-    /// @notice Stores a partial note in storage
-    /// @param context The context of the public call
-    /// @param commitment The partial note to store
-    #[contract_library_method]
-    fn _store_commitment_in_storage(context: &mut PublicContext, commitment: PartialUintNote) {
-        context.storage_write(commitment.commitment(), true);
-    }
-
     /// @notice Initializes a transfer commitment to be used for transfers/mints
     /// @param context The context of the private call
     /// @param private_balances The storage pointer to the private balances
@@ -630,14 +608,6 @@ pub contract Token {
             from,
         );
 
-        // We can't simply return the partial note because we won't be able to later on verify that it was created
-        // correctly (e.g. that the storage slot corresponds to the owner, and that we're using the balance set and not
-        // another state variable) once this information is hidden in the partial note commitment. We therefore store
-        // the partial note in our own public storage, so that we can later check that we're only completing correctly
-        // created partial notes.
-        Token::at(context.this_address()).store_commitment_in_storage_internal(commitment).enqueue(
-            context,
-        );
         commitment
     }
 
