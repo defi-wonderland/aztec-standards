@@ -71,14 +71,27 @@ jobs:
           mkdir -p export/${{ env.PROJECT_NAME }}/current/artifacts
           mkdir -p export/${{ env.PROJECT_NAME }}/historical
           
+          # Fix historical versions structure if they have double-nested artifacts
           if [ -d "node_modules/${{ env.PROJECT_NAME }}/historical" ]; then
+            # First copy all historical versions
             cp -r node_modules/${{ env.PROJECT_NAME }}/historical/** export/${{ env.PROJECT_NAME }}/historical/
+            
+            # Fix structure for each historical version
+            for version_dir in export/${{ env.PROJECT_NAME }}/historical/*/; do
+              if [ -d "${version_dir}artifacts/artifacts" ]; then
+                echo "Fixing double-nested artifacts structure in ${version_dir}"
+                # Move contents up one level
+                mv "${version_dir}artifacts/artifacts"/* "${version_dir}artifacts/"
+                # Remove empty nested directory
+                rm -rf "${version_dir}artifacts/artifacts"
+              fi
+            done
           else
             echo "No historical directory found, skipping copy"
           fi
 
           # Copy the compiled JS files directly to artifacts directory
-          cp -r dist/* export/${{ env.PROJECT_NAME }}/current/artifacts
+          cp -r dist/* export/${{ env.PROJECT_NAME }}/current/artifacts/
           cp -r target export/${{ env.PROJECT_NAME }}/current/
 
           # Copy deployments.json if it exists
