@@ -50,7 +50,7 @@ jobs:
       - name: Compile artifacts to JS
         run: |
           mkdir -p dist/artifacts
-          yarn tsc artifacts/*.ts --outDir dist/artifacts --skipLibCheck --target es2020 --module nodenext --moduleResolution nodenext --resolveJsonModule
+          yarn tsc artifacts/*.ts --outDir dist/artifacts --skipLibCheck --target es2020 --module nodenext --moduleResolution nodenext --resolveJsonModule --declaration
       - name: Update version
         run: yarn version --new-version "0.0.0-${GITHUB_SHA::8}" --no-git-tag-version
 
