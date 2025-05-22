@@ -4,6 +4,10 @@ on:
         - main
     pull_request:
 
+concurrency:
+  group: pr-${{ github.head_ref }}
+  cancel-in-progress: true
+
 jobs:
     setup-and-run:
       runs-on: ubuntu-latest
