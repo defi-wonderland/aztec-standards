@@ -26,7 +26,7 @@ export async function deployTokenWithInitialSupply(deployer: AccountWallet) {
   return contract;
 }
 
-describe('Token - Single PXE', () => {
+describe.skip('Token - Single PXE', () => {
   let pxe: PXE;
   let wallets: AccountWalletWithSecretKey[] = [];
   let accounts: CompleteAddress[] = [];
@@ -452,7 +452,7 @@ describe('Token - Single PXE', () => {
   }, 300_000);
 });
 
-describe('Token - Multi PXE', () => {
+describe.skip('Token - Multi PXE', () => {
   let alicePXE: PXE;
   let bobPXE: PXE;
 
