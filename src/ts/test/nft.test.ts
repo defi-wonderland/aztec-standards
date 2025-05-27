@@ -183,7 +183,6 @@ describe('NFT - Single PXE', () => {
     await expect(
       nft.withWallet(alice).methods.mint_public(carl.getAddress(), tokenId).send().wait()
     ).rejects.toThrow(/^Transaction 0x[0-9a-f]+ was app_logic_reverted\. Reason: $/);
-    // ).rejects.toThrow(/token already exists/);
   }, 300_000);
 
   it('fails to mint with token ID zero', async () => {
@@ -192,7 +191,6 @@ describe('NFT - Single PXE', () => {
     await expect(
       nft.withWallet(alice).methods.mint_public(bob.getAddress(), tokenId).send().wait()
     ).rejects.toThrow(/^Transaction 0x[0-9a-f]+ was app_logic_reverted\. Reason: $/);
-    // ).rejects.toThrow(/zero token ID not supported/);
 
     await expect(
       nft.withWallet(alice).methods.mint_private(bob.getAddress(), tokenId).send().wait()
@@ -257,7 +255,6 @@ describe('NFT - Single PXE', () => {
     await expect(
       nft.withWallet(carl).methods.burn_public(carl.getAddress(), tokenId, 0n).send().wait()
     ).rejects.toThrow(/^Transaction 0x[0-9a-f]+ was app_logic_reverted\. Reason: $/);
-    // ).rejects.toThrow(/caller is not owner/);
 
     // First mint NFT privately to bob
     const tokenId2 = 2n;
@@ -276,7 +273,6 @@ describe('NFT - Single PXE', () => {
     await expect(
       nft.withWallet(bob).methods.burn_public(bob.getAddress(), tokenId, 0n).send().wait()
     ).rejects.toThrow(/^Transaction 0x[0-9a-f]+ was app_logic_reverted\. Reason: $/);
-    // ).rejects.toThrow(/caller is not owner/);
 
     // Try to burn non-existent private NFT
     await expect(
@@ -380,7 +376,6 @@ describe('NFT - Single PXE', () => {
         .send()
         .wait()
     ).rejects.toThrow(/^Transaction 0x[0-9a-f]+ was app_logic_reverted\. Reason: $/);
-    // ).rejects.toThrow(/invalid commitment/);
     
     // Verify alice still owns the NFT
     await assertOwnsPrivateNFT(nft, tokenId, alice.getAddress());
@@ -562,7 +557,6 @@ describe('NFT - Single PXE', () => {
         .send()
         .wait()
     ).rejects.toThrow(/^Transaction 0x[0-9a-f]+ was app_logic_reverted\. Reason: $/);
-    // ).rejects.toThrow(/caller is not owner/);
     
     // Verify alice still owns the NFT publicly
     await assertOwnsPublicNFT(nft, tokenId, alice.getAddress());
@@ -634,7 +628,6 @@ describe('NFT - Single PXE', () => {
         .send()
         .wait()
     ).rejects.toThrow(/^Transaction 0x[0-9a-f]+ was app_logic_reverted\. Reason: $/);
-    // ).rejects.toThrow(/caller is not owner/);
     
     // Verify alice still owns the NFT publicly
     await assertOwnsPublicNFT(nft, tokenId, alice.getAddress());
@@ -737,7 +730,6 @@ describe('NFT - Single PXE', () => {
     await expect(
       nftWithBobMinter.withWallet(alice).methods.mint_public(alice.getAddress(), tokenId).send().wait()
     ).rejects.toThrow(/^Transaction 0x[0-9a-f]+ was app_logic_reverted\. Reason: $/);
-    // ).rejects.toThrow(/caller is not minter/);
 
     await expect(
       nftWithBobMinter.withWallet(alice).methods.mint_private(alice.getAddress(), tokenId).send().wait()
@@ -761,7 +753,6 @@ describe('NFT - Single PXE', () => {
         .send()
         .wait()
     ).rejects.toThrow(/^Transaction 0x[0-9a-f]+ was app_logic_reverted\. Reason: $/);
-    // ).rejects.toThrow(/caller is not owner/);
     
     // Alice can transfer since she's the owner
     await nft.withWallet(alice)
