@@ -757,12 +757,7 @@ pub contract Token {
         let total_assets = Token::at(storage.asset.read())
             .balance_of_public(context.this_address())
             .view(&mut context);
-        let shares = convertToShares(
-            assets,
-            total_assets,
-            storage.total_supply.read(),
-            ROUND_DOWN,
-        );
+        let shares = convertToShares(assets, total_assets, storage.total_supply, ROUND_DOWN);
 
         // Take the assets from the caller
         Token::at(storage.asset.read())
@@ -1072,7 +1067,7 @@ pub contract Token {
         let total_assets = Token::at(storage.asset.read())
             .balance_of_public(context.this_address())
             .view(&mut context);
-        let shares = convertToShares(assets, total_assets, storage.total_supply.read(), ROUND_UP);
+        let shares = convertToShares(assets, total_assets, storage.total_supply, ROUND_UP);
 
         // Transfer the assets to the recipient
         Token::at(storage.asset.read())
@@ -1328,7 +1323,7 @@ pub contract Token {
         let total_assets = Token::at(storage.asset.read())
             .balance_of_public(context.this_address())
             .view(&mut context);
-        let shares = convertToShares(assets, total_assets, storage.total_supply.read(), ROUND_UP);
+        let shares = convertToShares(assets, total_assets, storage.total_supply, ROUND_UP);
 
         _burn_from_public(storage.public_balances, storage.total_supply, from, shares);
     }
@@ -1342,8 +1337,7 @@ pub contract Token {
         let total_assets = Token::at(storage.asset.read())
             .balance_of_public(context.this_address())
             .view(&mut context);
-        let min_shares =
-            convertToShares(assets, total_assets, storage.total_supply.read(), ROUND_UP);
+        let min_shares = convertToShares(assets, total_assets, storage.total_supply, ROUND_UP);
 
         assert(min_shares <= shares, "Insufficient shares burnt");
     }
@@ -1378,12 +1372,7 @@ pub contract Token {
         let total_assets = Token::at(storage.asset.read())
             .balance_of_public(context.this_address())
             .view(&mut context);
-        let shares = convertToShares(
-            assets,
-            total_assets,
-            storage.total_supply.read(),
-            ROUND_DOWN,
-        );
+        let shares = convertToShares(assets, total_assets, storage.total_supply, ROUND_DOWN);
 
         _mint_to_public(storage.public_balances, storage.total_supply, to, shares);
     }
@@ -1397,12 +1386,7 @@ pub contract Token {
         let total_assets = Token::at(storage.asset.read())
             .balance_of_public(context.this_address())
             .view(&mut context);
-        let max_shares = convertToShares(
-            assets,
-            total_assets,
-            storage.total_supply.read(),
-            ROUND_DOWN,
-        );
+        let max_shares = convertToShares(assets, total_assets, storage.total_supply, ROUND_DOWN);
 
         assert(shares <= max_shares, "Too many shares requested");
     }
@@ -1421,7 +1405,7 @@ pub contract Token {
         let total_assets = Token::at(storage.asset.read())
             .balance_of_public(context.this_address())
             .view(&mut context);
-        let shares = convertToShares(assets, total_assets, storage.total_supply.read(), ROUND_UP);
+        let shares = convertToShares(assets, total_assets, storage.total_supply, ROUND_UP);
 
         let surplus = max_shares - shares; // Reverts with underflow if invalid
         if surplus > 0 {
@@ -1445,12 +1429,7 @@ pub contract Token {
         let total_assets = Token::at(storage.asset.read())
             .balance_of_public(context.this_address())
             .view(&mut context);
-        let max_shares = convertToShares(
-            assets,
-            total_assets,
-            storage.total_supply.read(),
-            ROUND_DOWN,
-        );
+        let max_shares = convertToShares(assets, total_assets, storage.total_supply, ROUND_DOWN);
 
         let outstanding_shares = max_shares - min_shares; // Reverts with underflow if invalid
         if outstanding_shares > 0 {
@@ -1477,7 +1456,7 @@ pub contract Token {
         let assets = convertToAssets(
             shares,
             total_assets - max_assets,
-            storage.total_supply.read(),
+            storage.total_supply,
             ROUND_UP,
         );
 
@@ -1503,12 +1482,7 @@ pub contract Token {
         let total_assets = Token::at(storage.asset.read())
             .balance_of_public(context.this_address())
             .view(&mut context);
-        let assets = convertToAssets(
-            shares,
-            total_assets,
-            storage.total_supply.read(),
-            ROUND_DOWN,
-        );
+        let assets = convertToAssets(shares, total_assets, storage.total_supply, ROUND_DOWN);
 
         let outstanding_assets = assets - min_assets; // Reverts with underflow if invalid
         if outstanding_assets > 0 {
@@ -1538,12 +1512,7 @@ pub contract Token {
         let total_assets = Token::at(storage.asset.read())
             .balance_of_public(context.this_address())
             .view(&mut context);
-        let assets = convertToAssets(
-            shares,
-            total_assets,
-            storage.total_supply.read(),
-            ROUND_DOWN,
-        );
+        let assets = convertToAssets(shares, total_assets, storage.total_supply, ROUND_DOWN);
 
         let outstanding_assets = assets - min_assets; // Reverts with underflow if invalid
         if outstanding_assets > 0 {
@@ -1573,26 +1542,30 @@ pub contract Token {
         let assets = convertToAssets(
             shares,
             total_assets - max_assets,
-            storage.total_supply.read(),
+            storage.total_supply,
             ROUND_UP,
         );
 
-        let excess = max_assets - assets; // Reverts with underflow if invalid
+        let change = max_assets - assets; // Reverts with underflow if invalid
         Token::at(storage.asset.read())
-            .transfer_public_to_public(context.this_address(), from, excess, 0)
+            .transfer_public_to_public(context.this_address(), from, change, 0)
             .call(&mut context);
     }
+
+    /** ==========================================================
+     * ================== VAULT LIBRARIES ========================
+     * ======================================================== */
 
     #[contract_library_method]
     fn convertToShares(
         assets: u128,
         total_assets: u128,
-        total_supply: u128,
+        total_supply: PublicMutable<u128, &mut PublicContext>,
         rounding: bool,
     ) -> u128 {
         // TODO: handle overflow
         // TODO: optimize rounding
-        let mul_term = assets * (total_supply + offset());
+        let mul_term = assets * (total_supply.read() + offset());
         let denominator = (total_assets + 1);
         let mut shares = mul_term / denominator;
         if rounding == ROUND_UP & (mul_term % denominator) > 0 {
@@ -1605,13 +1578,13 @@ pub contract Token {
     fn convertToAssets(
         shares: u128,
         total_assets: u128,
-        total_supply: u128,
+        total_supply: PublicMutable<u128, &mut PublicContext>,
         rounding: bool,
     ) -> u128 {
         // TODO: handle overflow
         // TODO: optimize rounding
         let mul_term = shares * (total_assets + 1);
-        let denominator = (total_supply + offset());
+        let denominator = (total_supply.read() + offset());
         let mut assets = mul_term / denominator;
         if rounding == ROUND_UP & (mul_term % denominator) > 0 {
             assets = assets + 1;
