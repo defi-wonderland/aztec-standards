@@ -32,10 +32,8 @@ pub contract Token {
     global RECURSIVE_TRANSFER_CALL_MAX_NOTES: u32 = 8;
 
     // Rounding direction that the vault uses to calculate shares and assets
-    enum Rounding {
-        DOWN,
-        UP,
-    }
+    global ROUND_DOWN: bool = false;
+    global ROUND_UP: bool = true;
 
     /// @param name The name of the token
     /// @param symbol The symbol of the token
@@ -722,7 +720,7 @@ pub contract Token {
             assets,
             total_assets,
             storage.total_supply.read(),
-            Rounding.DOWN,
+            ROUND_DOWN,
         );
 
         // Take the assets from the caller
@@ -898,12 +896,7 @@ pub contract Token {
         let total_assets = Token::at(storage.asset.read())
             .balance_of_public(context.this_address())
             .view(&mut context);
-        let assets = convertToAssets(
-            shares,
-            total_assets,
-            storage.total_supply.read(),
-            Rounding.UP,
-        );
+        let assets = convertToAssets(shares, total_assets, storage.total_supply.read(), ROUND_UP);
 
         // transfer assets in
         Token::at(storage.asset.read())
@@ -1046,12 +1039,7 @@ pub contract Token {
         let total_assets = Token::at(storage.asset.read())
             .balance_of_public(context.this_address())
             .view(&mut context);
-        let shares = convertToShares(
-            assets,
-            total_assets,
-            storage.total_supply.read(),
-            Rounding.UP,
-        );
+        let shares = convertToShares(assets, total_assets, storage.total_supply.read(), ROUND_UP);
 
         // Transfer the assets to the recipient
         Token::at(storage.asset.read())
@@ -1085,7 +1073,7 @@ pub contract Token {
         // Called after minting shares so that burn_shares_internal computes the amount of shares based on previous state.
         Token::at(storage.asset.read())
             .transfer_public_to_private(context.this_address(), to, assets, nonce)
-            .enqueue(&mut context);
+            .call(&mut context);
     }
 
     /// @notice Withdraws an amount of the underlying asset from a private balance to a private balance
@@ -1124,7 +1112,7 @@ pub contract Token {
         // Called after minting shares so that burn_private_shares_internal computes the amount of shares based on previous state.
         Token::at(storage.asset.read())
             .transfer_public_to_private(context.this_address(), to, assets, nonce)
-            .enqueue(&mut context);
+            .call(&mut context);
     }
 
     /// @notice Withdraws an amount of the underlying asset from a private balance to a private balance
@@ -1167,7 +1155,7 @@ pub contract Token {
         // Called after minting shares so that burn_shares_with_commitment_internal computes the amount of shares based on previous state.
         Token::at(storage.asset.read())
             .transfer_public_to_private(context.this_address(), to, assets, nonce)
-            .enqueue(&mut context);
+            .call(&mut context);
     }
 
     /** ==========================================================
@@ -1191,7 +1179,7 @@ pub contract Token {
             shares,
             total_assets,
             storage.total_supply.read(),
-            Rounding.DOWN,
+            ROUND_DOWN,
         );
 
         // Transfer the assets to the recipient
@@ -1272,7 +1260,7 @@ pub contract Token {
         // Transfer min_assets out
         Token::at(storage.asset.read())
             .transfer_public_to_private(context.this_address(), to, min_assets, nonce)
-            .enqueue(&mut context);
+            .call(&mut context);
     }
 
     /// @notice Redeems an amount of the shares from a public balance to a private balance
@@ -1311,7 +1299,7 @@ pub contract Token {
         // Transfer min_assets out
         Token::at(storage.asset.read())
             .transfer_public_to_private(context.this_address(), to, min_assets, nonce)
-            .enqueue(&mut context);
+            .call(&mut context);
     }
 
     /** ==========================================================
@@ -1327,12 +1315,7 @@ pub contract Token {
         let total_assets = Token::at(storage.asset.read())
             .balance_of_public(context.this_address())
             .view(&mut context);
-        let shares = convertToShares(
-            assets,
-            total_assets,
-            storage.total_supply.read(),
-            Rounding.UP,
-        );
+        let shares = convertToShares(assets, total_assets, storage.total_supply.read(), ROUND_UP);
 
         _decrease_public_balance(storage.public_balances, from, shares);
         _decrease_total_supply(storage.total_supply, shares);
@@ -1347,12 +1330,8 @@ pub contract Token {
         let total_assets = Token::at(storage.asset.read())
             .balance_of_public(context.this_address())
             .view(&mut context);
-        let min_shares = convertToShares(
-            assets,
-            total_assets,
-            storage.total_supply.read(),
-            Rounding.UP,
-        );
+        let min_shares =
+            convertToShares(assets, total_assets, storage.total_supply.read(), ROUND_UP);
 
         assert(min_shares <= shares, "Insufficient shares burnt");
 
@@ -1364,7 +1343,7 @@ pub contract Token {
     /// @param shares The amount of requested shares
     #[public]
     #[internal]
-    fn burn_private_shares_and_redeem_internal(to: u128, shares: u128) {
+    fn burn_private_shares_and_redeem_internal(to: AztecAddress, shares: u128) {
         let total_assets = Token::at(storage.asset.read())
             .balance_of_public(context.this_address())
             .view(&mut context);
@@ -1372,7 +1351,7 @@ pub contract Token {
             shares,
             total_assets,
             storage.total_supply.read(),
-            Rounding.DOWN,
+            ROUND_DOWN,
         );
 
         Token::at(storage.asset.read())
@@ -1395,7 +1374,7 @@ pub contract Token {
             assets,
             total_assets,
             storage.total_supply.read(),
-            Rounding.DOWN,
+            ROUND_DOWN,
         );
 
         _increase_public_balance(storage.public_balances, to, shares);
@@ -1415,7 +1394,7 @@ pub contract Token {
             assets,
             total_assets,
             storage.total_supply.read(),
-            Rounding.DOWN,
+            ROUND_DOWN,
         );
 
         assert(shares <= max_shares, "Too many shares requested");
@@ -1437,12 +1416,7 @@ pub contract Token {
         let total_assets = Token::at(storage.asset.read())
             .balance_of_public(context.this_address())
             .view(&mut context);
-        let shares = convertToShares(
-            assets,
-            total_assets,
-            storage.total_supply.read(),
-            Rounding.UP,
-        );
+        let shares = convertToShares(assets, total_assets, storage.total_supply.read(), ROUND_UP);
 
         let surplus = max_shares - shares; // Reverts with underflow if invalid
         if surplus > 0 {
@@ -1470,7 +1444,7 @@ pub contract Token {
             assets,
             total_assets,
             storage.total_supply.read(),
-            Rounding.DOWN,
+            ROUND_DOWN,
         );
 
         let outstanding_shares = max_shares - min_shares; // Reverts with underflow if invalid
@@ -1499,11 +1473,11 @@ pub contract Token {
             shares,
             total_assets - max_assets,
             storage.total_supply.read(),
-            Rounding.UP,
+            ROUND_UP,
         );
 
         let change = max_assets - assets; // Reverts with underflow if invalid
-        if outstanding_shares > 0 {
+        if change > 0 {
             Token::at(storage.asset.read())
                 .transfer_public_to_commitment(context.this_address(), change, asset_commitment, 0)
                 .call(&mut context);
@@ -1528,10 +1502,10 @@ pub contract Token {
             shares,
             total_assets,
             storage.total_supply.read(),
-            Rounding.DOWN,
+            ROUND_DOWN,
         );
 
-        let outstanding_assets = assets - min_shares; // Reverts with underflow if invalid
+        let outstanding_assets = assets - min_assets; // Reverts with underflow if invalid
         if outstanding_assets > 0 {
             Token::at(storage.asset.read())
                 .transfer_public_to_commitment(
@@ -1565,10 +1539,10 @@ pub contract Token {
             shares,
             total_assets,
             storage.total_supply.read(),
-            Rounding.DOWN,
+            ROUND_DOWN,
         );
 
-        let outstanding_assets = assets - min_shares; // Reverts with underflow if invalid
+        let outstanding_assets = assets - min_assets; // Reverts with underflow if invalid
         if outstanding_assets > 0 {
             Token::at(storage.asset.read())
                 .transfer_public_to_commitment(
@@ -1598,7 +1572,7 @@ pub contract Token {
             shares,
             total_assets - max_assets,
             storage.total_supply.read(),
-            Rounding.UP,
+            ROUND_UP,
         );
 
         let excess = max_assets - assets; // Reverts with underflow if invalid
@@ -1612,14 +1586,14 @@ pub contract Token {
         assets: u128,
         total_assets: u128,
         total_supply: u128,
-        rounding: Rounding,
+        rounding: bool,
     ) -> u128 {
         // TODO: handle overflow
         // TODO: optimize rounding
         let mul_term = assets * (total_supply + offset());
         let denominator = (total_assets + 1);
-        let shares = mul_term / denominator;
-        if rounding == Rounding.UP & (mul_term % denominator) > 0 {
+        let mut shares = mul_term / denominator;
+        if rounding == ROUND_UP & (mul_term % denominator) > 0 {
             shares = shares + 1;
         }
         shares
@@ -1630,14 +1604,14 @@ pub contract Token {
         shares: u128,
         total_assets: u128,
         total_supply: u128,
-        rounding: Rounding,
+        rounding: bool,
     ) -> u128 {
         // TODO: handle overflow
         // TODO: optimize rounding
         let mul_term = shares * (total_assets + 1);
         let denominator = (total_supply + offset());
-        let assets = mul_term / denominator;
-        if rounding == Rounding.UP & (mul_term % denominator) > 0 {
+        let mut assets = mul_term / denominator;
+        if rounding == ROUND_UP & (mul_term % denominator) > 0 {
             assets = assets + 1;
         }
         assets
