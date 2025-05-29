@@ -1057,7 +1057,7 @@ pub contract Token {
     /// @notice Withdraws an amount of the underlying asset from a public balance to a public balance
     /// @param from The address of the sender
     /// @param to The address of the recipient
-    /// @param assets The amount of underlying asset to withdraw
+    /// @param assets The amount of assets to withdraw
     /// @param nonce The nonce used for authwitness
     #[public]
     fn withdraw_public_to_public(from: AztecAddress, to: AztecAddress, assets: u128, nonce: Field) {
@@ -1081,7 +1081,7 @@ pub contract Token {
     /// @notice Withdraws an amount of the underlying asset from a public balance to a private balance
     /// @param from The address of the sender
     /// @param to The address of the recipient
-    /// @param assets The amount of underlying asset to withdraw
+    /// @param assets The amount of assets to withdraw
     /// @param nonce The nonce used for authwitness
     #[private]
     fn withdraw_public_to_private(
@@ -1090,25 +1090,23 @@ pub contract Token {
         assets: u128,
         nonce: Field,
     ) {
-        // TODO: Should _validate_from_public be used inside burn_shares_internal instead?
         _validate_from_private(&mut context, from, nonce);
 
-        // mint shares to the recipient in public
+        // Calculate and burn the sender's shares
         Token::at(context.this_address()).burn_shares_internal(from, assets).enqueue(&mut context);
 
-        // Take the asset from the caller
-        // Called after minting shares so that burn_shares_internal computes the amount of shares based on previous state.
+        // Transfer the assets to the recipient in private
         Token::at(storage.asset.read())
-            .transfer_public_to_private(context.this_address(), to, assets, nonce)
+            .transfer_public_to_private(context.this_address(), to, assets, 0)
             .call(&mut context);
     }
 
     /// @notice Withdraws an amount of the underlying asset from a private balance to a private balance
-    /// @dev The shares is calculated with (total_supply + 1) / (total_assets + 1).
-    ///      If the ratio decreases between private and public execution, the user's input is used and excess assets are kept in the contract.
+    /// @dev The shares are calculated with (total_supply + offset) / (total_assets + 1).
+    ///      The ratio can only decrease or remain the same as time goes by. Any outstanding asset is kept by the contract as yield.
     /// @param from The address of the sender
     /// @param to The address of the recipient
-    /// @param assets The amount of underlying asset to withdraw
+    /// @param assets The amount of assets to withdraw
     /// @param shares The amount of shares to burn
     /// @param nonce The nonce used for authwitness
     #[private]
@@ -1121,24 +1119,25 @@ pub contract Token {
     ) {
         _validate_from_private(&mut context, from, nonce);
 
-        // Mint shares to the recipient in public
-        Token::at(context.this_address()).burn_private_shares_internal(assets, shares).enqueue(
+        // Validate that the shares-assets ratio is correct
+        Token::at(context.this_address()).validate_shares_to_burn_internal(assets, shares).enqueue(
             &mut context,
         );
 
         // Burn shares from the sender in private
         _burn_from_private(&mut context, storage.private_balances, from, shares);
 
-        // Take the asset from the caller
-        // Called after minting shares so that burn_private_shares_internal computes the amount of shares based on previous state.
+        // Transfer the assets to the recipient in private
         Token::at(storage.asset.read())
-            .transfer_public_to_private(context.this_address(), to, assets, nonce)
+            .transfer_public_to_private(context.this_address(), to, assets, 0)
             .call(&mut context);
     }
 
     /// @notice Withdraws an amount of the underlying asset from a private balance to a private balance
-    /// @dev The max_shares is calculated with (total_supply + 1) / (total_assets + 1).
-    ///      If the ratio decreases between private and public execution, the excess shares sent are returned through a commitment.
+    /// @dev max_shares is the amount of shares that will be burnt immediately in private.
+    ///      Any excess shares the sender has transferred in private, will be returned to the sender through a commitment once the call is executed publicly.
+    ///      This excess amount can only be known at public execution.
+    ///      To optimize calls to this method, consider setting max_shares to an exact sum of notes, so that change is not returned twice (in private and later via commitment)
     /// @param from The address of the sender
     /// @param to The address of the recipient
     /// @param assets The amount of underlying asset to withdraw
@@ -1163,19 +1162,20 @@ pub contract Token {
             INITIAL_TRANSFER_CALL_MAX_NOTES,
         );
 
-        // TODO: do we actually need to emit the partial note log, emitted inside uint_note::partial?
+        // TODO (optimization): partial note logs and validity_commitment nullifier are not needed
         let commitment =
             _initialize_transfer_commitment(&mut context, storage.private_balances, from, from);
 
-        // Mint shares to the recipient in public
+        // Burn the correct amount of shares
+        // Any excess amount of shares is sent back to the sender via commitment
+        // Reverts if the amount of shares required is greater than max_shares
         Token::at(context.this_address())
             .burn_shares_with_commitment_internal(commitment, assets, max_shares)
             .enqueue(&mut context);
 
-        // Take the asset from the caller
-        // Called after minting shares so that burn_shares_with_commitment_internal computes the amount of shares based on previous state.
+        // Transfer the assets to the recipient in private
         Token::at(storage.asset.read())
-            .transfer_public_to_private(context.this_address(), to, assets, nonce)
+            .transfer_public_to_private(context.this_address(), to, assets, 0)
             .call(&mut context);
     }
 
@@ -1333,7 +1333,7 @@ pub contract Token {
     /// @param shares The amount of requested shares
     #[public]
     #[internal]
-    fn burn_private_shares_internal(assets: u128, shares: u128) {
+    fn validate_shares_to_burn_internal(assets: u128, shares: u128) {
         let total_assets = Token::at(storage.asset.read())
             .balance_of_public(context.this_address())
             .view(&mut context);
