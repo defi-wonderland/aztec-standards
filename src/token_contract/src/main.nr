@@ -67,7 +67,6 @@ pub contract Token {
         storage.symbol.initialize(FieldCompressedString::from_string(symbol));
         storage.decimals.initialize(decimals);
         storage.asset.initialize(asset);
-        // TODO: inflation attack prevention
     }
 
     /// @notice Initializes the token with an initial supply
@@ -379,6 +378,7 @@ pub contract Token {
     /** ==========================================================
      * ===================== UNCONSTRAINED =======================
      * ======================================================== */
+
     #[utility]
     unconstrained fn balance_of_private(owner: AztecAddress) -> u128 {
         storage.private_balances.at(owner).balance_of()
@@ -761,10 +761,8 @@ pub contract Token {
     #[public]
     fn deposit_public_to_public(from: AztecAddress, to: AztecAddress, assets: u128, nonce: Field) {
         // Calculate shares to mint
-        let total_assets = Token::at(storage.asset.read())
-            .balance_of_public(context.this_address())
-            .view(&mut context);
-        let shares = convertToShares(assets, total_assets, storage.total_supply, ROUND_DOWN);
+        let total_assets = _total_assets(&mut context, storage.asset);
+        let shares = _convert_to_shares(assets, total_assets, storage.total_supply, ROUND_DOWN);
 
         // Take the assets from the sender
         Token::at(storage.asset.read())
@@ -937,10 +935,8 @@ pub contract Token {
     #[public]
     fn issue_public_to_public(from: AztecAddress, to: AztecAddress, shares: u128, nonce: Field) {
         // Calculate assets required
-        let total_assets = Token::at(storage.asset.read())
-            .balance_of_public(context.this_address())
-            .view(&mut context);
-        let assets = convertToAssets(shares, total_assets, storage.total_supply.read(), ROUND_UP);
+        let total_assets = _total_assets(&mut context, storage.asset);
+        let assets = _convert_to_assets(shares, total_assets, storage.total_supply, ROUND_UP);
 
         // Take the assets from the sender
         Token::at(storage.asset.read())
@@ -1068,10 +1064,8 @@ pub contract Token {
         _validate_from_public(&mut context, from, nonce);
 
         // Calculate shares to burn
-        let total_assets = Token::at(storage.asset.read())
-            .balance_of_public(context.this_address())
-            .view(&mut context);
-        let shares = convertToShares(assets, total_assets, storage.total_supply, ROUND_UP);
+        let total_assets = _total_assets(&mut context, storage.asset);
+        let shares = _convert_to_shares(assets, total_assets, storage.total_supply, ROUND_UP);
 
         // Transfer the assets to the recipient
         Token::at(storage.asset.read())
@@ -1198,15 +1192,8 @@ pub contract Token {
         _validate_from_public(&mut context, from, nonce);
 
         // Calculate assets to redeem
-        let total_assets = Token::at(storage.asset.read())
-            .balance_of_public(context.this_address())
-            .view(&mut context);
-        let assets = convertToAssets(
-            shares,
-            total_assets,
-            storage.total_supply.read(),
-            ROUND_DOWN,
-        );
+        let total_assets = _total_assets(&mut context, storage.asset);
+        let assets = _convert_to_assets(shares, total_assets, storage.total_supply, ROUND_DOWN);
 
         // Transfer the assets to the recipient
         Token::at(storage.asset.read())
@@ -1265,7 +1252,8 @@ pub contract Token {
             .enqueue(&mut context);
 
         // Burn shares from the sender in private
-        burn_private(from, shares, nonce);
+        _validate_from_private(&mut context, from, nonce);
+        _burn_from_private(&mut context, storage.private_balances, from, shares);
 
         // Transfer min_assets to the recipient
         Token::at(storage.asset.read())
@@ -1325,10 +1313,8 @@ pub contract Token {
     #[public]
     #[internal]
     fn burn_shares_internal(from: AztecAddress, assets: u128) {
-        let total_assets = Token::at(storage.asset.read())
-            .balance_of_public(context.this_address())
-            .view(&mut context);
-        let shares = convertToShares(assets, total_assets, storage.total_supply, ROUND_UP);
+        let total_assets = _total_assets(&mut context, storage.asset);
+        let shares = _convert_to_shares(assets, total_assets, storage.total_supply, ROUND_UP);
 
         _burn_from_public(storage.public_balances, storage.total_supply, from, shares);
     }
@@ -1339,10 +1325,8 @@ pub contract Token {
     #[public]
     #[internal]
     fn validate_shares_to_burn_internal(assets: u128, shares: u128) {
-        let total_assets = Token::at(storage.asset.read())
-            .balance_of_public(context.this_address())
-            .view(&mut context);
-        let min_shares = convertToShares(assets, total_assets, storage.total_supply, ROUND_UP);
+        let total_assets = _total_assets(&mut context, storage.asset);
+        let min_shares = _convert_to_shares(assets, total_assets, storage.total_supply, ROUND_UP);
 
         assert(min_shares <= shares, "Insufficient shares burnt");
     }
@@ -1353,15 +1337,8 @@ pub contract Token {
     #[public]
     #[internal]
     fn burn_private_shares_and_redeem_internal(to: AztecAddress, shares: u128) {
-        let total_assets = Token::at(storage.asset.read())
-            .balance_of_public(context.this_address())
-            .view(&mut context);
-        let assets = convertToAssets(
-            shares,
-            total_assets,
-            storage.total_supply.read(),
-            ROUND_DOWN,
-        );
+        let total_assets = _total_assets(&mut context, storage.asset);
+        let assets = _convert_to_assets(shares, total_assets, storage.total_supply, ROUND_DOWN);
 
         Token::at(storage.asset.read())
             .transfer_public_to_public(context.this_address(), to, assets, 0)
@@ -1374,10 +1351,8 @@ pub contract Token {
     #[public]
     #[internal]
     fn mint_shares_internal(to: AztecAddress, assets: u128) {
-        let total_assets = Token::at(storage.asset.read())
-            .balance_of_public(context.this_address())
-            .view(&mut context);
-        let shares = convertToShares(assets, total_assets, storage.total_supply, ROUND_DOWN);
+        let total_assets = _total_assets(&mut context, storage.asset);
+        let shares = _convert_to_shares(assets, total_assets, storage.total_supply, ROUND_DOWN);
 
         _mint_to_public(storage.public_balances, storage.total_supply, to, shares);
     }
@@ -1388,10 +1363,8 @@ pub contract Token {
     #[public]
     #[internal]
     fn validate_shares_to_mint_internal(assets: u128, shares: u128) {
-        let total_assets = Token::at(storage.asset.read())
-            .balance_of_public(context.this_address())
-            .view(&mut context);
-        let max_shares = convertToShares(assets, total_assets, storage.total_supply, ROUND_DOWN);
+        let total_assets = _total_assets(&mut context, storage.asset);
+        let max_shares = _convert_to_shares(assets, total_assets, storage.total_supply, ROUND_DOWN);
 
         assert(shares <= max_shares, "Too many shares requested");
     }
@@ -1407,10 +1380,8 @@ pub contract Token {
         assets: u128,
         max_shares: u128,
     ) {
-        let total_assets = Token::at(storage.asset.read())
-            .balance_of_public(context.this_address())
-            .view(&mut context);
-        let shares = convertToShares(assets, total_assets, storage.total_supply, ROUND_UP);
+        let total_assets = _total_assets(&mut context, storage.asset);
+        let shares = _convert_to_shares(assets, total_assets, storage.total_supply, ROUND_UP);
 
         let surplus = max_shares - shares; // Reverts with underflow if invalid
         if surplus > 0 {
@@ -1431,10 +1402,8 @@ pub contract Token {
         assets: u128,
         min_shares: u128,
     ) {
-        let total_assets = Token::at(storage.asset.read())
-            .balance_of_public(context.this_address())
-            .view(&mut context);
-        let max_shares = convertToShares(assets, total_assets, storage.total_supply, ROUND_DOWN);
+        let total_assets = _total_assets(&mut context, storage.asset);
+        let max_shares = _convert_to_shares(assets, total_assets, storage.total_supply, ROUND_DOWN);
 
         let outstanding_shares = max_shares - min_shares; // Reverts with underflow if invalid
         if outstanding_shares > 0 {
@@ -1455,10 +1424,8 @@ pub contract Token {
         shares: u128,
         max_assets: u128,
     ) {
-        let total_assets = Token::at(storage.asset.read())
-            .balance_of_public(context.this_address())
-            .view(&mut context);
-        let assets = convertToAssets(
+        let total_assets = _total_assets(&mut context, storage.asset);
+        let assets = _convert_to_assets(
             shares,
             total_assets - max_assets,
             storage.total_supply,
@@ -1484,10 +1451,8 @@ pub contract Token {
         shares: u128,
         min_assets: u128,
     ) {
-        let total_assets = Token::at(storage.asset.read())
-            .balance_of_public(context.this_address())
-            .view(&mut context);
-        let assets = convertToAssets(shares, total_assets, storage.total_supply, ROUND_DOWN);
+        let total_assets = _total_assets(&mut context, storage.asset);
+        let assets = _convert_to_assets(shares, total_assets, storage.total_supply, ROUND_DOWN);
 
         let outstanding_assets = assets - min_assets; // Reverts with underflow if invalid
         if outstanding_assets > 0 {
@@ -1514,10 +1479,8 @@ pub contract Token {
         shares: u128,
         min_assets: u128,
     ) {
-        let total_assets = Token::at(storage.asset.read())
-            .balance_of_public(context.this_address())
-            .view(&mut context);
-        let assets = convertToAssets(shares, total_assets, storage.total_supply, ROUND_DOWN);
+        let total_assets = _total_assets(&mut context, storage.asset);
+        let assets = _convert_to_assets(shares, total_assets, storage.total_supply, ROUND_DOWN);
 
         let outstanding_assets = assets - min_assets; // Reverts with underflow if invalid
         if outstanding_assets > 0 {
@@ -1541,10 +1504,8 @@ pub contract Token {
     #[public]
     #[internal]
     fn validate_assets_transfer_internal(from: AztecAddress, shares: u128, max_assets: u128) {
-        let total_assets = Token::at(storage.asset.read())
-            .balance_of_public(context.this_address())
-            .view(&mut context);
-        let assets = convertToAssets(
+        let total_assets = _total_assets(&mut context, storage.asset);
+        let assets = _convert_to_assets(
             shares,
             total_assets - max_assets,
             storage.total_supply,
@@ -1562,7 +1523,17 @@ pub contract Token {
      * ======================================================== */
 
     #[contract_library_method]
-    fn convertToShares(
+    unconstrained fn _total_assets(
+        context: &mut PublicContext,
+        asset: PublicImmutable<AztecAddress, &mut PublicContext>,
+    ) -> u128 {
+        let total_assets =
+            Token::at(asset.read()).balance_of_public(context.this_address()).view(context);
+        total_assets
+    }
+
+    #[contract_library_method]
+    fn _convert_to_shares(
         assets: u128,
         total_assets: u128,
         total_supply: PublicMutable<u128, &mut PublicContext>,
@@ -1580,7 +1551,7 @@ pub contract Token {
     }
 
     #[contract_library_method]
-    fn convertToAssets(
+    fn _convert_to_assets(
         shares: u128,
         total_assets: u128,
         total_supply: PublicMutable<u128, &mut PublicContext>,
@@ -1598,8 +1569,8 @@ pub contract Token {
     }
 
     /// @notice Offset that determines the rate of virtual shares to virtual assets in the vault, which itself determines the initial exchange rate.
-    /// While not fully preventing inflation attacks, analysis shows that offset=1 makes it non-profitable even if an attacker is able to capture value from multiple user deposits, as a result
-    /// of the value being captured by the virtual shares (out of the attacker's donation) matching the attacker's expected gains.
+    /// While not fully preventing inflation attacks, analysis shows that offset=1 makes it non-profitable even if an attacker is able to capture value from multiple user deposits,
+    /// as a result of the value being captured by the virtual shares (out of the attacker's donation) matching the attacker's expected gains.
     /// With a larger offset, the attack becomes orders of magnitude more expensive than it is profitable.
     #[contract_library_method]
     fn offset() -> u128 {
