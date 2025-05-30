@@ -1,9 +1,4 @@
-import {
-  type AccountWallet,
-  type ContractFunctionInteraction,
-  type PXE,
-  createPXEClient,
-} from '@aztec/aztec.js';
+import { type AccountWallet, type ContractFunctionInteraction, type PXE, createPXEClient } from '@aztec/aztec.js';
 import { getInitialTestAccountsWallets } from '@aztec/accounts/testing';
 
 // Import the new Benchmark base class and context
@@ -42,7 +37,6 @@ export default class NFTContractBenchmark extends Benchmark {
   getMethods(context: NFTBenchmarkContext): ContractFunctionInteraction[] {
     const { nftContract, deployer, accounts } = context;
     const alice = deployer;
-    const bob = accounts[1];
     const owner = alice.getAddress();
 
     const methods: ContractFunctionInteraction[] = [
@@ -51,17 +45,17 @@ export default class NFTContractBenchmark extends Benchmark {
       nftContract.withWallet(alice).methods.mint_public(owner, 2),
 
       // Transfer methods
-      nftContract.withWallet(alice).methods.transfer_private_to_public(owner, bob.getAddress(), 1, 0),
-      nftContract.withWallet(bob).methods.transfer_public_to_private(bob.getAddress(), owner, 1, 0),
+      nftContract.withWallet(alice).methods.transfer_private_to_public(owner, owner, 1, 0),
+      nftContract.withWallet(alice).methods.transfer_public_to_private(owner, owner, 1, 0),
       nftContract.withWallet(alice).methods.transfer_private_to_private(owner, owner, 1, 0),
-      nftContract.withWallet(alice).methods.transfer_public_to_public(owner, bob.getAddress(), 2, 0),
-      
-      // NOTE: don't have enough private NFT's at this point
-      // nftContract.withWallet(bob).methods.transfer_private_to_public_with_commitment(bob.getAddress(), owner, 3, 0),
-      
+      nftContract.withWallet(alice).methods.transfer_public_to_public(owner, owner, 2, 0),
+
+      // NOTE: don't have enough private NFT's to burn_private
+      // nftContract.withWallet(alice).methods.transfer_private_to_public_with_commitment(owner, owner, 1, 0),
+
       // Burn methods
       nftContract.withWallet(alice).methods.burn_private(owner, 1, 0),
-      nftContract.withWallet(bob).methods.burn_public(bob.getAddress(), 2, 0),
+      nftContract.withWallet(alice).methods.burn_public(owner, 2, 0),
     ];
 
     return methods.filter(Boolean);
