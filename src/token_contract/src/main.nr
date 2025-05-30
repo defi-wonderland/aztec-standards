@@ -872,6 +872,7 @@ pub contract Token {
         _increase_private_balance(&mut context, storage.private_balances, from, to, min_shares);
 
         // TODO (optimization): partial note logs and validity_commitment nullifier are not needed
+        // Initialize commitment that allows to mint outstanding shares to the recipient in public
         let commitment =
             _initialize_transfer_commitment(&mut context, storage.private_balances, from, to);
 
@@ -908,6 +909,7 @@ pub contract Token {
         _increase_private_balance(&mut context, storage.private_balances, from, to, min_shares);
 
         // TODO (optimization): partial note logs and validity_commitment nullifier are not needed
+        // Initialize commitment that allows to mint outstanding shares to the recipient in public
         let commitment =
             _initialize_transfer_commitment(&mut context, storage.private_balances, from, to);
 
@@ -1000,7 +1002,8 @@ pub contract Token {
             .transfer_private_to_public(from, context.this_address(), max_assets, nonce)
             .call(&mut context);
 
-        // TODO (optimization): partial note logs and validity_commitment nullifier are not needed
+        // TODO (optimization): partial note logs and validity_commitment nullifier are not needed (?)
+        // Initialize commitment that allows to refund excess assets to the sender in public
         let asset_commitment = Token::at(storage.asset.read())
             .initialize_transfer_commitment(from, from)
             .call(&mut context);
@@ -1036,7 +1039,8 @@ pub contract Token {
             .transfer_private_to_public(from, context.this_address(), max_assets, nonce)
             .call(&mut context);
 
-        // TODO (optimization): partial note logs and validity_commitment nullifier are not needed
+        // TODO (optimization): partial note logs and validity_commitment nullifier are not needed (?)
+        // Initialize commitment that allows to refund excess assets to the sender in public
         let asset_commitment = Token::at(storage.asset.read())
             .initialize_transfer_commitment(from, from)
             .call(&mut context);
@@ -1163,6 +1167,7 @@ pub contract Token {
         );
 
         // TODO (optimization): partial note logs and validity_commitment nullifier are not needed
+        // Initialize commitment that allows to refund excess shares to the sender in public
         let commitment =
             _initialize_transfer_commitment(&mut context, storage.private_balances, from, from);
 
@@ -1231,8 +1236,9 @@ pub contract Token {
     }
 
     /// @notice Redeems an amount of the shares from a private balance to a private balance
-    /// @dev The min_assets is calculated with (total_supply + 1) / (total_assets + 1).
-    ///      If the ratio decreases between private and public execution, the remaining assets sent are sent through a commitment.
+    /// @dev min_assets is the amount of assets that will be transferred to the recipient immediately in private.
+    ///      Any outstanding assets the recipient is entitled to, will be sent through a commitment once the call is executed publicly.
+    ///      This excess amount can only be known at public execution.
     /// @param from The address of the sender
     /// @param to The address of the recipient
     /// @param shares The amount of shares to burn
@@ -1246,34 +1252,31 @@ pub contract Token {
         min_assets: u128,
         nonce: Field,
     ) {
-        _validate_from_private(&mut context, from, nonce);
-
-        // TODO: do we actually need to emit the partial note log, emitted inside uint_note::partial?
+        // TODO (optimization): partial note logs and validity_commitment nullifier are not needed (?)
+        // Initialize commitment that allows to transfer outstanding assets to the recipient in public
         let asset_commitment = Token::at(storage.asset.read())
             .initialize_transfer_commitment(from, to)
             .call(&mut context);
 
-        // Mint shares to the recipient in public
+        // Transfers any outstanding assets without revealing the recipient
+        // Reverts if min_assets is greater than allowed
         Token::at(context.this_address())
-            .burn_private_shares_and_redeem_with_commitment_internal(
-                asset_commitment,
-                shares,
-                min_assets,
-            )
+            .validate_shares_burn_with_commitment(asset_commitment, shares, min_assets)
             .enqueue(&mut context);
 
         // Burn shares from the sender in private
-        _burn_from_private(&mut context, storage.private_balances, from, shares);
+        burn_private(from, shares, nonce);
 
-        // Transfer min_assets out
+        // Transfer min_assets to the recipient
         Token::at(storage.asset.read())
             .transfer_public_to_private(context.this_address(), to, min_assets, nonce)
             .call(&mut context);
     }
 
     /// @notice Redeems an amount of the shares from a public balance to a private balance
-    /// @dev The min_assets is calculated with (total_supply + 1) / (total_assets + 1).
-    ///      If the ratio decreases between private and public execution, the remaining assets sent are sent through a commitment.
+    /// @dev min_assets is the amount of assets that will be transferred to the recipient immediately in private.
+    ///      Any outstanding assets the recipient is entitled to, will be sent through a commitment once the call is executed publicly.
+    ///      This excess amount can only be known at public execution.
     /// @param from The address of the sender
     /// @param to The address of the recipient
     /// @param shares The amount of shares to redeem
@@ -1289,12 +1292,14 @@ pub contract Token {
     ) {
         _validate_from_private(&mut context, from, nonce);
 
-        // TODO: do we actually need to emit the partial note log, emitted inside uint_note::partial?
+        // TODO (optimization): partial note logs and validity_commitment nullifier are not needed (?)
+        // Initialize commitment that allows to transfer outstanding assets to the recipient in public
         let asset_commitment = Token::at(storage.asset.read())
             .initialize_transfer_commitment(from, to)
             .call(&mut context);
 
-        // Mint shares to the recipient in public
+        // Transfers any outstanding assets without revealing the recipient and burn the sender's public balance
+        // Reverts if min_assets is greater than allowed
         Token::at(context.this_address())
             .burn_shares_and_redeem_with_commitment_internal(
                 from,
@@ -1304,9 +1309,9 @@ pub contract Token {
             )
             .enqueue(&mut context);
 
-        // Transfer min_assets out
+        // Transfer min_assets to the recipient
         Token::at(storage.asset.read())
-            .transfer_public_to_private(context.this_address(), to, min_assets, nonce)
+            .transfer_public_to_private(context.this_address(), to, min_assets, 0)
             .call(&mut context);
     }
 
@@ -1474,7 +1479,7 @@ pub contract Token {
     /// @param min_assets The amount of tokens to increase the balance by
     #[public]
     #[internal]
-    fn burn_private_shares_and_redeem_with_commitment_internal(
+    fn validate_shares_burn_with_commitment(
         asset_commitment: PartialUintNote,
         shares: u128,
         min_assets: u128,
