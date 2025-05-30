@@ -273,16 +273,16 @@ pub contract NFT {
 
     #[contract_library_method]
     fn _set_nft_exists(
-        nft_exists_storage: Map<Field, PublicMutable<bool, &mut PublicContext>, &mut PublicContext>,
+        nft_exists: Map<Field, PublicMutable<bool, &mut PublicContext>, &mut PublicContext>,
         token_id: Field,
         exists: bool,
     ) {
         if exists {
-            assert(!nft_exists_storage.at(token_id).read(), "token already exists");
+            assert(!nft_exists.at(token_id).read(), "token already exists");
         } else {
-            assert(nft_exists_storage.at(token_id).read(), "token does not exist");
+            assert(nft_exists.at(token_id).read(), "token does not exist");
         }
-        nft_exists_storage.at(token_id).write(exists);
+        nft_exists.at(token_id).write(exists);
     }
 
     /** ==========================================================
