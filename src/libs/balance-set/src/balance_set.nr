@@ -1,15 +1,27 @@
 use aztec::{
     context::{PrivateContext, UtilityContext},
     macros::functions::utility,
-    note::{note_emission::OuterNoteEmission, retrieved_note::RetrievedNote},
+    note::{
+        note_emission::OuterNoteEmission, note_getter_options::SortOrder,
+        note_interface::NoteProperties, retrieved_note::RetrievedNote,
+    },
     prelude::{NoteGetterOptions, NoteViewerOptions, PrivateSet},
     protocol_types::{address::AztecAddress, constants::MAX_NOTE_HASH_READ_REQUESTS_PER_CALL},
+    state_vars::storage::Storage,
 };
+
 use uint_note::uint_note::{UintNote};
 use std::ops::Add;
 
 pub struct BalanceSet<Context> {
     pub set: PrivateSet<UintNote, Context>,
+}
+
+// TODO(#13824): remove this impl once we allow structs to hold state variables.
+impl<Context> Storage<1> for BalanceSet<Context> {
+    fn get_storage_slot(self) -> Field {
+        self.set.get_storage_slot()
+    }
 }
 
 impl<Context> BalanceSet<Context> {
@@ -26,8 +38,10 @@ impl BalanceSet<UtilityContext> {
 
     pub unconstrained fn balance_of_with_offset(self: Self, offset: u32) -> u128 {
         let mut balance = 0 as u128;
+        // docs:start:view_notes
         let mut options = NoteViewerOptions::new();
         let notes = self.set.view_notes(options.set_offset(offset));
+        // docs:end:view_notes
         for i in 0..options.limit {
             if i < notes.len() {
                 balance = balance + notes.get_unchecked(i).get_value();
@@ -49,7 +63,9 @@ impl BalanceSet<&mut PrivateContext> {
             // We fetch the nullifier public key hash from the registry / from our PXE
             let mut addend_note = UintNote::new(addend, owner);
 
+            // docs:start:insert
             OuterNoteEmission::new(Option::some(self.set.insert(addend_note)))
+            // docs:end:insert
         }
     }
 
@@ -78,6 +94,7 @@ impl BalanceSet<&mut PrivateContext> {
         // might result in is simply higher DA costs due to more nullifiers being emitted. Since we don't care
         // about proving optimal note usage, we can save these constraints and make the circuit smaller.
         let options = NoteGetterOptions::with_preprocessor(preprocess_notes_min_sum, target_amount)
+            .sort(UintNote::properties().value, SortOrder.DESC)
             .set_limit(max_notes);
         let notes = self.set.pop_notes(options);
 
@@ -112,7 +129,7 @@ pub fn preprocess_notes_min_sum(
         if notes[i].is_some() & sum < min_sum {
             let retrieved_note = notes[i].unwrap_unchecked();
             selected[i] = Option::some(retrieved_note);
-            sum = sum + retrieved_note.note.get_value();
+            sum = sum.add(retrieved_note.note.get_value());
         }
     }
     selected

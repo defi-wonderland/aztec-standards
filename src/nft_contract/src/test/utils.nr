@@ -51,6 +51,7 @@ pub unconstrained fn deploy_nft_with_minter(
         minter,
     );
     let nft_contract = env.deploy("./@nft_contract", "NFT").with_public_void_initializer(
+        owner,
         initializer_call_interface,
     );
     env.advance_block_by(1);

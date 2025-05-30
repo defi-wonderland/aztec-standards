@@ -158,7 +158,7 @@ impl NFTNote {
         }
 
         // Emit the private log
-        context.emit_private_log(log);
+        context.emit_private_log(log, log.len());
 
         PartialNFTNote { commitment }
     }
