@@ -10,6 +10,7 @@ import {
   Contract,
 } from '@aztec/aztec.js';
 import { TokenContract, TokenContractArtifact } from '../../artifacts/Token.js';
+import { NFTContract, NFTContractArtifact } from '../../artifacts/NFT.js';
 
 export const logger = createLogger('aztec:aztec-standards');
 
@@ -73,6 +74,23 @@ export async function deployTokenWithMinter(deployer: AccountWallet) {
     deployer,
     TokenContractArtifact,
     ['PrivateToken', 'PT', 18, deployer.getAddress(), AztecAddress.ZERO],
+    'constructor_with_minter',
+  )
+    .send()
+    .deployed();
+  return contract;
+}
+
+/**
+ * Deploys the NFT contract with a specified minter.
+ * @param deployer - The wallet to deploy the contract with.
+ * @returns A deployed contract instance.
+ */
+export async function deployNFTWithMinter(deployer: AccountWallet) {
+  const contract = await Contract.deploy(
+    deployer,
+    NFTContractArtifact,
+    ['NFT', 'NFT', deployer.getAddress()],
     'constructor_with_minter',
   )
     .send()
