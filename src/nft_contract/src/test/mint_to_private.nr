@@ -4,7 +4,7 @@ use aztec::prelude::AztecAddress;
 
 #[test]
 unconstrained fn nft_mint_private_success() {
-    let (env, nft_contract_address, owner, minter, recipient) = utils::setup_with_minter(false);
+    let (env, nft_contract_address, owner, minter, _) = utils::setup_with_minter(false);
 
     let token_id = 10000;
     env.impersonate(minter);
@@ -50,4 +50,3 @@ unconstrained fn nft_mint_private_fail_token_id_zero() {
     env.impersonate(minter);
     NFT::at(nft_contract_address).mint_private(owner, 0).call(&mut env.private());
 }
-

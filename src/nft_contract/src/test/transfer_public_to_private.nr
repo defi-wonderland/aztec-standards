@@ -7,7 +7,7 @@ use aztec::prelude::AztecAddress;
 unconstrained fn nft_transfer_public_to_private_success() {
     // Setup and mint NFT to owner in public state
     let token_id = 10000;
-    let (env, nft_contract_address, owner, minter, recipient, token_id) = 
+    let (env, nft_contract_address, owner, _, recipient) =
         utils::setup_and_mint_to_public(false, token_id);
 
     // Verify initial ownership state
@@ -15,9 +15,9 @@ unconstrained fn nft_transfer_public_to_private_success() {
 
     // Transfer NFT from public to private state
     env.impersonate(owner);
-    NFT::at(nft_contract_address)
-        .transfer_public_to_private(owner, recipient, token_id, 0)
-        .call(&mut env.private());
+    NFT::at(nft_contract_address).transfer_public_to_private(owner, recipient, token_id, 0).call(
+        &mut env.private(),
+    );
     env.advance_block_by(1);
 
     // Verify the NFT is no longer owned publicly by owner
@@ -30,12 +30,12 @@ unconstrained fn nft_transfer_public_to_private_success() {
 unconstrained fn nft_transfer_public_to_private_authorized_success() {
     // Setup with account contracts (needed for authwits) and mint NFT to owner
     let token_id = 10000;
-    let (env, nft_contract_address, owner, minter, recipient, token_id) = 
+    let (env, nft_contract_address, owner, _, recipient) =
         utils::setup_and_mint_to_public(true, token_id);
 
     // Create the transfer call interface
-    let transfer_call_interface = NFT::at(nft_contract_address)
-        .transfer_public_to_private(owner, recipient, token_id, 1);
+    let transfer_call_interface =
+        NFT::at(nft_contract_address).transfer_public_to_private(owner, recipient, token_id, 1);
 
     // Add authorization witness from owner to recipient
     authwit_cheatcodes::add_private_authwit_from_call_interface(
@@ -59,20 +59,20 @@ unconstrained fn nft_transfer_public_to_private_authorized_success() {
 unconstrained fn nft_transfer_public_to_private_invalid_nonce_fail() {
     // Setup and mint NFT to owner in public state
     let token_id = 10000;
-    let (env, nft_contract_address, owner, minter, recipient, token_id) = 
+    let (env, nft_contract_address, owner, _, recipient) =
         utils::setup_and_mint_to_public(false, token_id);
 
     // Attempt transfer with non-zero nonce as owner (should use nonce=0 when self-transferring)
     env.impersonate(owner);
-    NFT::at(nft_contract_address)
-        .transfer_public_to_private(owner, recipient, token_id, 1)
-        .call(&mut env.private());
+    NFT::at(nft_contract_address).transfer_public_to_private(owner, recipient, token_id, 1).call(
+        &mut env.private(),
+    );
 }
 
 #[test(should_fail_with = "caller is not owner")]
 unconstrained fn nft_transfer_public_to_private_not_owned_fail() {
     // Setup environment but don't mint the NFT
-    let (env, nft_contract_address, owner, minter, recipient) = utils::setup_with_minter(false);
+    let (env, nft_contract_address, owner, _, recipient) = utils::setup_with_minter(false);
     let non_existent_token_id = 12345;
 
     // Attempt to transfer a token that doesn't exist / isn't owned
@@ -86,12 +86,12 @@ unconstrained fn nft_transfer_public_to_private_not_owned_fail() {
 unconstrained fn nft_transfer_public_to_private_unauthorized_fail() {
     // Setup with account contracts for proper authorization testing
     let token_id = 10000;
-    let (env, nft_contract_address, owner, minter, recipient, token_id) = 
+    let (env, nft_contract_address, owner, _, recipient) =
         utils::setup_and_mint_to_public(true, token_id);
 
     // Create transfer interface with non-zero nonce (indicating authorization needed)
-    let transfer_call_interface = NFT::at(nft_contract_address)
-        .transfer_public_to_private(owner, recipient, token_id, 1);
+    let transfer_call_interface =
+        NFT::at(nft_contract_address).transfer_public_to_private(owner, recipient, token_id, 1);
 
     // Impersonate recipient but DON'T add authorization witness
     // This test verifies that without an authorization witness (authwit),
