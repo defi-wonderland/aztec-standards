@@ -349,7 +349,7 @@ pub contract NFT {
     /// @param to The address of the recipient
     /// @param token_id The id of the token to mint
     #[private]
-    fn mint_private(to: AztecAddress, token_id: Field) {
+    fn mint_to_private(to: AztecAddress, token_id: Field) {
         assert(token_id != 0, "zero token ID not supported");
         _validate_minter(context.msg_sender(), storage.minter.read());
 
@@ -367,7 +367,7 @@ pub contract NFT {
     /// @param to The address of the recipient
     /// @param token_id The id of the token to mint
     #[public]
-    fn mint_public(to: AztecAddress, token_id: Field) {
+    fn mint_to_public(to: AztecAddress, token_id: Field) {
         assert(token_id != 0, "zero token ID not supported");
         _validate_minter(context.msg_sender(), storage.minter.read());
 
