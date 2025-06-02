@@ -928,20 +928,32 @@ pub contract Token {
      * ======================================================== */
 
     /// @notice Issues exactly the requested shares to a public balance and receives the underlying asset from a public balance
+    /// @dev max_assets is calculated based on the ratio (total_supply + offset) / (total_assets + 1) plus any acceptable slippage.
+    ///      The ratio can only decrease or remain the same as time goes by. Any excess assets the sender has transferred will be returned.
+    ///      This excess amount can only be known at public execution.
     /// @param from The address of the sender
     /// @param to The address of the recipient
     /// @param shares The amount of shares to issue
+    /// @param max_assets The maximum amount of assets that should be deposited
     /// @param nonce The nonce used for authwitness
     #[public]
-    fn issue_public_to_public(from: AztecAddress, to: AztecAddress, shares: u128, nonce: Field) {
+    fn issue_public_to_public(from: AztecAddress, to: AztecAddress, shares: u128, max_assets: u128, nonce: Field) {
+        // Take the assets from the sender
+        Token::at(storage.asset.read())
+            .transfer_public_to_public(from, context.this_address(), max_assets, nonce)
+            .call(&mut context);
+
         // Calculate assets required
         let total_assets = _total_assets(&mut context, storage.asset);
         let assets = _convert_to_assets(shares, total_assets, storage.total_supply, ROUND_UP);
 
-        // Take the assets from the sender
-        Token::at(storage.asset.read())
-            .transfer_public_to_public(from, context.this_address(), assets, nonce)
-            .call(&mut context);
+        let change = max_assets - assets; // Reverts with underflow if invalid
+        if change > 0 {
+            // Reimburse the sender with any excess assets sent
+            Token::at(storage.asset.read())
+                .transfer_public_to_public(context.this_address(), from, change, 0)
+                .call(&mut context);
+        }
 
         // Mint shares to the recipient
         _mint_to_public(storage.public_balances, storage.total_supply, to, shares);
@@ -978,7 +990,7 @@ pub contract Token {
     }
 
     /// @notice Issues exactly the requested shares to a public balance and receives the underlying asset from a private balance
-    /// @dev Any excess assets the caller has transferred in private, will be returned to the caller through a commitment once the call is executed publicly.
+    /// @dev Any excess assets the sender has transferred in private, will be returned to the sender through a commitment once the call is executed publicly.
     ///      This excess amount can only be known at public execution.
     /// @param from The address of the sender
     /// @param to The address of the recipient
@@ -1482,7 +1494,7 @@ pub contract Token {
     /// @notice Increases the balance of the commitment by `amount`
     /// @param commitment The partial note representing the commitment (privacy entrance)
     /// @param shares The amount of tokens to increase the balance by
-    /// @param max_assets The maximum amount of assets to deposit. If the amount is greater then needed, the excess will be returned to the caller in private.
+    /// @param max_assets The maximum amount of assets to deposit. If the amount is greater then needed, the excess will be returned to the sender in private.
     #[public]
     #[internal]
     fn validate_assets_transfer_with_commitment(
@@ -1566,7 +1578,7 @@ pub contract Token {
     /// @notice Increases the balance of the commitment by `amount`
     /// @param from The address of the sender
     /// @param shares The amount of tokens to increase the balance by
-    /// @param max_assets The maximum amount of assets to deposit. If the amount is greater then needed, the excess will be returned to the caller in private.
+    /// @param max_assets The maximum amount of assets to deposit. If the amount is greater then needed, the excess will be returned to the sender in private.
     #[public]
     #[internal]
     fn validate_assets_transfer_internal(from: AztecAddress, shares: u128, max_assets: u128) {
