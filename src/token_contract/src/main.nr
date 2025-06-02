@@ -937,7 +937,13 @@ pub contract Token {
     /// @param max_assets The maximum amount of assets that should be deposited
     /// @param nonce The nonce used for authwitness
     #[public]
-    fn issue_public_to_public(from: AztecAddress, to: AztecAddress, shares: u128, max_assets: u128, nonce: Field) {
+    fn issue_public_to_public(
+        from: AztecAddress,
+        to: AztecAddress,
+        shares: u128,
+        max_assets: u128,
+        nonce: Field,
+    ) {
         // Take the assets from the sender
         Token::at(storage.asset.read())
             .transfer_public_to_public(from, context.this_address(), max_assets, nonce)
@@ -1181,7 +1187,12 @@ pub contract Token {
         // Any excess amount of shares is sent back to the sender via commitment
         // Reverts if the amount of shares required is greater than max_shares
         Token::at(context.this_address())
-            .burn_private_shares_with_commitment_and_redeem_internal(to, commitment, assets, max_shares)
+            .burn_private_shares_with_commitment_and_redeem_internal(
+                to,
+                commitment,
+                assets,
+                max_shares,
+            )
             .enqueue(&mut context);
     }
 
@@ -1404,10 +1415,12 @@ pub contract Token {
     /// @param shares The amount of requested shares
     #[public]
     #[internal]
-    fn burn_private_shares_with_commitment_and_redeem_internal(to: AztecAddress, 
+    fn burn_private_shares_with_commitment_and_redeem_internal(
+        to: AztecAddress,
         commitment: PartialUintNote,
         assets: u128,
-        max_shares: u128) {
+        max_shares: u128,
+    ) {
         let total_assets = _total_assets(&mut context, storage.asset);
         let shares = _convert_to_shares(assets, total_assets, storage.total_supply, ROUND_UP);
 
