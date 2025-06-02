@@ -431,7 +431,7 @@ pub contract Token {
 
     #[public]
     #[internal]
-    fn mint_public_internal(to: AztecAddress, amount: u128) {
+    fn mint_to_public_internal(to: AztecAddress, amount: u128) {
         _mint_to_public(storage.public_balances, storage.total_supply, to, amount);
     }
 
@@ -1010,7 +1010,7 @@ pub contract Token {
             .enqueue(&mut context);
 
         // Mint shares to recipient in public
-        Token::at(context.this_address()).mint_public_internal(to, shares).enqueue(&mut context);
+        Token::at(context.this_address()).mint_to_public_internal(to, shares).enqueue(&mut context);
     }
 
     /// @notice Issues exactly the requested shares to a private balance and receives the underlying asset from a private balance
