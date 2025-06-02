@@ -1131,6 +1131,48 @@ pub contract Token {
             .call(&mut context);
     }
 
+    /// @notice Withdraws an amount of the underlying asset from a private balance to a public balance
+    /// @dev max_shares is the amount of shares that will be burnt immediately in private.
+    ///      Any excess shares the sender has transferred in private, will be returned to the sender through a commitment once the call is executed publicly.
+    ///      This excess amount can only be known at public execution.
+    ///      To optimize calls to this method, consider setting max_shares to an exact sum of notes, so that change is not returned twice (in private and later via commitment)
+    /// @param from The address of the sender
+    /// @param to The address of the recipient
+    /// @param assets The amount of underlying asset to withdraw
+    /// @param max_shares The maximum amount of shares to burn
+    /// @param nonce The nonce used for authwitness
+    #[private]
+    fn withdraw_private_to_public_exact(
+        from: AztecAddress,
+        to: AztecAddress,
+        assets: u128,
+        max_shares: u128,
+        nonce: Field,
+    ) {
+        _validate_from_private(&mut context, from, nonce);
+
+        // Burn shares from the sender in private
+        _decrease_private_balance(
+            &mut context,
+            storage.private_balances,
+            from,
+            max_shares,
+            INITIAL_TRANSFER_CALL_MAX_NOTES,
+        );
+
+        // TODO (optimization): partial note logs and validity_commitment nullifier are not needed
+        // Initialize commitment that allows to refund excess shares to the sender in public
+        let commitment =
+            _initialize_transfer_commitment(&mut context, storage.private_balances, from, from);
+
+        // Burn the correct amount of shares
+        // Any excess amount of shares is sent back to the sender via commitment
+        // Reverts if the amount of shares required is greater than max_shares
+        Token::at(context.this_address())
+            .burn_private_shares_with_commitment_and_redeem_internal(to, commitment, assets, max_shares)
+            .enqueue(&mut context);
+    }
+
     /// @notice Withdraws an amount of the underlying asset from a private balance to a private balance
     /// @dev max_shares is the amount of shares that will be burnt immediately in private.
     ///      Any excess shares the sender has transferred in private, will be returned to the sender through a commitment once the call is executed publicly.
@@ -1339,6 +1381,30 @@ pub contract Token {
     fn burn_private_shares_and_redeem_internal(to: AztecAddress, shares: u128) {
         let total_assets = _total_assets(&mut context, storage.asset);
         let assets = _convert_to_assets(shares, total_assets, storage.total_supply, ROUND_DOWN);
+
+        Token::at(storage.asset.read())
+            .transfer_public_to_public(context.this_address(), to, assets, 0)
+            .call(&mut context);
+    }
+
+    /// @notice Decreases shares total supply after privately burning `shares`
+    /// @param to The amount of underlying that will be sent to the contract
+    /// @param shares The amount of requested shares
+    #[public]
+    #[internal]
+    fn burn_private_shares_with_commitment_and_redeem_internal(to: AztecAddress, 
+        commitment: PartialUintNote,
+        assets: u128,
+        max_shares: u128) {
+        let total_assets = _total_assets(&mut context, storage.asset);
+        let shares = _convert_to_shares(assets, total_assets, storage.total_supply, ROUND_UP);
+
+        let surplus = max_shares - shares; // Reverts with underflow if invalid
+        if surplus > 0 {
+            _increase_commitment_balance(&mut context, commitment, surplus);
+        }
+
+        _decrease_total_supply(storage.total_supply, shares);
 
         Token::at(storage.asset.read())
             .transfer_public_to_public(context.this_address(), to, assets, 0)
