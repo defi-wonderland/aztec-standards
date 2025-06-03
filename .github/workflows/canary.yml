@@ -10,7 +10,7 @@ jobs:
 
     env:
       PROJECT_NAME: '@defi-wonderland/aztec-standards'
-      AZTEC_VERSION: 0.87.2
+      AZTEC_VERSION: 0.87.7
 
     steps:
       - name: Checkout Repo

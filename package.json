@@ -11,7 +11,7 @@
   "scripts": {
     "postinstall": "husky",
     "clean": "rm -rf ./src/artifacts ./target",
-    "codegen": "aztec codegen target --outdir src/artifacts",
+    "codegen": "aztec codegen target --outdir src/artifacts --force",
     "compile": "aztec-nargo compile",
     "start:pxe": "docker compose -p sandbox -f ~/.aztec/docker-compose.sandbox.yml -f docker-compose.override.yml up",
     "test": "yarn test:nr && yarn test:js",
@@ -24,9 +24,9 @@
     "*.ts": "prettier --write -u"
   },
   "dependencies": {
-    "@aztec/accounts": "0.87.2",
-    "@aztec/aztec.js": "0.87.2",
-    "@aztec/noir-contracts.js": "0.87.2",
+    "@aztec/accounts": "0.87.7",
+    "@aztec/aztec.js": "0.87.7",
+    "@aztec/noir-contracts.js": "0.87.7",
     "@defi-wonderland/aztec-benchmark": "1.0.0",
     "@types/node": "22.5.1"
   },
