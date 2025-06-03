@@ -106,6 +106,10 @@ pub contract Token {
 
         storage.minter.initialize(minter);
         storage.upgrade_authority.initialize(upgrade_authority);
+
+        ContractInstanceDeployer::at(DEPLOYER_CONTRACT_ADDRESS)
+            .set_update_delay(aztec::protocol_types::constants::MINIMUM_UPDATE_DELAY)
+            .call(&mut context);
     }
 
     /** ==========================================================
