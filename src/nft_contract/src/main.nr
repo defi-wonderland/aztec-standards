@@ -369,6 +369,7 @@ pub contract NFT {
     fn mint_public(to: AztecAddress, token_id: Field) {
         assert(token_id != 0, "zero token ID not supported");
         _validate_minter(context.msg_sender(), storage.minter.read());
+        assert(!storage.nft_exists.at(token_id).read(), "token already exists");
 
         storage.nft_exists.at(token_id).write(true);
         storage.public_owners.at(token_id).write(to);
