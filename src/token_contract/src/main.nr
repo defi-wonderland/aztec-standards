@@ -170,7 +170,7 @@ pub contract Token {
 
         let commitment =
             _initialize_transfer_commitment(&mut context, storage.private_balances, from, to);
-        commitment.commitment()
+        commitment
     }
 
     /// @notice Transfer tokens from private balance to another private balance
@@ -208,7 +208,7 @@ pub contract Token {
     #[private]
     fn transfer_private_to_commitment(
         from: AztecAddress,
-        commitment: Field,
+        commitment: PartialUintNote,
         amount: u128,
         _nonce: Field,
     ) {
@@ -223,7 +223,7 @@ pub contract Token {
         );
 
         Token::at(context.this_address())
-            .increase_commitment_balance_internal(PartialUintNote { commitment }, amount)
+            .increase_commitment_balance_internal(commitment, amount)
             .enqueue(&mut context);
     }
 
@@ -255,10 +255,10 @@ pub contract Token {
     /// @param to The address of the recipient
     /// @return commitment The partial note initialized for the transfer/mint commitment
     #[private]
-    fn initialize_transfer_commitment(from: AztecAddress, to: AztecAddress) -> Field {
+    fn initialize_transfer_commitment(from: AztecAddress, to: AztecAddress) -> PartialUintNote {
         let commitment =
             _initialize_transfer_commitment(&mut context, storage.private_balances, from, to);
-        commitment.commitment()
+        commitment
     }
 
     /// @notice Recursively subtracts balance from commitment
@@ -311,23 +311,14 @@ pub contract Token {
     #[public]
     fn transfer_public_to_commitment(
         from: AztecAddress,
-        commitment: Field,
+        commitment: PartialUintNote,
         amount: u128,
         _nonce: Field,
     ) {
         _validate_from_public(&mut context, from);
 
         _decrease_public_balance(storage.public_balances, from, amount);
-        _increase_commitment_balance(&mut context, PartialUintNote { commitment }, amount);
-    }
-
-    /// @notice Stores a partial note in storage
-    /// @dev Used to store the commitment (privacy entrance)
-    /// @param commitment The partial note to store
-    #[public]
-    #[internal]
-    fn store_commitment_in_storage_internal(commitment: PartialUintNote) {
-        _store_commitment_in_storage(&mut context, commitment);
+        _increase_commitment_balance(&mut context, commitment, amount);
     }
 
     /// @notice Increases the public balance of `to` by `amount`
@@ -448,11 +439,11 @@ pub contract Token {
     /// @param commitment The partial note representing the mint commitment (privacy entrance)
     /// @param amount The amount of tokens to mint
     #[public]
-    fn mint_to_commitment(commitment: Field, amount: u128) {
+    fn mint_to_commitment(commitment: PartialUintNote, amount: u128) {
         _validate_minter(context.msg_sender(), storage.minter.read());
 
         _increase_total_supply(storage.total_supply, amount);
-        _increase_commitment_balance(&mut context, PartialUintNote { commitment }, amount);
+        _increase_commitment_balance(&mut context, commitment, amount);
     }
 
     #[public]
@@ -596,12 +587,7 @@ pub contract Token {
         commitment: PartialUintNote,
         amount: u128,
     ) {
-        // We verify that the partial note we're completing is valid (i.e. it uses the correct state variable's storage
-        // slot, and it is internally consistent). We *could* clear the storage since each partial note should only be
-        // used once, but since the AVM offers no gas refunds for doing so this would just make the transaction be more
-        // expensive.
-        assert(context.storage_read(commitment.commitment()), "Invalid commitment");
-        commitment.complete(amount, context);
+        commitment.complete(context, context.msg_sender(), amount);
     }
 
     /// @notice Subtracts balance from commitment
@@ -652,14 +638,6 @@ pub contract Token {
         total_supply.write(new_supply);
     }
 
-    /// @notice Stores a partial note in storage
-    /// @param context The context of the public call
-    /// @param commitment The partial note to store
-    #[contract_library_method]
-    fn _store_commitment_in_storage(context: &mut PublicContext, commitment: PartialUintNote) {
-        context.storage_write(commitment.commitment(), true);
-    }
-
     /// @notice Initializes a transfer commitment to be used for transfers/mints
     /// @param context The context of the private call
     /// @param private_balances The storage pointer to the private balances
@@ -679,15 +657,7 @@ pub contract Token {
             context,
             to,
             from,
-        );
-
-        // We can't simply return the partial note because we won't be able to later on verify that it was created
-        // correctly (e.g. that the storage slot corresponds to the owner, and that we're using the balance set and not
-        // another state variable) once this information is hidden in the partial note commitment. We therefore store
-        // the partial note in our own public storage, so that we can later check that we're only completing correctly
-        // created partial notes.
-        Token::at(context.this_address()).store_commitment_in_storage_internal(commitment).enqueue(
-            context,
+            context.msg_sender(),
         );
         commitment
     }
