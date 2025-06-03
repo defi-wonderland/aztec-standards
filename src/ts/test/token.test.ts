@@ -1,7 +1,6 @@
 import { TokenContractArtifact, TokenContract } from '../../artifacts/Token.js';
 import {
   AccountWallet,
-  CompleteAddress,
   ContractDeployer,
   Fr,
   PXE,
@@ -29,19 +28,16 @@ export async function deployTokenWithInitialSupply(deployer: AccountWallet) {
 describe('Token - Single PXE', () => {
   let pxe: PXE;
   let wallets: AccountWalletWithSecretKey[] = [];
-  let accounts: CompleteAddress[] = [];
 
-  let alice: AccountWallet;
-  let bob: AccountWallet;
-  let carl: AccountWallet;
+  let alice: AccountWalletWithSecretKey;
+  let bob: AccountWalletWithSecretKey;
+  let carl: AccountWalletWithSecretKey;
 
   let token: TokenContract;
 
   beforeAll(async () => {
     pxe = await setupSandbox();
-
     wallets = await getInitialTestAccountsWallets(pxe);
-    accounts = wallets.map((w) => w.getCompleteAddress());
 
     alice = wallets[0];
     bob = wallets[1];
