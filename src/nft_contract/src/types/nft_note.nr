@@ -29,11 +29,11 @@ pub struct NFTNote {
     // Correct ordering is checked by the tests in this module.
 
     /// The owner of the note, i.e. the account whose nullifier secret key is required to compute the nullifier.
-    owner: AztecAddress,
+    pub owner: AztecAddress,
     /// Random value, protects against note hash preimage attacks.
     randomness: Field,
     /// The ID of the token represented by this note.
-    token_id: Field,
+    pub token_id: Field,
 }
 
 impl NoteHash for NFTNote {
@@ -209,7 +209,7 @@ impl NoteType for PrivateNFTPartialNotePrivateLogContent {
 /// of course that its token id is known).
 #[derive(Packable, Serialize, Deserialize)]
 pub struct PartialNFTNote {
-    commitment: Field,
+    pub commitment: Field,
 }
 
 impl PartialNFTNote {
