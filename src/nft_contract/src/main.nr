@@ -95,7 +95,7 @@ pub contract NFT {
         to: AztecAddress,
         token_id: Field,
         nonce: Field,
-    ) -> PartialNFTNote {
+    ) -> Field {
         _validate_from_private(&mut context, from, nonce);
 
         _remove_private_token_owner(storage.private_nfts.at(from), token_id);
@@ -104,7 +104,7 @@ pub contract NFT {
             .enqueue(&mut context);
         let commitment =
             _initialize_transfer_commitment(&mut context, storage.private_nfts, from, to);
-        commitment
+        commitment.commitment()
     }
 
     /// @notice Transfers token by id from private owner to another private owner
@@ -223,14 +223,14 @@ pub contract NFT {
     fn transfer_public_to_commitment(
         from: AztecAddress,
         token_id: Field,
-        commitment: PartialNFTNote,
+        commitment: Field,
         nonce: Field,
     ) {
         _validate_from_public(&mut context, from, nonce);
         _validate_public_token_owner(storage.public_owners, from, token_id);
 
         _update_public_token_owner(storage.public_owners, AztecAddress::zero(), token_id);
-        _transfer_token_to_commitment(&mut context, commitment, token_id);
+        _transfer_token_to_commitment(&mut context, PartialNFTNote { commitment }, token_id);
     }
 
     /// @notice Stores a commitment in storage
@@ -322,7 +322,7 @@ pub contract NFT {
     /// @return owned_nft_ids An array of token IDs owned by `owner`
     /// @return page_limit_reached A flag indicating whether a page limit was reached
     #[utility]
-    unconstrained fn get_private_nfts(
+    pub unconstrained fn get_private_nfts(
         owner: AztecAddress,
         page_index: u32,
     ) -> pub ([Field; MAX_NOTES_PER_PAGE], bool) {
@@ -353,8 +353,7 @@ pub contract NFT {
         assert(token_id != 0, "zero token ID not supported");
         _validate_minter(context.msg_sender(), storage.minter.read());
 
-        let nft = NFT::at(context.this_address());
-        nft.set_nft_exists_internal(token_id, true).enqueue(&mut context);
+        NFT::at(context.this_address()).set_nft_exists_internal(token_id, true).enqueue(&mut context);
         storage.private_nfts.at(to).insert(NFTNote::new(token_id, to)).emit(encode_and_encrypt_note(
             &mut context,
             to,

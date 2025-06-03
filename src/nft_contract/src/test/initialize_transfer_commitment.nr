@@ -1,12 +1,11 @@
 use crate::NFT;
 use crate::test::utils;
-use aztec::prelude::AztecAddress;
 
 #[test]
 unconstrained fn nft_initialize_transfer_commitment_success() {
     // Setup with NFT in private state
     let token_id = 10000;
-    let (env, nft_contract_address, owner, minter, recipient, token_id) = 
+    let (env, nft_contract_address, owner, _, recipient) =
         utils::setup_and_mint_to_private(false, token_id);
 
     // Initialize transfer commitment
@@ -27,7 +26,7 @@ unconstrained fn nft_initialize_transfer_commitment_success() {
 unconstrained fn nft_initialize_transfer_commitment_by_recipient_success() {
     // Setup with NFT in private state
     let token_id = 10000;
-    let (env, nft_contract_address, owner, minter, recipient, token_id) = 
+    let (env, nft_contract_address, owner, _, recipient) =
         utils::setup_and_mint_to_private(false, token_id);
 
     // Initialize transfer commitment as recipient
@@ -48,7 +47,7 @@ unconstrained fn nft_initialize_transfer_commitment_by_recipient_success() {
 unconstrained fn nft_initialize_transfer_commitment_self_success() {
     // Setup with NFT in private state
     let token_id = 10000;
-    let (env, nft_contract_address, owner, minter, recipient, token_id) = 
+    let (env, nft_contract_address, owner, _, _) =
         utils::setup_and_mint_to_private(false, token_id);
 
     // Initialize transfer commitment to self
@@ -69,7 +68,7 @@ unconstrained fn nft_initialize_transfer_commitment_self_success() {
 unconstrained fn nft_initialize_transfer_commitment_by_third_party_success() {
     // Setup with NFT in private state
     let token_id = 10000;
-    let (env, nft_contract_address, owner, minter, recipient, token_id) = 
+    let (env, nft_contract_address, owner, minter, recipient) =
         utils::setup_and_mint_to_private(false, token_id);
 
     // Initialize transfer commitment as minter (third party)
