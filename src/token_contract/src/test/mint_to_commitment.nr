@@ -106,9 +106,9 @@ unconstrained fn mint_to_private_failure_invalid_commitments_random() {
     let mint_amount: u128 = 10_000;
     env.impersonate(minter);
 
-    Token::at(token_contract_address).mint_to_commitment(random(), mint_amount).call(
-        &mut env.public(),
-    );
+    Token::at(token_contract_address)
+        .mint_to_commitment(PartialUintNote { commitment: random() }, mint_amount)
+        .call(&mut env.public());
 }
 
 #[test(should_fail_with = "Invalid commitment 'context.storage_read(commitment.commitment())'")]
@@ -117,7 +117,9 @@ unconstrained fn mint_to_private_failure_invalid_commitments_zero() {
 
     let mint_amount: u128 = 10_000;
     env.impersonate(minter);
-    Token::at(token_contract_address).mint_to_commitment(0, mint_amount).call(&mut env.public());
+    Token::at(token_contract_address)
+        .mint_to_commitment(PartialUintNote { commitment: 0 }, mint_amount)
+        .call(&mut env.public());
 }
 
 #[test(should_fail_with = "Got 2 logs for tag")]
@@ -133,9 +135,9 @@ unconstrained fn mint_to_private_failure_already_completed_commitment() {
 
     // mint to a commitment once
     env.impersonate(minter);
-    Token::at(token_contract_address).mint_to_commitment(commitment, mint_amount).call(
-        &mut env.public(),
-    );
+    Token::at(token_contract_address)
+        .mint_to_commitment(commitment, mint_amount)
+        .call(&mut env.public());
     env.advance_block_by(1);
 
     // balance should be minted
@@ -143,9 +145,9 @@ unconstrained fn mint_to_private_failure_already_completed_commitment() {
     // balance should be equal to total supply
     utils::check_total_supply(token_contract_address, mint_amount);
     // mint to the same commitment again
-    Token::at(token_contract_address).mint_to_commitment(commitment, mint_amount).call(
-        &mut env.public(),
-    );
+    Token::at(token_contract_address)
+        .mint_to_commitment(commitment, mint_amount)
+        .call(&mut env.public());
 
     env.advance_block_by(1);
 

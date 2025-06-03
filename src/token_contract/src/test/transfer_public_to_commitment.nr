@@ -54,7 +54,7 @@ unconstrained fn transfer_public_to_commitment_transfer_not_initialized() {
         utils::setup_and_mint_to_public_without_minter(false);
 
     // Transfer was not prepared, so we can use a random value for the commitment
-    let commitment = random();
+    let commitment = PartialUintNote { commitment: random() };
 
     // Try finalizing the transfer without preparing it first
     Token::at(token_contract_address)
