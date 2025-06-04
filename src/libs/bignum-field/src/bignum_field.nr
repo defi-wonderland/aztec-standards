@@ -90,7 +90,6 @@ impl BigNumField {
         let hi: u128 = ((self.value - lo as Field) / TWO_POW_128) as u128;
         let denom: u128 = other.value as u128;
 
-        let mut quotient: u128 = 0;
         let mut r_hi = hi;
         let mut r_lo = lo;
 
@@ -101,13 +100,14 @@ impl BigNumField {
 
             if shifted_r_hi >= denom {
                 r_hi = shifted_r_hi - denom;
-                quotient = quotient | (1 << (127 - i));
             } else {
                 r_hi = shifted_r_hi;
             }
         }
 
-        Self { value: quotient as Field }
+        let quotient: Field = self.value - (r_hi as Field) / other.value;
+
+        Self { value: quotient }
     }
 }
 
