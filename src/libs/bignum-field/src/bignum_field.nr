@@ -93,14 +93,15 @@ impl BigNumField {
         let mut r_lo = lo;
 
         for i in 0..128 {
-            let j = 128 - i - 1;
             let overflow_bit = (r_lo >> 127) & 1;
             r_lo = r_lo << 1;
-            r_hi = (r_hi << 1) | overflow_bit;
+            let shifted_r_hi = (r_hi << 1) | overflow_bit;
 
-            if r_hi >= denom {
-                r_hi = r_hi - denom;
-                quotient = quotient | (1 << j);
+            if shifted_r_hi >= denom {
+                r_hi = shifted_r_hi - denom;
+                quotient = quotient | (1 << (127 - i));
+            } else {
+                r_hi = shifted_r_hi;
             }
         }
 
