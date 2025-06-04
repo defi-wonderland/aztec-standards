@@ -41,8 +41,8 @@ export default class NFTContractBenchmark extends Benchmark {
 
     const methods: ContractFunctionInteraction[] = [
       // Mint methods
-      nftContract.withWallet(alice).methods.mint_private(owner, 1),
-      nftContract.withWallet(alice).methods.mint_public(owner, 2),
+      nftContract.withWallet(alice).methods.mint_to_private(owner, 1),
+      nftContract.withWallet(alice).methods.mint_to_public(owner, 2),
 
       // Transfer methods
       nftContract.withWallet(alice).methods.transfer_private_to_public(owner, owner, 1, 0),

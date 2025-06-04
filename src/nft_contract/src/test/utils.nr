@@ -63,7 +63,7 @@ pub unconstrained fn setup_and_mint_to_public(
         setup_with_minter(with_account_contracts);
 
     env.impersonate(minter);
-    NFT::at(nft_contract_address).mint_public(owner, token_id).call(&mut env.public());
+    NFT::at(nft_contract_address).mint_to_public(owner, token_id).call(&mut env.public());
     env.advance_block_by(1);
 
     (env, nft_contract_address, owner, minter, recipient)
@@ -77,7 +77,7 @@ pub unconstrained fn setup_and_mint_to_private(
         setup_with_minter(with_account_contracts);
 
     env.impersonate(minter);
-    NFT::at(nft_contract_address).mint_private(owner, token_id).call(&mut env.private());
+    NFT::at(nft_contract_address).mint_to_private(owner, token_id).call(&mut env.private());
     env.advance_block_by(1);
 
     (env, nft_contract_address, owner, minter, recipient)
