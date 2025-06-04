@@ -676,7 +676,6 @@ pub contract Token {
     ) {
         _increase_private_balance(context, private_balances, from, to, amount);
 
-        // Enqueue call to increase total supply
         Token::at(context.this_address()).increase_total_supply_internal(amount).enqueue(context);
     }
 
