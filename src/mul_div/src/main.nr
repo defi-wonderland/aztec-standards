@@ -55,8 +55,10 @@ pub contract MulDiv {
     /// @param z The amount of tokens to transfer
     #[public]
     fn mul_div_in_public(x: BigNumField, y: BigNumField, z: BigNumField) {
-        // let result = x.mul_unchecked(y);
-        let result = x.mul_in_public(y).div_in_public(z);
+        // x.value.assert_max_bit_size::<127>();
+        // y.value.assert_max_bit_size::<127>();
+        let result = x.mul_unchecked(y).div_Field_by_128(z);
+        // let result = x.mul_in_public(y).div_in_public(z);
 
         let new_balance = storage.public_results.read() + result;
         storage.public_results.write(new_balance);

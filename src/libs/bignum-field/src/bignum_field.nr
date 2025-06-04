@@ -82,6 +82,30 @@ impl BigNumField {
         let (quotient, remainder) = __udiv_mod(self_bn.limbs, other_bn.limbs);
         Self { value: to_field(BN254_Fq { limbs: quotient }) }
     }
+
+    pub unconstrained fn div_Field_by_128(self, other: Self) -> Self {
+        let lo: u128 = (self.value & 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF) as u128;
+        let hi: u128 = (self.value >> 128) as u128;
+        let denom: u128 = other.value as u128;
+
+        let mut quotient: u128 = 0;
+        let mut r_hi = hi;
+        let mut r_lo = lo;
+
+        for i in 0..128 {
+            let j = 128 - i - 1;
+            let overflow_bit = (r_lo >> 127) & 1;
+            r_lo = r_lo << 1;
+            r_hi = (r_hi << 1) | overflow_bit;
+
+            if r_hi >= denom {
+                r_hi = r_hi - denom;
+                quotient = quotient | (1 << j);
+            }
+        }
+
+        Self { quotient as Field }
+    }
 }
 
 impl ToField for BigNumField {
