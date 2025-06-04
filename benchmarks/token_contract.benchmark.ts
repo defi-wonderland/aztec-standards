@@ -1,9 +1,4 @@
-import {
-  type AccountWallet,
-  type ContractFunctionInteraction,
-  type PXE,
-  createPXEClient,
-} from '@aztec/aztec.js';
+import { type AccountWallet, type ContractFunctionInteraction, type PXE, createPXEClient } from '@aztec/aztec.js';
 import { getInitialTestAccountsWallets } from '@aztec/accounts/testing';
 import { parseUnits } from 'viem';
 
@@ -60,7 +55,9 @@ export default class TokenContractBenchmark extends Benchmark {
 
       // Transfer methods
       tokenContract.withWallet(alice).methods.transfer_private_to_public(owner, bob.getAddress(), amt(10), 0),
-      tokenContract.withWallet(alice).methods.transfer_private_to_public_with_commitment(owner, bob.getAddress(), amt(10), 0),
+      tokenContract
+        .withWallet(alice)
+        .methods.transfer_private_to_public_with_commitment(owner, bob.getAddress(), amt(10), 0),
       tokenContract.withWallet(alice).methods.transfer_private_to_private(owner, bob.getAddress(), amt(10), 0),
       tokenContract.withWallet(alice).methods.transfer_public_to_private(owner, bob.getAddress(), amt(10), 0),
       tokenContract.withWallet(alice).methods.transfer_public_to_public(owner, bob.getAddress(), amt(10), 0),
