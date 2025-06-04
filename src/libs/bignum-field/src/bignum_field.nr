@@ -13,6 +13,8 @@ use bignum::{
     },
 };
 
+global TWO_POW_128: Field = 0x100000000000000000000000000000000;
+
 pub struct BigNumField {
     pub(crate) value: Field,
 }
@@ -85,7 +87,7 @@ impl BigNumField {
 
     pub unconstrained fn div_Field_by_128(self, other: Self) -> Self {
         let lo: u128 = self.value as u128;
-        let hi: u128 = Self::extract_high_u128(self.value) as u128;
+        let hi: u128 = ((self.value - lo as Field) / TWO_POW_128) as u128;
         let denom: u128 = other.value as u128;
 
         let mut quotient: u128 = 0;
@@ -106,15 +108,6 @@ impl BigNumField {
         }
 
         Self { value: quotient as Field }
-    }
-
-    fn extract_high_u128(value: Field) -> u128 {
-        let bytes: [u8; 32] = value.to_le_bytes();
-        let mut hi: u128 = 0;
-        for i in 0..16 {
-            hi |= (bytes[16 + i] as u128) << (8 * i);
-        }
-        hi
     }
 }
 
