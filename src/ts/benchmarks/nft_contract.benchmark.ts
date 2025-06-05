@@ -4,8 +4,8 @@ import { getInitialTestAccountsWallets } from '@aztec/accounts/testing';
 // Import the new Benchmark base class and context
 import { Benchmark, BenchmarkContext } from '@defi-wonderland/aztec-benchmark';
 
-import { NFTContract } from '../src/artifacts/NFT.js';
-import { deployNFTWithMinter } from '../src/ts/test/utils.js';
+import { NFTContract } from '../../artifacts/NFT.js';
+import { deployNFTWithMinter } from '../test/utils.js';
 
 // Extend the BenchmarkContext from the new package
 interface NFTBenchmarkContext extends BenchmarkContext {
