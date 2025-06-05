@@ -471,6 +471,15 @@ pub contract Token {
         _decrease_total_supply(storage.total_supply, amount);
     }
 
+    /// @notice Burns tokens from a public balance without validation
+    /// @param from The address from which to burn the tokens
+    /// @param amount The amount of tokens to burn
+    #[public]
+    #[internal]
+    fn burn_public_internal(from: AztecAddress, amount: u128) {
+        _burn_from_public(storage.public_balances, storage.total_supply, from, amount);
+    }
+
     /** ==========================================================
      * ================= TOKEN LIBRARIES =========================
      * ======================================================== */
@@ -789,7 +798,7 @@ pub contract Token {
         nonce: Field,
     ) {
         // Validate in public that `assets` is sufficient for the requested shares
-        Token::at(context.this_address()).validate_shares_to_mint_internal(assets, shares).enqueue(
+        Token::at(context.this_address()).validate_issuance_rate_internal(assets, shares).enqueue(
             &mut context,
         );
 
@@ -819,7 +828,7 @@ pub contract Token {
         nonce: Field,
     ) {
         // Validate in public that `assets` is sufficient for the requested shares
-        Token::at(context.this_address()).validate_shares_to_mint_internal(assets, shares).enqueue(
+        Token::at(context.this_address()).validate_issuance_rate_internal(assets, shares).enqueue(
             &mut context,
         );
 
@@ -840,7 +849,9 @@ pub contract Token {
     #[private]
     fn deposit_private_to_public(from: AztecAddress, to: AztecAddress, assets: u128, nonce: Field) {
         // Calculate and mint shares to the recipient in public
-        Token::at(context.this_address()).mint_shares_internal(to, assets).enqueue(&mut context);
+        Token::at(context.this_address()).issue_from_assets_internal(to, assets).enqueue(
+            &mut context,
+        );
 
         // Take the assets from the sender
         Token::at(storage.asset.read())
@@ -876,7 +887,7 @@ pub contract Token {
         // Mint any outstanding shares without revealing the recipient and updates the shares total supply
         // Reverts if min_shares is greater than allowed
         Token::at(context.this_address())
-            .finalize_mint_with_commitment_internal(commitment, assets, min_shares)
+            .settle_deposit_to_private_with_commitment_internal(commitment, assets, min_shares)
             .enqueue(&mut context);
 
         // Take the assets from the sender
@@ -913,7 +924,7 @@ pub contract Token {
         // Mint any outstanding shares without revealing the recipient and updates the shares total supply
         // Reverts if min_shares is greater than allowed
         Token::at(context.this_address())
-            .finalize_mint_with_commitment_internal(commitment, assets, min_shares)
+            .settle_deposit_to_private_with_commitment_internal(commitment, assets, min_shares)
             .enqueue(&mut context);
 
         // Take the assets from the sender
@@ -987,7 +998,7 @@ pub contract Token {
 
         // Validate the amount of assets transferred and send back any surplus
         Token::at(context.this_address())
-            .validate_assets_transfer_internal(from, shares, max_assets)
+            .settle_issuance_from_public_internal(from, shares, max_assets)
             .enqueue(&mut context);
 
         // Mint shares to the recipient
@@ -1023,7 +1034,7 @@ pub contract Token {
 
         // Validate max_assets in public and refund any surplus to the sender with a commitment
         Token::at(context.this_address())
-            .validate_assets_transfer_with_commitment(asset_commitment, shares, max_assets)
+            .settle_issuance_from_private_with_commitment(asset_commitment, shares, max_assets)
             .enqueue(&mut context);
 
         // Mint shares to recipient in public
@@ -1060,7 +1071,7 @@ pub contract Token {
 
         // Validate max_assets in public and refund any surplus to the sender with a commitment
         Token::at(context.this_address())
-            .validate_assets_transfer_with_commitment(asset_commitment, shares, max_assets)
+            .settle_issuance_from_private_with_commitment(asset_commitment, shares, max_assets)
             .enqueue(&mut context);
 
         // Mint shares to recipient in private
@@ -1108,7 +1119,9 @@ pub contract Token {
         _validate_from_private(&mut context, from, nonce);
 
         // Calculate and burn the sender's shares
-        Token::at(context.this_address()).burn_shares_internal(from, assets).enqueue(&mut context);
+        Token::at(context.this_address()).redeem_from_assets_internal(from, assets).enqueue(
+            &mut context,
+        );
 
         // Transfer the assets to the recipient in private
         Token::at(storage.asset.read())
@@ -1186,13 +1199,9 @@ pub contract Token {
         // Any excess amount of shares is sent back to the sender via commitment
         // Reverts if the amount of shares required is greater than max_shares
         Token::at(context.this_address())
-            .burn_private_shares_with_commitment_and_redeem_internal(
-                to,
-                commitment,
-                assets,
-                max_shares,
-            )
-            .enqueue(&mut context);
+            .settle_withdrawal_to_public_with_commitment_internal(to, commitment, assets, max_shares
+                )
+                .enqueue(&mut context);
     }
 
     /// @notice Withdraws an amount of the underlying asset from a private balance to a private balance
@@ -1233,7 +1242,7 @@ pub contract Token {
         // Any excess amount of shares is sent back to the sender via commitment
         // Reverts if the amount of shares required is greater than max_shares
         Token::at(context.this_address())
-            .burn_shares_with_commitment_internal(commitment, assets, max_shares)
+            .settle_withdrawal_to_private_with_commitment_internal(commitment, assets, max_shares)
             .enqueue(&mut context);
 
         // Transfer the assets to the recipient in private
@@ -1278,9 +1287,9 @@ pub contract Token {
         _validate_from_private(&mut context, from, nonce);
 
         // Burn shares and redeem public assets
-        Token::at(context.this_address())
-            .burn_private_shares_and_redeem_internal(to, shares)
-            .enqueue(&mut context);
+        Token::at(context.this_address()).settle_redemption_to_public_internal(to, shares).enqueue(
+            &mut context,
+        );
 
         // Burn shares from the sender in private
         _burn_from_private(&mut context, storage.private_balances, from, shares);
@@ -1312,7 +1321,7 @@ pub contract Token {
         // Transfers any outstanding assets without revealing the recipient
         // Reverts if min_assets is greater than allowed
         Token::at(context.this_address())
-            .validate_shares_burn_with_commitment(asset_commitment, shares, min_assets)
+            .settle_redemption_to_private_with_commitment(asset_commitment, shares, min_assets)
             .enqueue(&mut context);
 
         // Burn shares from the sender in private
@@ -1353,13 +1362,11 @@ pub contract Token {
         // Transfers any outstanding assets without revealing the recipient and burn the sender's public balance
         // Reverts if min_assets is greater than allowed
         Token::at(context.this_address())
-            .burn_shares_and_redeem_with_commitment_internal(
-                from,
-                asset_commitment,
-                shares,
-                min_assets,
-            )
+            .settle_redemption_to_private_with_commitment(asset_commitment, shares, min_assets)
             .enqueue(&mut context);
+
+        // Burn the shares being redeemed
+        Token::at(context.this_address()).burn_public_internal(from, shares).enqueue(&mut context);
 
         // Transfer min_assets to the recipient
         Token::at(storage.asset.read())
@@ -1371,21 +1378,21 @@ pub contract Token {
      * ==================== VAULT INTERNALS ======================
      * ======================================================== */
 
-    /// @notice Decreases the public balance of `from` by `amount`
-    /// @param to The address of the recipient
-    /// @param amount The amount of tokens to increase the balance by
+    /// @notice Burns shares held in public for a given amount of assets
+    /// @param from The address of the sender
+    /// @param assets The amount of assets to burn shares for
     #[public]
     #[internal]
-    fn burn_shares_internal(from: AztecAddress, assets: u128) {
+    fn redeem_from_assets_internal(from: AztecAddress, assets: u128) {
         let total_assets = _total_assets(&mut context, storage.asset);
         let shares = _convert_to_shares(assets, total_assets, storage.total_supply, ROUND_UP);
 
         _burn_from_public(storage.public_balances, storage.total_supply, from, shares);
     }
 
-    /// @notice Decreases shares total supply after privately burning `shares`
-    /// @param assets The amount of underlying that will be sent to the contract
-    /// @param shares The amount of requested shares
+    /// @notice Validates that the requested shares amount is valid for the given assets
+    /// @param assets The amount of assets being withdrawn
+    /// @param shares The amount of shares being burned
     #[public]
     #[internal]
     fn validate_shares_to_burn_internal(assets: u128, shares: u128) {
@@ -1395,12 +1402,12 @@ pub contract Token {
         assert(min_shares <= shares, "Insufficient shares burnt");
     }
 
-    /// @notice Decreases shares total supply after privately burning `shares`
-    /// @param to The amount of underlying that will be sent to the contract
-    /// @param shares The amount of requested shares
+    /// @notice Withdraws assets to a public balance for a given amount of shares
+    /// @param to The address of the recipient
+    /// @param shares The amount of shares being redeemed
     #[public]
     #[internal]
-    fn burn_private_shares_and_redeem_internal(to: AztecAddress, shares: u128) {
+    fn settle_redemption_to_public_internal(to: AztecAddress, shares: u128) {
         let total_assets = _total_assets(&mut context, storage.asset);
         let assets = _convert_to_assets(shares, total_assets, storage.total_supply, ROUND_DOWN);
 
@@ -1409,12 +1416,14 @@ pub contract Token {
             .call(&mut context);
     }
 
-    /// @notice Decreases shares total supply after privately burning `shares`
-    /// @param to The amount of underlying that will be sent to the contract
-    /// @param shares The amount of requested shares
+    /// @notice Withdraws assets to a public balance, decreases shares total supply and refunds excess shares via commitment
+    /// @param to The address of the recipient
+    /// @param commitment The partial note representing the commitment (privacy entrance)
+    /// @param assets The amount of assets being withdrawn
+    /// @param max_shares The maximum amount of shares that should be redeemed
     #[public]
     #[internal]
-    fn burn_private_shares_with_commitment_and_redeem_internal(
+    fn settle_withdrawal_to_public_with_commitment_internal(
         to: AztecAddress,
         commitment: PartialUintNote,
         assets: u128,
@@ -1435,37 +1444,37 @@ pub contract Token {
             .call(&mut context);
     }
 
-    /// @notice Increases the public balance of `to` by `amount`
+    /// @notice Mints shares to a public balance for a given amount of assets
     /// @param to The address of the recipient
-    /// @param amount The amount of tokens to increase the balance by
+    /// @param assets The amount of assets being deposited
     #[public]
     #[internal]
-    fn mint_shares_internal(to: AztecAddress, assets: u128) {
+    fn issue_from_assets_internal(to: AztecAddress, assets: u128) {
         let total_assets = _total_assets(&mut context, storage.asset);
         let shares = _convert_to_shares(assets, total_assets, storage.total_supply, ROUND_DOWN);
 
         _mint_to_public(storage.public_balances, storage.total_supply, to, shares);
     }
 
-    /// @notice Increases shares total supply after privately minting `shares`
-    /// @param assets The amount of underlying that will be sent to the contract
-    /// @param shares The amount of requested shares
+    /// @notice Validates that the requested shares amount is valid for the deposited assets
+    /// @param assets The amount of assets being deposited
+    /// @param shares The amount of shares being issued
     #[public]
     #[internal]
-    fn validate_shares_to_mint_internal(assets: u128, shares: u128) {
+    fn validate_issuance_rate_internal(assets: u128, shares: u128) {
         let total_assets = _total_assets(&mut context, storage.asset);
         let max_shares = _convert_to_shares(assets, total_assets, storage.total_supply, ROUND_DOWN);
 
         assert(shares <= max_shares, "Too many shares requested");
     }
 
-    /// @notice Increases the balance of the commitment by `amount`
+    /// @notice Decreases shares total supply and refunds excess shares via commitment
     /// @param commitment The partial note representing the commitment (privacy entrance)
-    /// @param assets The amount of tokens to increase the balance by
-    /// @param max_shares The amount of tokens to increase the balance by
+    /// @param assets The amount of assets being withdrawn
+    /// @param max_shares The maximum amount of shares that should be redeemed
     #[public]
     #[internal]
-    fn burn_shares_with_commitment_internal(
+    fn settle_withdrawal_to_private_with_commitment_internal(
         commitment: PartialUintNote,
         assets: u128,
         max_shares: u128,
@@ -1481,13 +1490,13 @@ pub contract Token {
         _decrease_total_supply(storage.total_supply, shares);
     }
 
-    /// @notice Increases the balance of the commitment by `amount`
+    /// @notice Increases shares total supply and issues outstanding shares via commitment
     /// @param commitment The partial note representing the commitment (privacy entrance)
-    /// @param assets The amount of tokens to increase the balance by
-    /// @param min_shares The amount of tokens to increase the balance by
+    /// @param assets The amount of assets being deposited
+    /// @param min_shares The minimum amount of shares that should be issued
     #[public]
     #[internal]
-    fn finalize_mint_with_commitment_internal(
+    fn settle_deposit_to_private_with_commitment_internal(
         commitment: PartialUintNote,
         assets: u128,
         min_shares: u128,
@@ -1503,13 +1512,13 @@ pub contract Token {
         _increase_total_supply(storage.total_supply, max_shares);
     }
 
-    /// @notice Increases the balance of the commitment by `amount`
-    /// @param commitment The partial note representing the commitment (privacy entrance)
-    /// @param shares The amount of tokens to increase the balance by
-    /// @param max_assets The maximum amount of assets to deposit. If the amount is greater then needed, the excess will be returned to the sender in private.
+    /// @notice Refunds excess assets to the sender via commitment while validating the shares amount requested
+    /// @param asset_commitment The partial note representing the commitment (privacy entrance)
+    /// @param shares The amount of shares being issued
+    /// @param max_assets The maximum amount of assets that should be deposited
     #[public]
     #[internal]
-    fn validate_assets_transfer_with_commitment(
+    fn settle_issuance_from_private_with_commitment(
         asset_commitment: PartialUintNote,
         shares: u128,
         max_assets: u128,
@@ -1530,13 +1539,13 @@ pub contract Token {
         }
     }
 
-    /// @notice Increases the balance of the commitment by `amount`
+    /// @notice Validates share redemption rate and withdraws any outstanding assets via commitment
     /// @param asset_commitment The partial note representing the commitment (privacy entrance)
-    /// @param shares The amount of tokens to increase the balance by
-    /// @param min_assets The amount of tokens to increase the balance by
+    /// @param shares The amount of shares being redeemed
+    /// @param min_assets The minimum amount of assets that should be withdrawn
     #[public]
     #[internal]
-    fn validate_shares_burn_with_commitment(
+    fn settle_redemption_to_private_with_commitment(
         asset_commitment: PartialUintNote,
         shares: u128,
         min_assets: u128,
@@ -1557,43 +1566,13 @@ pub contract Token {
         }
     }
 
-    /// @notice Increases the balance of the commitment by `amount`
-    /// @param asset_commitment The partial note representing the commitment (privacy entrance)
-    /// @param shares The amount of tokens to increase the balance by
-    /// @param min_assets The amount of tokens to increase the balance by
-    #[public]
-    #[internal]
-    fn burn_shares_and_redeem_with_commitment_internal(
-        from: AztecAddress,
-        asset_commitment: PartialUintNote,
-        shares: u128,
-        min_assets: u128,
-    ) {
-        let total_assets = _total_assets(&mut context, storage.asset);
-        let assets = _convert_to_assets(shares, total_assets, storage.total_supply, ROUND_DOWN);
-
-        let outstanding_assets = assets - min_assets; // Reverts with underflow if invalid
-        if outstanding_assets > 0 {
-            Token::at(storage.asset.read())
-                .transfer_public_to_commitment(
-                    context.this_address(),
-                    outstanding_assets,
-                    asset_commitment,
-                    0,
-                )
-                .call(&mut context);
-        }
-
-        _burn_from_public(storage.public_balances, storage.total_supply, from, shares);
-    }
-
-    /// @notice Increases the balance of the commitment by `amount`
+    /// @notice Validates issuance rate and refunds excess assets being deposited from a public balance
     /// @param from The address of the sender
-    /// @param shares The amount of tokens to increase the balance by
-    /// @param max_assets The maximum amount of assets to deposit. If the amount is greater then needed, the excess will be returned to the sender in private.
+    /// @param shares The amount of shares being issued
+    /// @param max_assets The maximum amount of assets that should be deposited
     #[public]
     #[internal]
-    fn validate_assets_transfer_internal(from: AztecAddress, shares: u128, max_assets: u128) {
+    fn settle_issuance_from_public_internal(from: AztecAddress, shares: u128, max_assets: u128) {
         let total_assets = _total_assets(&mut context, storage.asset);
         let assets = _convert_to_assets(
             shares,
