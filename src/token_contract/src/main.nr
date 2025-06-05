@@ -954,15 +954,19 @@ pub contract Token {
         max_assets: u128,
         nonce: Field,
     ) {
-        // Take the assets from the sender
-        Token::at(storage.asset.read())
-            .transfer_public_to_public(from, context.this_address(), max_assets, nonce)
-            .call(&mut context);
+        // TODO: do we need 2 different nonces?
+        _validate_from_public(&mut context, from, nonce);
 
         // Calculate assets required
         let total_assets = _total_assets(&mut context, storage.asset);
         let assets = _convert_to_assets(shares, total_assets, storage.total_supply, ROUND_UP);
 
+        // Take the assets from the sender
+        Token::at(storage.asset.read())
+            .transfer_public_to_public(from, context.this_address(), max_assets, nonce)
+            .call(&mut context);
+
+        // Refund
         let change = max_assets - assets; // Reverts with underflow if invalid
         if change > 0 {
             // Reimburse the sender with any excess assets sent
@@ -1330,7 +1334,7 @@ pub contract Token {
 
         // Transfer min_assets to the recipient
         Token::at(storage.asset.read())
-            .transfer_public_to_private(context.this_address(), to, min_assets, nonce)
+            .transfer_public_to_private(context.this_address(), to, min_assets, 0)
             .call(&mut context);
     }
 
