@@ -768,6 +768,9 @@ pub contract Token {
     /// @param nonce The nonce used for authwitness
     #[public]
     fn deposit_public_to_public(from: AztecAddress, to: AztecAddress, assets: u128, nonce: Field) {
+        // TODO: do we need 2 different nonces?
+        _validate_from_public(&mut context, from, nonce);
+
         // Calculate shares to mint
         let total_assets = _total_assets(&mut context, storage.asset);
         let shares = _convert_to_shares(assets, total_assets, storage.total_supply, ROUND_DOWN);
