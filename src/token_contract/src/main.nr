@@ -798,7 +798,7 @@ pub contract Token {
         nonce: Field,
     ) {
         // Validate in public that `assets` is sufficient for the requested shares
-        Token::at(context.this_address()).validate_issuance_rate_internal(assets, shares).enqueue(
+        Token::at(context.this_address()).validate_deposit_rate_internal(assets, shares).enqueue(
             &mut context,
         );
 
@@ -828,7 +828,7 @@ pub contract Token {
         nonce: Field,
     ) {
         // Validate in public that `assets` is sufficient for the requested shares
-        Token::at(context.this_address()).validate_issuance_rate_internal(assets, shares).enqueue(
+        Token::at(context.this_address()).validate_deposit_rate_internal(assets, shares).enqueue(
             &mut context,
         );
 
@@ -1152,7 +1152,7 @@ pub contract Token {
         _validate_from_private(&mut context, from, nonce);
 
         // Validate that the shares-assets ratio is correct
-        Token::at(context.this_address()).validate_shares_to_burn_internal(assets, shares).enqueue(
+        Token::at(context.this_address()).validate_withdrawal_rate_internal(assets, shares).enqueue(
             &mut context,
         );
 
@@ -1399,7 +1399,7 @@ pub contract Token {
     /// @param shares The amount of shares being burned
     #[public]
     #[internal]
-    fn validate_shares_to_burn_internal(assets: u128, shares: u128) {
+    fn validate_withdrawal_rate_internal(assets: u128, shares: u128) {
         let total_assets = _total_assets(&mut context, storage.asset);
         let min_shares = _convert_to_shares(assets, total_assets, storage.total_supply, ROUND_UP);
 
@@ -1465,7 +1465,7 @@ pub contract Token {
     /// @param shares The amount of shares being issued
     #[public]
     #[internal]
-    fn validate_issuance_rate_internal(assets: u128, shares: u128) {
+    fn validate_deposit_rate_internal(assets: u128, shares: u128) {
         let total_assets = _total_assets(&mut context, storage.asset);
         let max_shares = _convert_to_shares(assets, total_assets, storage.total_supply, ROUND_DOWN);
 
