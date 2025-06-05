@@ -1586,9 +1586,11 @@ pub contract Token {
         );
 
         let change = max_assets - assets; // Reverts with underflow if invalid
-        Token::at(storage.asset.read())
-            .transfer_public_to_public(context.this_address(), from, change, 0)
-            .call(&mut context);
+        if change > 0 {
+            Token::at(storage.asset.read())
+                .transfer_public_to_public(context.this_address(), from, change, 0)
+                .call(&mut context);
+        }
     }
 
     /** ==========================================================
