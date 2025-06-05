@@ -59,7 +59,7 @@ pub contract Token {
     /// @param name The name of the token
     /// @param symbol The symbol of the token
     /// @param decimals The number of decimals of the token
-    /// @param asset The asset of the token
+    /// @param asset The underlying asset for the yield bearing token
     #[public]
     #[initializer]
     fn constructor_with_asset(name: str<31>, symbol: str<31>, decimals: u8, asset: AztecAddress) {
@@ -754,13 +754,11 @@ pub contract Token {
     }
 
     /** ==========================================================
-     * ================== VAULT ==================================
+     * ======================= VAULT =============================
      * ======================================================== */
 
-    /** ==========================================================
-     * ================== DEPOSIT ================================
-     * ======================================================== */
-
+    /* ====================== DEPOSIT ========================= */
+    
     /// @notice Deposits the underlying asset from a public balance and receives shares to a public balance
     /// @param from The address of the sender
     /// @param to The address of the recipient
@@ -936,9 +934,7 @@ pub contract Token {
             .call(&mut context);
     }
 
-    /** ==========================================================
-     * ==================== ISSUE ================================
-     * ======================================================== */
+    /* ======================= ISSUE ========================== */
 
     /// @notice Issues exactly the requested shares to a public balance and receives the underlying asset from a public balance
     /// @dev max_assets is calculated based on the ratio (total_supply + offset) / (total_assets + 1) plus any acceptable slippage.
@@ -1085,9 +1081,7 @@ pub contract Token {
         _mint_to_private(&mut context, storage.private_balances, from, to, shares);
     }
 
-    /** ==========================================================
-     * ==================== WITHDRAW =============================
-     * ======================================================== */
+    /* ====================== WITHDRAW ======================== */
 
     /// @notice Withdraws an amount of the underlying asset from a public balance to a public balance
     /// @param from The address of the sender
@@ -1258,9 +1252,7 @@ pub contract Token {
             .call(&mut context);
     }
 
-    /** ==========================================================
-     * ==================== REDEEM ===============================
-     * ======================================================== */
+    /* ======================= REDEEM ========================= */
 
     /// @notice Redeems an amount of the shares from a public balance to a public balance
     /// @param from The address of the sender
