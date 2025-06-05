@@ -1,7 +1,7 @@
 {
   "summary": {
-    "mint_private": 338463,
-    "mint_public": 214216,
+    "mint_to_private": 338463,
+    "mint_to_public": 214216,
     "transfer_private_to_public": 318175,
     "transfer_public_to_private": 334921,
     "transfer_private_to_private": 323920,
@@ -11,7 +11,7 @@
   },
   "results": [
     {
-      "name": "mint_private",
+      "name": "mint_to_private",
       "totalGateCount": 338463,
       "gateCounts": [
         {
@@ -23,7 +23,7 @@
           "gateCount": 41309
         },
         {
-          "circuitName": "NFT:mint_private",
+          "circuitName": "NFT:mint_to_private",
           "gateCount": 31615
         },
         {
@@ -51,7 +51,7 @@
       }
     },
     {
-      "name": "mint_public",
+      "name": "mint_to_public",
       "totalGateCount": 214216,
       "gateCounts": [
         {
@@ -308,8 +308,8 @@
     }
   ],
   "gasSummary": {
-    "mint_private": 74039,
-    "mint_public": 75191,
+    "mint_to_private": 74039,
+    "mint_to_public": 75191,
     "transfer_private_to_public": 56685,
     "transfer_public_to_private": 75230,
     "transfer_private_to_private": 29569,

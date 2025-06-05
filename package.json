@@ -9,6 +9,7 @@
   "license": "MIT",
   "type": "module",
   "scripts": {
+    "postinstall": "husky",
     "clean": "rm -rf ./src/artifacts ./target",
     "codegen": "aztec codegen target --outdir src/artifacts",
     "compile": "aztec-nargo compile",

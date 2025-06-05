@@ -12,7 +12,15 @@ import {
   IntentAction,
 } from '@aztec/aztec.js';
 import { getInitialTestAccountsWallets } from '@aztec/accounts/testing';
-import { AMOUNT, createPXE, expectTokenBalances, expectUintNote, setupSandbox, wad, deployTokenWithMinter } from './utils.js';
+import {
+  AMOUNT,
+  createPXE,
+  expectTokenBalances,
+  expectUintNote,
+  setupSandbox,
+  wad,
+  deployTokenWithMinter,
+} from './utils.js';
 
 export async function deployTokenWithInitialSupply(deployer: AccountWallet) {
   const contract = await Contract.deploy(
