@@ -1,8 +1,6 @@
 use crate::{test::utils, Token};
 use authwit::cheatcodes as authwit_cheatcodes;
 use aztec::oracle::random::random;
-use std::test::OracleMock;
-use uint_note::uint_note::{PartialUintNote, UintNote};
 
 #[test]
 unconstrained fn transfer_public_to_private_success() {
