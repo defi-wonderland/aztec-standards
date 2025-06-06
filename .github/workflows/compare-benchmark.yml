@@ -131,7 +131,7 @@ jobs:
       # 3️⃣  DIFF &  COMMENT
       # ──────────────────────────────────────────────────────────────
       - name: Generate Markdown diff
-        uses: defi-wonderland/aztec-benchmark/action@f841428
+        uses: defi-wonderland/aztec-benchmark/action@f841428fb6286faa4fc45772638ac3777a263dd2
         with:
           base_suffix: '_base'
           current_suffix: '_pr'
