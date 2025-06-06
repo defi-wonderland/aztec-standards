@@ -34,20 +34,6 @@ export const expectUintNote = (note: UniqueNote, amount: bigint, owner: AztecAdd
   expect(note.note.items[2]).toEqual(new Fr(amount));
 };
 
-export const expectAddressNote = (note: UniqueNote, address: AztecAddress, owner: AztecAddress) => {
-  logger.info('checking address note {} {}', [address, owner]);
-  expect(note.note.items[0]).toEqual(new Fr(address.toBigInt()));
-  expect(note.note.items[1]).toEqual(new Fr(owner.toBigInt()));
-};
-
-export const expectAccountNote = (note: UniqueNote, owner: AztecAddress, secret?: FieldLike) => {
-  logger.info('checking address note {} {}', [owner, secret]);
-  expect(note.note.items[0]).toEqual(new Fr(owner.toBigInt()));
-  if (secret !== undefined) {
-    expect(note.note.items[1]).toEqual(secret);
-  }
-};
-
 export const expectTokenBalances = async (
   token: TokenContract,
   address: AztecAddress,
