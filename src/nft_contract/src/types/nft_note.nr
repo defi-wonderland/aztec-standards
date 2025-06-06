@@ -1,4 +1,4 @@
-use dep::aztec::{
+use aztec::{
     context::{PrivateContext, PublicContext},
     keys::getters::{get_nsk_app, get_public_keys},
     macros::notes::custom_note,
@@ -256,7 +256,7 @@ mod test {
         NFTNote, NFTPartialNotePrivateContent, PartialNFTNote,
         PrivateNFTPartialNotePrivateLogContent,
     };
-    use dep::aztec::{
+    use aztec::{
         note::note_interface::NoteHash,
         protocol_types::{
             address::AztecAddress,
