@@ -5,8 +5,6 @@ use aztec::macros::aztec;
 
 #[aztec]
 pub contract NFT {
-    // nft note structs
-    use crate::types::nft_note::{NFTNote, PartialNFTNote};
     // aztec library
     use aztec::{
         context::PrivateContext,
@@ -34,6 +32,8 @@ pub contract NFT {
     use compressed_string::FieldCompressedString;
     // contract instance deployer
     use contract_instance_deployer::ContractInstanceDeployer;
+    // nft note structs
+    use crate::types::nft_note::{NFTNote, PartialNFTNote};
 
     /// @param symbol The symbol of the NFT
     /// @param name The name of the NFT
@@ -155,14 +155,14 @@ pub contract NFT {
     fn transfer_private_to_commitment(
         from: AztecAddress,
         token_id: Field,
-        commitment: PartialNFTNote,
+        commitment: Field,
         nonce: Field,
     ) {
         _validate_from_private(&mut context, from, nonce);
 
         _remove_private_token_owner(storage.private_nfts.at(from), token_id);
         NFT::at(context.this_address())
-            .transfer_token_to_commitment_internal(commitment, token_id)
+            .transfer_token_to_commitment_internal(PartialNFTNote { commitment }, token_id)
             .enqueue(&mut context);
     }
 
@@ -199,8 +199,10 @@ pub contract NFT {
     /// @param to The address of the recipient
     /// @return commitment The partial nft note utilized for the transfer commitment (privacy entrance)
     #[private]
-    fn initialize_transfer_commitment(from: AztecAddress, to: AztecAddress) -> PartialNFTNote {
-        _initialize_transfer_commitment(&mut context, storage.private_nfts, from, to)
+    fn initialize_transfer_commitment(from: AztecAddress, to: AztecAddress) -> Field {
+        let commitment =
+            _initialize_transfer_commitment(&mut context, storage.private_nfts, from, to);
+        commitment.commitment()
     }
 
     /** ==========================================================

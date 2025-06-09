@@ -27,10 +27,10 @@ pub contract Token {
     use uint_note::uint_note::{PartialUintNote, UintNote};
     // compression library
     use compressed_string::FieldCompressedString;
-    // private balance library
-    use crate::types::balance_set::BalanceSet;
     // contract instance deployer
     use contract_instance_deployer::ContractInstanceDeployer;
+    // private balance library
+    use crate::types::balance_set::BalanceSet;
 
     // gas-optimized max notes for initial transfer call
     global INITIAL_TRANSFER_CALL_MAX_NOTES: u32 = 2;
