@@ -75,6 +75,9 @@ jobs:
         run: |
           npx aztec-benchmark --suffix _base --output-dir ${{ env.BENCH_DIR }}
 
+      - name: Recursively list files in a specific folder
+        run: ls -lR ./benchmarks
+
       # ──────────────────────────────────────────────────────────────
       # 2️⃣  BENCHMARK PR HEAD  (github.event.pull_request.head.sha)
       # ──────────────────────────────────────────────────────────────
@@ -84,6 +87,9 @@ jobs:
           ref: ${{ github.event.pull_request.head.sha }}
           clean: false
 
+      - name: Recursively list files in a specific folder
+        run: ls -lR ./benchmarks
+
       - name: Detect Aztec version (PR)
         id: prver
         run: |
@@ -91,10 +97,13 @@ jobs:
           echo "PR Aztec version is $VER"
           if [ "${{ steps.basever.outputs.ver }}" != "$VER" ]; then
             echo "ver_diff=true" >> "$GITHUB_OUTPUT"
-          echo "ver=$VER" >> "$GITHUB_OUTPUT"
           else
             echo "ver_diff=false" >> "$GITHUB_OUTPUT"
           fi
+          echo "ver=$VER" >> "$GITHUB_OUTPUT"
+
+      - name: Recursively list files in a specific folder
+        run: ls -lR ./benchmarks
 
       - name: Kill BASE services
         if: steps.prver.outputs.ver_diff == 'true'
@@ -103,14 +112,23 @@ jobs:
           pkill -f "aztec.*--pxe.*8081" || true                   
           sleep 5      
 
+      - name: Recursively list files in a specific folder
+        run: ls -lR ./benchmarks
+
       - name: Switch CLI to PR version
         if: steps.prver.outputs.ver_diff == 'true'
         run: |
           VERSION=${{ steps.prver.outputs.ver }} aztec-up
 
+      - name: Recursively list files in a specific folder
+        run: ls -lR ./benchmarks
+
       - name: Start sandbox (PR, background)
         if: steps.prver.outputs.ver_diff == 'true'
         run: aztec start --sandbox &
+
+      - name: Recursively list files in a specific folder
+        run: ls -lR ./benchmarks
 
       - name: Start PXE node (PR, background)
         if: steps.prver.outputs.ver_diff == 'true'
@@ -119,14 +137,26 @@ jobs:
             start --port 8081 --pxe --pxe.nodeUrl=http://localhost:8080/ \
             --pxe.proverEnabled false &
 
+      - name: Recursively list files in a specific folder
+        run: ls -lR ./benchmarks
+
       - name: Install deps (PR)
         run: yarn
+
+      - name: Recursively list files in a specific folder
+        run: ls -lR ./benchmarks
 
       - name: Compile contracts (PR)
         run: script -e -c "${AZTEC_NARGO:-aztec-nargo} compile"
 
+      - name: Recursively list files in a specific folder
+        run: ls -lR ./benchmarks
+
       - name: Codegen wrappers (PR)
         run: script -e -c "aztec codegen target --outdir src/artifacts --force"
+
+      - name: Recursively list files in a specific folder
+        run: ls -lR ./benchmarks
 
       # ──────────────────────────────────────────────────────────────
       # 3️⃣  DIFF &  COMMENT
@@ -137,8 +167,14 @@ jobs:
           base_suffix: '_base'
           current_suffix: '_pr'
 
+      - name: Recursively list files in a specific folder
+        run: ls -lR ./benchmarks
+
       - name: Comment diff
         uses: peter-evans/create-or-update-comment@v4
         with:
           issue-number: ${{ github.event.pull_request.number }}
           body-file: benchmark-comparison.md
+
+      - name: Recursively list files in a specific folder
+        run: ls -lR ./benchmarks
