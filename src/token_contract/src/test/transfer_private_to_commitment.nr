@@ -2,12 +2,11 @@ use crate::test::utils;
 use crate::Token;
 use authwit::cheatcodes as authwit_cheatcodes;
 use aztec::oracle::random::random;
-use uint_note::uint_note::{PartialUintNote, UintNote};
 
 #[test]
 unconstrained fn transfer_private_to_commitment() {
     let (env, token_contract_address, owner, recipient, mint_amount) =
-        utils::setup_and_mint_to_private_without_minter(/* with_account_contracts */ false);
+        utils::setup_and_mint_to_private_without_minter(false);
 
     utils::check_private_balance(token_contract_address, owner, mint_amount);
     utils::check_private_balance(token_contract_address, recipient, 0 as u128);
@@ -34,7 +33,7 @@ unconstrained fn transfer_private_to_commitment() {
 #[test]
 unconstrained fn transfer_private_to_commitment_on_behalf_of_other() {
     let (env, token_contract_address, owner, recipient, mint_amount) =
-        utils::setup_and_mint_to_private_without_minter(/* with_account_contracts */ true);
+        utils::setup_and_mint_to_private_without_minter(true);
 
     utils::check_private_balance(token_contract_address, owner, mint_amount);
     utils::check_private_balance(token_contract_address, recipient, 0 as u128);
@@ -70,7 +69,7 @@ unconstrained fn transfer_private_to_commitment_on_behalf_of_other() {
 #[test(should_fail_with = "invalid nonce")]
 unconstrained fn transfer_private_to_commitment_non_zero_nonce() {
     let (env, token_contract_address, owner, recipient, mint_amount) =
-        utils::setup_and_mint_to_private_without_minter(/* with_account_contracts */ false);
+        utils::setup_and_mint_to_private_without_minter(false);
 
     // Prepare commitment
     env.impersonate(recipient);

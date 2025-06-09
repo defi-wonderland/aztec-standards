@@ -1,7 +1,6 @@
 use crate::{test::utils, Token};
 use aztec::oracle::random::random;
 use std::test::OracleMock;
-use uint_note::uint_note::{PartialUintNote, UintNote};
 
 /// Internal orchestration means that the calls to `initialize_transfer_commitment`
 /// and `transfer_public_to_commitment` are done by the TOKEN contract itself.
@@ -13,7 +12,7 @@ unconstrained fn transfer_public_to_commitment_internal_orchestration() {
     // in this test we just call it and check the outcome.
     // Setup without account contracts. We are not using authwits here, so dummy accounts are enough
     let (_, token_contract_address, user, _, amount) =
-        utils::setup_and_mint_to_private_without_minter(/* with_account_contracts */ false);
+        utils::setup_and_mint_to_private_without_minter(false);
 
     // User's private balance should be equal to the amount
     utils::check_private_balance(token_contract_address, user, amount);
@@ -25,7 +24,7 @@ unconstrained fn transfer_public_to_commitment_internal_orchestration() {
 unconstrained fn transfer_public_to_commitment_external_orchestration() {
     // Setup without account contracts. We are not using authwits here, so dummy accounts are enough
     let (env, token_contract_address, owner, recipient, amount) =
-        utils::setup_and_mint_to_public_without_minter(/* with_account_contracts */ false);
+        utils::setup_and_mint_to_public_without_minter(false);
 
     let note_randomness = random();
 
@@ -52,7 +51,7 @@ unconstrained fn transfer_public_to_commitment_external_orchestration() {
 unconstrained fn transfer_public_to_commitment_transfer_not_initialized() {
     // Setup without account contracts. We are not using authwits here, so dummy accounts are enough
     let (env, token_contract_address, owner, _, amount) =
-        utils::setup_and_mint_to_public_without_minter(/* with_account_contracts */ false);
+        utils::setup_and_mint_to_public_without_minter(false);
 
     // Transfer was not prepared, so we can use a random value for the commitment
     let commitment = random();
@@ -67,7 +66,7 @@ unconstrained fn transfer_public_to_commitment_transfer_not_initialized() {
 unconstrained fn transfer_public_to_commitment_failure_not_an_owner() {
     // Setup without account contracts. We are not using authwits here, so dummy accounts are enough
     let (env, token_contract_address, owner, not_owner, amount) =
-        utils::setup_and_mint_to_public_without_minter(/* with_account_contracts */ false);
+        utils::setup_and_mint_to_public_without_minter(false);
 
     // (For this specific test we could set a random value for the commitment and not do the call to `prepare...`
     // as the token balance check is before we use the value but that would made the test less robust against changes
