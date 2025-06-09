@@ -20,6 +20,10 @@ pub contract NFT {
             AztecAddress, Map, NoteGetterOptions, NoteViewerOptions, PrivateSet, PublicContext,
             PublicImmutable, PublicMutable,
         },
+        protocol_types::{
+            constants::DEPLOYER_CONTRACT_ADDRESS, contract_class_id::ContractClassId,
+            traits::FromField,
+        },
         utils::comparison::Comparator,
     };
     // authorized witness library
@@ -28,6 +32,8 @@ pub contract NFT {
     };
     // compression library
     use compressed_string::FieldCompressedString;
+    // contract instance deployer
+    use contract_instance_deployer::ContractInstanceDeployer;
 
     /// @param symbol The symbol of the NFT
     /// @param name The name of the NFT
@@ -43,6 +49,7 @@ pub contract NFT {
         nft_exists: Map<Field, PublicMutable<bool, Context>, Context>,
         public_owners: Map<Field, PublicMutable<AztecAddress, Context>, Context>,
         minter: PublicImmutable<AztecAddress, Context>,
+        upgrade_authority: PublicImmutable<AztecAddress, Context>,
     }
 
     /// @dev Initializes the token with a minter
@@ -51,10 +58,16 @@ pub contract NFT {
     /// @param minter The address of the minter
     #[public]
     #[initializer]
-    fn constructor_with_minter(name: str<31>, symbol: str<31>, minter: AztecAddress) {
+    fn constructor_with_minter(
+        name: str<31>,
+        symbol: str<31>,
+        minter: AztecAddress,
+        upgrade_authority: AztecAddress,
+    ) {
         storage.name.initialize(FieldCompressedString::from_string(name));
         storage.symbol.initialize(FieldCompressedString::from_string(symbol));
         storage.minter.initialize(minter);
+        storage.upgrade_authority.initialize(upgrade_authority);
     }
 
     /** ==========================================================
@@ -406,6 +419,26 @@ pub contract NFT {
         _validate_public_token_owner(storage.public_owners, from, token_id);
         _update_public_token_owner(storage.public_owners, AztecAddress::zero(), token_id);
         storage.nft_exists.at(token_id).write(false);
+    }
+
+    /** ==========================================================
+     * ===================  UPGRADEABLE  =========================
+     * ======================================================== */
+
+    /// @notice Upgrades the contract to a new contract class id
+    /// @dev The upgrade authority must be set
+    /// @dev The upgrade will only be effective after the upgrade delay has passed
+    /// @param new_contract_class_id The new contract class id
+    #[public]
+    fn upgrade_contract(new_contract_class_id: Field) {
+        let upgrade_authority = storage.upgrade_authority.read();
+
+        assert(!upgrade_authority.eq(AztecAddress::zero()), "upgrade authority not set");
+        assert(context.msg_sender().eq(upgrade_authority), "caller is not upgrade authority");
+
+        ContractInstanceDeployer::at(DEPLOYER_CONTRACT_ADDRESS)
+            .update(ContractClassId::from_field(new_contract_class_id))
+            .call(&mut context);
     }
 
     /** ==========================================================

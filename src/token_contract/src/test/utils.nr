@@ -13,7 +13,7 @@ use aztec::{
 use std::test::OracleMock;
 use uint_note::uint_note::UintNote;
 
-global mint_amount: u128 = 10_000 as u128;
+pub global mint_amount: u128 = 10_000 as u128;
 
 pub unconstrained fn setup_with_initial_supply(
     with_account_contracts: bool,
