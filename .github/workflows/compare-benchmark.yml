@@ -91,10 +91,10 @@ jobs:
           echo "PR Aztec version is $VER"
           if [ "${{ steps.basever.outputs.ver }}" != "$VER" ]; then
             echo "ver_diff=true" >> "$GITHUB_OUTPUT"
+          echo "ver=$VER" >> "$GITHUB_OUTPUT"
           else
             echo "ver_diff=false" >> "$GITHUB_OUTPUT"
           fi
-          echo "ver=$VER" >> "$GITHUB_OUTPUT"
 
       - name: Kill BASE services
         if: steps.prver.outputs.ver_diff == 'true'
