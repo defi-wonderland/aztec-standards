@@ -1,11 +1,11 @@
-use crate::test::utils;
+use crate::test::utils::{self, mint_amount};
 use crate::Token;
 use authwit::cheatcodes as authwit_cheatcodes;
 use aztec::oracle::random::random;
 
 #[test]
 unconstrained fn transfer_private_to_public_with_commitment() {
-    let (env, token_contract_address, owner, recipient, mint_amount) =
+    let (env, token_contract_address, owner, recipient) =
         utils::setup_and_mint_to_private_without_minter(false);
 
     utils::check_private_balance(token_contract_address, owner, mint_amount);
@@ -26,7 +26,7 @@ unconstrained fn transfer_private_to_public_with_commitment() {
 
 #[test]
 unconstrained fn transfer_private_to_public_with_commitment_stores_commitment() {
-    let (env, token_contract_address, owner, recipient, mint_amount) =
+    let (env, token_contract_address, owner, recipient) =
         utils::setup_and_mint_to_private_without_minter(false);
 
     env.impersonate(owner);
@@ -43,7 +43,7 @@ unconstrained fn transfer_private_to_public_with_commitment_stores_commitment() 
 
 #[test(should_fail_with = "invalid nonce")]
 unconstrained fn transfer_private_to_public_with_commitment_and_non_zero_nonce() {
-    let (env, token_contract_address, owner, recipient, mint_amount) =
+    let (env, token_contract_address, owner, recipient) =
         utils::setup_and_mint_to_private_without_minter(false);
 
     utils::check_private_balance(token_contract_address, owner, mint_amount);
@@ -59,7 +59,7 @@ unconstrained fn transfer_private_to_public_with_commitment_and_non_zero_nonce()
 
 #[test]
 unconstrained fn transfer_private_to_public_with_commitment_on_behalf_of_other() {
-    let (env, token_contract_address, owner, recipient, mint_amount) =
+    let (env, token_contract_address, owner, recipient) =
         utils::setup_and_mint_to_private_without_minter(true);
 
     utils::check_private_balance(token_contract_address, owner, mint_amount);
@@ -89,7 +89,7 @@ unconstrained fn transfer_private_to_public_with_commitment_on_behalf_of_other()
 
 #[test]
 unconstrained fn transfer_private_to_public_with_commitment_and_finalize() {
-    let (env, token_contract_address, owner, recipient, mint_amount) =
+    let (env, token_contract_address, owner, recipient) =
         utils::setup_and_mint_to_private_without_minter(false);
 
     utils::check_private_balance(token_contract_address, owner, mint_amount);
@@ -121,7 +121,7 @@ unconstrained fn transfer_private_to_public_with_commitment_and_finalize() {
 
 #[test(should_fail_with = "Invalid commitment")]
 unconstrained fn transfer_private_to_public_with_commitment_and_finalize_with_invalid_commitment() {
-    let (env, token_contract_address, owner, recipient, mint_amount) =
+    let (env, token_contract_address, owner, recipient) =
         utils::setup_and_mint_to_private_without_minter(false);
 
     utils::check_private_balance(token_contract_address, owner, mint_amount);
@@ -153,7 +153,7 @@ unconstrained fn transfer_private_to_public_with_commitment_and_finalize_with_in
 
 #[test(should_fail_with = "Invalid commitment")]
 unconstrained fn transfer_private_to_public_with_commitment_and_finalize_with_commitment_zero() {
-    let (env, token_contract_address, owner, recipient, mint_amount) =
+    let (env, token_contract_address, owner, recipient) =
         utils::setup_and_mint_to_private_without_minter(false);
 
     utils::check_private_balance(token_contract_address, owner, mint_amount);
