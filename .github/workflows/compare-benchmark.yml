@@ -75,33 +75,26 @@ jobs:
         run: |
           npx aztec-benchmark --suffix _base --output-dir ${{ env.BENCH_DIR }}
 
-      - name: Recursively list files in a specific folder
-        run: ls -lR ./benchmarks
-
+      # This is required to avoid the benchmark results being removed by the Checkout PR step
       - name: Store base benchmark results
         run: |
           mkdir -p ../benchmarks_base && mv ${{ env.BENCH_DIR }}/* ../benchmarks_base/
 
-      - name: Recursively list files in a specific folder
-        run: ls -lR ./benchmarks
-
       # ──────────────────────────────────────────────────────────────
       # 2️⃣  BENCHMARK PR HEAD  (github.event.pull_request.head.sha)
       # ──────────────────────────────────────────────────────────────
+
+      # clean does not work correctly and is removing the benchmark results anyways
+      # https://github.com/actions/checkout/issues/1201
       - name: Checkout PR branch
         uses: actions/checkout@v3
         with:
           ref: ${{ github.event.pull_request.head.sha }}
           clean: false
 
-      - name: Recursively list files in a specific folder
-        run: ls -lR ./benchmarks
-
+      # Restore the base benchmark results to avoid the benchmark results being removed by the Checkout PR step
       - name: Restore base benchmark results
         run: mv ../benchmarks_base/* ${{ env.BENCH_DIR }}/
-
-      - name: Recursively list files in a specific folder
-        run: ls -lR ./benchmarks
 
       - name: Detect Aztec version (PR)
         id: prver
@@ -156,14 +149,8 @@ jobs:
           base_suffix: '_base'
           current_suffix: '_pr'
 
-      - name: Recursively list files in a specific folder
-        run: ls -lR ./benchmarks
-
       - name: Comment diff
         uses: peter-evans/create-or-update-comment@v4
         with:
           issue-number: ${{ github.event.pull_request.number }}
           body-file: benchmark-comparison.md
-
-      - name: Recursively list files in a specific folder
-        run: ls -lR ./benchmarks
