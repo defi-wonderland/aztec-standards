@@ -55,20 +55,6 @@ unconstrained fn nft_transfer_public_to_private_authorized_success() {
     utils::assert_owns_private_nft(nft_contract_address, recipient, token_id);
 }
 
-#[test(should_fail_with = "invalid nonce")]
-unconstrained fn nft_transfer_public_to_private_invalid_nonce_fail() {
-    // Setup and mint NFT to owner in public state
-    let token_id = 10000;
-    let (env, nft_contract_address, owner, _, recipient) =
-        utils::setup_and_mint_to_public(false, token_id);
-
-    // Attempt transfer with non-zero nonce as owner (should use nonce=0 when self-transferring)
-    env.impersonate(owner);
-    NFT::at(nft_contract_address).transfer_public_to_private(owner, recipient, token_id, 1).call(
-        &mut env.private(),
-    );
-}
-
 #[test(should_fail_with = "caller is not owner")]
 unconstrained fn nft_transfer_public_to_private_not_owned_fail() {
     // Setup environment but don't mint the NFT

@@ -116,15 +116,15 @@ pub contract Token {
     /// @param from The address of the sender
     /// @param to The address of the recipient
     /// @param amount The amount of tokens to transfer
-    /// @param nonce The nonce used for authwitness
+    /// @param _nonce The nonce used for authwitness
     #[private]
     fn transfer_private_to_public(
         from: AztecAddress,
         to: AztecAddress,
         amount: u128,
-        nonce: Field,
+        _nonce: Field,
     ) {
-        _validate_from_private(&mut context, from, nonce);
+        _validate_from_private(&mut context, from);
 
         _decrease_private_balance(
             &mut context,
@@ -144,16 +144,16 @@ pub contract Token {
     /// @param from The address of the sender
     /// @param to The address of the recipient
     /// @param amount The amount of tokens to transfer
-    /// @param nonce The nonce used for authwitness
+    /// @param _nonce The nonce used for authwitness
     /// @return commitment The partial note utilized for the transfer commitment (privacy entrance)
     #[private]
     fn transfer_private_to_public_with_commitment(
         from: AztecAddress,
         to: AztecAddress,
         amount: u128,
-        nonce: Field,
+        _nonce: Field,
     ) -> Field {
-        _validate_from_private(&mut context, from, nonce);
+        _validate_from_private(&mut context, from);
 
         _decrease_private_balance(
             &mut context,
@@ -177,15 +177,15 @@ pub contract Token {
     /// @param from The address of the sender
     /// @param to The address of the recipient
     /// @param amount The amount of tokens to transfer
-    /// @param nonce The nonce used for authwitness
+    /// @param _nonce The nonce used for authwitness
     #[private]
     fn transfer_private_to_private(
         from: AztecAddress,
         to: AztecAddress,
         amount: u128,
-        nonce: Field,
+        _nonce: Field,
     ) {
-        _validate_from_private(&mut context, from, nonce);
+        _validate_from_private(&mut context, from);
 
         _decrease_private_balance(
             &mut context,
@@ -203,15 +203,15 @@ pub contract Token {
     /// @param from The address of the sender
     /// @param commitment The partial note representing the commitment (privacy entrance that the recipient shares with the sender)
     /// @param amount The amount of tokens to transfer
-    /// @param nonce The nonce used for authwitness
+    /// @param _nonce The nonce used for authwitness
     #[private]
     fn transfer_private_to_commitment(
         from: AztecAddress,
         commitment: Field,
         amount: u128,
-        nonce: Field,
+        _nonce: Field,
     ) {
-        _validate_from_private(&mut context, from, nonce);
+        _validate_from_private(&mut context, from);
 
         _decrease_private_balance(
             &mut context,
@@ -231,15 +231,15 @@ pub contract Token {
     /// @param from The address of the sender
     /// @param to The address of the recipient
     /// @param amount The amount of tokens to transfer
-    /// @param nonce The nonce used for authwitness
+    /// @param _nonce The nonce used for authwitness
     #[private]
     fn transfer_public_to_private(
         from: AztecAddress,
         to: AztecAddress,
         amount: u128,
-        nonce: Field,
+        _nonce: Field,
     ) {
-        _validate_from_private(&mut context, from, nonce);
+        _validate_from_private(&mut context, from);
 
         Token::at(context.this_address()).decrease_public_balance_internal(from, amount).enqueue(
             &mut context,
@@ -286,10 +286,15 @@ pub contract Token {
     /// @param from The address of the sender
     /// @param to The address of the recipient
     /// @param amount The amount of tokens to transfer
-    /// @param nonce The nonce used for authwitness
+    /// @param _nonce The nonce used for authwitness
     #[public]
-    fn transfer_public_to_public(from: AztecAddress, to: AztecAddress, amount: u128, nonce: Field) {
-        _validate_from_public(&mut context, from, nonce);
+    fn transfer_public_to_public(
+        from: AztecAddress,
+        to: AztecAddress,
+        amount: u128,
+        _nonce: Field,
+    ) {
+        _validate_from_public(&mut context, from);
 
         _decrease_public_balance(storage.public_balances, from, amount);
         _increase_public_balance(storage.public_balances, to, amount);
@@ -301,15 +306,15 @@ pub contract Token {
     /// @param from The address of the sender
     /// @param commitment The partial note representing the commitment (privacy entrance)
     /// @param amount The amount of tokens to transfer
-    /// @param nonce The nonce used for authwitness
+    /// @param _nonce The nonce used for authwitness
     #[public]
     fn transfer_public_to_commitment(
         from: AztecAddress,
         commitment: Field,
         amount: u128,
-        nonce: Field,
+        _nonce: Field,
     ) {
-        _validate_from_public(&mut context, from, nonce);
+        _validate_from_public(&mut context, from);
 
         _decrease_public_balance(storage.public_balances, from, amount);
         _increase_commitment_balance(&mut context, PartialUintNote { commitment }, amount);
@@ -463,10 +468,10 @@ pub contract Token {
     /// @dev Burns tokens from a commitment and enqueues a public call to update the total supply
     /// @param from The address of the sender
     /// @param amount The amount of tokens to burn
-    /// @param nonce The nonce used for authwitness
+    /// @param _nonce The nonce used for authwitness
     #[private]
-    fn burn_private(from: AztecAddress, amount: u128, nonce: Field) {
-        _validate_from_private(&mut context, from, nonce);
+    fn burn_private(from: AztecAddress, amount: u128, _nonce: Field) {
+        _validate_from_private(&mut context, from);
 
         _decrease_private_balance(
             &mut context,
@@ -485,10 +490,10 @@ pub contract Token {
     /// @dev Burns tokens from a public balance and updates the total supply
     /// @param from The address of the sender
     /// @param amount The amount of tokens to burn
-    /// @param nonce The nonce used for authwitness
+    /// @param _nonce The nonce used for authwitness
     #[public]
-    fn burn_public(from: AztecAddress, amount: u128, nonce: Field) {
-        _validate_from_public(&mut context, from, nonce);
+    fn burn_public(from: AztecAddress, amount: u128, _nonce: Field) {
+        _validate_from_public(&mut context, from);
 
         _decrease_public_balance(storage.public_balances, from, amount);
         _decrease_total_supply(storage.total_supply, amount);
@@ -711,34 +716,22 @@ pub contract Token {
      * ======================================================== */
 
     /// @notice Validates that the caller possesses authwit from the `from` address or the caller is the `from` address
-    /// @dev If the caller is the `from` address, the nonce must be 0
     /// @param context The context of the private call
     /// @param from The address of the sender
-    /// @param nonce The nonce of the transaction
     #[contract_library_method]
-    fn _validate_from_private(context: &mut PrivateContext, from: AztecAddress, nonce: Field) {
+    fn _validate_from_private(context: &mut PrivateContext, from: AztecAddress) {
         if (!from.eq(context.msg_sender())) {
             assert_current_call_valid_authwit(context, from);
-        } else {
-            assert(nonce == 0, "invalid nonce");
         }
     }
 
     /// @notice Validates that the caller possesses authwit from the `from` address or the caller is the `from` address
-    /// @dev If the caller is the `from` address, the nonce must be 0
     /// @param context The context of the public call
     /// @param from The address of the sender
-    /// @param nonce The nonce of the transaction
     #[contract_library_method]
-    unconstrained fn _validate_from_public(
-        context: &mut PublicContext,
-        from: AztecAddress,
-        nonce: Field,
-    ) {
+    unconstrained fn _validate_from_public(context: &mut PublicContext, from: AztecAddress) {
         if (!from.eq(context.msg_sender())) {
             assert_current_call_valid_authwit_public(context, from);
-        } else {
-            assert(nonce == 0, "invalid nonce");
         }
     }
 }

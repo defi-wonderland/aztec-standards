@@ -45,18 +45,6 @@ unconstrained fn burn_private_failure_more_than_balance() {
     Token::at(token_contract_address).burn_private(owner, burn_amount, 0).call(&mut env.private());
 }
 
-#[test(should_fail_with = "invalid nonce")]
-unconstrained fn burn_private_failure_on_behalf_of_self_non_zero_nonce() {
-    let (env, token_contract_address, owner, _) =
-        utils::setup_and_mint_to_public_without_minter(false);
-
-    // Burn more than balance
-    let burn_amount = mint_amount / 10;
-    Token::at(token_contract_address).burn_private(owner, burn_amount, random()).call(
-        &mut env.private(),
-    );
-}
-
 #[test(should_fail_with = "Balance too low")]
 unconstrained fn burn_private_failure_on_behalf_of_other_more_than_balance() {
     let (env, token_contract_address, owner, recipient) =

@@ -77,24 +77,6 @@ unconstrained fn transfer_private_multiple_notes_recursively() {
     utils::check_private_balance(token_contract_address, recipient, transfer_amount);
 }
 
-#[test(should_fail_with = "invalid nonce")]
-unconstrained fn transfer_private_failure_on_behalf_of_self_non_zero_nonce() {
-    // Setup without account contracts. We are not using authwits here, so dummy accounts are enough
-    let (env, token_contract_address, owner, recipient) =
-        utils::setup_and_mint_to_private_without_minter(false);
-    // Add authwit
-    let transfer_amount = (1000 as u128);
-    let transfer_private_from_call_interface = Token::at(token_contract_address)
-        .transfer_private_to_private(owner, recipient, transfer_amount, 1);
-    authwit_cheatcodes::add_private_authwit_from_call_interface(
-        owner,
-        recipient,
-        transfer_private_from_call_interface,
-    );
-    // Transfer tokens
-    transfer_private_from_call_interface.call(&mut env.private());
-}
-
 #[test(should_fail_with = "Balance too low")]
 unconstrained fn transfer_private_failure_on_behalf_of_more_than_balance() {
     // Setup with account contracts. Slower since we actually deploy them, but needed for authwits.

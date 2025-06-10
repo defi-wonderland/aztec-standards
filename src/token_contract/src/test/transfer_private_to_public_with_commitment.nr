@@ -41,22 +41,6 @@ unconstrained fn transfer_private_to_public_with_commitment_stores_commitment() 
     );
 }
 
-#[test(should_fail_with = "invalid nonce")]
-unconstrained fn transfer_private_to_public_with_commitment_and_non_zero_nonce() {
-    let (env, token_contract_address, owner, recipient) =
-        utils::setup_and_mint_to_private_without_minter(false);
-
-    utils::check_private_balance(token_contract_address, owner, mint_amount);
-    utils::check_private_balance(token_contract_address, recipient, 0 as u128);
-
-    // Transfer tokens
-    let transfer_amount = mint_amount;
-    env.impersonate(owner);
-    let _ = Token::at(token_contract_address)
-        .transfer_private_to_public_with_commitment(owner, recipient, transfer_amount, random())
-        .call(&mut env.private());
-}
-
 #[test]
 unconstrained fn transfer_private_to_public_with_commitment_on_behalf_of_other() {
     let (env, token_contract_address, owner, recipient) =
