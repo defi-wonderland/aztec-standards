@@ -758,7 +758,7 @@ pub contract Token {
      * ======================================================== */
 
     /* ====================== DEPOSIT ========================= */
-    
+
     /// @notice Deposits the underlying asset from a public balance and receives shares to a public balance
     /// @param from The address of the sender
     /// @param to The address of the recipient
@@ -766,7 +766,6 @@ pub contract Token {
     /// @param nonce The nonce used for authwitness
     #[public]
     fn deposit_public_to_public(from: AztecAddress, to: AztecAddress, assets: u128, nonce: Field) {
-        // TODO: do we need 2 different nonces?
         _validate_from_public(&mut context, from, nonce);
 
         // Calculate shares to mint
@@ -953,7 +952,6 @@ pub contract Token {
         max_assets: u128,
         nonce: Field,
     ) {
-        // TODO: do we need 2 different nonces?
         _validate_from_public(&mut context, from, nonce);
 
         // Calculate assets required
