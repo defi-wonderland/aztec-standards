@@ -448,7 +448,7 @@ pub contract Token {
     fn burn_private(from: AztecAddress, amount: u128, nonce: Field) {
         _validate_from_private(&mut context, from, nonce);
 
-        _burn_from_private(&mut context, storage.private_balances, from, amount);
+        _burn_private(&mut context, storage.private_balances, from, amount);
     }
 
     /// @notice Burns tokens from a public balance
@@ -460,7 +460,7 @@ pub contract Token {
     fn burn_public(from: AztecAddress, amount: u128, nonce: Field) {
         _validate_from_public(&mut context, from, nonce);
 
-        _burn_from_public(storage.public_balances, storage.total_supply, from, amount);
+        _burn_public(storage.public_balances, storage.total_supply, from, amount);
     }
 
     /// @notice Decreases the total supply by `amount`
@@ -477,7 +477,7 @@ pub contract Token {
     #[public]
     #[internal]
     fn burn_public_internal(from: AztecAddress, amount: u128) {
-        _burn_from_public(storage.public_balances, storage.total_supply, from, amount);
+        _burn_public(storage.public_balances, storage.total_supply, from, amount);
     }
 
     /** ==========================================================
@@ -689,7 +689,7 @@ pub contract Token {
     }
 
     #[contract_library_method]
-    fn _burn_from_public(
+    fn _burn_public(
         public_balances: Map<AztecAddress, PublicMutable<u128, &mut PublicContext>, &mut PublicContext>,
         total_supply: PublicMutable<u128, &mut PublicContext>,
         from: AztecAddress,
@@ -700,7 +700,7 @@ pub contract Token {
     }
 
     #[contract_library_method]
-    fn _burn_from_private(
+    fn _burn_private(
         context: &mut PrivateContext,
         private_balances: Map<AztecAddress, BalanceSet<&mut PrivateContext>, &mut PrivateContext>,
         from: AztecAddress,
@@ -1100,7 +1100,7 @@ pub contract Token {
             .call(&mut context);
 
         // Burn the sender's shares
-        _burn_from_public(storage.public_balances, storage.total_supply, from, shares);
+        _burn_public(storage.public_balances, storage.total_supply, from, shares);
     }
 
     /// @notice Withdraws an amount of the underlying asset from a public balance to a private balance
@@ -1152,7 +1152,7 @@ pub contract Token {
         );
 
         // Burn shares from the sender in private
-        _burn_from_private(&mut context, storage.private_balances, from, shares);
+        _burn_private(&mut context, storage.private_balances, from, shares);
 
         // Transfer the assets to the recipient in private
         Token::at(storage.asset.read())
@@ -1271,7 +1271,7 @@ pub contract Token {
             .call(&mut context);
 
         // Burn the sender's shares
-        _burn_from_public(storage.public_balances, storage.total_supply, from, shares);
+        _burn_public(storage.public_balances, storage.total_supply, from, shares);
     }
 
     /// @notice Redeems an amount of the shares from a private balance to a public balance
@@ -1289,7 +1289,7 @@ pub contract Token {
         );
 
         // Burn shares from the sender in private
-        _burn_from_private(&mut context, storage.private_balances, from, shares);
+        _burn_private(&mut context, storage.private_balances, from, shares);
     }
 
     /// @notice Redeems an amount of the shares from a private balance to a private balance
@@ -1323,7 +1323,7 @@ pub contract Token {
 
         // Burn shares from the sender in private
         _validate_from_private(&mut context, from, nonce);
-        _burn_from_private(&mut context, storage.private_balances, from, shares);
+        _burn_private(&mut context, storage.private_balances, from, shares);
 
         // Transfer min_assets to the recipient
         Token::at(storage.asset.read())
@@ -1384,7 +1384,7 @@ pub contract Token {
         let total_assets = _total_assets(&mut context, storage.asset);
         let shares = _convert_to_shares(assets, total_assets, storage.total_supply, ROUND_UP);
 
-        _burn_from_public(storage.public_balances, storage.total_supply, from, shares);
+        _burn_public(storage.public_balances, storage.total_supply, from, shares);
     }
 
     /// @notice Validates that the requested shares amount is valid for the given assets
