@@ -143,7 +143,7 @@ pub contract Token {
 
     /// @notice Transfer tokens from private balance to public balance and initializes a commitment
     /// @dev Spends notes, emits a new note (UintNote) with any remaining change, enqueues a public call, and returns a partial note.
-    ///      `from` will also be the completer of the partial note.
+    ///      `to` will also be the completer of the initialized partial note.
     /// @param from The address of the sender
     /// @param to The address of the recipient
     /// @param amount The amount of tokens to transfer
