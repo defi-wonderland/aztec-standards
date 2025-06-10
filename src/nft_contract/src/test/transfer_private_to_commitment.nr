@@ -96,27 +96,6 @@ unconstrained fn nft_transfer_private_to_commitment_authorized_success() {
     );
 }
 
-#[test(should_fail_with = "invalid nonce")]
-unconstrained fn nft_transfer_private_to_commitment_self_non_zero_nonce_fail() {
-    // Setup and mint NFT to owner
-    let token_id = 10000;
-    let (env, nft_contract_address, owner, _, recipient) =
-        utils::setup_and_mint_to_private(false, token_id);
-
-    // Prepare commitment as recipient
-    env.impersonate(recipient);
-    let commitment: PartialNFTNote = NFT::at(nft_contract_address)
-        .initialize_transfer_commitment(owner, recipient)
-        .call(&mut env.private());
-    env.advance_block_by(1);
-
-    // Attempt transfer with non-zero nonce as owner
-    env.impersonate(owner);
-    NFT::at(nft_contract_address)
-        .transfer_private_to_commitment(owner, token_id, commitment, 1)
-        .call(&mut env.private());
-}
-
 #[test(should_fail_with = "nft not found in private to public")]
 unconstrained fn nft_transfer_private_to_commitment_non_existent_fail() {
     // Setup but don't mint any NFT

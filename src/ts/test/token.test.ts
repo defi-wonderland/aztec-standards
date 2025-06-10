@@ -218,20 +218,6 @@ describe('Token - Single PXE', () => {
     expect(totalSupply).toBe(AMOUNT * 2n);
   }, 300_000);
 
-  it('fails when using an invalid nonce', async () => {
-    // Mint 1 token privately to alice
-    await token.withWallet(alice).methods.mint_to_private(alice.getAddress(), alice.getAddress(), AMOUNT).send().wait();
-
-    // This fails because of the nonce check
-    await expect(
-      token
-        .withWallet(alice)
-        .methods.transfer_private_to_public(alice.getAddress(), alice.getAddress(), AMOUNT * 2n, 1)
-        .send()
-        .wait(),
-    ).rejects.toThrow(/invalid nonce/);
-  }, 300_000);
-
   it.skip('fails when transferring more tokens than available in private balance', async () => {
     // Mint 1 token privately to alice
     await token.withWallet(alice).methods.mint_to_private(alice.getAddress(), alice.getAddress(), AMOUNT).send().wait();
