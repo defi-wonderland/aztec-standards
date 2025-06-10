@@ -2,6 +2,8 @@ use crate::test::utils;
 use crate::Token;
 use authwit::cheatcodes as authwit_cheatcodes;
 use aztec::oracle::random::random;
+use aztec::protocol_types::traits::ToField;
+use uint_note::uint_note::PartialUintNote;
 
 #[test]
 unconstrained fn transfer_private_to_public_with_commitment() {
@@ -35,7 +37,7 @@ unconstrained fn transfer_private_to_public_with_commitment_stores_commitment() 
         .call(&mut env.private());
     env.advance_block_by(1);
 
-    let validity_commitment = commitment.compute_validity_commitment(owner);
+    let validity_commitment = commitment.compute_validity_commitment(recipient);
     assert(
         env.public().nullifier_exists(validity_commitment, token_contract_address),
         "validity nullifier should exist",
@@ -90,7 +92,7 @@ unconstrained fn transfer_private_to_public_with_commitment_and_finalize() {
 
     // Before finalize the recipient should have the tokens in public balance
     utils::check_public_balance(token_contract_address, recipient, transfer_amount);
-
+ 
     // Transfer tokens
     env.impersonate(recipient);
     Token::at(token_contract_address)
@@ -104,7 +106,7 @@ unconstrained fn transfer_private_to_public_with_commitment_and_finalize() {
     utils::check_private_balance(token_contract_address, recipient, transfer_amount);
 }
 
-#[test(should_fail_with = "Invalid commitment")]
+#[test(should_fail_with = "Invalid partial note or completer")]
 unconstrained fn transfer_private_to_public_with_commitment_and_finalize_with_invalid_commitment() {
     let (env, token_contract_address, owner, recipient, mint_amount) =
         utils::setup_and_mint_to_private_without_minter(false);
@@ -136,7 +138,7 @@ unconstrained fn transfer_private_to_public_with_commitment_and_finalize_with_in
     utils::check_private_balance(token_contract_address, recipient, 0 as u128);
 }
 
-#[test(should_fail_with = "Invalid commitment")]
+#[test(should_fail_with = "Invalid partial note or completer")]
 unconstrained fn transfer_private_to_public_with_commitment_and_finalize_with_commitment_zero() {
     let (env, token_contract_address, owner, recipient, mint_amount) =
         utils::setup_and_mint_to_private_without_minter(false);

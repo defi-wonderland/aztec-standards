@@ -14,7 +14,7 @@ unconstrained fn transfer_private_to_commitment() {
     // Prepare commitment
     env.impersonate(recipient);
     let commitment = Token::at(token_contract_address)
-        .initialize_transfer_commitment(recipient, recipient)
+        .initialize_transfer_commitment(owner, recipient)
         .call(&mut env.private());
 
     // Transfer tokens
@@ -41,9 +41,9 @@ unconstrained fn transfer_private_to_commitment_on_behalf_of_other() {
     let transfer_amount = mint_amount;
 
     // Prepare commitment
-    env.impersonate(recipient);
+    env.impersonate(owner);
     let commitment = Token::at(token_contract_address)
-        .initialize_transfer_commitment(recipient, recipient)
+        .initialize_transfer_commitment(owner, recipient)
         .call(&mut env.private());
     env.advance_block_by(1);
 
