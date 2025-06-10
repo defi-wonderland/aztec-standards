@@ -98,14 +98,16 @@ describe('NFT - Single PXE', () => {
 
     const deploymentData = await getContractInstanceFromDeployParams(NFTContractArtifact, {
       constructorArtifact: 'constructor_with_minter',
-      constructorArgs: ['TestNFT', 'TNFT', deployerWallet.getAddress()],
+      constructorArgs: ['TestNFT', 'TNFT', deployerWallet.getAddress(), deployerWallet.getAddress()],
       salt,
       deployer: deployerWallet.getAddress(),
     });
 
     const deployer = new ContractDeployer(NFTContractArtifact, deployerWallet, undefined, 'constructor_with_minter');
 
-    const tx = deployer.deploy('TestNFT', 'TNFT', deployerWallet.getAddress()).send({ contractAddressSalt: salt });
+    const tx = deployer
+      .deploy('TestNFT', 'TNFT', deployerWallet.getAddress(), deployerWallet.getAddress())
+      .send({ contractAddressSalt: salt });
 
     const receipt = await tx.getReceipt();
 
