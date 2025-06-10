@@ -13,8 +13,9 @@ pub contract Token {
         },
         prelude::{AztecAddress, Map, PublicContext, PublicImmutable, PublicMutable},
         protocol_types::{
-            constants::DEPLOYER_CONTRACT_ADDRESS, contract_class_id::ContractClassId,
-            traits::FromField,
+            constants::DEPLOYER_CONTRACT_ADDRESS,
+            contract_class_id::ContractClassId,
+            traits::{FromField, ToField},
         },
     };
     // authorized witness library
@@ -169,8 +170,19 @@ pub contract Token {
             &mut context,
         );
 
-        let commitment =
-            _initialize_transfer_commitment(&mut context, storage.private_balances, from, to, from);
+        aztec::oracle::debug_log::debug_log_format(
+            "##transfer_private_to_public_with_commitment: {0} {1} {2}",
+            [context.msg_sender().to_field(), from.to_field(), to.to_field()],
+        );
+        // We're creating a commitment for the recipient, so the completer is the recipient
+        let completer = to;
+        let commitment = _initialize_transfer_commitment(
+            &mut context,
+            storage.private_balances,
+            from,
+            to,
+            completer,
+        );
         commitment
     }
 
@@ -306,7 +318,8 @@ pub contract Token {
 
     /// @notice Finalizes a transfer of token `amount` from public balance of `from` to a commitment of `to`
     /// @dev The transfer must be prepared by calling `initialize_transfer_commitment` first and the resulting
-    /// `commitment` must be passed as an argument to this function
+    /// `commitment` must be passed as an argument to this function.
+    /// `from` will be used as the completer for the partial note.
     /// @param from The address of the sender
     /// @param commitment The partial note representing the commitment (privacy entrance)
     /// @param amount The amount of tokens to transfer
@@ -321,6 +334,11 @@ pub contract Token {
         _validate_from_public(&mut context, from);
 
         _decrease_public_balance(storage.public_balances, from, amount);
+        aztec::oracle::debug_log::debug_log_format(
+            "transfer_public_to_commitment {0} {1}",
+            [context.msg_sender().to_field(), from.to_field()],
+        );
+
         _increase_commitment_balance(&mut context, commitment, from, amount);
     }
 
@@ -597,6 +615,15 @@ pub contract Token {
         completer: AztecAddress,
         amount: u128,
     ) {
+        aztec::oracle::debug_log::debug_log_format(
+            "##increase_commitment_balance: {0} {1}",
+            [context.msg_sender().to_field(), completer.to_field()],
+        );
+        let validity_commitment = commitment.compute_validity_commitment(completer);
+        aztec::oracle::debug_log::debug_log_format(
+            "##increase_commitment_balance::validity_commitment: {0}",
+            [validity_commitment],
+        );
         commitment.complete(context, completer, amount);
     }
 
@@ -670,6 +697,16 @@ pub contract Token {
             to,
             from,
             completer,
+        );
+        aztec::oracle::debug_log::debug_log_format(
+            "##initialize_transfer_commitment: {0} {1} {2} {3} {4}",
+            [
+                context.msg_sender().to_field(),
+                from.to_field(),
+                to.to_field(),
+                completer.to_field(),
+                commitment.commitment.to_field(),
+            ],
         );
         commitment
     }
