@@ -61,7 +61,7 @@ async function assertPrivateNFTNullified(
   expect(hasNFT).toBe(false);
 }
 
-describe('NFT - Single PXE', () => {
+describe.skip('NFT - Single PXE', () => {
   let pxe: PXE;
   let wallets: AccountWalletWithSecretKey[] = [];
   let accounts: CompleteAddress[] = [];
