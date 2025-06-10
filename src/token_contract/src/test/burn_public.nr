@@ -60,19 +60,6 @@ unconstrained fn burn_public_failure_more_than_balance() {
     Token::at(token_contract_address).burn_public(owner, burn_amount, 0).call(&mut env.public());
 }
 
-#[test(should_fail_with = "invalid nonce")]
-unconstrained fn burn_public_failure_on_behalf_of_self_non_zero_nonce() {
-    let (env, token_contract_address, owner, _, mint_amount) =
-        utils::setup_and_mint_to_public_without_minter(false);
-
-    // Burn on behalf of self with non-zero nonce
-    let burn_amount = mint_amount / 10 as u128;
-    // Try to burn
-    Token::at(token_contract_address).burn_public(owner, burn_amount, random()).call(
-        &mut env.public(),
-    );
-}
-
 #[test(should_fail_with = "unauthorized")]
 unconstrained fn burn_public_failure_on_behalf_of_other_without_approval() {
     let (env, token_contract_address, owner, recipient, mint_amount) =

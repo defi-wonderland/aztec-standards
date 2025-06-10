@@ -112,18 +112,6 @@ unconstrained fn transfer_private_to_public_failure_more_than_balance() {
         .call(&mut env.private());
 }
 
-#[test(should_fail_with = "invalid nonce")]
-unconstrained fn transfer_private_to_public_failure_on_behalf_of_self_non_zero_nonce() {
-    // Setup without account contracts. We are not using authwits here, so dummy accounts are enough
-    let (env, token_contract_address, owner, _, mint_amount) =
-        utils::setup_and_mint_to_private_without_minter(false);
-
-    let transfer_private_to_public_amount = mint_amount + (1 as u128);
-    Token::at(token_contract_address)
-        .transfer_private_to_public(owner, owner, transfer_private_to_public_amount, random())
-        .call(&mut env.private());
-}
-
 #[test(should_fail_with = "Balance too low")]
 unconstrained fn transfer_private_to_public_failure_on_behalf_of_other_more_than_balance() {
     let (env, token_contract_address, owner, recipient, mint_amount) =

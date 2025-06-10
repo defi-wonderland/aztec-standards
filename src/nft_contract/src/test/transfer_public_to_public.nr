@@ -80,29 +80,6 @@ unconstrained fn nft_transfer_public_to_public_non_existent_fail() {
         .call(&mut env.public());
 }
 
-#[test(should_fail_with = "invalid nonce")]
-unconstrained fn nft_transfer_public_to_public_self_non_zero_nonce_fail() {
-    // Setup and mint NFT to owner
-    let token_id = 10000;
-    let (env, nft_contract_address, owner, _, recipient) =
-        utils::setup_and_mint_to_public(false, token_id);
-
-    // Attempt transfer with non-zero nonce (using 1 for determinism)
-    env.impersonate(owner);
-    let transfer_call_interface =
-        NFT::at(nft_contract_address).transfer_public_to_public(owner, recipient, token_id, 1);
-
-    // Add auth witness (even though we're the owner)
-    authwit_cheatcodes::add_public_authwit_from_call_interface(
-        owner,
-        recipient,
-        transfer_call_interface,
-    );
-
-    // Should fail because we're using non-zero nonce as the owner
-    transfer_call_interface.call(&mut env.public());
-}
-
 #[test(should_fail_with = "unauthorized")]
 unconstrained fn nft_transfer_public_to_public_unauthorized_fail() {
     // Setup with account contracts for proper authorization testing

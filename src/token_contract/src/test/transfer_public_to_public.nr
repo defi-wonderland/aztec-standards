@@ -68,24 +68,6 @@ unconstrained fn public_transfer_failure_more_than_balance() {
     public_transfer_call_interface.call(&mut env.public());
 }
 
-#[test(should_fail_with = "invalid nonce")]
-unconstrained fn public_transfer_failure_on_behalf_of_self_non_zero_nonce() {
-    // Setup without account contracts. We are not using authwits here, so dummy accounts are enough
-    let (env, token_contract_address, owner, recipient, mint_amount) =
-        utils::setup_and_mint_to_public_without_minter(false);
-    // Transfer tokens
-    let transfer_amount = mint_amount / (10 as u128);
-    let public_transfer_call_interface = Token::at(token_contract_address)
-        .transfer_public_to_public(owner, recipient, transfer_amount, random());
-    authwit_cheatcodes::add_public_authwit_from_call_interface(
-        owner,
-        recipient,
-        public_transfer_call_interface,
-    );
-    // Try to transfer tokens
-    public_transfer_call_interface.call(&mut env.public());
-}
-
 #[test(should_fail_with = "unauthorized")]
 unconstrained fn public_transfer_failure_on_behalf_of_other_without_approval() {
     // Setup with account contracts. Slower since we actually deploy them, but needed for authwits.

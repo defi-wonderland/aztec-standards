@@ -25,23 +25,6 @@ unconstrained fn transfer_public_to_private_success() {
     utils::check_private_balance(token_contract_address, recipient, transfer_amount);
 }
 
-#[test(should_fail_with = "invalid nonce")]
-unconstrained fn transfer_public_to_private_success_invalid_nonce() {
-    let (env, token_contract_address, sender, recipient, mint_amount) =
-        utils::setup_and_mint_to_public_without_minter(false);
-
-    utils::check_public_balance(token_contract_address, sender, mint_amount);
-    utils::check_private_balance(token_contract_address, recipient, 0);
-
-    let nonce = random();
-    let transfer_amount = mint_amount / 2;
-
-    env.impersonate(sender);
-    Token::at(token_contract_address)
-        .transfer_public_to_private(sender, recipient, transfer_amount, nonce)
-        .call(&mut env.private());
-}
-
 #[test(should_fail_with = "Assertion failed: attempt to subtract with overflow 'public_balances.at(from).read() - amount'")]
 unconstrained fn transfer_public_to_private_not_enough_balance() {
     let (env, token_contract_address, sender, recipient, mint_amount) =
