@@ -3,8 +3,7 @@ use crate::{test::utils, Token};
 #[test]
 unconstrained fn mint_to_public_success() {
     // Setup without account contracts. We are not using authwits here, so dummy accounts are enough
-    let (env, token_contract_address, owner, _, minter) =
-        utils::setup_with_minter(/* with_account_contracts */ false);
+    let (env, token_contract_address, owner, _, minter) = utils::setup_with_minter(false);
 
     env.impersonate(minter);
     let mint_amount: u128 = 10_000;
@@ -19,8 +18,7 @@ unconstrained fn mint_to_public_success() {
 #[test]
 unconstrained fn mint_to_public_failures() {
     // Setup without account contracts. We are not using authwits here, so dummy accounts are enough
-    let (env, token_contract_address, owner, recipient, minter) =
-        utils::setup_with_minter(/* with_account_contracts */ false);
+    let (env, token_contract_address, owner, recipient, minter) = utils::setup_with_minter(false);
 
     // As non-minter
     let mint_amount: u128 = 10_000;

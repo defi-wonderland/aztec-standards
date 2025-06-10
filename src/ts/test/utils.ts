@@ -10,6 +10,7 @@ import {
   Contract,
 } from '@aztec/aztec.js';
 import { TokenContract, TokenContractArtifact } from '../../artifacts/Token.js';
+import { NFTContract, NFTContractArtifact } from '../../artifacts/NFT.js';
 
 export const logger = createLogger('aztec:aztec-standards');
 
@@ -26,23 +27,11 @@ export const setupSandbox = async () => {
   return createPXE();
 };
 
+// --- Token Utils ---
+
 export const expectUintNote = (note: UniqueNote, amount: bigint, owner: AztecAddress) => {
   expect(note.note.items[0]).toEqual(new Fr(owner.toBigInt()));
   expect(note.note.items[2]).toEqual(new Fr(amount));
-};
-
-export const expectAddressNote = (note: UniqueNote, address: AztecAddress, owner: AztecAddress) => {
-  logger.info('checking address note {} {}', [address, owner]);
-  expect(note.note.items[0]).toEqual(new Fr(address.toBigInt()));
-  expect(note.note.items[1]).toEqual(new Fr(owner.toBigInt()));
-};
-
-export const expectAccountNote = (note: UniqueNote, owner: AztecAddress, secret?: FieldLike) => {
-  logger.info('checking address note {} {}', [owner, secret]);
-  expect(note.note.items[0]).toEqual(new Fr(owner.toBigInt()));
-  if (secret !== undefined) {
-    expect(note.note.items[1]).toEqual(secret);
-  }
 };
 
 export const expectTokenBalances = async (
@@ -70,7 +59,24 @@ export async function deployTokenWithMinter(deployer: AccountWallet) {
   const contract = await Contract.deploy(
     deployer,
     TokenContractArtifact,
-    ['PrivateToken', 'PT', 18, deployer.getAddress()],
+    ['PrivateToken', 'PT', 18, deployer.getAddress(), AztecAddress.ZERO],
+    'constructor_with_minter',
+  )
+    .send()
+    .deployed();
+  return contract;
+}
+
+/**
+ * Deploys the NFT contract with a specified minter.
+ * @param deployer - The wallet to deploy the contract with.
+ * @returns A deployed contract instance.
+ */
+export async function deployNFTWithMinter(deployer: AccountWallet) {
+  const contract = await Contract.deploy(
+    deployer,
+    NFTContractArtifact,
+    ['NFT', 'NFT', deployer.getAddress()],
     'constructor_with_minter',
   )
     .send()

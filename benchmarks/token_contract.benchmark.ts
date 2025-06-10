@@ -1,14 +1,9 @@
-import {
-  type AccountWallet,
-  type ContractFunctionInteraction,
-  type PXE,
-  createPXEClient,
-} from '@aztec/aztec.js';
+import { type AccountWallet, type ContractFunctionInteraction, type PXE, createPXEClient } from '@aztec/aztec.js';
 import { getInitialTestAccountsWallets } from '@aztec/accounts/testing';
 import { parseUnits } from 'viem';
 
 // Import the new Benchmark base class and context
-import { Benchmark, BenchmarkContext } from 'aztec-benchmark';
+import { Benchmark, BenchmarkContext } from '@defi-wonderland/aztec-benchmark';
 
 import { TokenContract } from '../src/artifacts/Token.js';
 import { deployTokenWithMinter } from '../src/ts/test/utils.js';
@@ -60,7 +55,9 @@ export default class TokenContractBenchmark extends Benchmark {
 
       // Transfer methods
       tokenContract.withWallet(alice).methods.transfer_private_to_public(owner, bob.getAddress(), amt(10), 0),
-      tokenContract.withWallet(alice).methods.transfer_private_to_public_with_commitment(owner, bob.getAddress(), amt(10), 0),
+      tokenContract
+        .withWallet(alice)
+        .methods.transfer_private_to_public_with_commitment(owner, bob.getAddress(), amt(10), 0),
       tokenContract.withWallet(alice).methods.transfer_private_to_private(owner, bob.getAddress(), amt(10), 0),
       tokenContract.withWallet(alice).methods.transfer_public_to_private(owner, bob.getAddress(), amt(10), 0),
       tokenContract.withWallet(alice).methods.transfer_public_to_public(owner, bob.getAddress(), amt(10), 0),

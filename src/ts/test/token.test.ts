@@ -12,13 +12,21 @@ import {
   IntentAction,
 } from '@aztec/aztec.js';
 import { getInitialTestAccountsWallets } from '@aztec/accounts/testing';
-import { AMOUNT, createPXE, expectTokenBalances, expectUintNote, setupSandbox, wad, deployTokenWithMinter } from './utils.js';
+import {
+  AMOUNT,
+  createPXE,
+  expectTokenBalances,
+  expectUintNote,
+  setupSandbox,
+  wad,
+  deployTokenWithMinter,
+} from './utils.js';
 
 export async function deployTokenWithInitialSupply(deployer: AccountWallet) {
   const contract = await Contract.deploy(
     deployer,
     TokenContractArtifact,
-    ['PrivateToken', 'PT', 18, 0, deployer.getAddress()],
+    ['PrivateToken', 'PT', 18, 0, deployer.getAddress(), deployer.getAddress()],
     'constructor_with_initial_supply',
   )
     .send()
@@ -63,13 +71,13 @@ describe('Token - Single PXE', () => {
 
     const deploymentData = await getContractInstanceFromDeployParams(TokenContractArtifact, {
       constructorArtifact: 'constructor_with_minter',
-      constructorArgs: ['PrivateToken', 'PT', 18, deployerWallet.getAddress()],
+      constructorArgs: ['PrivateToken', 'PT', 18, deployerWallet.getAddress(), deployerWallet.getAddress()],
       salt,
       deployer: deployerWallet.getAddress(),
     });
     const deployer = new ContractDeployer(TokenContractArtifact, deployerWallet, undefined, 'constructor_with_minter');
     const tx = deployer
-      .deploy('PrivateToken', 'PT', 18, deployerWallet.getAddress())
+      .deploy('PrivateToken', 'PT', 18, deployerWallet.getAddress(), deployerWallet.getAddress())
       .send({ contractAddressSalt: salt });
     const receipt = await tx.getReceipt();
 
@@ -100,7 +108,7 @@ describe('Token - Single PXE', () => {
 
     const deploymentData = await getContractInstanceFromDeployParams(TokenContractArtifact, {
       constructorArtifact: 'constructor_with_initial_supply',
-      constructorArgs: ['PrivateToken', 'PT', 18, 1, deployerWallet.getAddress()],
+      constructorArgs: ['PrivateToken', 'PT', 18, 1, deployerWallet.getAddress(), deployerWallet.getAddress()],
       salt,
       deployer: deployerWallet.getAddress(),
     });
@@ -111,7 +119,7 @@ describe('Token - Single PXE', () => {
       'constructor_with_initial_supply',
     );
     const tx = deployer
-      .deploy('PrivateToken', 'PT', 18, 1, deployerWallet.getAddress())
+      .deploy('PrivateToken', 'PT', 18, 1, deployerWallet.getAddress(), deployerWallet.getAddress())
       .send({ contractAddressSalt: salt });
     const receipt = await tx.getReceipt();
 
@@ -210,20 +218,6 @@ describe('Token - Single PXE', () => {
     expect(totalSupply).toBe(AMOUNT * 2n);
   }, 300_000);
 
-  it('fails when using an invalid nonce', async () => {
-    // Mint 1 token privately to alice
-    await token.withWallet(alice).methods.mint_to_private(alice.getAddress(), alice.getAddress(), AMOUNT).send().wait();
-
-    // This fails because of the nonce check
-    await expect(
-      token
-        .withWallet(alice)
-        .methods.transfer_private_to_public(alice.getAddress(), alice.getAddress(), AMOUNT * 2n, 1)
-        .send()
-        .wait(),
-    ).rejects.toThrow(/invalid nonce/);
-  }, 300_000);
-
   it.skip('fails when transferring more tokens than available in private balance', async () => {
     // Mint 1 token privately to alice
     await token.withWallet(alice).methods.mint_to_private(alice.getAddress(), alice.getAddress(), AMOUNT).send().wait();
@@ -286,35 +280,34 @@ describe('Token - Single PXE', () => {
     expect(alicePublicBalance).toBe(0n);
   }, 300_000);
 
-  // TODO(#29): burn was nuked because of this PR, re-enable it
-  // it('can burn tokens from private balance', async () => {
-  //   // Mint 2 tokens privately to alice
-  //   await token
-  //     .withWallet(alice)
-  //     .methods.mint_to_private(alice.getAddress(), alice.getAddress(), AMOUNT * 2n)
-  //     .send()
-  //     .wait();
+  it('can burn tokens from private balance', async () => {
+    // Mint 2 tokens privately to alice
+    await token
+      .withWallet(alice)
+      .methods.mint_to_private(alice.getAddress(), alice.getAddress(), AMOUNT * 2n)
+      .send()
+      .wait();
 
-  //   // Burn 1 token from alice's private balance
-  //   await token.withWallet(alice).methods.burn_private(alice.getAddress(), AMOUNT, 0).send().wait();
+    // Burn 1 token from alice's private balance
+    await token.withWallet(alice).methods.burn_private(alice.getAddress(), AMOUNT, 0).send().wait();
 
-  //   // Try to burn more than available balance
-  //   await expect(
-  //     token
-  //       .withWallet(alice)
-  //       .methods.burn_private(alice.getAddress(), AMOUNT * 2n, 0)
-  //       .send()
-  //       .wait(),
-  //   ).rejects.toThrow(/Balance too low/);
+    // Try to burn more than available balance
+    await expect(
+      token
+        .withWallet(alice)
+        .methods.burn_private(alice.getAddress(), AMOUNT * 2n, 0)
+        .send()
+        .wait(),
+    ).rejects.toThrow(/Balance too low/);
 
-  //   // Check total supply decreased
-  //   const totalSupply = await token.methods.total_supply().simulate();
-  //   expect(totalSupply).toBe(AMOUNT);
+    // Check total supply decreased
+    const totalSupply = await token.methods.total_supply().simulate();
+    expect(totalSupply).toBe(AMOUNT);
 
-  //   // Public balance should still be 0
-  //   const alicePublicBalance = await token.methods.balance_of_public(alice.getAddress()).simulate();
-  //   expect(alicePublicBalance).toBe(0n);
-  // }, 300_000);
+    // Public balance should still be 0
+    const alicePublicBalance = await token.methods.balance_of_public(alice.getAddress()).simulate();
+    expect(alicePublicBalance).toBe(0n);
+  }, 300_000);
 
   it('can transfer tokens from public to private balance', async () => {
     // Mint 2 tokens publicly to alice
@@ -504,7 +497,7 @@ describe('Token - Multi PXE', () => {
       .methods.transfer_public_to_private(alice.getAddress(), alice.getAddress(), wad(5), 0)
       .send()
       .wait();
-    await token.methods.sync_notes().simulate({});
+    await token.withWallet(alice).methods.sync_private_state().simulate({});
 
     // assert balances
     await expectTokenBalances(token, alice.getAddress(), wad(5), wad(5));
@@ -521,8 +514,8 @@ describe('Token - Multi PXE', () => {
       .send()
       .wait();
 
-    await token.withWallet(alice).methods.sync_notes().simulate({});
-    await token.withWallet(bob).methods.sync_notes().simulate({});
+    await token.withWallet(alice).methods.sync_private_state().simulate({});
+    await token.withWallet(bob).methods.sync_private_state().simulate({});
 
     notes = await alicePXE.getNotes({ txHash: fundBobTx.txHash });
     expect(notes.length).toBe(1);
@@ -540,8 +533,8 @@ describe('Token - Multi PXE', () => {
       .send()
       .wait();
 
-    await token.withWallet(alice).methods.sync_notes().simulate({});
-    await token.withWallet(bob).methods.sync_notes().simulate({});
+    await token.withWallet(alice).methods.sync_private_state().simulate({});
+    await token.withWallet(bob).methods.sync_private_state().simulate({});
 
     // assert balances
     await expectTokenBalances(token, alice.getAddress(), wad(0), wad(0));

@@ -1,12 +1,15 @@
 {
-  "name": "aztec_standards",
+  "name": "@defi-wonderland/aztec-standards",
   "version": "0.0.0",
-  "repository": "https://github.com/defi-wonderland/aztec-standards.git",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/defi-wonderland/aztec-standards.git"
+  },
   "author": "Wonderland",
   "license": "MIT",
-  "private": true,
   "type": "module",
   "scripts": {
+    "postinstall": "husky",
     "clean": "rm -rf ./src/artifacts ./target",
     "codegen": "aztec codegen target --outdir src/artifacts",
     "compile": "aztec-nargo compile",
@@ -15,15 +18,16 @@
     "test:js": "NODE_NO_WARNINGS=1 node --experimental-vm-modules $(yarn bin jest) --no-cache --runInBand --config jest.integration.config.json",
     "test:nr": "aztec test",
     "lint:prettier": "prettier '**/*.{js,ts}' --write",
-    "bench": "benchmark-cli"
+    "bench": "NODE_NO_WARNINGS=1 aztec-benchmark --suffix _base"
   },
   "lint-staged": {
     "*.ts": "prettier --write -u"
   },
   "dependencies": {
-    "@aztec/accounts": "0.86.0",
-    "@aztec/aztec.js": "0.86.0",
-    "@aztec/noir-contracts.js": "0.86.0",
+    "@aztec/accounts": "0.87.2",
+    "@aztec/aztec.js": "0.87.2",
+    "@aztec/noir-contracts.js": "0.87.2",
+    "@defi-wonderland/aztec-benchmark": "1.0.0",
     "@types/node": "22.5.1"
   },
   "devDependencies": {
@@ -36,11 +40,13 @@
     "prettier": "3.4.2",
     "ts-jest": "29.2.5",
     "ts-node": "10.9.2",
-    "typescript": "5.7.2",
-    "aztec-benchmark": "^1.0.13"
+    "typescript": "5.7.2"
   },
   "jest": {
     "testTimeout": 200000
+  },
+  "config": {
+    "aztecVersion": "0.87.2"
   },
   "packageManager": "yarn@1.22.22+sha512.a6b2f7906b721bba3d67d4aff083df04dad64c399707841b7acf00f6b133b7ac24255f2652fa22ae3534329dc6180534e98d17432037ff6fd140556e2bb3137e"
 }

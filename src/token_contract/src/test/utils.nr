@@ -73,8 +73,10 @@ pub unconstrained fn deploy_token_with_initial_supply(
         18,
         initial_supply,
         to,
+        AztecAddress::zero(),
     );
     let token_contract = env.deploy("./@token_contract", "Token").with_public_void_initializer(
+        owner,
         initializer_call_interface,
     );
     env.advance_block_by(1);
@@ -96,8 +98,10 @@ pub unconstrained fn deploy_token_with_minter(
         "TT00000000000000000000000000000",
         18,
         minter,
+        AztecAddress::zero(),
     );
     let token_contract = env.deploy("./@token_contract", "Token").with_public_void_initializer(
+        owner,
         initializer_call_interface,
     );
     env.advance_block_by(1);
@@ -293,14 +297,18 @@ pub unconstrained fn add_token_note(
 }
 
 pub unconstrained fn get_private_balance_notes(
+    token_contract_address: AztecAddress,
     account: AztecAddress,
     offset: u32,
 ) -> BoundedVec<UintNote, MAX_NOTES_PER_PAGE> {
+    let current_contract_address = get_contract_address();
+    cheatcodes::set_contract_address(token_contract_address);
     let mut options = NoteViewerOptions::new();
     let private_balances_slot = Token::storage_layout().private_balances.slot;
     let private_balance_slot = derive_storage_slot_in_map(private_balances_slot, account);
     let notes: BoundedVec<UintNote, MAX_NOTES_PER_PAGE> =
         view_notes(private_balance_slot, options.set_offset(offset));
+    cheatcodes::set_contract_address(current_contract_address);
     notes
 }
 
