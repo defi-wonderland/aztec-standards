@@ -13,8 +13,6 @@ import {
   AztecAddress,
   AccountManager,
 } from '@aztec/aztec.js';
-import { getInitialTestAccountsWallets } from '@aztec/accounts/testing';
-import { createPXE, setupSandbox } from './utils.js';
 import { getSponsoredFeePaymentMethod, setupSponsoredFPC } from '../contracts/fpc.js';
 import { setupPXE } from '../contracts/pxe.js';
 import { deploySchnorrAccount } from '../contracts/accounts.js';
@@ -99,8 +97,6 @@ describe('NFT - Single PXE', () => {
   let nft: NFTContract;
 
   beforeAll(async () => {
-    pxe = await setupSandbox();
-
     ({ pxe, aliceAccount, bobAccount, carlAccount, defaultFPM, defaultOptions } = await setupTestSuite());
 
     alice = await aliceAccount.getWallet();

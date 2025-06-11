@@ -67,8 +67,6 @@ describe('Token - Single PXE', () => {
   let defaultOptions: any;
 
   beforeAll(async () => {
-    logger.info('Aztec-Starter tests running.');
-
     ({ pxe, aliceAccount, bobAccount, carlAccount, pm, defaultFPM, defaultOptions } = await setupTestSuite());
 
     alice = await aliceAccount.getWallet();
