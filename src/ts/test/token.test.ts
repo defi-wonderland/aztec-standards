@@ -1,28 +1,26 @@
 import { TokenContractArtifact, TokenContract } from '../../artifacts/Token.js';
 import {
-  AccountWallet,
   CompleteAddress,
   ContractDeployer,
   Fr,
-  PXE,
   TxStatus,
   getContractInstanceFromDeployParams,
   Contract,
   AccountWalletWithSecretKey,
   IntentAction,
+  SponsoredFeePaymentMethod,
+  Wallet,
+  L1FeeJuicePortalManager,
+  AccountManager,
 } from '@aztec/aztec.js';
-import { getInitialTestAccountsWallets } from '@aztec/accounts/testing';
-import {
-  AMOUNT,
-  createPXE,
-  expectTokenBalances,
-  expectUintNote,
-  setupSandbox,
-  wad,
-  deployTokenWithMinter,
-} from './utils.js';
+import { AMOUNT, deployTokenWithMinter, expectTokenBalances, expectUintNote, logger, wad } from './utils.js';
+import { PXE } from '@aztec/stdlib/interfaces/client';
+import { getSponsoredFeePaymentMethod, setupSponsoredFPC } from '../contracts/fpc.js';
+import { setupPXE } from '../contracts/pxe.js';
+import { setupFeeJuicePortalManager } from '../contracts/pm.js';
+import { deploySchnorrAccount } from '../contracts/accounts.js';
 
-export async function deployTokenWithInitialSupply(deployer: AccountWallet) {
+export async function deployTokenWithInitialSupply(deployer: Wallet) {
   const contract = await Contract.deploy(
     deployer,
     TokenContractArtifact,
@@ -34,26 +32,47 @@ export async function deployTokenWithInitialSupply(deployer: AccountWallet) {
   return contract;
 }
 
+const setupTestSuite = async () => {
+  const pxe = await setupPXE();
+  await setupSponsoredFPC(pxe);
+  const defaultFPM = await getSponsoredFeePaymentMethod(pxe);
+  const defaultOptions = {
+    fee: { paymentMethod: defaultFPM },
+  };
+  const pm = await setupFeeJuicePortalManager(pxe);
+
+  const aliceAccount = await await deploySchnorrAccount(pxe, defaultOptions);
+  const bobAccount = await await deploySchnorrAccount(pxe, defaultOptions);
+  const carlAccount = await await deploySchnorrAccount(pxe, defaultOptions);
+
+  return { pxe, aliceAccount, bobAccount, carlAccount, pm, defaultFPM, defaultOptions };
+};
+
 describe('Token - Single PXE', () => {
   let pxe: PXE;
-  let wallets: AccountWalletWithSecretKey[] = [];
-  let accounts: CompleteAddress[] = [];
 
-  let alice: AccountWallet;
-  let bob: AccountWallet;
-  let carl: AccountWallet;
+  let aliceAccount: AccountManager;
+  let bobAccount: AccountManager;
+  let carlAccount: AccountManager;
+
+  let alice: AccountWalletWithSecretKey;
+  let bob: AccountWalletWithSecretKey;
+  let carl: AccountWalletWithSecretKey;
 
   let token: TokenContract;
 
+  let pm: L1FeeJuicePortalManager;
+  let defaultFPM;
+  let defaultOptions: any;
+
   beforeAll(async () => {
-    pxe = await setupSandbox();
+    logger.info('Aztec-Starter tests running.');
 
-    wallets = await getInitialTestAccountsWallets(pxe);
-    accounts = wallets.map((w) => w.getCompleteAddress());
+    ({ pxe, aliceAccount, bobAccount, carlAccount, pm, defaultFPM, defaultOptions } = await setupTestSuite());
 
-    alice = wallets[0];
-    bob = wallets[1];
-    carl = wallets[2];
+    alice = await aliceAccount.getWallet();
+    bob = await bobAccount.getWallet();
+    carl = await carlAccount.getWallet();
 
     console.log({
       alice: alice.getAddress(),
@@ -62,12 +81,12 @@ describe('Token - Single PXE', () => {
   });
 
   beforeEach(async () => {
-    token = (await deployTokenWithMinter(alice)) as TokenContract;
+    token = (await deployTokenWithMinter(alice, defaultOptions)) as TokenContract;
   });
 
   it('deploys the contract with minter', async () => {
     const salt = Fr.random();
-    const [deployerWallet] = wallets; // using first account as deployer
+    const deployerWallet = alice;
 
     const deploymentData = await getContractInstanceFromDeployParams(TokenContractArtifact, {
       constructorArtifact: 'constructor_with_minter',
@@ -78,7 +97,9 @@ describe('Token - Single PXE', () => {
     const deployer = new ContractDeployer(TokenContractArtifact, deployerWallet, undefined, 'constructor_with_minter');
     const tx = deployer
       .deploy('PrivateToken', 'PT', 18, deployerWallet.getAddress(), deployerWallet.getAddress())
-      .send({ contractAddressSalt: salt });
+      .send({
+        contractAddressSalt: salt,
+      });
     const receipt = await tx.getReceipt();
 
     expect(receipt).toEqual(
@@ -104,7 +125,7 @@ describe('Token - Single PXE', () => {
 
   it('deploys the contract with initial supply', async () => {
     const salt = Fr.random();
-    const [deployerWallet] = wallets; // using first account as deployer
+    const deployerWallet = alice; // using first account as deployer
 
     const deploymentData = await getContractInstanceFromDeployParams(TokenContractArtifact, {
       constructorArtifact: 'constructor_with_initial_supply',
@@ -146,7 +167,7 @@ describe('Token - Single PXE', () => {
 
   it('mints', async () => {
     await token.withWallet(alice);
-    const tx = await token.methods.mint_to_public(bob.getAddress(), AMOUNT).send().wait();
+    const tx = await token.methods.mint_to_public(bob.getAddress(), AMOUNT).send(defaultOptions).wait();
     const balance = await token.methods.balance_of_public(bob.getAddress()).simulate();
     expect(balance).toBe(AMOUNT);
   }, 300_000);
@@ -446,42 +467,48 @@ describe('Token - Single PXE', () => {
 });
 
 describe('Token - Multi PXE', () => {
-  let alicePXE: PXE;
-  let bobPXE: PXE;
+  let pxe: PXE;
 
-  let aliceWallet: AccountWalletWithSecretKey;
-  let bobWallet: AccountWalletWithSecretKey;
+  let aliceAccount: AccountManager;
+  let bobAccount: AccountManager;
+  let carlAccount: AccountManager;
 
-  let alice: AccountWallet;
-  let bob: AccountWallet;
+  let alice: AccountWalletWithSecretKey;
+  let bob: AccountWalletWithSecretKey;
+  let carl: AccountWalletWithSecretKey;
 
   let token: TokenContract;
 
+  let pm: L1FeeJuicePortalManager;
+  let defaultFPM;
+  let defaultOptions: any;
+
+  let alicePXE: PXE;
+  let bobPXE: PXE;
+
   beforeAll(async () => {
-    alicePXE = await createPXE(0);
-    bobPXE = await createPXE(1);
+    ({ pxe, aliceAccount, bobAccount, carlAccount, pm, defaultFPM, defaultOptions } = await setupTestSuite());
 
-    const initialsAlice = await getInitialTestAccountsWallets(alicePXE);
-    const initialsBob = await getInitialTestAccountsWallets(bobPXE);
-    // TODO: assert that the used PXEs are actually separate instances?
+    alice = await aliceAccount.getWallet();
+    bob = await bobAccount.getWallet();
+    carl = await carlAccount.getWallet();
 
-    aliceWallet = initialsAlice[0];
-    bobWallet = initialsBob[1];
-    alice = initialsAlice[0];
-    bob = initialsBob[1];
+    // TODO: use different PXE instances.
+    alicePXE = pxe;
+    bobPXE = pxe;
   });
 
   beforeEach(async () => {
-    token = (await deployTokenWithMinter(alice)) as TokenContract;
+    token = (await deployTokenWithMinter(alice, defaultOptions)) as TokenContract;
     await bobPXE.registerContract(token);
 
     // alice knows bob
     // TODO: review this, alice shouldn't need to register bob's **secrets**!
-    await alicePXE.registerAccount(bobWallet.getSecretKey(), bob.getCompleteAddress().partialAddress);
+    await alicePXE.registerAccount(bob.getSecretKey(), bob.getCompleteAddress().partialAddress);
     await alicePXE.registerSender(bob.getAddress());
 
     // bob knows alice
-    await bobPXE.registerAccount(aliceWallet.getSecretKey(), alice.getCompleteAddress().partialAddress);
+    await bobPXE.registerAccount(alice.getSecretKey(), alice.getCompleteAddress().partialAddress);
     await bobPXE.registerSender(alice.getAddress());
   });
 
