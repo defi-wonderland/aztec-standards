@@ -20,16 +20,3 @@ export const setupPXE = async () => {
   await waitForPXE(pxe);
   return pxe;
 };
-
-// export const createPXE = async (id: number = 0) => {
-//   const { BASE_PXE_URL = `http://localhost` } = process.env;
-//   const url = `${BASE_PXE_URL}:${8080 + id}`;
-//   const pxe = createPXEClient(url);
-//   logger.info(`Waiting for PXE to be ready at ${url}`);
-//   await waitForPXE(pxe);
-//   return pxe;
-// };
-
-// export const setupSandbox = async () => {
-//   return createPXE();
-// };

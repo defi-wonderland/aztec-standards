@@ -1,7 +1,6 @@
 import { NFTContract, NFTContractArtifact } from '../../artifacts/NFT.js';
 import {
   AccountWallet,
-  CompleteAddress,
   Fr,
   PXE,
   TxStatus,
@@ -12,6 +11,8 @@ import {
   IntentAction,
   AztecAddress,
   AccountManager,
+  DeployOptions,
+  FeePaymentMethod,
 } from '@aztec/aztec.js';
 import { getSponsoredFeePaymentMethod, setupSponsoredFPC } from '../contracts/fpc.js';
 import { setupPXE } from '../contracts/pxe.js';
@@ -19,7 +20,7 @@ import { deploySchnorrAccount } from '../contracts/accounts.js';
 import { setupFeeJuicePortalManager } from '../contracts/pm.js';
 
 // Deploy NFT contract with a minter
-async function deployNFTWithMinter(deployer: AccountWallet, options: any) {
+async function deployNFTWithMinter(deployer: AccountWallet, options: DeployOptions) {
   const contract = await Contract.deploy(
     deployer,
     NFTContractArtifact,
@@ -91,9 +92,8 @@ describe('NFT - Single PXE', () => {
   let bob: AccountWalletWithSecretKey;
   let carl: AccountWalletWithSecretKey;
 
-  let defaultFPM;
-  // TODO: replace any (there's a type defined in aztec.js)
-  let defaultOptions: any;
+  let defaultFPM: FeePaymentMethod;
+  let defaultOptions: DeployOptions;
   let nft: NFTContract;
 
   beforeAll(async () => {

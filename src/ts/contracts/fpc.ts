@@ -4,7 +4,7 @@ import { Wallet } from '@aztec/aztec.js';
 import { PXE } from '@aztec/stdlib/interfaces/client';
 import { SponsoredFeePaymentMethod } from '@aztec/aztec.js/fee/testing';
 
-const SPONSORED_FPC_SALT = new Fr(0);
+export const SPONSORED_FPC_SALT = new Fr(0);
 
 export async function getSponsoredFPCInstance(): Promise<ContractInstanceWithAddress> {
   return await getContractInstanceFromDeployParams(SponsoredFPCContract.artifact, {

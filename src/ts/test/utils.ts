@@ -1,4 +1,4 @@
-import { createLogger, Fr, AztecAddress, UniqueNote, AccountWallet, Contract } from '@aztec/aztec.js';
+import { createLogger, Fr, AztecAddress, UniqueNote, AccountWallet, Contract, DeployOptions } from '@aztec/aztec.js';
 import { TokenContract, TokenContractArtifact } from '../../artifacts/Token.js';
 import { NFTContractArtifact } from '../../artifacts/NFT.js';
 
@@ -32,7 +32,7 @@ export const wad = (n: number = 1) => AMOUNT * BigInt(n);
  * @param deployer - The wallet to deploy the contract with.
  * @returns A deployed contract instance.
  */
-export async function deployTokenWithMinter(deployer: AccountWallet, options: any) {
+export async function deployTokenWithMinter(deployer: AccountWallet, options: DeployOptions) {
   const contract = await Contract.deploy(
     deployer,
     TokenContractArtifact,
@@ -49,14 +49,14 @@ export async function deployTokenWithMinter(deployer: AccountWallet, options: an
  * @param deployer - The wallet to deploy the contract with.
  * @returns A deployed contract instance.
  */
-export async function deployNFTWithMinter(deployer: AccountWallet) {
+export async function deployNFTWithMinter(deployer: AccountWallet, options: DeployOptions) {
   const contract = await Contract.deploy(
     deployer,
     NFTContractArtifact,
     ['NFT', 'NFT', deployer.getAddress()],
     'constructor_with_minter',
   )
-    .send()
+    .send(options)
     .deployed();
   return contract;
 }
