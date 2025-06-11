@@ -37,7 +37,7 @@ unconstrained fn transfer_private_to_public_with_commitment_stores_commitment() 
         .call(&mut env.private());
     env.advance_block_by(1);
 
-    let validity_commitment = commitment.compute_validity_commitment(recipient);
+    let validity_commitment = PartialUintNote { commitment }.compute_validity_commitment(recipient);
     assert(
         env.public().nullifier_exists(validity_commitment, token_contract_address),
         "validity nullifier should exist",
@@ -123,7 +123,7 @@ unconstrained fn transfer_private_to_public_with_commitment_and_finalize_with_in
         .transfer_private_to_public_with_commitment(owner, recipient, transfer_amount, 0)
         .call(&mut env.private());
 
-    let invalid_commitment = PartialUintNote { commitment: 0xdeadbeef };
+    let invalid_commitment = 0xdeadbeef;
 
     // finalize transfer to an invalid commitment
     env.impersonate(recipient);
@@ -155,7 +155,7 @@ unconstrained fn transfer_private_to_public_with_commitment_and_finalize_with_co
         .transfer_private_to_public_with_commitment(owner, recipient, transfer_amount, 0)
         .call(&mut env.private());
 
-    let invalid_commitment = PartialUintNote { commitment: 0 };
+    let invalid_commitment = 0;
     // Transfer tokens
     env.impersonate(recipient);
     Token::at(token_contract_address)

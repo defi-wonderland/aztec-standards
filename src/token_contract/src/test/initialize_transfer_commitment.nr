@@ -15,7 +15,7 @@ unconstrained fn initialize_transfer_commitment() {
 
     // Check that the commitment has been stored
     assert(
-        utils::_commitment_storage_read(token_contract_address, commitment.commitment()),
+        utils::_commitment_storage_read(token_contract_address, commitment),
         "Commitment not stored",
     );
 }

@@ -105,7 +105,7 @@ unconstrained fn mint_to_private_failure_invalid_commitments_random() {
     env.impersonate(minter);
 
     Token::at(token_contract_address)
-        .mint_to_commitment(PartialUintNote { commitment: random() }, mint_amount)
+        .mint_to_commitment(random(), mint_amount)
         .call(&mut env.public());
 }
 
@@ -116,7 +116,7 @@ unconstrained fn mint_to_private_failure_invalid_commitments_zero() {
     let mint_amount: u128 = 10_000;
     env.impersonate(minter);
     Token::at(token_contract_address)
-        .mint_to_commitment(PartialUintNote { commitment: 0 }, mint_amount)
+        .mint_to_commitment(0, mint_amount)
         .call(&mut env.public());
 }
 
