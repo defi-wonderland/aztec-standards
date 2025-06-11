@@ -1,5 +1,6 @@
 use crate::test::utils;
 use crate::Token;
+use uint_note::uint_note::PartialUintNote;
 
 #[test]
 unconstrained fn initialize_transfer_commitment() {
@@ -13,9 +14,9 @@ unconstrained fn initialize_transfer_commitment() {
         .call(&mut env.private());
     env.advance_block_by(1);
 
-    // Check that the commitment has been stored
+    let validity_commitment = PartialUintNote { commitment }.compute_validity_commitment(owner);
     assert(
-        utils::_commitment_storage_read(token_contract_address, commitment),
-        "Commitment not stored",
+        env.public().nullifier_exists(validity_commitment, token_contract_address),
+        "validity nullifier should exist",
     );
 }
