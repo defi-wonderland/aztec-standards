@@ -11,19 +11,24 @@ import {
   AccountWalletWithSecretKey,
   IntentAction,
   AztecAddress,
+  AccountManager,
 } from '@aztec/aztec.js';
 import { getInitialTestAccountsWallets } from '@aztec/accounts/testing';
 import { createPXE, setupSandbox } from './utils.js';
+import { getSponsoredFeePaymentMethod, setupSponsoredFPC } from '../contracts/fpc.js';
+import { setupPXE } from '../contracts/pxe.js';
+import { deploySchnorrAccount } from '../contracts/accounts.js';
+import { setupFeeJuicePortalManager } from '../contracts/pm.js';
 
 // Deploy NFT contract with a minter
-async function deployNFTWithMinter(deployer: AccountWallet) {
+async function deployNFTWithMinter(deployer: AccountWallet, options: any) {
   const contract = await Contract.deploy(
     deployer,
     NFTContractArtifact,
     ['TestNFT', 'TNFT', deployer.getAddress()],
     'constructor_with_minter',
   )
-    .send()
+    .send(options)
     .deployed();
   return contract;
 }
@@ -61,26 +66,46 @@ async function assertPrivateNFTNullified(
   expect(hasNFT).toBe(false);
 }
 
-describe.skip('NFT - Single PXE', () => {
+const setupTestSuite = async () => {
+  const pxe = await setupPXE();
+  await setupSponsoredFPC(pxe);
+  const defaultFPM = await getSponsoredFeePaymentMethod(pxe);
+  const defaultOptions = {
+    fee: { paymentMethod: defaultFPM },
+  };
+  const pm = await setupFeeJuicePortalManager(pxe);
+
+  const aliceAccount = await await deploySchnorrAccount(pxe, defaultOptions);
+  const bobAccount = await await deploySchnorrAccount(pxe, defaultOptions);
+  const carlAccount = await await deploySchnorrAccount(pxe, defaultOptions);
+
+  return { pxe, aliceAccount, bobAccount, carlAccount, pm, defaultFPM, defaultOptions };
+};
+
+describe('NFT - Single PXE', () => {
   let pxe: PXE;
-  let wallets: AccountWalletWithSecretKey[] = [];
-  let accounts: CompleteAddress[] = [];
 
-  let alice: AccountWallet;
-  let bob: AccountWallet;
-  let carl: AccountWallet;
+  let aliceAccount: AccountManager;
+  let bobAccount: AccountManager;
+  let carlAccount: AccountManager;
 
+  let alice: AccountWalletWithSecretKey;
+  let bob: AccountWalletWithSecretKey;
+  let carl: AccountWalletWithSecretKey;
+
+  let defaultFPM;
+  // TODO: replace any (there's a type defined in aztec.js)
+  let defaultOptions: any;
   let nft: NFTContract;
 
   beforeAll(async () => {
     pxe = await setupSandbox();
 
-    wallets = await getInitialTestAccountsWallets(pxe);
-    accounts = wallets.map((w) => w.getCompleteAddress());
+    ({ pxe, aliceAccount, bobAccount, carlAccount, defaultFPM, defaultOptions } = await setupTestSuite());
 
-    alice = wallets[0];
-    bob = wallets[1];
-    carl = wallets[2];
+    alice = await aliceAccount.getWallet();
+    bob = await bobAccount.getWallet();
+    carl = await carlAccount.getWallet();
 
     console.log({
       alice: alice.getAddress(),
@@ -89,12 +114,12 @@ describe.skip('NFT - Single PXE', () => {
   });
 
   beforeEach(async () => {
-    nft = (await deployNFTWithMinter(alice)) as NFTContract;
+    nft = (await deployNFTWithMinter(alice, defaultOptions)) as NFTContract;
   });
 
   it('deploys the contract with minter', async () => {
     const salt = Fr.random();
-    const [deployerWallet] = wallets; // using first account as deployer
+    const deployerWallet = alice; // using first account as deployer
 
     const deploymentData = await getContractInstanceFromDeployParams(NFTContractArtifact, {
       constructorArtifact: 'constructor_with_minter',
@@ -105,7 +130,9 @@ describe.skip('NFT - Single PXE', () => {
 
     const deployer = new ContractDeployer(NFTContractArtifact, deployerWallet, undefined, 'constructor_with_minter');
 
-    const tx = deployer.deploy('TestNFT', 'TNFT', deployerWallet.getAddress()).send({ contractAddressSalt: salt });
+    const tx = deployer
+      .deploy('TestNFT', 'TNFT', deployerWallet.getAddress())
+      .send({ ...defaultOptions, contractAddressSalt: salt });
 
     const receipt = await tx.getReceipt();
 
@@ -134,7 +161,7 @@ describe.skip('NFT - Single PXE', () => {
 
   it('mints NFT to public', async () => {
     const tokenId = 1n;
-    await nft.withWallet(alice).methods.mint_to_public(bob.getAddress(), tokenId).send().wait();
+    await nft.withWallet(alice).methods.mint_to_public(bob.getAddress(), tokenId).send(defaultOptions).wait();
 
     // Verify bob owns the NFT publicly
     await assertOwnsPublicNFT(nft, tokenId, bob.getAddress());
@@ -142,7 +169,7 @@ describe.skip('NFT - Single PXE', () => {
 
   it('mints NFT to private', async () => {
     const tokenId = 1n;
-    await nft.withWallet(alice).methods.mint_to_private(bob.getAddress(), tokenId).send().wait();
+    await nft.withWallet(alice).methods.mint_to_private(bob.getAddress(), tokenId).send(defaultOptions).wait();
 
     // Verify bob owns the NFT privately
     await assertOwnsPrivateNFT(nft, tokenId, bob.getAddress());
@@ -152,36 +179,36 @@ describe.skip('NFT - Single PXE', () => {
     const tokenId = 1n;
 
     // Bob attempts to mint when he's not the minter
-    await expect(nft.withWallet(bob).methods.mint_to_public(bob.getAddress(), tokenId).send().wait()).rejects.toThrow(
-      /^Transaction 0x[0-9a-f]+ was app_logic_reverted\. Reason: $/,
-    );
+    await expect(
+      nft.withWallet(bob).methods.mint_to_public(bob.getAddress(), tokenId).send(defaultOptions).wait(),
+    ).rejects.toThrow(/^Transaction 0x[0-9a-f]+ was app_logic_reverted\. Reason: $/);
 
-    await expect(nft.withWallet(bob).methods.mint_to_private(bob.getAddress(), tokenId).send().wait()).rejects.toThrow(
-      /Assertion failed: caller is not minter/,
-    );
+    await expect(
+      nft.withWallet(bob).methods.mint_to_private(bob.getAddress(), tokenId).send(defaultOptions).wait(),
+    ).rejects.toThrow(/Assertion failed: caller is not minter/);
   }, 300_000);
 
   it('fails to mint same token ID twice', async () => {
     const tokenId = 1n;
 
     // First mint succeeds
-    await nft.withWallet(alice).methods.mint_to_public(bob.getAddress(), tokenId).send().wait();
+    await nft.withWallet(alice).methods.mint_to_public(bob.getAddress(), tokenId).send(defaultOptions).wait();
 
     // Second mint with same token ID should fail
     await expect(
-      nft.withWallet(alice).methods.mint_to_public(carl.getAddress(), tokenId).send().wait(),
+      nft.withWallet(alice).methods.mint_to_public(carl.getAddress(), tokenId).send(defaultOptions).wait(),
     ).rejects.toThrow(/^Transaction 0x[0-9a-f]+ was app_logic_reverted\. Reason: $/);
   }, 300_000);
 
   it('fails to mint with token ID zero', async () => {
     const tokenId = 0n;
 
-    await expect(nft.withWallet(alice).methods.mint_to_public(bob.getAddress(), tokenId).send().wait()).rejects.toThrow(
-      /^Transaction 0x[0-9a-f]+ was app_logic_reverted\. Reason: $/,
-    );
+    await expect(
+      nft.withWallet(alice).methods.mint_to_public(bob.getAddress(), tokenId).send(defaultOptions).wait(),
+    ).rejects.toThrow(/^Transaction 0x[0-9a-f]+ was app_logic_reverted\. Reason: $/);
 
     await expect(
-      nft.withWallet(alice).methods.mint_to_private(bob.getAddress(), tokenId).send().wait(),
+      nft.withWallet(alice).methods.mint_to_private(bob.getAddress(), tokenId).send(defaultOptions).wait(),
     ).rejects.toThrow(/zero token ID not supported/);
   }, 300_000);
 
@@ -190,8 +217,8 @@ describe.skip('NFT - Single PXE', () => {
     const tokenId2 = 2n;
 
     // Mint two NFTs to bob
-    await nft.withWallet(alice).methods.mint_to_private(bob.getAddress(), tokenId1).send().wait();
-    await nft.withWallet(alice).methods.mint_to_private(bob.getAddress(), tokenId2).send().wait();
+    await nft.withWallet(alice).methods.mint_to_private(bob.getAddress(), tokenId1).send(defaultOptions).wait();
+    await nft.withWallet(alice).methods.mint_to_private(bob.getAddress(), tokenId2).send(defaultOptions).wait();
 
     // Verify bob owns both NFTs
     await assertOwnsPrivateNFT(nft, tokenId1, bob.getAddress());
@@ -204,13 +231,13 @@ describe.skip('NFT - Single PXE', () => {
     const tokenId = 1n;
 
     // First mint NFT publicly to bob
-    await nft.withWallet(alice).methods.mint_to_public(bob.getAddress(), tokenId).send().wait();
+    await nft.withWallet(alice).methods.mint_to_public(bob.getAddress(), tokenId).send(defaultOptions).wait();
 
     // Verify bob owns the NFT publicly
     await assertOwnsPublicNFT(nft, tokenId, bob.getAddress());
 
     // Bob burns his NFT
-    await nft.withWallet(bob).methods.burn_public(bob.getAddress(), tokenId, 0n).send().wait();
+    await nft.withWallet(bob).methods.burn_public(bob.getAddress(), tokenId, 0n).send(defaultOptions).wait();
 
     // Verify the NFT no longer exists
     const owner = await nft.methods.public_owner_of(tokenId).simulate();
@@ -221,13 +248,13 @@ describe.skip('NFT - Single PXE', () => {
     const tokenId = 1n;
 
     // First mint NFT privately to bob
-    await nft.withWallet(alice).methods.mint_to_private(bob.getAddress(), tokenId).send().wait();
+    await nft.withWallet(alice).methods.mint_to_private(bob.getAddress(), tokenId).send(defaultOptions).wait();
 
     // Verify bob owns the NFT privately
     await assertOwnsPrivateNFT(nft, tokenId, bob.getAddress());
 
     // Bob burns his NFT
-    await nft.withWallet(bob).methods.burn_private(bob.getAddress(), tokenId, 0n).send().wait();
+    await nft.withWallet(bob).methods.burn_private(bob.getAddress(), tokenId, 0n).send(defaultOptions).wait();
 
     // Verify the NFT is nullified
     await assertPrivateNFTNullified(nft, tokenId, bob.getAddress());
@@ -237,20 +264,20 @@ describe.skip('NFT - Single PXE', () => {
     const tokenId = 1n;
 
     // First mint NFT publicly to bob
-    await nft.withWallet(alice).methods.mint_to_public(bob.getAddress(), tokenId).send().wait();
+    await nft.withWallet(alice).methods.mint_to_public(bob.getAddress(), tokenId).send(defaultOptions).wait();
 
     // Carl attempts to burn bob's NFT
     await expect(
-      nft.withWallet(carl).methods.burn_public(carl.getAddress(), tokenId, 0n).send().wait(),
+      nft.withWallet(carl).methods.burn_public(carl.getAddress(), tokenId, 0n).send(defaultOptions).wait(),
     ).rejects.toThrow(/^Transaction 0x[0-9a-f]+ was app_logic_reverted\. Reason: $/);
 
     // First mint NFT privately to bob
     const tokenId2 = 2n;
-    await nft.withWallet(alice).methods.mint_to_private(bob.getAddress(), tokenId2).send().wait();
+    await nft.withWallet(alice).methods.mint_to_private(bob.getAddress(), tokenId2).send(defaultOptions).wait();
 
     // Carl attempts to burn bob's private NFT
     await expect(
-      nft.withWallet(carl).methods.burn_private(carl.getAddress(), tokenId2, 0n).send().wait(),
+      nft.withWallet(carl).methods.burn_private(carl.getAddress(), tokenId2, 0n).send(defaultOptions).wait(),
     ).rejects.toThrow(/nft not found/);
   }, 300_000);
 
@@ -258,14 +285,14 @@ describe.skip('NFT - Single PXE', () => {
     const tokenId = 999n;
 
     // Try to burn non-existent public NFT
-    await expect(nft.withWallet(bob).methods.burn_public(bob.getAddress(), tokenId, 0n).send().wait()).rejects.toThrow(
-      /^Transaction 0x[0-9a-f]+ was app_logic_reverted\. Reason: $/,
-    );
+    await expect(
+      nft.withWallet(bob).methods.burn_public(bob.getAddress(), tokenId, 0n).send(defaultOptions).wait(),
+    ).rejects.toThrow(/^Transaction 0x[0-9a-f]+ was app_logic_reverted\. Reason: $/);
 
     // Try to burn non-existent private NFT
-    await expect(nft.withWallet(bob).methods.burn_private(bob.getAddress(), tokenId, 0n).send().wait()).rejects.toThrow(
-      /nft not found/,
-    );
+    await expect(
+      nft.withWallet(bob).methods.burn_private(bob.getAddress(), tokenId, 0n).send(defaultOptions).wait(),
+    ).rejects.toThrow(/nft not found/);
   }, 300_000);
 
   // --- Transfer tests: private to private ---
@@ -274,7 +301,7 @@ describe.skip('NFT - Single PXE', () => {
     const tokenId = 1n;
 
     // First mint NFT privately to alice
-    await nft.withWallet(alice).methods.mint_to_private(alice.getAddress(), tokenId).send().wait();
+    await nft.withWallet(alice).methods.mint_to_private(alice.getAddress(), tokenId).send(defaultOptions).wait();
 
     // Verify alice owns the NFT privately
     await assertOwnsPrivateNFT(nft, tokenId, alice.getAddress());
@@ -283,7 +310,7 @@ describe.skip('NFT - Single PXE', () => {
     await nft
       .withWallet(alice)
       .methods.transfer_private_to_private(alice.getAddress(), bob.getAddress(), tokenId, 0n)
-      .send()
+      .send(defaultOptions)
       .wait();
 
     // Verify alice no longer owns the NFT
@@ -297,14 +324,14 @@ describe.skip('NFT - Single PXE', () => {
     const tokenId = 1n;
 
     // First mint NFT privately to alice
-    await nft.withWallet(alice).methods.mint_to_private(alice.getAddress(), tokenId).send().wait();
+    await nft.withWallet(alice).methods.mint_to_private(alice.getAddress(), tokenId).send(defaultOptions).wait();
 
     // Carl attempts to transfer alice's NFT to bob
     await expect(
       nft
         .withWallet(carl)
         .methods.transfer_private_to_private(carl.getAddress(), bob.getAddress(), tokenId, 0n)
-        .send()
+        .send(defaultOptions)
         .wait(),
     ).rejects.toThrow(/nft not found/);
 
@@ -319,13 +346,17 @@ describe.skip('NFT - Single PXE', () => {
     const tokenId = 1n;
 
     // First mint NFT privately to alice
-    await nft.withWallet(alice).methods.mint_to_private(alice.getAddress(), tokenId).send().wait();
+    await nft.withWallet(alice).methods.mint_to_private(alice.getAddress(), tokenId).send(defaultOptions).wait();
 
     // Verify alice owns the NFT privately
     await assertOwnsPrivateNFT(nft, tokenId, alice.getAddress());
 
     // Bob initializes a transfer commitment for receiving the NFT
-    await nft.withWallet(bob).methods.initialize_transfer_commitment(bob.getAddress(), bob.getAddress()).send().wait();
+    await nft
+      .withWallet(bob)
+      .methods.initialize_transfer_commitment(bob.getAddress(), bob.getAddress())
+      .send(defaultOptions)
+      .wait();
 
     // Get the commitment value through simulation
     const commitment = await nft
@@ -337,7 +368,7 @@ describe.skip('NFT - Single PXE', () => {
     await nft
       .withWallet(alice)
       .methods.transfer_private_to_commitment(alice.getAddress(), tokenId, commitment, 0n)
-      .send()
+      .send(defaultOptions)
       .wait();
 
     // Verify alice no longer owns the NFT
@@ -351,7 +382,7 @@ describe.skip('NFT - Single PXE', () => {
     const tokenId = 1n;
 
     // First mint NFT privately to alice
-    await nft.withWallet(alice).methods.mint_to_private(alice.getAddress(), tokenId).send().wait();
+    await nft.withWallet(alice).methods.mint_to_private(alice.getAddress(), tokenId).send(defaultOptions).wait();
 
     // Create an invalid commitment (using wrong sender)
     const invalidCommitment = await nft
@@ -364,7 +395,7 @@ describe.skip('NFT - Single PXE', () => {
       nft
         .withWallet(alice)
         .methods.transfer_private_to_commitment(alice.getAddress(), tokenId, invalidCommitment, 0n)
-        .send()
+        .send(defaultOptions)
         .wait(),
     ).rejects.toThrow(/^Transaction 0x[0-9a-f]+ was app_logic_reverted\. Reason: $/);
 
@@ -378,7 +409,7 @@ describe.skip('NFT - Single PXE', () => {
     const tokenId = 1n;
 
     // First mint NFT privately to alice
-    await nft.withWallet(alice).methods.mint_to_private(alice.getAddress(), tokenId).send().wait();
+    await nft.withWallet(alice).methods.mint_to_private(alice.getAddress(), tokenId).send(defaultOptions).wait();
 
     // Verify alice owns the NFT privately
     await assertOwnsPrivateNFT(nft, tokenId, alice.getAddress());
@@ -387,7 +418,7 @@ describe.skip('NFT - Single PXE', () => {
     await nft
       .withWallet(alice)
       .methods.transfer_private_to_public(alice.getAddress(), bob.getAddress(), tokenId, 0n)
-      .send()
+      .send(defaultOptions)
       .wait();
 
     // Verify alice no longer owns the NFT privately
@@ -401,14 +432,14 @@ describe.skip('NFT - Single PXE', () => {
     const tokenId = 1n;
 
     // First mint NFT privately to alice
-    await nft.withWallet(alice).methods.mint_to_private(alice.getAddress(), tokenId).send().wait();
+    await nft.withWallet(alice).methods.mint_to_private(alice.getAddress(), tokenId).send(defaultOptions).wait();
 
     // Carl attempts to transfer alice's NFT to bob
     await expect(
       nft
         .withWallet(carl)
         .methods.transfer_private_to_public(carl.getAddress(), bob.getAddress(), tokenId, 0n)
-        .send()
+        .send(defaultOptions)
         .wait(),
     ).rejects.toThrow(/nft not found/);
 
@@ -420,7 +451,7 @@ describe.skip('NFT - Single PXE', () => {
     const tokenId = 1n;
 
     // First mint NFT privately to alice
-    await nft.withWallet(alice).methods.mint_to_private(alice.getAddress(), tokenId).send().wait();
+    await nft.withWallet(alice).methods.mint_to_private(alice.getAddress(), tokenId).send(defaultOptions).wait();
 
     // Create transfer call interface with non-zero nonce
     const transferCallInterface = nft
@@ -435,7 +466,7 @@ describe.skip('NFT - Single PXE', () => {
     const witness = await alice.createAuthWit(intent);
 
     // Bob executes the transfer with alice's authorization
-    await transferCallInterface.send({ authWitnesses: [witness] }).wait();
+    await transferCallInterface.send({ ...defaultOptions, authWitnesses: [witness] }).wait();
 
     // Verify alice no longer owns the NFT privately
     await assertPrivateNFTNullified(nft, tokenId, alice.getAddress());
@@ -450,7 +481,7 @@ describe.skip('NFT - Single PXE', () => {
     const tokenId = 1n;
 
     // First mint NFT privately to alice
-    await nft.withWallet(alice).methods.mint_to_private(alice.getAddress(), tokenId).send().wait();
+    await nft.withWallet(alice).methods.mint_to_private(alice.getAddress(), tokenId).send(defaultOptions).wait();
 
     // Verify alice owns the NFT privately
     await assertOwnsPrivateNFT(nft, tokenId, alice.getAddress());
@@ -459,7 +490,7 @@ describe.skip('NFT - Single PXE', () => {
     await nft
       .withWallet(alice)
       .methods.transfer_private_to_public_with_commitment(alice.getAddress(), bob.getAddress(), tokenId, 0n)
-      .send()
+      .send(defaultOptions)
       .wait();
 
     // Verify alice no longer owns the NFT privately
@@ -473,14 +504,14 @@ describe.skip('NFT - Single PXE', () => {
     const tokenId = 1n;
 
     // First mint NFT privately to alice
-    await nft.withWallet(alice).methods.mint_to_private(alice.getAddress(), tokenId).send().wait();
+    await nft.withWallet(alice).methods.mint_to_private(alice.getAddress(), tokenId).send(defaultOptions).wait();
 
     // Carl attempts to transfer alice's NFT to bob
     await expect(
       nft
         .withWallet(carl)
         .methods.transfer_private_to_public_with_commitment(carl.getAddress(), bob.getAddress(), tokenId, 0n)
-        .send()
+        .send(defaultOptions)
         .wait(),
     ).rejects.toThrow(/nft not found/);
 
@@ -492,7 +523,7 @@ describe.skip('NFT - Single PXE', () => {
     const tokenId = 1n;
 
     // First mint NFT privately to alice
-    await nft.withWallet(alice).methods.mint_to_private(alice.getAddress(), tokenId).send().wait();
+    await nft.withWallet(alice).methods.mint_to_private(alice.getAddress(), tokenId).send(defaultOptions).wait();
 
     // Create transfer call interface with non-zero nonce
     const transferCallInterface = nft
@@ -507,7 +538,7 @@ describe.skip('NFT - Single PXE', () => {
     const witness = await alice.createAuthWit(intent);
 
     // Bob executes the transfer with alice's authorization
-    await transferCallInterface.send({ authWitnesses: [witness] }).wait();
+    await transferCallInterface.send({ ...defaultOptions, authWitnesses: [witness] }).wait();
 
     // Verify alice no longer owns the NFT privately
     await assertPrivateNFTNullified(nft, tokenId, alice.getAddress());
@@ -522,7 +553,7 @@ describe.skip('NFT - Single PXE', () => {
     const tokenId = 1n;
 
     // First mint NFT publicly to alice
-    await nft.withWallet(alice).methods.mint_to_public(alice.getAddress(), tokenId).send().wait();
+    await nft.withWallet(alice).methods.mint_to_public(alice.getAddress(), tokenId).send(defaultOptions).wait();
 
     // Verify alice owns the NFT publicly
     await assertOwnsPublicNFT(nft, tokenId, alice.getAddress());
@@ -531,7 +562,7 @@ describe.skip('NFT - Single PXE', () => {
     await nft
       .withWallet(alice)
       .methods.transfer_public_to_private(alice.getAddress(), bob.getAddress(), tokenId, 0n)
-      .send()
+      .send(defaultOptions)
       .wait();
 
     // Verify alice no longer owns the NFT publicly
@@ -546,14 +577,14 @@ describe.skip('NFT - Single PXE', () => {
     const tokenId = 1n;
 
     // First mint NFT publicly to alice
-    await nft.withWallet(alice).methods.mint_to_public(alice.getAddress(), tokenId).send().wait();
+    await nft.withWallet(alice).methods.mint_to_public(alice.getAddress(), tokenId).send(defaultOptions).wait();
 
     // Carl attempts to transfer alice's NFT to bob
     await expect(
       nft
         .withWallet(carl)
         .methods.transfer_public_to_private(carl.getAddress(), bob.getAddress(), tokenId, 0n)
-        .send()
+        .send(defaultOptions)
         .wait(),
     ).rejects.toThrow(/^Transaction 0x[0-9a-f]+ was app_logic_reverted\. Reason: $/);
 
@@ -565,7 +596,7 @@ describe.skip('NFT - Single PXE', () => {
     const tokenId = 1n;
 
     // First mint NFT publicly to alice
-    await nft.withWallet(alice).methods.mint_to_public(alice.getAddress(), tokenId).send().wait();
+    await nft.withWallet(alice).methods.mint_to_public(alice.getAddress(), tokenId).send(defaultOptions).wait();
 
     // Create transfer call interface with non-zero nonce
     const transferCallInterface = nft
@@ -580,7 +611,7 @@ describe.skip('NFT - Single PXE', () => {
     const witness = await alice.createAuthWit(intent);
 
     // Bob executes the transfer with alice's authorization
-    await transferCallInterface.send({ authWitnesses: [witness] }).wait();
+    await transferCallInterface.send({ ...defaultOptions, authWitnesses: [witness] }).wait();
 
     // Verify alice no longer owns the NFT publicly
     const publicOwner = await nft.methods.public_owner_of(tokenId).simulate();
@@ -596,7 +627,7 @@ describe.skip('NFT - Single PXE', () => {
     const tokenId = 1n;
 
     // First mint NFT publicly to alice
-    await nft.withWallet(alice).methods.mint_to_public(alice.getAddress(), tokenId).send().wait();
+    await nft.withWallet(alice).methods.mint_to_public(alice.getAddress(), tokenId).send(defaultOptions).wait();
 
     // Verify alice owns the NFT publicly
     await assertOwnsPublicNFT(nft, tokenId, alice.getAddress());
@@ -605,7 +636,7 @@ describe.skip('NFT - Single PXE', () => {
     await nft
       .withWallet(alice)
       .methods.transfer_public_to_public(alice.getAddress(), bob.getAddress(), tokenId, 0n)
-      .send()
+      .send(defaultOptions)
       .wait();
 
     // Verify alice no longer owns the NFT publicly
@@ -620,14 +651,14 @@ describe.skip('NFT - Single PXE', () => {
     const tokenId = 1n;
 
     // First mint NFT publicly to alice
-    await nft.withWallet(alice).methods.mint_to_public(alice.getAddress(), tokenId).send().wait();
+    await nft.withWallet(alice).methods.mint_to_public(alice.getAddress(), tokenId).send(defaultOptions).wait();
 
     // Carl attempts to transfer alice's NFT to bob
     await expect(
       nft
         .withWallet(carl)
         .methods.transfer_public_to_public(carl.getAddress(), bob.getAddress(), tokenId, 0n)
-        .send()
+        .send(defaultOptions)
         .wait(),
     ).rejects.toThrow(/^Transaction 0x[0-9a-f]+ was app_logic_reverted\. Reason: $/);
 
@@ -640,7 +671,7 @@ describe.skip('NFT - Single PXE', () => {
     const tokenId = 1n;
 
     // First mint NFT publicly to alice
-    await nft.withWallet(alice).methods.mint_to_public(alice.getAddress(), tokenId).send().wait();
+    await nft.withWallet(alice).methods.mint_to_public(alice.getAddress(), tokenId).send(defaultOptions).wait();
 
     // Verify initial ownership
     const initialOwner = await nft.methods.public_owner_of(tokenId).simulate();
@@ -664,7 +695,7 @@ describe.skip('NFT - Single PXE', () => {
     expect(validity.isValidInPublic).toBeFalsy();
 
     // Bob executes the transfer with alice's authorization
-    await action.send({ authWitnesses: [witness] }).wait();
+    await action.send({ ...defaultOptions, authWitnesses: [witness] }).wait();
 
     // Verify final ownership
     const finalOwner = await nft.methods.public_owner_of(tokenId).simulate();
@@ -694,7 +725,7 @@ describe.skip('NFT - Single PXE', () => {
     expect(initialOwner.equals(AztecAddress.ZERO)).toBe(true);
 
     // Mint NFT to alice
-    await nft.withWallet(alice).methods.mint_to_public(alice.getAddress(), tokenId).send().wait();
+    await nft.withWallet(alice).methods.mint_to_public(alice.getAddress(), tokenId).send(defaultOptions).wait();
 
     // Check owner is alice
     const owner = await nft.methods.public_owner_of(tokenId).simulate();
@@ -711,8 +742,8 @@ describe.skip('NFT - Single PXE', () => {
     expect(initialLimitReached).toBe(false);
 
     // Mint two NFTs to alice
-    await nft.withWallet(alice).methods.mint_to_private(alice.getAddress(), tokenId1).send().wait();
-    await nft.withWallet(alice).methods.mint_to_private(alice.getAddress(), tokenId2).send().wait();
+    await nft.withWallet(alice).methods.mint_to_private(alice.getAddress(), tokenId1).send(defaultOptions).wait();
+    await nft.withWallet(alice).methods.mint_to_private(alice.getAddress(), tokenId2).send(defaultOptions).wait();
 
     // Check owned NFTs
     const [ownedNfts, limitReached] = await nft.methods.get_private_nfts(alice.getAddress(), 0).simulate();
@@ -727,19 +758,31 @@ describe.skip('NFT - Single PXE', () => {
     const tokenId = 1n;
 
     // Deploy new contract with bob as minter
-    const nftWithBobMinter = (await deployNFTWithMinter(bob)) as NFTContract;
+    const nftWithBobMinter = (await deployNFTWithMinter(bob, defaultOptions)) as NFTContract;
 
     // Alice attempts to mint when she's not the minter
     await expect(
-      nftWithBobMinter.withWallet(alice).methods.mint_to_public(alice.getAddress(), tokenId).send().wait(),
+      nftWithBobMinter
+        .withWallet(alice)
+        .methods.mint_to_public(alice.getAddress(), tokenId)
+        .send(defaultOptions)
+        .wait(),
     ).rejects.toThrow(/^Transaction 0x[0-9a-f]+ was app_logic_reverted\. Reason: $/);
 
     await expect(
-      nftWithBobMinter.withWallet(alice).methods.mint_to_private(alice.getAddress(), tokenId).send().wait(),
+      nftWithBobMinter
+        .withWallet(alice)
+        .methods.mint_to_private(alice.getAddress(), tokenId)
+        .send(defaultOptions)
+        .wait(),
     ).rejects.toThrow(/caller is not minter/);
 
     // Bob can mint since he's the minter
-    await nftWithBobMinter.withWallet(bob).methods.mint_to_public(alice.getAddress(), tokenId).send().wait();
+    await nftWithBobMinter
+      .withWallet(bob)
+      .methods.mint_to_public(alice.getAddress(), tokenId)
+      .send(defaultOptions)
+      .wait();
     await assertOwnsPublicNFT(nftWithBobMinter, tokenId, alice.getAddress());
   }, 300_000);
 
@@ -747,14 +790,14 @@ describe.skip('NFT - Single PXE', () => {
     const tokenId = 1n;
 
     // Mint NFT to alice
-    await nft.withWallet(alice).methods.mint_to_public(alice.getAddress(), tokenId).send().wait();
+    await nft.withWallet(alice).methods.mint_to_public(alice.getAddress(), tokenId).send(defaultOptions).wait();
 
     // Bob attempts to transfer without ownership or authorization
     await expect(
       nft
         .withWallet(bob)
         .methods.transfer_public_to_public(bob.getAddress(), carl.getAddress(), tokenId, 0n)
-        .send()
+        .send(defaultOptions)
         .wait(),
     ).rejects.toThrow(/^Transaction 0x[0-9a-f]+ was app_logic_reverted\. Reason: $/);
 
@@ -762,7 +805,7 @@ describe.skip('NFT - Single PXE', () => {
     await nft
       .withWallet(alice)
       .methods.transfer_public_to_public(alice.getAddress(), bob.getAddress(), tokenId, 0n)
-      .send()
+      .send(defaultOptions)
       .wait();
     await assertOwnsPublicNFT(nft, tokenId, bob.getAddress());
   }, 300_000);
@@ -771,14 +814,14 @@ describe.skip('NFT - Single PXE', () => {
     const tokenId = 1n;
 
     // Mint NFT privately to alice
-    await nft.withWallet(alice).methods.mint_to_private(alice.getAddress(), tokenId).send().wait();
+    await nft.withWallet(alice).methods.mint_to_private(alice.getAddress(), tokenId).send(defaultOptions).wait();
 
     // Bob attempts to transfer without ownership or authorization
     await expect(
       nft
         .withWallet(bob)
         .methods.transfer_private_to_private(bob.getAddress(), carl.getAddress(), tokenId, 0n)
-        .send()
+        .send(defaultOptions)
         .wait(),
     ).rejects.toThrow(/nft not found/);
 
@@ -786,7 +829,7 @@ describe.skip('NFT - Single PXE', () => {
     await nft
       .withWallet(alice)
       .methods.transfer_private_to_private(alice.getAddress(), bob.getAddress(), tokenId, 0n)
-      .send()
+      .send(defaultOptions)
       .wait();
     await assertOwnsPrivateNFT(nft, tokenId, bob.getAddress());
   }, 300_000);
@@ -796,7 +839,7 @@ describe.skip('NFT - Single PXE', () => {
     const invalidNonce = 999n;
 
     // Mint NFT to alice
-    await nft.withWallet(alice).methods.mint_to_public(alice.getAddress(), tokenId).send().wait();
+    await nft.withWallet(alice).methods.mint_to_public(alice.getAddress(), tokenId).send(defaultOptions).wait();
 
     // Bob attempts transfer with invalid authorization
     const transferCallInterface = nft
@@ -812,7 +855,7 @@ describe.skip('NFT - Single PXE', () => {
     const witness = await carl.createAuthWit(intent); // Wrong signer (carl instead of alice)
 
     // Transfer should fail with invalid authorization
-    await expect(transferCallInterface.send({ authWitnesses: [witness] }).wait()).rejects.toThrow();
+    await expect(transferCallInterface.send({ ...defaultOptions, authWitnesses: [witness] }).wait()).rejects.toThrow();
 
     // Alice still owns the NFT
     await assertOwnsPublicNFT(nft, tokenId, alice.getAddress());
