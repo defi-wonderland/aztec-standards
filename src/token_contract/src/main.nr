@@ -170,10 +170,6 @@ pub contract Token {
             &mut context,
         );
 
-        aztec::oracle::debug_log::debug_log_format(
-            "##transfer_private_to_public_with_commitment: {0} {1} {2}",
-            [context.msg_sender().to_field(), from.to_field(), to.to_field()],
-        );
         // We're creating a commitment for the recipient, so the completer is the recipient
         let completer = to;
         let commitment = _initialize_transfer_commitment(
@@ -334,10 +330,6 @@ pub contract Token {
         _validate_from_public(&mut context, from);
 
         _decrease_public_balance(storage.public_balances, from, amount);
-        aztec::oracle::debug_log::debug_log_format(
-            "transfer_public_to_commitment {0} {1}",
-            [context.msg_sender().to_field(), from.to_field()],
-        );
 
         _increase_commitment_balance(&mut context, PartialUintNote { commitment }, from, amount);
     }
@@ -620,15 +612,7 @@ pub contract Token {
         completer: AztecAddress,
         amount: u128,
     ) {
-        aztec::oracle::debug_log::debug_log_format(
-            "##increase_commitment_balance: {0} {1}",
-            [context.msg_sender().to_field(), completer.to_field()],
-        );
         let validity_commitment = commitment.compute_validity_commitment(completer);
-        aztec::oracle::debug_log::debug_log_format(
-            "##increase_commitment_balance::validity_commitment: {0}",
-            [validity_commitment],
-        );
         commitment.complete(context, completer, amount);
     }
 
@@ -703,16 +687,7 @@ pub contract Token {
             from,
             completer,
         );
-        aztec::oracle::debug_log::debug_log_format(
-            "##initialize_transfer_commitment: {0} {1} {2} {3} {4}",
-            [
-                context.msg_sender().to_field(),
-                from.to_field(),
-                to.to_field(),
-                completer.to_field(),
-                commitment.commitment.to_field(),
-            ],
-        );
+
         commitment
     }
 
