@@ -90,9 +90,12 @@ unconstrained fn transfer_private_to_public_with_commitment_and_finalize() {
         .transfer_private_to_public_with_commitment(owner, recipient, transfer_amount, 0)
         .call(&mut env.private());
 
+    // The partial note won't be available unless we advance one block
+    env.advance_block_by(1);
+
     // Before finalize the recipient should have the tokens in public balance
     utils::check_public_balance(token_contract_address, recipient, transfer_amount);
- 
+
     // Transfer tokens
     env.impersonate(recipient);
     Token::at(token_contract_address)

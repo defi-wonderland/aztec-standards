@@ -469,7 +469,12 @@ pub contract Token {
         _validate_minter(sender, storage.minter.read());
         let completer = sender;
         _increase_total_supply(storage.total_supply, amount);
-        _increase_commitment_balance(&mut context, PartialUintNote { commitment }, completer, amount);
+        _increase_commitment_balance(
+            &mut context,
+            PartialUintNote { commitment },
+            completer,
+            amount,
+        );
     }
 
     #[public]
