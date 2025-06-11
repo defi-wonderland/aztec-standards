@@ -1,31 +1,8 @@
-import {
-  createLogger,
-  Fr,
-  waitForPXE,
-  AztecAddress,
-  UniqueNote,
-  AccountWallet,
-  createPXEClient,
-  FieldLike,
-  Contract,
-} from '@aztec/aztec.js';
+import { createLogger, Fr, AztecAddress, UniqueNote, AccountWallet, Contract } from '@aztec/aztec.js';
 import { TokenContract, TokenContractArtifact } from '../../artifacts/Token.js';
-import { NFTContract, NFTContractArtifact } from '../../artifacts/NFT.js';
+import { NFTContractArtifact } from '../../artifacts/NFT.js';
 
 export const logger = createLogger('aztec:aztec-standards');
-
-export const createPXE = async (id: number = 0) => {
-  const { BASE_PXE_URL = `http://localhost` } = process.env;
-  const url = `${BASE_PXE_URL}:${8080 + id}`;
-  const pxe = createPXEClient(url);
-  logger.info(`Waiting for PXE to be ready at ${url}`);
-  await waitForPXE(pxe);
-  return pxe;
-};
-
-export const setupSandbox = async () => {
-  return createPXE();
-};
 
 // --- Token Utils ---
 
@@ -55,14 +32,14 @@ export const wad = (n: number = 1) => AMOUNT * BigInt(n);
  * @param deployer - The wallet to deploy the contract with.
  * @returns A deployed contract instance.
  */
-export async function deployTokenWithMinter(deployer: AccountWallet) {
+export async function deployTokenWithMinter(deployer: AccountWallet, options: any) {
   const contract = await Contract.deploy(
     deployer,
     TokenContractArtifact,
     ['PrivateToken', 'PT', 18, deployer.getAddress(), AztecAddress.ZERO],
     'constructor_with_minter',
   )
-    .send()
+    .send(options)
     .deployed();
   return contract;
 }
