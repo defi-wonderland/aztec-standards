@@ -1,4 +1,4 @@
-use crate::test::utils;
+use crate::test::utils::{self, mint_amount};
 use crate::Token;
 use authwit::cheatcodes as authwit_cheatcodes;
 use aztec::{note::constants::MAX_NOTES_PER_PAGE, oracle::random::random};
@@ -7,7 +7,7 @@ use uint_note::uint_note::UintNote;
 #[test]
 unconstrained fn transfer_private_to_public_on_behalf_of_self() {
     // Setup without account contracts. We are not using authwits here, so dummy accounts are enough
-    let (env, token_contract_address, owner, _, mint_amount) =
+    let (env, token_contract_address, owner, _) =
         utils::setup_and_mint_to_private_without_minter(false);
 
     let transfer_private_to_public_amount = mint_amount / (10 as u128);
@@ -28,7 +28,7 @@ unconstrained fn transfer_private_to_public_on_behalf_of_self() {
 
 #[test]
 unconstrained fn transfer_private_to_public_on_behalf_of_other() {
-    let (env, token_contract_address, owner, recipient, mint_amount) =
+    let (env, token_contract_address, owner, recipient) =
         utils::setup_and_mint_to_private_without_minter(true);
 
     let transfer_private_to_public_amount = mint_amount / (10 as u128);
@@ -103,7 +103,7 @@ unconstrained fn transfer_private_to_public_multiple_notes_recursively() {
 #[test(should_fail_with = "Balance too low")]
 unconstrained fn transfer_private_to_public_failure_more_than_balance() {
     // Setup without account contracts. We are not using authwits here, so dummy accounts are enough
-    let (env, token_contract_address, owner, _, mint_amount) =
+    let (env, token_contract_address, owner, _) =
         utils::setup_and_mint_to_private_without_minter(false);
 
     let transfer_private_to_public_amount = mint_amount + (1 as u128);
@@ -114,7 +114,7 @@ unconstrained fn transfer_private_to_public_failure_more_than_balance() {
 
 #[test(should_fail_with = "Balance too low")]
 unconstrained fn transfer_private_to_public_failure_on_behalf_of_other_more_than_balance() {
-    let (env, token_contract_address, owner, recipient, mint_amount) =
+    let (env, token_contract_address, owner, recipient) =
         utils::setup_and_mint_to_private_without_minter(true);
 
     let transfer_private_to_public_amount = mint_amount + (1 as u128);
@@ -133,7 +133,7 @@ unconstrained fn transfer_private_to_public_failure_on_behalf_of_other_more_than
 
 #[test(should_fail_with = "Unknown auth witness for message hash")]
 unconstrained fn transfer_private_to_public_failure_on_behalf_of_other_invalid_designated_caller() {
-    let (env, token_contract_address, owner, recipient, mint_amount) =
+    let (env, token_contract_address, owner, recipient) =
         utils::setup_and_mint_to_private_without_minter(true);
 
     let transfer_private_to_public_amount = mint_amount + (1 as u128);
@@ -152,7 +152,7 @@ unconstrained fn transfer_private_to_public_failure_on_behalf_of_other_invalid_d
 
 #[test(should_fail_with = "Unknown auth witness for message hash")]
 unconstrained fn transfer_private_to_public_failure_on_behalf_of_other_no_approval() {
-    let (env, token_contract_address, owner, recipient, mint_amount) =
+    let (env, token_contract_address, owner, recipient) =
         utils::setup_and_mint_to_private_without_minter(true);
 
     let transfer_private_to_public_amount = mint_amount + (1 as u128);

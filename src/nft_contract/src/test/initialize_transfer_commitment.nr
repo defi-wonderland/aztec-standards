@@ -16,10 +16,7 @@ unconstrained fn nft_initialize_transfer_commitment_success() {
     env.advance_block_by(1);
 
     // Verify commitment is stored
-    assert(
-        utils::get_commitment_stored(nft_contract_address, commitment.commitment()),
-        "Commitment not stored",
-    );
+    assert(utils::get_commitment_stored(nft_contract_address, commitment), "Commitment not stored");
 }
 
 #[test]
@@ -37,10 +34,7 @@ unconstrained fn nft_initialize_transfer_commitment_by_recipient_success() {
     env.advance_block_by(1);
 
     // Verify commitment is stored
-    assert(
-        utils::get_commitment_stored(nft_contract_address, commitment.commitment()),
-        "Commitment not stored",
-    );
+    assert(utils::get_commitment_stored(nft_contract_address, commitment), "Commitment not stored");
 }
 
 #[test]
@@ -58,10 +52,7 @@ unconstrained fn nft_initialize_transfer_commitment_self_success() {
     env.advance_block_by(1);
 
     // Verify commitment is stored
-    assert(
-        utils::get_commitment_stored(nft_contract_address, commitment.commitment()),
-        "Commitment not stored",
-    );
+    assert(utils::get_commitment_stored(nft_contract_address, commitment), "Commitment not stored");
 }
 
 #[test]
@@ -79,8 +70,5 @@ unconstrained fn nft_initialize_transfer_commitment_by_third_party_success() {
     env.advance_block_by(1);
 
     // Verify commitment is stored
-    assert(
-        utils::get_commitment_stored(nft_contract_address, commitment.commitment()),
-        "Commitment not stored",
-    );
+    assert(utils::get_commitment_stored(nft_contract_address, commitment), "Commitment not stored");
 }
