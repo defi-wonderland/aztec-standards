@@ -12,13 +12,15 @@ import {
   Wallet,
   L1FeeJuicePortalManager,
   AccountManager,
+  FeePaymentMethod,
+  DeployOptions,
 } from '@aztec/aztec.js';
 import { AMOUNT, deployTokenWithMinter, expectTokenBalances, expectUintNote, logger, wad } from './utils.js';
 import { PXE } from '@aztec/stdlib/interfaces/client';
 import { getSponsoredFeePaymentMethod, setupSponsoredFPC } from '../contracts/fpc.js';
 import { setupPXE } from '../contracts/pxe.js';
 import { setupFeeJuicePortalManager } from '../contracts/pm.js';
-import { deploySchnorrAccount } from '../contracts/accounts.js';
+import { deployRandomSchnorrAccount, deploySchnorrAccount } from '../contracts/accounts.js';
 
 export async function deployTokenWithInitialSupply(deployer: Wallet, options: any) {
   const contract = await Contract.deploy(
@@ -41,9 +43,9 @@ const setupTestSuite = async () => {
   };
   const pm = await setupFeeJuicePortalManager(pxe);
 
-  const aliceAccount = await await deploySchnorrAccount(pxe, defaultOptions);
-  const bobAccount = await await deploySchnorrAccount(pxe, defaultOptions);
-  const carlAccount = await await deploySchnorrAccount(pxe, defaultOptions);
+  const aliceAccount = await await deployRandomSchnorrAccount(pxe, defaultOptions);
+  const bobAccount = await await deployRandomSchnorrAccount(pxe, defaultOptions);
+  const carlAccount = await await deployRandomSchnorrAccount(pxe, defaultOptions);
 
   return { pxe, aliceAccount, bobAccount, carlAccount, pm, defaultFPM, defaultOptions };
 };
@@ -62,9 +64,8 @@ describe('Token - Single PXE', () => {
   let token: TokenContract;
 
   let pm: L1FeeJuicePortalManager;
-  let defaultFPM;
-  // TODO: replace any (there's a type defined in aztec.js)
-  let defaultOptions: any;
+  let defaultFPM: FeePaymentMethod;
+  let defaultOptions: DeployOptions;
 
   beforeAll(async () => {
     ({ pxe, aliceAccount, bobAccount, carlAccount, pm, defaultFPM, defaultOptions } = await setupTestSuite());
