@@ -16,7 +16,7 @@ import {
 } from '@aztec/aztec.js';
 import { getSponsoredFeePaymentMethod, setupSponsoredFPC } from '../contracts/fpc.js';
 import { setupPXE } from '../contracts/pxe.js';
-import { deploySchnorrAccount } from '../contracts/accounts.js';
+import { deployRandomSchnorrAccount, deploySchnorrAccount } from '../contracts/accounts.js';
 import { setupFeeJuicePortalManager } from '../contracts/pm.js';
 
 // Deploy NFT contract with a minter
@@ -74,9 +74,9 @@ const setupTestSuite = async () => {
   };
   const pm = await setupFeeJuicePortalManager(pxe);
 
-  const aliceAccount = await await deploySchnorrAccount(pxe, defaultOptions);
-  const bobAccount = await await deploySchnorrAccount(pxe, defaultOptions);
-  const carlAccount = await await deploySchnorrAccount(pxe, defaultOptions);
+  const aliceAccount = await await deployRandomSchnorrAccount(pxe, defaultOptions);
+  const bobAccount = await await deployRandomSchnorrAccount(pxe, defaultOptions);
+  const carlAccount = await await deployRandomSchnorrAccount(pxe, defaultOptions);
 
   return { pxe, aliceAccount, bobAccount, carlAccount, pm, defaultFPM, defaultOptions };
 };

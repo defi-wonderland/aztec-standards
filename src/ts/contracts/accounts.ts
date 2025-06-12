@@ -12,6 +12,7 @@ export async function deployRandomSchnorrAccount(pxe: PXE, options?: any): Promi
     ...options,
   });
   await deployTx.wait();
+
   return schnorrAccount;
 }
 

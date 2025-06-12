@@ -30,7 +30,8 @@ export async function setupSponsoredFPC(pxe: PXE, deployer?: Wallet) {
   const instance = (
     deployer ? await deploySponsoredFPC(deployer) : await getSponsoredFPCInstance()
   ) as ContractInstanceWithAddress;
-  pxe.registerContract({ instance, artifact: SponsoredFPCContract.artifact });
+  await pxe.registerContract({ instance, artifact: SponsoredFPCContract.artifact });
+
   return instance;
 }
 
@@ -43,7 +44,6 @@ export async function getDeployedSponsoredFPCAddress(pxe: PXE) {
   return fpc;
 }
 
-// todo: we can initialize this once
 export const getSponsoredFeePaymentMethod = async (pxe: PXE) => {
   return new SponsoredFeePaymentMethod(await getDeployedSponsoredFPCAddress(pxe));
 };

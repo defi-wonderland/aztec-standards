@@ -37,6 +37,7 @@ export async function deployTokenWithInitialSupply(deployer: Wallet, options: an
 const setupTestSuite = async () => {
   const pxe = await setupPXE();
   await setupSponsoredFPC(pxe);
+
   const defaultFPM = await getSponsoredFeePaymentMethod(pxe);
   const defaultOptions = {
     fee: { paymentMethod: defaultFPM },
@@ -73,11 +74,6 @@ describe('Token - Single PXE', () => {
     alice = await aliceAccount.getWallet();
     bob = await bobAccount.getWallet();
     carl = await carlAccount.getWallet();
-
-    console.log({
-      alice: alice.getAddress(),
-      bob: bob.getAddress(),
-    });
   });
 
   beforeEach(async () => {
