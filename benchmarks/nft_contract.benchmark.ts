@@ -1,11 +1,24 @@
-import { type AccountWallet, type ContractFunctionInteraction, type PXE, createPXEClient } from '@aztec/aztec.js';
-import { getInitialTestAccountsWallets } from '@aztec/accounts/testing';
+import {
+  type AccountWallet,
+  type ContractFunctionInteraction,
+  DeployOptions,
+  type PXE,
+  createPXEClient,
+} from '@aztec/aztec.js';
+import {
+  deployFundedSchnorrAccounts,
+  generateSchnorrAccounts,
+  getInitialTestAccounts,
+  getInitialTestAccountsWallets,
+} from '@aztec/accounts/testing';
 
 // Import the new Benchmark base class and context
 import { Benchmark, BenchmarkContext } from '@defi-wonderland/aztec-benchmark';
 
 import { NFTContract } from '../src/artifacts/NFT.js';
-import { deployNFTWithMinter } from '../src/ts/test/utils.js';
+import { deployNFTWithMinter, deployTokenWithMinter } from '../src/ts/test/utils.js';
+import { getSponsoredFeePaymentMethod, setupSponsoredFPC } from '../src/ts/contracts/fpc.js';
+import { deploySchnorrAccount } from '../src/ts/contracts/accounts.js';
 
 // Extend the BenchmarkContext from the new package
 interface NFTBenchmarkContext extends BenchmarkContext {
@@ -24,11 +37,20 @@ export default class NFTContractBenchmark extends Benchmark {
   async setup(): Promise<NFTBenchmarkContext> {
     const { BASE_PXE_URL = 'http://localhost' } = process.env;
     const pxe = createPXEClient(`${BASE_PXE_URL}:8080`);
-    const accounts = await getInitialTestAccountsWallets(pxe);
-    const deployer = accounts[0]!;
-    const deployedBaseContract = await deployNFTWithMinter(deployer);
+    await setupSponsoredFPC(pxe);
+    const defaultOptions: DeployOptions = {
+      fee: { paymentMethod: await getSponsoredFeePaymentMethod(pxe) },
+    };
+    const accounts = await generateSchnorrAccounts(3);
+    const wallets = await Promise.all(
+      accounts.map((acc) =>
+        deploySchnorrAccount(pxe, acc.secret, acc.salt, defaultOptions).then((acc) => acc.getWallet()),
+      ),
+    );
+    const deployer = wallets[0];
+    const deployedBaseContract = await deployNFTWithMinter(deployer, defaultOptions);
     const nftContract = await NFTContract.at(deployedBaseContract.address, deployer);
-    return { pxe, deployer, accounts, nftContract };
+    return { pxe, deployer, accounts: wallets, nftContract };
   }
 
   /**

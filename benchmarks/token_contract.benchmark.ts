@@ -1,5 +1,16 @@
-import { type AccountWallet, type ContractFunctionInteraction, type PXE, createPXEClient } from '@aztec/aztec.js';
-import { getInitialTestAccountsWallets } from '@aztec/accounts/testing';
+import {
+  type AccountWallet,
+  type ContractFunctionInteraction,
+  DeployOptions,
+  type PXE,
+  createPXEClient,
+} from '@aztec/aztec.js';
+import {
+  deployFundedSchnorrAccounts,
+  generateSchnorrAccounts,
+  getInitialTestAccounts,
+  getInitialTestAccountsWallets,
+} from '@aztec/accounts/testing';
 import { parseUnits } from 'viem';
 
 // Import the new Benchmark base class and context
@@ -7,6 +18,8 @@ import { Benchmark, BenchmarkContext } from '@defi-wonderland/aztec-benchmark';
 
 import { TokenContract } from '../src/artifacts/Token.js';
 import { deployTokenWithMinter } from '../src/ts/test/utils.js';
+import { getSponsoredFeePaymentMethod, setupSponsoredFPC } from '../src/ts/contracts/fpc.js';
+import { deploySchnorrAccount } from '../src/ts/contracts/accounts.js';
 
 // Extend the BenchmarkContext from the new package
 interface TokenBenchmarkContext extends BenchmarkContext {
@@ -32,11 +45,20 @@ export default class TokenContractBenchmark extends Benchmark {
   async setup(): Promise<TokenBenchmarkContext> {
     const { BASE_PXE_URL = 'http://localhost' } = process.env;
     const pxe = createPXEClient(`${BASE_PXE_URL}:8080`);
-    const accounts = await getInitialTestAccountsWallets(pxe);
-    const deployer = accounts[0]!;
-    const deployedBaseContract = await deployTokenWithMinter(deployer);
+    await setupSponsoredFPC(pxe);
+    const defaultOptions: DeployOptions = {
+      fee: { paymentMethod: await getSponsoredFeePaymentMethod(pxe) },
+    };
+    const accounts = await generateSchnorrAccounts(3);
+    const wallets = await Promise.all(
+      accounts.map((acc) =>
+        deploySchnorrAccount(pxe, acc.secret, acc.salt, defaultOptions).then((acc) => acc.getWallet()),
+      ),
+    );
+    const deployer = wallets[0];
+    const deployedBaseContract = await deployTokenWithMinter(deployer, defaultOptions);
     const tokenContract = await TokenContract.at(deployedBaseContract.address, deployer);
-    return { pxe, deployer, accounts, tokenContract };
+    return { pxe, deployer, accounts: wallets, tokenContract };
   }
 
   /**
@@ -52,7 +74,6 @@ export default class TokenContractBenchmark extends Benchmark {
       // Mint methods
       tokenContract.withWallet(alice).methods.mint_to_private(owner, owner, amt(100)),
       tokenContract.withWallet(alice).methods.mint_to_public(owner, amt(100)),
-
       // Transfer methods
       tokenContract.withWallet(alice).methods.transfer_private_to_public(owner, bob.getAddress(), amt(10), 0),
       tokenContract
