@@ -5,9 +5,9 @@ use authwit::cheatcodes as authwit_cheatcodes;
 unconstrained fn deposit_private_to_public_without_asset() {
     // Setup without account contracts. We are not using authwits here, so dummy accounts are enough
     let (_, asset_address, owner, recipient, mint_amount) =
-        utils::setup_and_mint_to_public_without_minter(false);
+        utils::setup_and_mint_to_public_without_minter(true);
     
-    let (env, vault_address, _, _, minter) = utils::setup_with_minter(false);
+    let (env, vault_address, _, _, minter) = utils::setup_with_minter(true);
 
     // Deposit should fail because the PublicImmutable asset was not initialized
     env.impersonate(owner);
@@ -18,7 +18,7 @@ unconstrained fn deposit_private_to_public_without_asset() {
 #[test]
 unconstrained fn deposit_private_to_public_success() {
     // Setup with asset token
-    let (env, vault_address, owner, recipient, asset_address) = utils::setup_with_asset(false);
+    let (env, vault_address, owner, recipient, asset_address) = utils::setup_with_asset(true);
 
     // Mint some asset tokens to owner
     let deposit_amount: u128 = 10_000;
@@ -57,12 +57,12 @@ unconstrained fn deposit_private_to_public_success() {
 #[test]
 unconstrained fn deposit_private_to_public_after_yield() {
     // Setup with asset token
-    let (env, vault_address, owner, recipient, asset_address) = utils::setup_with_asset(false);
+    let (env, vault_address, owner, recipient, asset_address) = utils::setup_with_asset(true);
 
     // Mint some asset tokens to the vault contract
     let yield_amount: u128 = 1;
     env.impersonate(owner);
-    Token::at(asset_address).mint_to_private(owner, vault_address, yield_amount).call(&mut env.private());
+    Token::at(asset_address).mint_to_public(vault_address, yield_amount).call(&mut env.public());
     env.advance_block_by(1);
 
     // Mint some asset tokens to owner
