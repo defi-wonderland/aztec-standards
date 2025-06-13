@@ -64,6 +64,7 @@ async function assertPrivateNFTNullified(
 const setupTestSuite = async () => {
   const pxe = await setupPXE();
   const accounts = await getInitialTestAccountsManagers(pxe);
+  // await Promise.all(accounts.map(acc => acc.deploy({})));
   const wallets = await Promise.all(accounts.map((acc) => acc.getWallet()));
   const [deployer] = wallets;
 

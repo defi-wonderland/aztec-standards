@@ -8,6 +8,7 @@ import {
   DeployOptions,
   createAztecNodeClient,
   waitForPXE,
+  Wallet,
 } from '@aztec/aztec.js';
 import { getPXEServiceConfig } from '@aztec/pxe/config';
 import { createPXEService } from '@aztec/pxe/server';
@@ -63,7 +64,7 @@ export const wad = (n: number = 1) => AMOUNT * BigInt(n);
  * @param deployer - The wallet to deploy the contract with.
  * @returns A deployed contract instance.
  */
-export async function deployTokenWithMinter(deployer: AccountWallet, options?: DeployOptions) {
+export async function deployTokenWithMinter(deployer: Wallet, options?: DeployOptions) {
   const contract = await Contract.deploy(
     deployer,
     TokenContractArtifact,

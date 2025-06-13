@@ -25,10 +25,11 @@ export default class NFTContractBenchmark extends Benchmark {
     const { BASE_PXE_URL = 'http://localhost' } = process.env;
     const pxe = createPXEClient(`${BASE_PXE_URL}:8080`);
     const accounts = await getInitialTestAccountsManagers(pxe);
+    // await Promise.all(accounts.map((acc) => acc.deploy({}).wait()));
     const wallets = await Promise.all(accounts.map((acc) => acc.getWallet()));
     const [deployer] = wallets;
 
-    const deployedBaseContract = await deployNFTWithMinter(deployer, {});
+    const deployedBaseContract = await deployNFTWithMinter(deployer, { universalDeploy: true });
     const nftContract = await NFTContract.at(deployedBaseContract.address, deployer);
     return { pxe, deployer, accounts: wallets, nftContract };
   }

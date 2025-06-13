@@ -8,7 +8,7 @@ import {
   IntentAction,
   Wallet,
 } from '@aztec/aztec.js';
-import { AMOUNT, deployTokenWithMinter, expectTokenBalances, expectUintNote, logger, setupPXE, wad } from './utils.js';
+import { AMOUNT, deployTokenWithMinter, expectTokenBalances, expectUintNote, setupPXE, wad } from './utils.js';
 import { PXE } from '@aztec/stdlib/interfaces/client';
 import { getInitialTestAccountsManagers } from '@aztec/accounts/testing';
 import { TokenContractArtifact, TokenContract } from '../../artifacts/Token.js';
@@ -66,6 +66,7 @@ describe('Token - Single PXE', () => {
       salt,
       deployer: deployerWallet.getAddress(),
     });
+
     const deployer = new ContractDeployer(TokenContractArtifact, deployerWallet, undefined, 'constructor_with_minter');
     const tx = deployer
       .deploy('PrivateToken', 'PT', 18, deployerWallet.getAddress(), deployerWallet.getAddress())
