@@ -1,8 +1,39 @@
-import { createLogger, Fr, AztecAddress, UniqueNote, AccountWallet, Contract, DeployOptions } from '@aztec/aztec.js';
+import {
+  createLogger,
+  Fr,
+  AztecAddress,
+  UniqueNote,
+  AccountWallet,
+  Contract,
+  DeployOptions,
+  createAztecNodeClient,
+  waitForPXE,
+} from '@aztec/aztec.js';
+import { getPXEServiceConfig } from '@aztec/pxe/config';
+import { createPXEService } from '@aztec/pxe/server';
+import { createStore } from '@aztec/kv-store/lmdb';
 import { TokenContract, TokenContractArtifact } from '../../artifacts/Token.js';
 import { NFTContractArtifact } from '../../artifacts/NFT.js';
 
 export const logger = createLogger('aztec:aztec-standards');
+
+const { NODE_URL = 'http://localhost:8080' } = process.env;
+const node = createAztecNodeClient(NODE_URL);
+const l1Contracts = await node.getL1ContractAddresses();
+const config = getPXEServiceConfig();
+const fullConfig = { ...config, l1Contracts };
+fullConfig.proverEnabled = false;
+
+const store = await createStore('pxe', {
+  dataDirectory: 'store',
+  dataStoreMapSizeKB: 1e6,
+});
+
+export const setupPXE = async () => {
+  const pxe = await createPXEService(node, fullConfig, { store });
+  await waitForPXE(pxe);
+  return pxe;
+};
 
 // --- Token Utils ---
 
