@@ -21,6 +21,7 @@ import { getSponsoredFeePaymentMethod, setupSponsoredFPC } from '../contracts/fp
 import { setupPXE } from '../contracts/pxe.js';
 import { setupFeeJuicePortalManager } from '../contracts/pm.js';
 import { deployRandomSchnorrAccount, deploySchnorrAccount } from '../contracts/accounts.js';
+import { getInitialTestAccountsManagers } from '@aztec/accounts/testing';
 
 export async function deployTokenWithInitialSupply(deployer: Wallet, options: any) {
   const contract = await Contract.deploy(
@@ -36,27 +37,18 @@ export async function deployTokenWithInitialSupply(deployer: Wallet, options: an
 
 const setupTestSuite = async () => {
   const pxe = await setupPXE();
-  await setupSponsoredFPC(pxe);
+  const accounts = await getInitialTestAccountsManagers(pxe);
+  const wallets = await Promise.all(accounts.map((acc) => acc.getWallet()));
+  const [deployer] = wallets;
 
-  const defaultFPM = await getSponsoredFeePaymentMethod(pxe);
-  const defaultOptions = {
-    fee: { paymentMethod: defaultFPM },
-  };
-  const pm = await setupFeeJuicePortalManager(pxe);
-
-  const aliceAccount = await await deployRandomSchnorrAccount(pxe, defaultOptions);
-  const bobAccount = await await deployRandomSchnorrAccount(pxe, defaultOptions);
-  const carlAccount = await await deployRandomSchnorrAccount(pxe, defaultOptions);
-
-  return { pxe, aliceAccount, bobAccount, carlAccount, pm, defaultFPM, defaultOptions };
+  return { pxe, deployer, wallets };
 };
 
 describe('Token - Single PXE', () => {
   let pxe: PXE;
 
-  let aliceAccount: AccountManager;
-  let bobAccount: AccountManager;
-  let carlAccount: AccountManager;
+  let wallets: AccountWalletWithSecretKey[];
+  let deployer: AccountWalletWithSecretKey;
 
   let alice: AccountWalletWithSecretKey;
   let bob: AccountWalletWithSecretKey;
@@ -64,20 +56,14 @@ describe('Token - Single PXE', () => {
 
   let token: TokenContract;
 
-  let pm: L1FeeJuicePortalManager;
-  let defaultFPM: FeePaymentMethod;
-  let defaultOptions: DeployOptions;
-
   beforeAll(async () => {
-    ({ pxe, aliceAccount, bobAccount, carlAccount, pm, defaultFPM, defaultOptions } = await setupTestSuite());
+    ({ pxe, deployer, wallets } = await setupTestSuite());
 
-    alice = await aliceAccount.getWallet();
-    bob = await bobAccount.getWallet();
-    carl = await carlAccount.getWallet();
+    [alice, bob, carl] = wallets;
   });
 
   beforeEach(async () => {
-    token = (await deployTokenWithMinter(alice, defaultOptions)) as TokenContract;
+    token = (await deployTokenWithMinter(alice, {})) as TokenContract;
   });
 
   it('deploys the contract with minter', async () => {
@@ -94,7 +80,6 @@ describe('Token - Single PXE', () => {
     const tx = deployer
       .deploy('PrivateToken', 'PT', 18, deployerWallet.getAddress(), deployerWallet.getAddress())
       .send({
-        ...defaultOptions,
         contractAddressSalt: salt,
       });
     const receipt = await tx.getReceipt();
@@ -138,7 +123,7 @@ describe('Token - Single PXE', () => {
     );
     const tx = deployer
       .deploy('PrivateToken', 'PT', 18, 1, deployerWallet.getAddress(), deployerWallet.getAddress())
-      .send({ ...defaultOptions, contractAddressSalt: salt });
+      .send({ contractAddressSalt: salt });
     const receipt = await tx.getReceipt();
 
     expect(receipt).toEqual(
@@ -164,7 +149,7 @@ describe('Token - Single PXE', () => {
 
   it('mints', async () => {
     await token.withWallet(alice);
-    const tx = await token.methods.mint_to_public(bob.getAddress(), AMOUNT).send(defaultOptions).wait();
+    const tx = await token.methods.mint_to_public(bob.getAddress(), AMOUNT).send().wait();
     const balance = await token.methods.balance_of_public(bob.getAddress()).simulate();
     expect(balance).toBe(AMOUNT);
   }, 300_000);
@@ -174,14 +159,14 @@ describe('Token - Single PXE', () => {
     await token
       .withWallet(alice)
       .methods.mint_to_public(alice.getAddress(), AMOUNT * 2n)
-      .send(defaultOptions)
+      .send()
       .wait();
 
     // Transfer 1 token from alice to bob
     await token
       .withWallet(alice)
       .methods.transfer_public_to_public(alice.getAddress(), bob.getAddress(), AMOUNT, 0)
-      .send(defaultOptions)
+      .send()
       .wait();
 
     // Check balances are correct
@@ -217,14 +202,14 @@ describe('Token - Single PXE', () => {
     await token
       .withWallet(alice)
       .methods.mint_to_private(alice.getAddress(), alice.getAddress(), AMOUNT * 2n)
-      .send(defaultOptions)
+      .send()
       .wait();
 
     // Transfer 1 token from alice's private balance to public balance
     await token
       .withWallet(alice)
       .methods.transfer_private_to_public(alice.getAddress(), alice.getAddress(), AMOUNT, 0)
-      .send(defaultOptions)
+      .send()
       .wait();
 
     // Check public balance is correct
@@ -238,11 +223,7 @@ describe('Token - Single PXE', () => {
 
   it.skip('fails when transferring more tokens than available in private balance', async () => {
     // Mint 1 token privately to alice
-    await token
-      .withWallet(alice)
-      .methods.mint_to_private(alice.getAddress(), alice.getAddress(), AMOUNT)
-      .send(defaultOptions)
-      .wait();
+    await token.withWallet(alice).methods.mint_to_private(alice.getAddress(), alice.getAddress(), AMOUNT).send().wait();
 
     // Try to transfer more tokens than available from private to public balance
     // TODO(#29): fix "Invalid arguments size: expected 3, got 2" error handling
@@ -260,14 +241,14 @@ describe('Token - Single PXE', () => {
     await token
       .withWallet(alice)
       .methods.mint_to_private(alice.getAddress(), alice.getAddress(), AMOUNT * 2n)
-      .send(defaultOptions)
+      .send()
       .wait();
 
     // Transfer 1 token from alice to bob's private balance
     await token
       .withWallet(alice)
       .methods.transfer_private_to_private(alice.getAddress(), bob.getAddress(), AMOUNT, 0)
-      .send(defaultOptions)
+      .send()
       .wait();
 
     // Try to transfer more than available balance
@@ -290,7 +271,7 @@ describe('Token - Single PXE', () => {
     await token
       .withWallet(alice)
       .methods.mint_to_private(alice.getAddress(), alice.getAddress(), AMOUNT * 2n)
-      .send(defaultOptions)
+      .send()
       .wait();
 
     // Check total supply increased
@@ -307,18 +288,18 @@ describe('Token - Single PXE', () => {
     await token
       .withWallet(alice)
       .methods.mint_to_private(alice.getAddress(), alice.getAddress(), AMOUNT * 2n)
-      .send(defaultOptions)
+      .send()
       .wait();
 
     // Burn 1 token from alice's private balance
-    await token.withWallet(alice).methods.burn_private(alice.getAddress(), AMOUNT, 0).send(defaultOptions).wait();
+    await token.withWallet(alice).methods.burn_private(alice.getAddress(), AMOUNT, 0).send().wait();
 
     // Try to burn more than available balance
     await expect(
       token
         .withWallet(alice)
         .methods.burn_private(alice.getAddress(), AMOUNT * 2n, 0)
-        .send(defaultOptions)
+        .send()
         .wait(),
     ).rejects.toThrow(/Balance too low/);
 
@@ -336,14 +317,14 @@ describe('Token - Single PXE', () => {
     await token
       .withWallet(alice)
       .methods.mint_to_public(alice.getAddress(), AMOUNT * 2n)
-      .send(defaultOptions)
+      .send()
       .wait();
 
     // Transfer 1 token from alice's public balance to private balance
     await token
       .withWallet(alice)
       .methods.transfer_public_to_private(alice.getAddress(), alice.getAddress(), AMOUNT, 0)
-      .send(defaultOptions)
+      .send()
       .wait();
 
     // Try to transfer more than available public balance
@@ -435,11 +416,11 @@ describe('Token - Single PXE', () => {
 
   it('private transfer with authwitness', async () => {
     // setup balances
-    await token.withWallet(alice).methods.mint_to_public(alice.getAddress(), AMOUNT).send(defaultOptions).wait();
+    await token.withWallet(alice).methods.mint_to_public(alice.getAddress(), AMOUNT).send().wait();
     await token
       .withWallet(alice)
       .methods.transfer_public_to_private(alice.getAddress(), alice.getAddress(), AMOUNT, 0)
-      .send(defaultOptions)
+      .send()
       .wait();
 
     expect(await token.methods.balance_of_private(alice.getAddress()).simulate()).toBe(AMOUNT);
@@ -460,7 +441,7 @@ describe('Token - Single PXE', () => {
     expect(validity.isValidInPrivate).toBeTruthy();
     expect(validity.isValidInPublic).toBeFalsy();
 
-    await action.send({ ...defaultOptions, authWitnesses: [witness] }).wait();
+    await action.send({ authWitnesses: [witness] }).wait();
 
     expect(await token.methods.balance_of_private(alice.getAddress()).simulate()).toBe(0n);
     expect(await token.methods.balance_of_private(bob.getAddress()).simulate()).toBe(AMOUNT);
@@ -470,9 +451,8 @@ describe('Token - Single PXE', () => {
 describe('Token - Multi PXE', () => {
   let pxe: PXE;
 
-  let aliceAccount: AccountManager;
-  let bobAccount: AccountManager;
-  let carlAccount: AccountManager;
+  let wallets: AccountWalletWithSecretKey[];
+  let deployer: AccountWalletWithSecretKey;
 
   let alice: AccountWalletWithSecretKey;
   let bob: AccountWalletWithSecretKey;
@@ -480,19 +460,13 @@ describe('Token - Multi PXE', () => {
 
   let token: TokenContract;
 
-  let pm: L1FeeJuicePortalManager;
-  let defaultFPM;
-  let defaultOptions: any;
-
   let alicePXE: PXE;
   let bobPXE: PXE;
 
   beforeAll(async () => {
-    ({ pxe, aliceAccount, bobAccount, carlAccount, pm, defaultFPM, defaultOptions } = await setupTestSuite());
+    ({ pxe, deployer, wallets } = await setupTestSuite());
 
-    alice = await aliceAccount.getWallet();
-    bob = await bobAccount.getWallet();
-    carl = await carlAccount.getWallet();
+    [alice, bob, carl] = wallets;
 
     // TODO: use different PXE instances.
     alicePXE = pxe;
@@ -500,7 +474,7 @@ describe('Token - Multi PXE', () => {
   });
 
   beforeEach(async () => {
-    token = (await deployTokenWithMinter(alice, defaultOptions)) as TokenContract;
+    token = (await deployTokenWithMinter(alice)) as TokenContract;
     await bobPXE.registerContract(token);
 
     // alice knows bob
@@ -517,13 +491,13 @@ describe('Token - Multi PXE', () => {
     let events, notes;
 
     // mint initial amount to alice
-    await token.withWallet(alice).methods.mint_to_public(alice.getAddress(), wad(10)).send(defaultOptions).wait();
+    await token.withWallet(alice).methods.mint_to_public(alice.getAddress(), wad(10)).send().wait();
 
     // self-transfer 5 public tokens to private
     const aliceShieldTx = await token
       .withWallet(alice)
       .methods.transfer_public_to_private(alice.getAddress(), alice.getAddress(), wad(5), 0)
-      .send(defaultOptions)
+      .send()
       .wait();
     await token.withWallet(alice).methods.sync_private_state().simulate({});
 
@@ -539,7 +513,7 @@ describe('Token - Multi PXE', () => {
     const fundBobTx = await token
       .withWallet(alice)
       .methods.transfer_public_to_private(alice.getAddress(), bob.getAddress(), wad(5), 0)
-      .send(defaultOptions)
+      .send()
       .wait();
 
     await token.withWallet(alice).methods.sync_private_state().simulate({});
@@ -558,7 +532,7 @@ describe('Token - Multi PXE', () => {
     const fundBobTx2 = await token
       .withWallet(alice)
       .methods.transfer_private_to_private(alice.getAddress(), bob.getAddress(), wad(5), 0)
-      .send(defaultOptions)
+      .send()
       .wait();
 
     await token.withWallet(alice).methods.sync_private_state().simulate({});

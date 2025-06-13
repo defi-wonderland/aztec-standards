@@ -32,7 +32,7 @@ export const wad = (n: number = 1) => AMOUNT * BigInt(n);
  * @param deployer - The wallet to deploy the contract with.
  * @returns A deployed contract instance.
  */
-export async function deployTokenWithMinter(deployer: AccountWallet, options: DeployOptions) {
+export async function deployTokenWithMinter(deployer: AccountWallet, options?: DeployOptions) {
   const contract = await Contract.deploy(
     deployer,
     TokenContractArtifact,
@@ -49,7 +49,7 @@ export async function deployTokenWithMinter(deployer: AccountWallet, options: De
  * @param deployer - The wallet to deploy the contract with.
  * @returns A deployed contract instance.
  */
-export async function deployNFTWithMinter(deployer: AccountWallet, options: DeployOptions) {
+export async function deployNFTWithMinter(deployer: AccountWallet, options?: DeployOptions) {
   const contract = await Contract.deploy(
     deployer,
     NFTContractArtifact,
