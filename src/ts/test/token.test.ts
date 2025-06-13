@@ -1,6 +1,4 @@
-import { TokenContractArtifact, TokenContract } from '../../artifacts/Token.js';
 import {
-  CompleteAddress,
   ContractDeployer,
   Fr,
   TxStatus,
@@ -8,20 +6,12 @@ import {
   Contract,
   AccountWalletWithSecretKey,
   IntentAction,
-  SponsoredFeePaymentMethod,
   Wallet,
-  L1FeeJuicePortalManager,
-  AccountManager,
-  FeePaymentMethod,
-  DeployOptions,
 } from '@aztec/aztec.js';
-import { AMOUNT, deployTokenWithMinter, expectTokenBalances, expectUintNote, logger, wad } from './utils.js';
+import { AMOUNT, deployTokenWithMinter, expectTokenBalances, expectUintNote, logger, setupPXE, wad } from './utils.js';
 import { PXE } from '@aztec/stdlib/interfaces/client';
-import { getSponsoredFeePaymentMethod, setupSponsoredFPC } from '../contracts/fpc.js';
-import { setupPXE } from '../contracts/pxe.js';
-import { setupFeeJuicePortalManager } from '../contracts/pm.js';
-import { deployRandomSchnorrAccount, deploySchnorrAccount } from '../contracts/accounts.js';
 import { getInitialTestAccountsManagers } from '@aztec/accounts/testing';
+import { TokenContractArtifact, TokenContract } from '../../artifacts/Token.js';
 
 export async function deployTokenWithInitialSupply(deployer: Wallet, options: any) {
   const contract = await Contract.deploy(
