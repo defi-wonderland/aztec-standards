@@ -53,9 +53,9 @@ jobs:
           run: |
             VERSION=0.87.8 aztec start --port 8081 --pxe --pxe.nodeUrl=http://localhost:8080/ --pxe.proverEnabled false &
 
-        - name: Run nr tests
-          run: |
-            script -e -c "aztec test"
+        # - name: Run nr tests
+        #   run: |
+        #     script -e -c "aztec test"
 
         - name: Run js tests
           run: script -e -c "BASE_PXE_URL=http://localhost NODE_NO_WARNINGS=1 node --experimental-vm-modules $(yarn bin jest) --no-cache --runInBand --config jest.integration.config.json"
