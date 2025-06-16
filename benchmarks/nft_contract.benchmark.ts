@@ -1,11 +1,20 @@
-import { type AccountWallet, type ContractFunctionInteraction, type PXE, createPXEClient } from '@aztec/aztec.js';
-import { getInitialTestAccountsManagers } from '@aztec/accounts/testing';
+import {
+  AccountManager,
+  type AccountWallet,
+  AccountWalletWithSecretKey,
+  type ContractFunctionInteraction,
+  type PXE,
+  createPXEClient,
+} from '@aztec/aztec.js';
+import { getInitialTestAccounts } from '@aztec/accounts/testing';
 
 // Import the new Benchmark base class and context
 import { Benchmark, BenchmarkContext } from '@defi-wonderland/aztec-benchmark';
 
 import { NFTContract } from '../src/artifacts/NFT.js';
 import { deployNFTWithMinter } from '../src/ts/test/utils.js';
+import { deriveSigningKey } from '@aztec/stdlib/keys';
+import { SchnorrAccountContract } from '@aztec/accounts/schnorr';
 
 // Extend the BenchmarkContext from the new package
 interface NFTBenchmarkContext extends BenchmarkContext {
@@ -24,11 +33,18 @@ export default class NFTContractBenchmark extends Benchmark {
   async setup(): Promise<NFTBenchmarkContext> {
     const { BASE_PXE_URL = 'http://localhost' } = process.env;
     const pxe = createPXEClient(`${BASE_PXE_URL}:8080`);
-    const accounts = await getInitialTestAccountsManagers(pxe);
-    // await Promise.all(accounts.map((acc) => acc.deploy({}).wait()));
-    const wallets = await Promise.all(accounts.map((acc) => acc.getWallet()));
+    const managers = await Promise.all(
+      (await getInitialTestAccounts()).map(async (acc) => {
+        return await AccountManager.create(
+          pxe,
+          acc.secret,
+          new SchnorrAccountContract(deriveSigningKey(acc.secret)),
+          acc.salt,
+        );
+      }),
+    );
+    const wallets = await Promise.all(managers.map((acc) => acc.register()));
     const [deployer] = wallets;
-
     const deployedBaseContract = await deployNFTWithMinter(deployer, { universalDeploy: true });
     const nftContract = await NFTContract.at(deployedBaseContract.address, deployer);
     return { pxe, deployer, accounts: wallets, nftContract };
