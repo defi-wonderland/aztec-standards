@@ -1,6 +1,5 @@
 use aztec::{
     context::{PrivateContext, UtilityContext},
-    macros::functions::utility,
     note::{
         note_emission::OuterNoteEmission, note_getter_options::SortOrder,
         note_interface::NoteProperties, retrieved_note::RetrievedNote,
@@ -10,8 +9,8 @@ use aztec::{
     state_vars::storage::Storage,
 };
 
-use uint_note::uint_note::{UintNote};
 use std::ops::Add;
+use uint_note::uint_note::UintNote;
 
 pub struct BalanceSet<Context> {
     pub set: PrivateSet<UintNote, Context>,
