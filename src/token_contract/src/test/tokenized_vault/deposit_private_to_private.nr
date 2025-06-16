@@ -6,12 +6,14 @@ unconstrained fn deposit_private_to_private_without_asset() {
     // Setup without account contracts. We are not using authwits here, so dummy accounts are enough
     let (_, asset_address, owner, recipient, mint_amount) =
         utils::setup_and_mint_to_public_without_minter(true);
-    
+
     let (env, vault_address, _, _, minter) = utils::setup_with_minter(true);
 
     // Deposit should fail because the PublicImmutable asset was not initialized
     env.impersonate(owner);
-    Token::at(vault_address).deposit_private_to_private(owner, recipient, mint_amount, mint_amount, 0).call(&mut env.private());
+    Token::at(vault_address)
+        .deposit_private_to_private(owner, recipient, mint_amount, mint_amount, 0)
+        .call(&mut env.private());
     env.advance_block_by(1);
 }
 
@@ -40,7 +42,9 @@ unconstrained fn deposit_private_to_private_success() {
     env.impersonate(owner);
     // At the first deposit 1 share = 1 asset
     let shares = deposit_amount;
-    Token::at(vault_address).deposit_private_to_private(owner, recipient, deposit_amount, shares, 0).call(&mut env.private());
+    Token::at(vault_address)
+        .deposit_private_to_private(owner, recipient, deposit_amount, shares, 0)
+        .call(&mut env.private());
     env.advance_block_by(1);
 
     // Check recipient got shares
@@ -85,7 +89,9 @@ unconstrained fn deposit_private_to_private_after_yield() {
     // Deposit
     env.impersonate(owner);
     let expected_shares: u128 = 5_000; // 10_000 / 2 because of yield
-    Token::at(vault_address).deposit_private_to_private(owner, recipient, deposit_amount, expected_shares, 0).call(&mut env.private());
+    Token::at(vault_address)
+        .deposit_private_to_private(owner, recipient, deposit_amount, expected_shares, 0)
+        .call(&mut env.private());
     env.advance_block_by(1);
 
     // Check recipient got shares
@@ -125,7 +131,9 @@ unconstrained fn deposit_private_to_private_request_fewer_shares() {
     env.impersonate(owner);
     // At the first deposit 1 share = 1 asset
     let shares = 9_999;
-    Token::at(vault_address).deposit_private_to_private(owner, recipient, deposit_amount, shares, 0).call(&mut env.private());
+    Token::at(vault_address)
+        .deposit_private_to_private(owner, recipient, deposit_amount, shares, 0)
+        .call(&mut env.private());
     env.advance_block_by(1);
 
     // Check recipient got shares
@@ -165,17 +173,8 @@ unconstrained fn deposit_private_to_private_request_too_many_shares() {
     env.impersonate(owner);
     // At the first deposit 1 share = 1 asset
     let shares = deposit_amount * 2;
-    Token::at(vault_address).deposit_private_to_private(owner, recipient, deposit_amount, shares, 0).call(&mut env.private());
+    Token::at(vault_address)
+        .deposit_private_to_private(owner, recipient, deposit_amount, shares, 0)
+        .call(&mut env.private());
     env.advance_block_by(1);
-
-    // Check recipient got shares
-    utils::check_private_balance(vault_address, recipient, shares);
-    utils::check_public_balance(vault_address, recipient, 0);
-
-    // Check the total supply got updated
-    let total_supply = Token::at(vault_address).total_supply().view(&mut env.public());
-    assert(total_supply == shares, "Incorrect shares total supply");
-
-    // Check vault has assets
-    utils::check_public_balance(asset_address, vault_address, deposit_amount);
 }

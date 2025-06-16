@@ -6,12 +6,14 @@ unconstrained fn deposit_private_to_public_without_asset() {
     // Setup without account contracts. We are not using authwits here, so dummy accounts are enough
     let (_, asset_address, owner, recipient, mint_amount) =
         utils::setup_and_mint_to_public_without_minter(true);
-    
+
     let (env, vault_address, _, _, minter) = utils::setup_with_minter(true);
 
     // Deposit should fail because the PublicImmutable asset was not initialized
     env.impersonate(owner);
-    Token::at(vault_address).deposit_private_to_public(owner, recipient, mint_amount, 0).call(&mut env.private());
+    Token::at(vault_address).deposit_private_to_public(owner, recipient, mint_amount, 0).call(
+        &mut env.private(),
+    );
     env.advance_block_by(1);
 }
 
@@ -38,7 +40,9 @@ unconstrained fn deposit_private_to_public_success() {
 
     // Deposit
     env.impersonate(owner);
-    Token::at(vault_address).deposit_private_to_public(owner, recipient, deposit_amount, 0).call(&mut env.private());
+    Token::at(vault_address).deposit_private_to_public(owner, recipient, deposit_amount, 0).call(
+        &mut env.private(),
+    );
     env.advance_block_by(1);
 
     // Check recipient got shares
@@ -83,7 +87,9 @@ unconstrained fn deposit_private_to_public_after_yield() {
 
     // Deposit
     env.impersonate(owner);
-    Token::at(vault_address).deposit_private_to_public(owner, recipient, deposit_amount, 0).call(&mut env.private());
+    Token::at(vault_address).deposit_private_to_public(owner, recipient, deposit_amount, 0).call(
+        &mut env.private(),
+    );
     env.advance_block_by(1);
 
     // Check recipient got shares
