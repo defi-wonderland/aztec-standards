@@ -12,7 +12,7 @@ import { parseUnits } from 'viem';
 import { Benchmark, BenchmarkContext } from '@defi-wonderland/aztec-benchmark';
 
 import { TokenContract } from '../src/artifacts/Token.js';
-import { deployTokenWithMinter } from '../src/ts/test/utils.js';
+import { deployTokenWithMinter, setupPXE } from '../src/ts/test/utils.js';
 import { SchnorrAccountContract } from '@aztec/accounts/schnorr';
 import { deriveSigningKey } from '@aztec/stdlib/keys';
 
@@ -38,8 +38,7 @@ export default class TokenContractBenchmark extends Benchmark {
    * Creates PXE client, gets accounts, and deploys the contract.
    */
   async setup(): Promise<TokenBenchmarkContext> {
-    const { BASE_PXE_URL = 'http://localhost' } = process.env;
-    const pxe = createPXEClient(`${BASE_PXE_URL}:8080`);
+    const pxe = await setupPXE();
     const managers = await Promise.all(
       (await getInitialTestAccounts()).map(async (acc) => {
         return await AccountManager.create(

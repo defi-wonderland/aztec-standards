@@ -12,7 +12,7 @@ import { getInitialTestAccounts } from '@aztec/accounts/testing';
 import { Benchmark, BenchmarkContext } from '@defi-wonderland/aztec-benchmark';
 
 import { NFTContract } from '../src/artifacts/NFT.js';
-import { deployNFTWithMinter } from '../src/ts/test/utils.js';
+import { deployNFTWithMinter, setupPXE } from '../src/ts/test/utils.js';
 import { deriveSigningKey } from '@aztec/stdlib/keys';
 import { SchnorrAccountContract } from '@aztec/accounts/schnorr';
 
@@ -31,8 +31,7 @@ export default class NFTContractBenchmark extends Benchmark {
    * Creates PXE client, gets accounts, and deploys the contract.
    */
   async setup(): Promise<NFTBenchmarkContext> {
-    const { BASE_PXE_URL = 'http://localhost' } = process.env;
-    const pxe = createPXEClient(`${BASE_PXE_URL}:8080`);
+    const pxe = await setupPXE();
     const managers = await Promise.all(
       (await getInitialTestAccounts()).map(async (acc) => {
         return await AccountManager.create(
