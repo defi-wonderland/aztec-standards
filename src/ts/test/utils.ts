@@ -1,30 +1,39 @@
 import {
   createLogger,
   Fr,
-  waitForPXE,
   AztecAddress,
   UniqueNote,
   AccountWallet,
-  createPXEClient,
-  FieldLike,
   Contract,
+  DeployOptions,
+  createAztecNodeClient,
+  waitForPXE,
+  Wallet,
 } from '@aztec/aztec.js';
+import { getPXEServiceConfig } from '@aztec/pxe/config';
+import { createPXEService } from '@aztec/pxe/server';
+import { createStore } from '@aztec/kv-store/lmdb';
 import { TokenContract, TokenContractArtifact } from '../../artifacts/Token.js';
-import { NFTContract, NFTContractArtifact } from '../../artifacts/NFT.js';
+import { NFTContractArtifact } from '../../artifacts/NFT.js';
 
 export const logger = createLogger('aztec:aztec-standards');
 
-export const createPXE = async (id: number = 0) => {
-  const { BASE_PXE_URL = `http://localhost` } = process.env;
-  const url = `${BASE_PXE_URL}:${8080 + id}`;
-  const pxe = createPXEClient(url);
-  logger.info(`Waiting for PXE to be ready at ${url}`);
+const { NODE_URL = 'http://localhost:8080' } = process.env;
+const node = createAztecNodeClient(NODE_URL);
+const l1Contracts = await node.getL1ContractAddresses();
+const config = getPXEServiceConfig();
+const fullConfig = { ...config, l1Contracts };
+fullConfig.proverEnabled = false;
+
+const store = await createStore('pxe', {
+  dataDirectory: 'store',
+  dataStoreMapSizeKB: 1e6,
+});
+
+export const setupPXE = async () => {
+  const pxe = await createPXEService(node, fullConfig, { store });
   await waitForPXE(pxe);
   return pxe;
-};
-
-export const setupSandbox = async () => {
-  return createPXE();
 };
 
 // --- Token Utils ---
@@ -55,14 +64,14 @@ export const wad = (n: number = 1) => AMOUNT * BigInt(n);
  * @param deployer - The wallet to deploy the contract with.
  * @returns A deployed contract instance.
  */
-export async function deployTokenWithMinter(deployer: AccountWallet) {
+export async function deployTokenWithMinter(deployer: Wallet, options?: DeployOptions) {
   const contract = await Contract.deploy(
     deployer,
     TokenContractArtifact,
     ['PrivateToken', 'PT', 18, deployer.getAddress(), AztecAddress.ZERO],
     'constructor_with_minter',
   )
-    .send()
+    .send(options)
     .deployed();
   return contract;
 }
@@ -72,14 +81,14 @@ export async function deployTokenWithMinter(deployer: AccountWallet) {
  * @param deployer - The wallet to deploy the contract with.
  * @returns A deployed contract instance.
  */
-export async function deployNFTWithMinter(deployer: AccountWallet) {
+export async function deployNFTWithMinter(deployer: AccountWallet, options?: DeployOptions) {
   const contract = await Contract.deploy(
     deployer,
     NFTContractArtifact,
     ['NFT', 'NFT', deployer.getAddress()],
     'constructor_with_minter',
   )
-    .send()
+    .send(options)
     .deployed();
   return contract;
 }

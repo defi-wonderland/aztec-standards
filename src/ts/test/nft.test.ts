@@ -1,7 +1,5 @@
-import { NFTContract, NFTContractArtifact } from '../../artifacts/NFT.js';
 import {
   AccountWallet,
-  CompleteAddress,
   Fr,
   PXE,
   TxStatus,
@@ -11,19 +9,24 @@ import {
   AccountWalletWithSecretKey,
   IntentAction,
   AztecAddress,
+  DeployOptions,
+  AccountManager,
 } from '@aztec/aztec.js';
-import { getInitialTestAccountsWallets } from '@aztec/accounts/testing';
-import { createPXE, setupSandbox } from './utils.js';
+import { setupPXE } from './utils.js';
+import { getInitialTestAccounts } from '@aztec/accounts/testing';
+import { NFTContract, NFTContractArtifact } from '../../artifacts/NFT.js';
+import { SchnorrAccountContract } from '@aztec/accounts/schnorr';
+import { deriveSigningKey } from '@aztec/stdlib/keys';
 
 // Deploy NFT contract with a minter
-async function deployNFTWithMinter(deployer: AccountWallet) {
+async function deployNFTWithMinter(deployer: AccountWallet, options?: DeployOptions) {
   const contract = await Contract.deploy(
     deployer,
     NFTContractArtifact,
     ['TestNFT', 'TNFT', deployer.getAddress()],
     'constructor_with_minter',
   )
-    .send()
+    .send(options)
     .deployed();
   return contract;
 }
@@ -61,26 +64,40 @@ async function assertPrivateNFTNullified(
   expect(hasNFT).toBe(false);
 }
 
-describe.skip('NFT - Single PXE', () => {
-  let pxe: PXE;
-  let wallets: AccountWalletWithSecretKey[] = [];
-  let accounts: CompleteAddress[] = [];
+const setupTestSuite = async () => {
+  const pxe = await setupPXE();
+  const managers = await Promise.all(
+    (await getInitialTestAccounts()).map(async (acc) => {
+      return await AccountManager.create(
+        pxe,
+        acc.secret,
+        new SchnorrAccountContract(deriveSigningKey(acc.secret)),
+        acc.salt,
+      );
+    }),
+  );
+  const wallets = await Promise.all(managers.map((acc) => acc.register()));
+  const [deployer] = wallets;
 
-  let alice: AccountWallet;
-  let bob: AccountWallet;
-  let carl: AccountWallet;
+  return { pxe, deployer, wallets };
+};
+
+describe('NFT - Single PXE', () => {
+  let pxe: PXE;
+
+  let wallets: AccountWalletWithSecretKey[];
+  let deployer: AccountWalletWithSecretKey;
+
+  let alice: AccountWalletWithSecretKey;
+  let bob: AccountWalletWithSecretKey;
+  let carl: AccountWalletWithSecretKey;
 
   let nft: NFTContract;
 
   beforeAll(async () => {
-    pxe = await setupSandbox();
+    ({ pxe, deployer, wallets } = await setupTestSuite());
 
-    wallets = await getInitialTestAccountsWallets(pxe);
-    accounts = wallets.map((w) => w.getCompleteAddress());
-
-    alice = wallets[0];
-    bob = wallets[1];
-    carl = wallets[2];
+    [alice, bob, carl] = wallets;
 
     console.log({
       alice: alice.getAddress(),
@@ -94,7 +111,7 @@ describe.skip('NFT - Single PXE', () => {
 
   it('deploys the contract with minter', async () => {
     const salt = Fr.random();
-    const [deployerWallet] = wallets; // using first account as deployer
+    const deployerWallet = alice; // using first account as deployer
 
     const deploymentData = await getContractInstanceFromDeployParams(NFTContractArtifact, {
       constructorArtifact: 'constructor_with_minter',
