@@ -10,10 +10,13 @@ import {
   IntentAction,
   AztecAddress,
   DeployOptions,
+  AccountManager,
 } from '@aztec/aztec.js';
 import { setupPXE } from './utils.js';
-import { getInitialTestAccountsManagers } from '@aztec/accounts/testing';
+import { getInitialTestAccounts } from '@aztec/accounts/testing';
 import { NFTContract, NFTContractArtifact } from '../../artifacts/NFT.js';
+import { SchnorrAccountContract } from '@aztec/accounts/schnorr';
+import { deriveSigningKey } from '@aztec/stdlib/keys';
 
 // Deploy NFT contract with a minter
 async function deployNFTWithMinter(deployer: AccountWallet, options?: DeployOptions) {
@@ -63,9 +66,17 @@ async function assertPrivateNFTNullified(
 
 const setupTestSuite = async () => {
   const pxe = await setupPXE();
-  const accounts = await getInitialTestAccountsManagers(pxe);
-  // await Promise.all(accounts.map(acc => acc.deploy({})));
-  const wallets = await Promise.all(accounts.map((acc) => acc.getWallet()));
+  const managers = await Promise.all(
+    (await getInitialTestAccounts()).map(async (acc) => {
+      return await AccountManager.create(
+        pxe,
+        acc.secret,
+        new SchnorrAccountContract(deriveSigningKey(acc.secret)),
+        acc.salt,
+      );
+    }),
+  );
+  const wallets = await Promise.all(managers.map((acc) => acc.register()));
   const [deployer] = wallets;
 
   return { pxe, deployer, wallets };

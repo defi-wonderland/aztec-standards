@@ -7,11 +7,14 @@ import {
   AccountWalletWithSecretKey,
   IntentAction,
   Wallet,
+  AccountManager,
 } from '@aztec/aztec.js';
 import { AMOUNT, deployTokenWithMinter, expectTokenBalances, expectUintNote, setupPXE, wad } from './utils.js';
 import { PXE } from '@aztec/stdlib/interfaces/client';
-import { getInitialTestAccountsManagers } from '@aztec/accounts/testing';
+import { getInitialTestAccounts, getInitialTestAccountsManagers } from '@aztec/accounts/testing';
 import { TokenContractArtifact, TokenContract } from '../../artifacts/Token.js';
+import { SchnorrAccountContract } from '@aztec/accounts/schnorr';
+import { deriveSigningKey } from '@aztec/stdlib/keys';
 
 export async function deployTokenWithInitialSupply(deployer: Wallet, options: any) {
   const contract = await Contract.deploy(
@@ -27,8 +30,17 @@ export async function deployTokenWithInitialSupply(deployer: Wallet, options: an
 
 const setupTestSuite = async () => {
   const pxe = await setupPXE();
-  const accounts = await getInitialTestAccountsManagers(pxe);
-  const wallets = await Promise.all(accounts.map((acc) => acc.getWallet()));
+  const managers = await Promise.all(
+    (await getInitialTestAccounts()).map(async (acc) => {
+      return await AccountManager.create(
+        pxe,
+        acc.secret,
+        new SchnorrAccountContract(deriveSigningKey(acc.secret)),
+        acc.salt,
+      );
+    }),
+  );
+  const wallets = await Promise.all(managers.map((acc) => acc.register()));
   const [deployer] = wallets;
 
   return { pxe, deployer, wallets };
