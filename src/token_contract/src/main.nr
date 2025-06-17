@@ -15,9 +15,8 @@ pub contract Token {
         messages::logs::note::encode_and_encrypt_note,
         prelude::{AztecAddress, Map, PublicContext, PublicImmutable, PublicMutable},
         protocol_types::{
-            constants::DEPLOYER_CONTRACT_ADDRESS,
-            contract_class_id::ContractClassId,
-            traits::{FromField, ToField},
+            constants::DEPLOYER_CONTRACT_ADDRESS, contract_class_id::ContractClassId,
+            traits::FromField,
         },
     };
     // authorized witness library
