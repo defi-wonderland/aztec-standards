@@ -864,6 +864,8 @@ pub contract Token {
         shares: u128,
         _nonce: Field,
     ) {
+        _validate_from_private(&mut context, from);
+
         // Validate in public that `assets` is sufficient for the requested shares
         Token::at(context.this_address()).validate_deposit_rate_internal(assets, shares).enqueue(
             &mut context,
@@ -894,6 +896,8 @@ pub contract Token {
         shares: u128,
         _nonce: Field,
     ) {
+        _validate_from_private(&mut context, from);
+
         // Validate in public that `assets` is sufficient for the requested shares
         Token::at(context.this_address()).validate_deposit_rate_internal(assets, shares).enqueue(
             &mut context,
@@ -920,6 +924,8 @@ pub contract Token {
         assets: u128,
         _nonce: Field,
     ) {
+        _validate_from_private(&mut context, from);
+
         // Calculate and mint shares to the recipient in public
         Token::at(context.this_address()).issue_from_assets_internal(to, assets).enqueue(
             &mut context,
@@ -948,6 +954,8 @@ pub contract Token {
         min_shares: u128,
         _nonce: Field,
     ) {
+        _validate_from_private(&mut context, from);
+
         // Increase recipient's private balance with `min_shares`
         _increase_private_balance(&mut context, storage.private_balances, from, to, min_shares);
 
@@ -989,6 +997,8 @@ pub contract Token {
         min_shares: u128,
         _nonce: Field,
     ) {
+        _validate_from_private(&mut context, from);
+
         // Increase recipient's private balance with `min_shares`
         _increase_private_balance(&mut context, storage.private_balances, from, to, min_shares);
 
@@ -1072,6 +1082,8 @@ pub contract Token {
         max_assets: u128,
         _nonce: Field,
     ) {
+        _validate_from_private(&mut context, from);
+
         // Take the assets from the sender
         Token::at(storage.asset.read())
             .transfer_public_to_public(from, context.this_address(), max_assets, _nonce)
@@ -1102,6 +1114,8 @@ pub contract Token {
         max_assets: u128,
         _nonce: Field,
     ) {
+        _validate_from_private(&mut context, from);
+
         // Take max_assets from the sender
         Token::at(storage.asset.read())
             .transfer_private_to_public(from, context.this_address(), max_assets, _nonce)
@@ -1139,6 +1153,8 @@ pub contract Token {
         max_assets: u128,
         _nonce: Field,
     ) {
+        _validate_from_private(&mut context, from);
+
         // Take max_assets from the sender
         Token::at(storage.asset.read())
             .transfer_private_to_public(from, context.this_address(), max_assets, _nonce)
@@ -1402,6 +1418,8 @@ pub contract Token {
         min_assets: u128,
         _nonce: Field,
     ) {
+        _validate_from_private(&mut context, from);
+
         // TODO (optimization): partial note logs and validity_commitment nullifier are not needed (?)
         // Initialize commitment that allows to transfer outstanding assets to the recipient in public
         let asset_commitment = Token::at(storage.asset.read())
@@ -1415,7 +1433,6 @@ pub contract Token {
             .enqueue(&mut context);
 
         // Burn shares from the sender in private
-        _validate_from_private(&mut context, from);
         _burn_private(&mut context, storage.private_balances, from, shares);
 
         // Transfer min_assets to the recipient
