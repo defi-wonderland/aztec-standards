@@ -174,8 +174,8 @@ unconstrained fn deposit_private_to_public_on_behalf_of_other_success() {
     );
 
     // Authorize the recipient to call deposit_private_to_public
-    let deposit_private_to_public_call_interface = Token::at(vault_address)
-        .deposit_private_to_public(owner, recipient, deposit_amount, 0);
+    let deposit_private_to_public_call_interface =
+        Token::at(vault_address).deposit_private_to_public(owner, recipient, deposit_amount, 0);
     authwit_cheatcodes::add_private_authwit_from_call_interface(
         owner,
         recipient,
