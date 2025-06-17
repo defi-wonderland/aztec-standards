@@ -1,8 +1,6 @@
 use crate::test::utils::{self, mint_amount};
 use crate::Token;
 use authwit::cheatcodes as authwit_cheatcodes;
-use aztec::oracle::random::random;
-use aztec::protocol_types::traits::ToField;
 use uint_note::uint_note::PartialUintNote;
 
 #[test]

@@ -1,7 +1,6 @@
 use crate::{test::utils::{self, mint_amount}, Token};
 use aztec::oracle::random::random;
 use std::test::OracleMock;
-use uint_note::uint_note::PartialUintNote;
 
 /// Internal orchestration means that the calls to `initialize_transfer_commitment`
 /// and `transfer_public_to_commitment` are done by the TOKEN contract itself.
