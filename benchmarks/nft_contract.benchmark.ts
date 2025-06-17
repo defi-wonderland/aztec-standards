@@ -42,19 +42,19 @@ export default class NFTContractBenchmark extends Benchmark {
         );
       }),
     );
-    const wallets = await Promise.all(managers.map((acc) => acc.register()));
-    const [deployer] = wallets;
+    const accounts = await Promise.all(managers.map((acc) => acc.register()));
+    const [deployer] = accounts;
     const deployedBaseContract = await deployNFTWithMinter(deployer, { universalDeploy: true });
     const nftContract = await NFTContract.at(deployedBaseContract.address, deployer);
-    return { pxe, deployer, accounts: wallets, nftContract };
+    return { pxe, deployer, accounts, nftContract };
   }
 
   /**
    * Returns the list of NFTContract methods to be benchmarked.
    */
   getMethods(context: NFTBenchmarkContext): ContractFunctionInteraction[] {
-    const { nftContract, deployer, accounts } = context;
-    const [alice, bob] = accounts;
+    const { nftContract, accounts } = context;
+    const [alice] = accounts;
     const owner = alice.getAddress();
     const methods: ContractFunctionInteraction[] = [
       // Mint methods

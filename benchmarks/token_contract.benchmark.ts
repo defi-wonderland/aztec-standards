@@ -49,18 +49,18 @@ export default class TokenContractBenchmark extends Benchmark {
         );
       }),
     );
-    const wallets = await Promise.all(managers.map((acc) => acc.register()));
-    const [deployer] = wallets;
+    const accounts = await Promise.all(managers.map((acc) => acc.register()));
+    const [deployer] = accounts;
     const deployedBaseContract = await deployTokenWithMinter(deployer);
     const tokenContract = await TokenContract.at(deployedBaseContract.address, deployer);
-    return { pxe, deployer, accounts: wallets, tokenContract };
+    return { pxe, deployer, accounts, tokenContract };
   }
 
   /**
    * Returns the list of TokenContract methods to be benchmarked.
    */
   getMethods(context: TokenBenchmarkContext): ContractFunctionInteraction[] {
-    const { tokenContract, deployer, accounts } = context;
+    const { tokenContract, accounts } = context;
     const [alice, bob] = accounts;
     const owner = alice.getAddress();
     const methods: ContractFunctionInteraction[] = [
