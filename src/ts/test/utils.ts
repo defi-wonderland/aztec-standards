@@ -8,6 +8,8 @@ import {
   createPXEClient,
   FieldLike,
   Contract,
+  IntentAction,
+  ContractFunctionInteraction,
 } from '@aztec/aztec.js';
 import { TokenContract, TokenContractArtifact } from '../../artifacts/Token.js';
 import { NFTContract, NFTContractArtifact } from '../../artifacts/NFT.js';
@@ -67,6 +69,18 @@ export async function deployTokenWithMinter(deployer: AccountWallet) {
   return contract;
 }
 
+export async function deployTokenWithInitialSupply(deployer: AccountWallet) {
+  const contract = await Contract.deploy(
+    deployer,
+    TokenContractArtifact,
+    ['PrivateToken', 'PT', 18, 0, deployer.getAddress(), deployer.getAddress()],
+    'constructor_with_initial_supply',
+  )
+    .send()
+    .deployed();
+  return contract;
+}
+
 /**
  * Deploys the NFT contract with a specified minter.
  * @param deployer - The wallet to deploy the contract with.
@@ -82,4 +96,56 @@ export async function deployNFTWithMinter(deployer: AccountWallet) {
     .send()
     .deployed();
   return contract;
+}
+
+/**
+ * Deploys the Token contract with a specified minter.
+ * @param deployer - The wallet to deploy the contract with.
+ * @returns A deployed contract instance.
+ */
+export async function deployVaultAndAssetWithMinter(deployer: AccountWallet): Promise<[Contract, Contract]> {
+  const assetContract = await Contract.deploy(
+    deployer,
+    TokenContractArtifact,
+    ['PrivateToken', 'PT', 6, deployer.getAddress(), AztecAddress.ZERO],
+    'constructor_with_minter',
+  )
+    .send()
+    .deployed();
+
+  const vaultContract = await Contract.deploy(
+    deployer,
+    TokenContractArtifact,
+    ['VaultToken', 'VT', 6, assetContract.address, AztecAddress.ZERO],
+    'constructor_with_asset',
+  )
+    .send()
+    .deployed();
+
+  return [vaultContract, assetContract];
+}
+
+export async function setPrivateAuthWit(
+  caller: AztecAddress,
+  action: ContractFunctionInteraction,
+  deployer: AccountWallet,
+) {
+  const intent: IntentAction = {
+    caller: caller,
+    action: action,
+  };
+  await deployer.createAuthWit(intent);
+}
+
+export async function setPublicAuthWit(
+  caller: AztecAddress,
+  action: ContractFunctionInteraction,
+  deployer: AccountWallet,
+) {
+  const intent: IntentAction = {
+    caller: caller,
+    action: action,
+  };
+  await deployer.createAuthWit(intent);
+  await (await deployer.setPublicAuthWit(intent, true)).send().wait();
 }

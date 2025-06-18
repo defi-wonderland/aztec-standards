@@ -22,18 +22,6 @@ import {
   deployTokenWithMinter,
 } from './utils.js';
 
-export async function deployTokenWithInitialSupply(deployer: AccountWallet) {
-  const contract = await Contract.deploy(
-    deployer,
-    TokenContractArtifact,
-    ['PrivateToken', 'PT', 18, 0, deployer.getAddress(), deployer.getAddress()],
-    'constructor_with_initial_supply',
-  )
-    .send()
-    .deployed();
-  return contract;
-}
-
 describe('Token - Single PXE', () => {
   let pxe: PXE;
   let wallets: AccountWalletWithSecretKey[] = [];
