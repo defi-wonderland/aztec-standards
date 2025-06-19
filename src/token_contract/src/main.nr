@@ -1,4 +1,5 @@
-pub mod test;
+mod types;
+mod test;
 
 use aztec::macros::aztec;
 
@@ -11,11 +12,11 @@ pub contract Token {
             functions::{initializer, internal, private, public, utility, view},
             storage::storage,
         },
+        messages::logs::note::encode_and_encrypt_note,
         prelude::{AztecAddress, Map, PublicContext, PublicImmutable, PublicMutable},
         protocol_types::{
-            constants::DEPLOYER_CONTRACT_ADDRESS,
-            contract_class_id::ContractClassId,
-            traits::{FromField, ToField},
+            constants::DEPLOYER_CONTRACT_ADDRESS, contract_class_id::ContractClassId,
+            traits::FromField,
         },
     };
     // authorized witness library
@@ -26,13 +27,10 @@ pub contract Token {
     use uint_note::uint_note::{PartialUintNote, UintNote};
     // compression library
     use compressed_string::FieldCompressedString;
-    // encryption library
-    use aztec::messages::logs::note::encode_and_encrypt_note;
-    // balance library
-    use balance_set::balance_set::BalanceSet;
-
     // contract instance deployer
     use contract_instance_deployer::ContractInstanceDeployer;
+    // private balance library
+    use crate::types::balance_set::BalanceSet;
 
     // gas-optimized max notes for initial transfer call
     global INITIAL_TRANSFER_CALL_MAX_NOTES: u32 = 2;

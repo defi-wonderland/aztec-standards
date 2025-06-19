@@ -1,11 +1,10 @@
-use crate::test::utils;
+use crate::test::utils::{self, mint_amount};
 use crate::Token;
 use authwit::cheatcodes as authwit_cheatcodes;
-use aztec::oracle::random::random;
 
 #[test]
 unconstrained fn transfer_private_to_commitment() {
-    let (env, token_contract_address, owner, recipient, mint_amount) =
+    let (env, token_contract_address, owner, recipient) =
         utils::setup_and_mint_to_private_without_minter(false);
 
     utils::check_private_balance(token_contract_address, owner, mint_amount);
@@ -32,7 +31,7 @@ unconstrained fn transfer_private_to_commitment() {
 
 #[test]
 unconstrained fn transfer_private_to_commitment_on_behalf_of_other() {
-    let (env, token_contract_address, owner, recipient, mint_amount) =
+    let (env, token_contract_address, owner, recipient) =
         utils::setup_and_mint_to_private_without_minter(true);
 
     utils::check_private_balance(token_contract_address, owner, mint_amount);
