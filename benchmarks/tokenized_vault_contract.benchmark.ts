@@ -154,22 +154,18 @@ export default class TokenContractBenchmark extends Benchmark {
 
       // Withdraw methods
       vaultContract.withWallet(bob).methods.withdraw_public_to_public(bobAddress, aliceAddress, amt(1), 0),
-      vaultContract.withWallet(bob).methods.withdraw_public_to_private(bobAddress, aliceAddress, amt(1), 0),
-      vaultContract.withWallet(bob).methods.withdraw_private_to_private(bobAddress, aliceAddress, amt(1), amt(1), 0),
+      // vaultContract.withWallet(bob).methods.withdraw_public_to_private(bobAddress, aliceAddress, amt(1), 0),
+      // vaultContract.withWallet(bob).methods.withdraw_private_to_private(bobAddress, aliceAddress, amt(1), amt(1), 0),
       vaultContract
         .withWallet(bob)
         .methods.withdraw_private_to_public_exact(bobAddress, aliceAddress, amt(1), amt(1), 0),
-      vaultContract
-        .withWallet(bob)
-        .methods.withdraw_private_to_private_exact(bobAddress, aliceAddress, amt(1), amt(1), 0),
+      // vaultContract.withWallet(bob).methods.withdraw_private_to_private_exact(bobAddress, aliceAddress, amt(1), amt(1), 0),
 
       // Redeem methods
       vaultContract.withWallet(bob).methods.redeem_public_to_public(bobAddress, aliceAddress, amt(1), 0),
       vaultContract.withWallet(bob).methods.redeem_private_to_public(bobAddress, aliceAddress, amt(1), 0),
-      vaultContract
-        .withWallet(bob)
-        .methods.redeem_private_to_private_exact(bobAddress, aliceAddress, amt(1), amt(1), 0),
-      vaultContract.withWallet(bob).methods.redeem_public_to_private_exact(bobAddress, aliceAddress, amt(1), amt(1), 0),
+      // vaultContract.withWallet(bob).methods.redeem_private_to_private_exact(bobAddress, aliceAddress, amt(1), amt(1), 0),
+      // vaultContract.withWallet(bob).methods.redeem_public_to_private_exact(bobAddress, aliceAddress, amt(1), amt(1), 0),
     ];
 
     return methods.filter(Boolean);
