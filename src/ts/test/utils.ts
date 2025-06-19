@@ -10,6 +10,7 @@ import {
   Contract,
   IntentAction,
   ContractFunctionInteraction,
+  AuthWitness,
 } from '@aztec/aztec.js';
 import { TokenContract, TokenContractArtifact } from '../../artifacts/Token.js';
 import { NFTContract, NFTContractArtifact } from '../../artifacts/NFT.js';
@@ -129,12 +130,12 @@ export async function setPrivateAuthWit(
   caller: AztecAddress,
   action: ContractFunctionInteraction,
   deployer: AccountWallet,
-) {
+): Promise<AuthWitness> {
   const intent: IntentAction = {
     caller: caller,
     action: action,
   };
-  await deployer.createAuthWit(intent);
+  return deployer.createAuthWit(intent);
 }
 
 export async function setPublicAuthWit(
