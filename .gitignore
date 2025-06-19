@@ -7,6 +7,4 @@ log/
 codegenCache.json
 .env
 .cursor
-benchmarks/nft_base.benchmark.json
-benchmarks/token_base.benchmark.json
-benchmarks/tokenized_vault_base.benchmark.json
+benchmarks/*.json
