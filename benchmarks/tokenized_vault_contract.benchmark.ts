@@ -113,7 +113,7 @@ export default class TokenContractBenchmark extends Benchmark {
     const aliceAddress = alice.getAddress();
     const bobAddress = bob.getAddress();
 
-    let publicNonce = 1;
+    let publicNonce = 0;
     let privateNonce = 100;
 
     const methods: ContractFunctionInteraction[] = [
