@@ -46,7 +46,7 @@ export default class NFTContractBenchmark extends Benchmark {
     const [deployer] = accounts;
     const deployedBaseContract = await deployNFTWithMinter(deployer, { universalDeploy: true });
     const nftContract = await NFTContract.at(deployedBaseContract.address, deployer);
-    return { pxe, deployer, accounts: wallets, nftContract };
+    return { pxe, deployer, accounts, nftContract };
   }
 
   /**

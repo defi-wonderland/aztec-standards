@@ -53,7 +53,7 @@ export default class TokenContractBenchmark extends Benchmark {
     const [deployer] = accounts;
     const deployedBaseContract = await deployTokenWithMinter(deployer);
     const tokenContract = await TokenContract.at(deployedBaseContract.address, deployer);
-    return { pxe, deployer, accounts: wallets, tokenContract };
+    return { pxe, deployer, accounts, tokenContract };
   }
 
   /**
