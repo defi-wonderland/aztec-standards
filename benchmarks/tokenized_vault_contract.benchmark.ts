@@ -70,35 +70,28 @@ export default class TokenContractBenchmark extends Benchmark {
 
     /* ======================= PUBLIC AUTHWITS ========================== */
 
-    // Set public authwitness for deposit_public_to_public
-    action = assetMethods.transfer_public_to_public(deployer.getAddress(), vaultContract.address, amt(1), 1);
-    await setPublicAuthWit(vaultContract.address, action, deployer);
-
-    // Set public authwitness for deposit_public_to_private
-    action = assetMethods.transfer_public_to_public(deployer.getAddress(), vaultContract.address, amt(1), 2);
-    await setPublicAuthWit(vaultContract.address, action, deployer);
-
-    // Set public authwitness for deposit_public_to_private_exact
-    action = assetMethods.transfer_public_to_public(deployer.getAddress(), vaultContract.address, amt(1), 3);
-    await setPublicAuthWit(vaultContract.address, action, deployer);
-
-    // Set public authwitness for issue_public_to_public
-    action = assetMethods.transfer_public_to_public(deployer.getAddress(), vaultContract.address, amt(1), 4);
-    await setPublicAuthWit(vaultContract.address, action, deployer);
-
-    // Set public authwitness for issue_public_to_private
-    action = assetMethods.transfer_public_to_public(deployer.getAddress(), vaultContract.address, amt(1), 5);
-    await setPublicAuthWit(vaultContract.address, action, deployer);
+    // Set public authwitness for the `transfer_public_to_public` method on the Asset contract to be used by the
+    // Tokenized Vault's following methods:
+    // 1. deposit_public_to_public
+    // 2. deposit_public_to_private
+    // 3. deposit_public_to_private_exact
+    // 4. issue_public_to_public
+    // 5. issue_public_to_private
+    for (let i = 0; i < 5; i++) {
+      const nonce = i;
+      action = assetMethods.transfer_public_to_public(deployer.getAddress(), vaultContract.address, amt(1), nonce);
+      await setPublicAuthWit(vaultContract.address, action, deployer);
+    }
 
     /* ======================= PRIVATE AUTHWITS ========================= */
 
     // Prepare private authwitness for the `transfer_private_to_public` method on the Asset contract to be used by the
     // Tokenized Vault's following methods:
     // 1. deposit_private_to_private
-    // 2. deposit_public_to_private
-    // 3. deposit_public_to_private_exact
-    // 4. issue_public_to_public
-    // 5. issue_public_to_private
+    // 2. deposit_private_to_public
+    // 3. deposit_private_to_private_exact
+    // 4. issue_private_to_public_exact
+    // 5. issue_private_to_private_exact
     const authWitnesses = [];
     for (let i = 0; i < 5; i++) {
       const nonce = 100 + i;
@@ -120,36 +113,45 @@ export default class TokenContractBenchmark extends Benchmark {
     const aliceAddress = alice.getAddress();
     const bobAddress = bob.getAddress();
 
+    let publicNonce = 1;
+    let privateNonce = 100;
+
     const methods: ContractFunctionInteraction[] = [
       // Deposit methods
-      vaultContract.withWallet(alice).methods.deposit_public_to_public(aliceAddress, bobAddress, amt(1), 1),
-      vaultContract.withWallet(alice).methods.deposit_public_to_private(aliceAddress, bobAddress, amt(1), amt(1), 2),
+      vaultContract.withWallet(alice).methods.deposit_public_to_public(aliceAddress, bobAddress, amt(1), publicNonce++),
       vaultContract
         .withWallet(alice)
-        .methods.deposit_private_to_private(aliceAddress, bobAddress, amt(1), amt(1), 100)
+        .methods.deposit_public_to_private(aliceAddress, bobAddress, amt(1), amt(1), publicNonce++),
+      vaultContract
+        .withWallet(alice)
+        .methods.deposit_private_to_private(aliceAddress, bobAddress, amt(1), amt(1), privateNonce++)
         .with({ authWitnesses: [authWitnesses[0]] }),
       vaultContract
         .withWallet(alice)
-        .methods.deposit_private_to_public(aliceAddress, bobAddress, amt(1), 101)
+        .methods.deposit_private_to_public(aliceAddress, bobAddress, amt(1), privateNonce++)
         .with({ authWitnesses: [authWitnesses[1]] }),
       vaultContract
         .withWallet(alice)
-        .methods.deposit_public_to_private_exact(aliceAddress, bobAddress, amt(1), amt(1), 3),
+        .methods.deposit_public_to_private_exact(aliceAddress, bobAddress, amt(1), amt(1), publicNonce++),
       vaultContract
         .withWallet(alice)
-        .methods.deposit_private_to_private_exact(aliceAddress, bobAddress, amt(1), amt(1), 102)
+        .methods.deposit_private_to_private_exact(aliceAddress, bobAddress, amt(1), amt(1), privateNonce++)
         .with({ authWitnesses: [authWitnesses[2]] }),
 
       // Issue methods
-      vaultContract.withWallet(alice).methods.issue_public_to_public(aliceAddress, bobAddress, amt(1), amt(1), 4),
-      vaultContract.withWallet(alice).methods.issue_public_to_private(aliceAddress, bobAddress, amt(1), amt(1), 5),
       vaultContract
         .withWallet(alice)
-        .methods.issue_private_to_public_exact(aliceAddress, bobAddress, amt(1), amt(1), 103)
+        .methods.issue_public_to_public(aliceAddress, bobAddress, amt(1), amt(1), publicNonce++),
+      vaultContract
+        .withWallet(alice)
+        .methods.issue_public_to_private(aliceAddress, bobAddress, amt(1), amt(1), publicNonce++),
+      vaultContract
+        .withWallet(alice)
+        .methods.issue_private_to_public_exact(aliceAddress, bobAddress, amt(1), amt(1), privateNonce++)
         .with({ authWitnesses: [authWitnesses[3]] }),
       vaultContract
         .withWallet(alice)
-        .methods.issue_private_to_private_exact(aliceAddress, bobAddress, amt(1), amt(1), 104)
+        .methods.issue_private_to_private_exact(aliceAddress, bobAddress, amt(1), amt(1), privateNonce++)
         .with({ authWitnesses: [authWitnesses[4]] }),
 
       // Withdraw methods
