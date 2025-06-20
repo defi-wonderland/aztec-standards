@@ -1,4 +1,4 @@
-use crate::test::utils;
+use crate::test::utils::{self, mint_amount};
 use crate::Token;
 use authwit::cheatcodes as authwit_cheatcodes;
 use aztec::note::constants::MAX_NOTES_PER_PAGE;
@@ -7,7 +7,7 @@ use uint_note::uint_note::UintNote;
 #[test]
 unconstrained fn transfer_private_on_behalf_of_other() {
     // Setup with account contracts. Slower since we actually deploy them, but needed for authwits.
-    let (env, token_contract_address, owner, recipient, mint_amount) =
+    let (env, token_contract_address, owner, recipient) =
         utils::setup_and_mint_to_private_without_minter(true);
     // Add authwit
     let transfer_amount = (1000 as u128);
@@ -80,7 +80,7 @@ unconstrained fn transfer_private_multiple_notes_recursively() {
 #[test(should_fail_with = "Balance too low")]
 unconstrained fn transfer_private_failure_on_behalf_of_more_than_balance() {
     // Setup with account contracts. Slower since we actually deploy them, but needed for authwits.
-    let (env, token_contract_address, owner, recipient, mint_amount) =
+    let (env, token_contract_address, owner, recipient) =
         utils::setup_and_mint_to_private_without_minter(true);
     // Add authwit
     let transfer_amount = mint_amount + (1 as u128);
@@ -101,7 +101,7 @@ unconstrained fn transfer_private_failure_on_behalf_of_more_than_balance() {
 #[test(should_fail_with = "Unknown auth witness for message hash ")]
 unconstrained fn transfer_private_failure_on_behalf_of_other_without_approval() {
     // Setup with account contracts. Slower since we actually deploy them, but needed for authwits.
-    let (env, token_contract_address, owner, recipient, _) =
+    let (env, token_contract_address, owner, recipient) =
         utils::setup_and_mint_to_private_without_minter(true);
     // Add authwit
     let transfer_amount = (1000 as u128);
@@ -116,7 +116,7 @@ unconstrained fn transfer_private_failure_on_behalf_of_other_without_approval() 
 #[test(should_fail_with = "Unknown auth witness for message hash")]
 unconstrained fn transfer_private_failure_on_behalf_of_other_wrong_caller() {
     // Setup with account contracts. Slower since we actually deploy them, but needed for authwits.
-    let (env, token_contract_address, owner, recipient, _) =
+    let (env, token_contract_address, owner, recipient) =
         utils::setup_and_mint_to_private_without_minter(true);
     // Add authwit
     let transfer_amount: u128 = 1000;
