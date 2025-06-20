@@ -141,7 +141,7 @@ pub contract Token {
 
     /// @notice Transfer tokens from private balance to public balance and initializes a commitment
     /// @dev Spends notes, emits a new note (UintNote) with any remaining change, enqueues a public call, and returns a partial note.
-    ///      `to` will also be the completer of the initialized partial note.
+    ///      The sender will be used as the completer for the initialized partial note.
     /// @param from The address of the sender
     /// @param to The address of the recipient
     /// @param amount The amount of tokens to transfer
@@ -168,8 +168,8 @@ pub contract Token {
             &mut context,
         );
 
-        // We're creating a commitment for the recipient, so the completer is the recipient
-        let completer = to;
+        // Only the sender will be able to complete the partial note
+        let completer = context.msg_sender();
         let commitment = _initialize_transfer_commitment(
             &mut context,
             storage.private_balances,
@@ -313,7 +313,7 @@ pub contract Token {
     /// @notice Finalizes a transfer of token `amount` from public balance of `from` to a commitment of `to`
     /// @dev The transfer must be prepared by calling `initialize_transfer_commitment` first and the resulting
     /// `commitment` must be passed as an argument to this function.
-    /// `from` will be used as the completer for the partial note.
+    /// @dev The sender will be used as the completer for the partial note.
     /// @param from The address of the sender
     /// @param commitment The partial note representing the commitment (privacy entrance)
     /// @param amount The amount of tokens to transfer
@@ -329,7 +329,7 @@ pub contract Token {
 
         _decrease_public_balance(storage.public_balances, from, amount);
 
-        _increase_commitment_balance(&mut context, PartialUintNote { commitment }, from, amount);
+        _increase_commitment_balance(&mut context, PartialUintNote { commitment }, context.msg_sender(), amount);
     }
 
     /// @notice Increases the public balance of `to` by `amount`
