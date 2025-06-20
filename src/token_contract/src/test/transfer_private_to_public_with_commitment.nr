@@ -25,7 +25,7 @@ unconstrained fn transfer_private_to_public_with_commitment() {
 }
 
 #[test]
-unconstrained fn transfer_private_to_public_with_commitment_stores_commitment() {
+unconstrained fn transfer_private_to_public_with_commitment_emits_validity_nullifier() {
     let (env, token_contract_address, owner, recipient) =
         utils::setup_and_mint_to_private_without_minter(false);
 
@@ -35,7 +35,8 @@ unconstrained fn transfer_private_to_public_with_commitment_stores_commitment() 
         .call(&mut env.private());
     env.advance_block_by(1);
 
-    let validity_commitment = PartialUintNote { commitment }.compute_validity_commitment(recipient);
+    // The caller is the completer of the partial note.
+    let validity_commitment = PartialUintNote { commitment }.compute_validity_commitment(owner);
     assert(
         env.public().nullifier_exists(validity_commitment, token_contract_address),
         "validity nullifier should exist",
@@ -94,11 +95,17 @@ unconstrained fn transfer_private_to_public_with_commitment_and_finalize() {
     // Before finalize the recipient should have the tokens in public balance
     utils::check_public_balance(token_contract_address, recipient, transfer_amount);
 
-    // Transfer tokens
     env.impersonate(recipient);
-    Token::at(token_contract_address)
-        .transfer_public_to_commitment(recipient, commitment, transfer_amount, 0)
-        .call(&mut env.public());
+    let action = Token::at(token_contract_address)
+        .transfer_public_to_commitment(recipient, commitment, transfer_amount, 0);
+    authwit_cheatcodes::add_public_authwit_from_call_interface(
+        recipient,
+        owner,
+        action,
+    );
+    env.impersonate(owner);
+    let _ = action.call(&mut env.public());
+
     env.advance_block_by(1);
 
     // Check balances

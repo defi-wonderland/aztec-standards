@@ -329,7 +329,13 @@ pub contract Token {
 
         _decrease_public_balance(storage.public_balances, from, amount);
 
-        _increase_commitment_balance(&mut context, PartialUintNote { commitment }, context.msg_sender(), amount);
+        let completer = context.msg_sender();
+        _increase_commitment_balance(
+            &mut context,
+            PartialUintNote { commitment },
+            completer,
+            amount,
+        );
     }
 
     /// @notice Increases the public balance of `to` by `amount`
