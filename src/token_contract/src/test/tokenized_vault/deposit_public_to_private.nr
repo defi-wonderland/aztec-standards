@@ -172,7 +172,7 @@ unconstrained fn deposit_public_to_private_request_too_many_shares() {
     // Deposit
     env.impersonate(owner);
     // At the first deposit 1 share = 1 asset
-    let shares = deposit_amount * 2;
+    let shares = deposit_amount + 1;
     Token::at(vault_address)
         .deposit_public_to_private(owner, recipient, deposit_amount, shares, 0)
         .call(&mut env.private());
