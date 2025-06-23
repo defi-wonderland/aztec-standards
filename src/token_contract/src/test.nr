@@ -11,7 +11,6 @@ mod transfer_private_to_commitment;
 mod transfer_public_to_public;
 mod transfer_public_to_commitment;
 mod transfer_public_to_private;
-// Tokenized Vault
 mod tokenized_vault;
 
 pub mod utils;
