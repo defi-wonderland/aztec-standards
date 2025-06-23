@@ -96,13 +96,13 @@ unconstrained fn transfer_private_to_public_with_commitment_and_finalize() {
     utils::check_public_balance(token_contract_address, recipient, transfer_amount);
 
     env.impersonate(recipient);
-    let action = Token::at(token_contract_address)
-        .transfer_public_to_commitment(recipient, commitment, transfer_amount, 0);
-    authwit_cheatcodes::add_public_authwit_from_call_interface(
+    let action = Token::at(token_contract_address).transfer_public_to_commitment(
         recipient,
-        owner,
-        action,
+        commitment,
+        transfer_amount,
+        0,
     );
+    authwit_cheatcodes::add_public_authwit_from_call_interface(recipient, owner, action);
     env.impersonate(owner);
     let _ = action.call(&mut env.public());
 

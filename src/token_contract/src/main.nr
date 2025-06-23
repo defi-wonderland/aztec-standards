@@ -604,7 +604,7 @@ pub contract Token {
     }
 
     /// @notice Completes a partial note
-    /// @dev Completes a partial note  and increases the balance of the commitment by `amount`
+    /// @dev Completes a partial note and increases the balance of the commitment by `amount`
     /// @param context The context of the public call
     /// @param commitment The partial note representing the commitment (privacy entrance)
     /// @param completer The address used to compute the validity commitment
