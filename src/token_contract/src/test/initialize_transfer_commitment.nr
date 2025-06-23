@@ -3,7 +3,7 @@ use crate::Token;
 
 #[test]
 unconstrained fn initialize_transfer_commitment() {
-    let (env, token_contract_address, owner, recipient, _) =
+    let (env, token_contract_address, owner, recipient) =
         utils::setup_and_mint_to_private_without_minter(false);
 
     // Transfer tokens
