@@ -56,10 +56,9 @@ jobs:
         - name: Codegen
           run: script -e -c "aztec codegen target --outdir src/artifacts"
 
-        # TODO: Expliciting the VERSION for `aztec start` is kinda useless
         - name: Start PXE
           run: |
-            VERSION=${{ steps.aztec-version.outputs.version }} aztec start --port 8081 --pxe --pxe.nodeUrl=http://localhost:8080/ --pxe.proverEnabled false &
+            aztec start --port 8081 --pxe --pxe.nodeUrl=http://localhost:8080/ --pxe.proverEnabled false &
 
         - name: Run nr tests
           run: |
