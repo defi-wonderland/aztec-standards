@@ -9,7 +9,7 @@ unconstrained fn mint_to_commitment_success() {
 
     env.impersonate(minter);
     let commitment = Token::at(token_contract_address)
-        .initialize_transfer_commitment(minter, recipient)
+        .initialize_transfer_commitment(minter, recipient, minter)
         .call(&mut env.private());
 
     let mint_amount: u128 = 10_000;
@@ -30,7 +30,7 @@ unconstrained fn mint_to_private_failure_unauthorized() {
 
     env.impersonate(recipient);
     let commitment = Token::at(token_contract_address)
-        .initialize_transfer_commitment(recipient, recipient)
+        .initialize_transfer_commitment(recipient, recipient, recipient)
         .call(&mut env.private());
 
     let mint_amount: u128 = 10_000;
@@ -46,7 +46,7 @@ unconstrained fn mint_to_private_failure_balance_overflow() {
 
     env.impersonate(minter);
     let commitment = Token::at(token_contract_address)
-        .initialize_transfer_commitment(minter, recipient)
+        .initialize_transfer_commitment(minter, recipient, minter)
         .call(&mut env.private());
 
     // TODO: is there something like type(u128).max?
@@ -74,7 +74,7 @@ unconstrained fn mint_to_private_failure_total_supply_overflow() {
 
     env.impersonate(minter);
     let commitment = Token::at(token_contract_address)
-        .initialize_transfer_commitment(minter, recipient)
+        .initialize_transfer_commitment(minter, recipient, minter)
         .call(&mut env.private());
 
     let mint_amount: u128 = 10_000;
@@ -89,7 +89,7 @@ unconstrained fn mint_to_private_failure_total_supply_overflow() {
     utils::check_private_balance(token_contract_address, owner, 0);
 
     let another_commitment = Token::at(token_contract_address)
-        .initialize_transfer_commitment(minter, recipient)
+        .initialize_transfer_commitment(minter, recipient, minter)
         .call(&mut env.private());
 
     Token::at(token_contract_address).mint_to_commitment(another_commitment, mint_amount).call(
@@ -124,7 +124,7 @@ unconstrained fn mint_to_private_failure_already_completed_commitment() {
 
     env.impersonate(minter);
     let commitment = Token::at(token_contract_address)
-        .initialize_transfer_commitment(minter, recipient)
+        .initialize_transfer_commitment(minter, recipient, minter)
         .call(&mut env.private());
 
     let mint_amount: u128 = 10_000;
