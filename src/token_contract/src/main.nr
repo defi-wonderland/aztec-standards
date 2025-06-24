@@ -264,7 +264,11 @@ pub contract Token {
     /// @param to The address of the recipient
     /// @return commitment The partial note initialized for the transfer/mint commitment
     #[private]
-    fn initialize_transfer_commitment(from: AztecAddress, to: AztecAddress, completer: AztecAddress) -> Field {
+    fn initialize_transfer_commitment(
+        from: AztecAddress,
+        to: AztecAddress,
+        completer: AztecAddress,
+    ) -> Field {
         let commitment = _initialize_transfer_commitment(
             &mut context,
             storage.private_balances,
