@@ -139,8 +139,9 @@ pub contract Token {
         );
     }
 
-    /// @notice Transfer tokens from private balance to public balance with a commitment
-    /// @dev Spends notes, emits a new note (UintNote) with any remaining change, enqueues a public call, and returns a partial note
+    /// @notice Transfer tokens from private balance to public balance and initializes a commitment
+    /// @dev Spends notes, emits a new note (UintNote) with any remaining change, enqueues a public call, and returns a partial note.
+    ///      The sender will be used as the completer for the initialized partial note.
     /// @param from The address of the sender
     /// @param to The address of the recipient
     /// @param amount The amount of tokens to transfer
@@ -167,9 +168,16 @@ pub contract Token {
             &mut context,
         );
 
-        let commitment =
-            _initialize_transfer_commitment(&mut context, storage.private_balances, from, to);
-        commitment.commitment()
+        // Only the sender will be able to complete the partial note
+        let completer = context.msg_sender();
+        let commitment = _initialize_transfer_commitment(
+            &mut context,
+            storage.private_balances,
+            from,
+            to,
+            completer,
+        );
+        commitment.commitment
     }
 
     /// @notice Transfer tokens from private balance to another private balance
@@ -198,8 +206,9 @@ pub contract Token {
         _increase_private_balance(&mut context, storage.private_balances, from, to, amount);
     }
 
-    /// @notice Transfer tokens from private balance to the recipient commitment (recipient must create a commitment first)
+    /// @notice Transfer tokens from private balance to the recipient's commitment (recipient must create a commitment first)
     /// @dev Spends notes, emits a new note (UintNote) with any remaining change, and enqueues a public call
+    ///      `from` will also be the completer of the partial note
     /// @param from The address of the sender
     /// @param commitment The partial note representing the commitment (privacy entrance that the recipient shares with the sender)
     /// @param amount The amount of tokens to transfer
@@ -222,7 +231,7 @@ pub contract Token {
         );
 
         Token::at(context.this_address())
-            .increase_commitment_balance_internal(PartialUintNote { commitment }, amount)
+            .increase_commitment_balance_internal(PartialUintNote { commitment }, from, amount)
             .enqueue(&mut context);
     }
 
@@ -250,14 +259,24 @@ pub contract Token {
 
     /// @notice Initializes a transfer commitment to be used for transfers/mints
     /// @dev Returns a partial note that can be used to execute transfers/mints
+    ///      `from` will also be the completer of the partial note.
     /// @param from The address of the sender
     /// @param to The address of the recipient
     /// @return commitment The partial note initialized for the transfer/mint commitment
     #[private]
-    fn initialize_transfer_commitment(from: AztecAddress, to: AztecAddress) -> Field {
-        let commitment =
-            _initialize_transfer_commitment(&mut context, storage.private_balances, from, to);
-        commitment.commitment()
+    fn initialize_transfer_commitment(
+        from: AztecAddress,
+        to: AztecAddress,
+        completer: AztecAddress,
+    ) -> Field {
+        let commitment = _initialize_transfer_commitment(
+            &mut context,
+            storage.private_balances,
+            from,
+            to,
+            completer,
+        );
+        commitment.commitment
     }
 
     /// @notice Recursively subtracts balance from commitment
@@ -302,7 +321,8 @@ pub contract Token {
 
     /// @notice Finalizes a transfer of token `amount` from public balance of `from` to a commitment of `to`
     /// @dev The transfer must be prepared by calling `initialize_transfer_commitment` first and the resulting
-    /// `commitment` must be passed as an argument to this function
+    /// `commitment` must be passed as an argument to this function.
+    /// @dev The sender will be used as the completer for the partial note.
     /// @param from The address of the sender
     /// @param commitment The partial note representing the commitment (privacy entrance)
     /// @param amount The amount of tokens to transfer
@@ -317,16 +337,14 @@ pub contract Token {
         _validate_from_public(&mut context, from);
 
         _decrease_public_balance(storage.public_balances, from, amount);
-        _increase_commitment_balance(&mut context, PartialUintNote { commitment }, amount);
-    }
 
-    /// @notice Stores a partial note in storage
-    /// @dev Used to store the commitment (privacy entrance)
-    /// @param commitment The partial note to store
-    #[public]
-    #[internal]
-    fn store_commitment_in_storage_internal(commitment: PartialUintNote) {
-        _store_commitment_in_storage(&mut context, commitment);
+        let completer = context.msg_sender();
+        _increase_commitment_balance(
+            &mut context,
+            PartialUintNote { commitment },
+            completer,
+            amount,
+        );
     }
 
     /// @notice Increases the public balance of `to` by `amount`
@@ -352,8 +370,12 @@ pub contract Token {
     /// @param amount The amount of tokens to increase the balance by
     #[public]
     #[internal]
-    fn increase_commitment_balance_internal(commitment: PartialUintNote, amount: u128) {
-        _increase_commitment_balance(&mut context, commitment, amount);
+    fn increase_commitment_balance_internal(
+        commitment: PartialUintNote,
+        completer: AztecAddress,
+        amount: u128,
+    ) {
+        _increase_commitment_balance(&mut context, commitment, completer, amount);
     }
 
     /** ==========================================================
@@ -448,10 +470,16 @@ pub contract Token {
     /// @param amount The amount of tokens to mint
     #[public]
     fn mint_to_commitment(commitment: Field, amount: u128) {
-        _validate_minter(context.msg_sender(), storage.minter.read());
-
+        let sender = context.msg_sender();
+        _validate_minter(sender, storage.minter.read());
+        let completer = sender;
         _increase_total_supply(storage.total_supply, amount);
-        _increase_commitment_balance(&mut context, PartialUintNote { commitment }, amount);
+        _increase_commitment_balance(
+            &mut context,
+            PartialUintNote { commitment },
+            completer,
+            amount,
+        );
     }
 
     #[public]
@@ -588,19 +616,17 @@ pub contract Token {
     /// @dev Completes a partial note and increases the balance of the commitment by `amount`
     /// @param context The context of the public call
     /// @param commitment The partial note representing the commitment (privacy entrance)
+    /// @param completer The address used to compute the validity commitment
     /// @param amount The amount of tokens to increase the balance of the commitment by
     #[contract_library_method]
     fn _increase_commitment_balance(
         context: &mut PublicContext,
         commitment: PartialUintNote,
+        completer: AztecAddress,
         amount: u128,
     ) {
-        // We verify that the partial note we're completing is valid (i.e. it uses the correct state variable's storage
-        // slot, and it is internally consistent). We *could* clear the storage since each partial note should only be
-        // used once, but since the AVM offers no gas refunds for doing so this would just make the transaction be more
-        // expensive.
-        assert(context.storage_read(commitment.commitment()), "Invalid commitment");
-        commitment.complete(amount, context);
+        let validity_commitment = commitment.compute_validity_commitment(completer);
+        commitment.complete(context, completer, amount);
     }
 
     /// @notice Subtracts balance from commitment
@@ -651,19 +677,12 @@ pub contract Token {
         total_supply.write(new_supply);
     }
 
-    /// @notice Stores a partial note in storage
-    /// @param context The context of the public call
-    /// @param commitment The partial note to store
-    #[contract_library_method]
-    fn _store_commitment_in_storage(context: &mut PublicContext, commitment: PartialUintNote) {
-        context.storage_write(commitment.commitment(), true);
-    }
-
     /// @notice Initializes a transfer commitment to be used for transfers/mints
     /// @param context The context of the private call
     /// @param private_balances The storage pointer to the private balances
     /// @param from The address of the sender
     /// @param to The address of the recipient
+    /// @param completer The address used to compute the validity commitment
     /// @return The partial note that can be used to execute the transfer/mint
     #[contract_library_method]
     fn _initialize_transfer_commitment(
@@ -671,6 +690,7 @@ pub contract Token {
         private_balances: Map<AztecAddress, BalanceSet<&mut PrivateContext>, &mut PrivateContext>,
         from: AztecAddress,
         to: AztecAddress,
+        completer: AztecAddress,
     ) -> PartialUintNote {
         let commitment = UintNote::partial(
             to,
@@ -678,16 +698,9 @@ pub contract Token {
             context,
             to,
             from,
+            completer,
         );
 
-        // We can't simply return the partial note because we won't be able to later on verify that it was created
-        // correctly (e.g. that the storage slot corresponds to the owner, and that we're using the balance set and not
-        // another state variable) once this information is hidden in the partial note commitment. We therefore store
-        // the partial note in our own public storage, so that we can later check that we're only completing correctly
-        // created partial notes.
-        Token::at(context.this_address()).store_commitment_in_storage_internal(commitment).enqueue(
-            context,
-        );
         commitment
     }
 
