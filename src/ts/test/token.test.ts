@@ -364,7 +364,10 @@ describe('Token - Single PXE', () => {
     expect(await token.methods.total_supply().simulate()).toBe(AMOUNT);
 
     // alice prepares partial note for bob
-    await token.methods.initialize_transfer_commitment(bob.getAddress(), alice.getAddress()).send().wait();
+    await token.methods
+      .initialize_transfer_commitment(bob.getAddress(), alice.getAddress(), bob.getAddress())
+      .send()
+      .wait();
 
     // alice still has tokens in public
     expect(await token.methods.balance_of_public(alice.getAddress()).simulate()).toBe(AMOUNT);
