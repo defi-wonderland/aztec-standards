@@ -11,7 +11,7 @@ unconstrained fn transfer_private_to_commitment() {
     utils::check_private_balance(token_contract_address, recipient, 0 as u128);
 
     // Prepare commitment
-    env.impersonate(recipient);
+    env.impersonate(owner);
     let commitment = Token::at(token_contract_address)
         .initialize_transfer_commitment(owner, recipient)
         .call(&mut env.private());

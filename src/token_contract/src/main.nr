@@ -266,7 +266,7 @@ pub contract Token {
     #[private]
     fn initialize_transfer_commitment(from: AztecAddress, to: AztecAddress) -> Field {
         let commitment =
-            _initialize_transfer_commitment(&mut context, storage.private_balances, from, to, from);
+            _initialize_transfer_commitment(&mut context, storage.private_balances, from, to, context.msg_sender());
         commitment.commitment
     }
 
