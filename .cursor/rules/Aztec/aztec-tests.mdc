@@ -1,0 +1,32 @@
+---
+description: Aztec test file guidelines
+globs: **/test/**/*.nr
+version: 1.0.0
+---
+
+# Aztec Test Guidelines
+
+## Test Organization
+- Create separate test files for each major functionality
+- Name test files by feature: mint_to_private.nr, transfer_public_to_public.nr
+- Use descriptive test names: mint_to_private_success, burn_public_fail_not_enough_balance
+- Group related tests in the same file
+
+## Test Structure
+- Use utils module for common setup and assertions
+- Implement setup helpers: setup_with_minter, setup_with_initial_supply
+- Create balance checking utilities: check_private_balance, check_public_balance
+- Use TestEnvironment for consistent test isolation
+
+## Test Patterns
+- Test both success and failure cases
+- Use #[test(should_fail_with = "error message")] for expected failures
+- Advance blocks after private operations: env.advance_block_by(1)
+- Impersonate users with env.impersonate(address)
+- Use env.assert_private_call_fails for testing authorization failures
+
+## Best Practices
+- Never skip tests - implement or remove them
+- Test edge cases explicitly (zero amounts, max values)
+- Verify state changes after operations
+- Test all privacy combinations (private→public, public→private, etc.)
