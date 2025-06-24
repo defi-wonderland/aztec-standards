@@ -10,7 +10,7 @@ unconstrained fn initialize_transfer_commitment() {
     // Transfer tokens
     env.impersonate(owner);
     let commitment = Token::at(token_contract_address)
-        .initialize_transfer_commitment(owner, recipient)
+        .initialize_transfer_commitment(owner, recipient, owner)
         .call(&mut env.private());
     env.advance_block_by(1);
 
