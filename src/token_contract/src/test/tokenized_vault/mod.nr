@@ -2,3 +2,6 @@ mod deposit_public_to_public;
 mod deposit_public_to_private;
 mod deposit_private_to_private;
 mod deposit_private_to_public;
+mod withdraw_public_to_public;
+mod withdraw_public_to_private;
+mod withdraw_private_to_private;
