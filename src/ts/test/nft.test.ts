@@ -12,11 +12,17 @@ import {
   DeployOptions,
   AccountManager,
 } from '@aztec/aztec.js';
+import { poseidon2Hash } from '@aztec/foundation/crypto';
 import { setupPXE } from './utils.js';
 import { getInitialTestAccounts } from '@aztec/accounts/testing';
 import { NFTContract, NFTContractArtifact } from '../../artifacts/NFT.js';
 import { SchnorrAccountContract } from '@aztec/accounts/schnorr';
 import { deriveSigningKey } from '@aztec/stdlib/keys';
+
+const stringBytes = Buffer.from('PRIVATE_OWNER', 'utf8');
+const fieldElements = Array.from(stringBytes).map((byte) => new Fr(byte));
+
+const PRIVATE_OWNER_ADDRESS = AztecAddress.fromField(await poseidon2Hash(fieldElements));
 
 // Deploy NFT contract with a minter
 async function deployNFTWithMinter(deployer: AccountWallet, options?: DeployOptions) {
@@ -555,7 +561,7 @@ describe('NFT - Single PXE', () => {
 
     // Verify alice no longer owns the NFT publicly
     const publicOwner = await nft.methods.public_owner_of(tokenId).simulate();
-    expect(publicOwner.equals(AztecAddress.ZERO)).toBe(true);
+    expect(publicOwner.equals(PRIVATE_OWNER_ADDRESS)).toBe(true);
 
     // Verify bob now owns the NFT privately
     await assertOwnsPrivateNFT(nft, tokenId, bob.getAddress());
@@ -603,7 +609,7 @@ describe('NFT - Single PXE', () => {
 
     // Verify alice no longer owns the NFT publicly
     const publicOwner = await nft.methods.public_owner_of(tokenId).simulate();
-    expect(publicOwner.equals(AztecAddress.ZERO)).toBe(true);
+    expect(publicOwner.equals(PRIVATE_OWNER_ADDRESS)).toBe(true);
 
     // Verify bob now owns the NFT privately
     await assertOwnsPrivateNFT(nft, tokenId, bob.getAddress());
