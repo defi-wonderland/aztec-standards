@@ -1,6 +1,5 @@
 use crate::{test::utils::{self, mint_amount}, Token};
 use authwit::cheatcodes as authwit_cheatcodes;
-use aztec::oracle::random::random;
 
 #[test]
 unconstrained fn transfer_public_to_private_success() {
