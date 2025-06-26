@@ -9,7 +9,7 @@ unconstrained fn withdraw_public_to_public_without_asset() {
 
     let (env, vault_address, _, _, minter) = utils::setup_with_minter(false);
 
-    // Deposit should fail because the PublicImmutable asset was not initialized
+    // Withdrawal should fail because the PublicImmutable asset was not initialized
     env.impersonate(owner);
     Token::at(vault_address).withdraw_public_to_public(owner, recipient, mint_amount, 0).call(
         &mut env.public(),
@@ -25,12 +25,19 @@ unconstrained fn withdraw_public_to_public_success() {
     // Mint some asset tokens to owner
     let deposit_amount: u128 = 10_000;
     let deposit_recipient = owner;
-    utils::deposit_public_to_public(env, owner, asset_address, vault_address, deposit_recipient, deposit_amount);
+    utils::deposit_public_to_public(
+        env,
+        owner,
+        asset_address,
+        vault_address,
+        deposit_recipient,
+        deposit_amount,
+    );
 
     env.impersonate(deposit_recipient);
-    Token::at(vault_address).withdraw_public_to_public(deposit_recipient, recipient, deposit_amount, 0).call(
-        &mut env.public(),
-    );
+    Token::at(vault_address)
+        .withdraw_public_to_public(deposit_recipient, recipient, deposit_amount, 0)
+        .call(&mut env.public());
     env.advance_block_by(1);
 
     // All shares are burnt
@@ -41,7 +48,7 @@ unconstrained fn withdraw_public_to_public_success() {
     let total_supply = Token::at(vault_address).total_supply().view(&mut env.public());
     assert(total_supply == 0, "Incorrect shares total supply");
 
-    // Check vault has assets
+    // Check asset balances
     utils::check_public_balance(asset_address, vault_address, 0);
     utils::check_public_balance(asset_address, recipient, deposit_amount);
 }
@@ -54,7 +61,14 @@ unconstrained fn withdraw_public_to_public_after_yield() {
     // Mint some asset tokens to owner
     let deposit_amount: u128 = 10_000;
     let deposit_recipient = owner;
-    utils::deposit_public_to_public(env, owner, asset_address, vault_address, deposit_recipient, deposit_amount);
+    utils::deposit_public_to_public(
+        env,
+        owner,
+        asset_address,
+        vault_address,
+        deposit_recipient,
+        deposit_amount,
+    );
 
     // Mint some asset tokens to the vault contract
     let yield_amount: u128 = 2;
@@ -64,9 +78,9 @@ unconstrained fn withdraw_public_to_public_after_yield() {
 
     // Withdraw
     env.impersonate(deposit_recipient);
-    Token::at(vault_address).withdraw_public_to_public(deposit_recipient, recipient, deposit_amount + 1, 0).call(
-        &mut env.public(),
-    );
+    Token::at(vault_address)
+        .withdraw_public_to_public(deposit_recipient, recipient, deposit_amount + 1, 0)
+        .call(&mut env.public());
     env.advance_block_by(1);
 
     // All shares are burnt
@@ -90,13 +104,20 @@ unconstrained fn withdraw_public_to_public_without_approval() {
     // Mint some asset tokens to owner
     let deposit_amount: u128 = 10_000;
     let deposit_recipient = owner;
-    utils::deposit_public_to_public(env, owner, asset_address, vault_address, deposit_recipient, deposit_amount);
+    utils::deposit_public_to_public(
+        env,
+        owner,
+        asset_address,
+        vault_address,
+        deposit_recipient,
+        deposit_amount,
+    );
 
     // Withdraw
     env.impersonate(recipient);
-    Token::at(vault_address).withdraw_public_to_public(deposit_recipient, recipient, deposit_amount, 0).call(
-        &mut env.public(),
-    );
+    Token::at(vault_address)
+        .withdraw_public_to_public(deposit_recipient, recipient, deposit_amount, 0)
+        .call(&mut env.public());
     env.advance_block_by(1);
 }
 
@@ -108,11 +129,18 @@ unconstrained fn withdraw_public_to_public_on_behalf_of_wrong_caller() {
     // Mint some asset tokens to owner
     let deposit_amount: u128 = 10_000;
     let deposit_recipient = owner;
-    utils::deposit_public_to_public(env, owner, asset_address, vault_address, deposit_recipient, deposit_amount);
+    utils::deposit_public_to_public(
+        env,
+        owner,
+        asset_address,
+        vault_address,
+        deposit_recipient,
+        deposit_amount,
+    );
 
     // Authorize someone to call withdraw_public_to_public
-    let public_withdraw_public_to_public_call_interface =
-        Token::at(vault_address).withdraw_public_to_public(deposit_recipient, recipient, deposit_amount, 0);
+    let public_withdraw_public_to_public_call_interface = Token::at(vault_address)
+        .withdraw_public_to_public(deposit_recipient, recipient, deposit_amount, 0);
     authwit_cheatcodes::add_public_authwit_from_call_interface(
         deposit_recipient,
         owner,
@@ -121,9 +149,9 @@ unconstrained fn withdraw_public_to_public_on_behalf_of_wrong_caller() {
 
     // Withdraw
     env.impersonate(recipient);
-    Token::at(vault_address).withdraw_public_to_public(deposit_recipient, recipient, deposit_amount, 0).call(
-        &mut env.public(),
-    );
+    Token::at(vault_address)
+        .withdraw_public_to_public(deposit_recipient, recipient, deposit_amount, 0)
+        .call(&mut env.public());
     env.advance_block_by(1);
 }
 
@@ -135,11 +163,18 @@ unconstrained fn withdraw_public_to_public_on_behalf_of_other_success() {
     // Mint some asset tokens to owner
     let deposit_amount: u128 = 10_000;
     let deposit_recipient = owner;
-    utils::deposit_public_to_public(env, owner, asset_address, vault_address, deposit_recipient, deposit_amount);
+    utils::deposit_public_to_public(
+        env,
+        owner,
+        asset_address,
+        vault_address,
+        deposit_recipient,
+        deposit_amount,
+    );
 
     // Authorize someone to call withdraw_public_to_public
-    let public_withdraw_public_to_public_call_interface =
-        Token::at(vault_address).withdraw_public_to_public(deposit_recipient, recipient, deposit_amount, 0);
+    let public_withdraw_public_to_public_call_interface = Token::at(vault_address)
+        .withdraw_public_to_public(deposit_recipient, recipient, deposit_amount, 0);
     authwit_cheatcodes::add_public_authwit_from_call_interface(
         deposit_recipient,
         recipient,
@@ -148,9 +183,9 @@ unconstrained fn withdraw_public_to_public_on_behalf_of_other_success() {
 
     // Withdraw
     env.impersonate(recipient);
-    Token::at(vault_address).withdraw_public_to_public(deposit_recipient, recipient, deposit_amount, 0).call(
-        &mut env.public(),
-    );
+    Token::at(vault_address)
+        .withdraw_public_to_public(deposit_recipient, recipient, deposit_amount, 0)
+        .call(&mut env.public());
     env.advance_block_by(1);
 
     // All shares are burnt
@@ -161,7 +196,7 @@ unconstrained fn withdraw_public_to_public_on_behalf_of_other_success() {
     let total_supply = Token::at(vault_address).total_supply().view(&mut env.public());
     assert(total_supply == 0, "Incorrect shares total supply");
 
-    // Check vault has assets
+    // Check asset balances
     utils::check_public_balance(asset_address, vault_address, 0);
     utils::check_public_balance(asset_address, recipient, deposit_amount);
 }

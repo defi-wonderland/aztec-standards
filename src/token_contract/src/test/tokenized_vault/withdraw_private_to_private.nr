@@ -39,8 +39,9 @@ unconstrained fn withdraw_private_to_private_success() {
     env.impersonate(deposit_recipient);
     let shares_to_burn: u128 = deposit_amount;
     Token::at(vault_address)
-        .withdraw_private_to_private(deposit_recipient, recipient, deposit_amount, shares_to_burn, 0)
-        .call(&mut env.private());
+        .withdraw_private_to_private(deposit_recipient, recipient, deposit_amount, shares_to_burn, 0
+            )
+            .call(&mut env.private());
     env.advance_block_by(1);
 
     // All shares are burnt
@@ -85,7 +86,13 @@ unconstrained fn withdraw_private_to_private_after_yield() {
     let shares_to_burn: u128 = deposit_amount;
     env.impersonate(deposit_recipient);
     Token::at(vault_address)
-        .withdraw_private_to_private(deposit_recipient, recipient, deposit_amount + 1, shares_to_burn, 0)
+        .withdraw_private_to_private(
+            deposit_recipient,
+            recipient,
+            deposit_amount + 1,
+            shares_to_burn,
+            0,
+        )
         .call(&mut env.private());
     env.advance_block_by(1);
 
@@ -125,7 +132,13 @@ unconstrained fn withdraw_private_to_private_request_fewer_assets() {
     let shares_to_burn: u128 = deposit_amount;
     let requested_assets: u128 = deposit_amount - 1;
     Token::at(vault_address)
-        .withdraw_private_to_private(deposit_recipient, recipient, requested_assets, shares_to_burn, 0)
+        .withdraw_private_to_private(
+            deposit_recipient,
+            recipient,
+            requested_assets,
+            shares_to_burn,
+            0,
+        )
         .call(&mut env.private());
     env.advance_block_by(1);
 
@@ -164,8 +177,9 @@ unconstrained fn withdraw_private_to_private_request_too_many_assets() {
     env.impersonate(deposit_recipient);
     let shares_to_burn: u128 = deposit_amount - 1;
     Token::at(vault_address)
-        .withdraw_private_to_private(deposit_recipient, recipient, deposit_amount, shares_to_burn, 0)
-        .call(&mut env.private());
+        .withdraw_private_to_private(deposit_recipient, recipient, deposit_amount, shares_to_burn, 0
+            )
+            .call(&mut env.private());
     env.advance_block_by(1);
 }
 
@@ -190,8 +204,9 @@ unconstrained fn withdraw_private_to_private_without_approval() {
     env.impersonate(recipient);
     let shares_to_burn: u128 = deposit_amount;
     Token::at(vault_address)
-        .withdraw_private_to_private(deposit_recipient, recipient, deposit_amount, shares_to_burn, 0)
-        .call(&mut env.private());
+        .withdraw_private_to_private(deposit_recipient, recipient, deposit_amount, shares_to_burn, 0
+            )
+            .call(&mut env.private());
     env.advance_block_by(1);
 }
 
@@ -215,7 +230,8 @@ unconstrained fn withdraw_private_to_private_on_behalf_of_wrong_caller() {
     // Authorize someone to call withdraw_private_to_private
     let shares_to_burn: u128 = deposit_amount;
     let withdraw_private_to_private_call_interface = Token::at(vault_address)
-        .withdraw_private_to_private(deposit_recipient, recipient, deposit_amount, shares_to_burn, 0);
+        .withdraw_private_to_private(deposit_recipient, recipient, deposit_amount, shares_to_burn, 0
+            );
     authwit_cheatcodes::add_private_authwit_from_call_interface(
         deposit_recipient,
         owner,
@@ -225,8 +241,9 @@ unconstrained fn withdraw_private_to_private_on_behalf_of_wrong_caller() {
     // Withdraw
     env.impersonate(recipient);
     Token::at(vault_address)
-        .withdraw_private_to_private(deposit_recipient, recipient, deposit_amount, shares_to_burn, 0)
-        .call(&mut env.private());
+        .withdraw_private_to_private(deposit_recipient, recipient, deposit_amount, shares_to_burn, 0
+            )
+            .call(&mut env.private());
     env.advance_block_by(1);
 }
 
@@ -252,7 +269,8 @@ unconstrained fn withdraw_private_to_private_on_behalf_of_other_success() {
     // Authorize someone to call withdraw_private_to_private
     let shares_to_burn: u128 = deposit_amount;
     let withdraw_private_to_private_call_interface = Token::at(vault_address)
-        .withdraw_private_to_private(deposit_recipient, recipient, deposit_amount, shares_to_burn, 0);
+        .withdraw_private_to_private(deposit_recipient, recipient, deposit_amount, shares_to_burn, 0
+            );
     authwit_cheatcodes::add_private_authwit_from_call_interface(
         deposit_recipient,
         recipient,
@@ -262,8 +280,9 @@ unconstrained fn withdraw_private_to_private_on_behalf_of_other_success() {
     // Withdraw
     env.impersonate(recipient);
     Token::at(vault_address)
-        .withdraw_private_to_private(deposit_recipient, recipient, deposit_amount, shares_to_burn, 0)
-        .call(&mut env.private());
+        .withdraw_private_to_private(deposit_recipient, recipient, deposit_amount, shares_to_burn, 0
+            )
+            .call(&mut env.private());
     env.advance_block_by(1);
 
     // All shares are burnt
