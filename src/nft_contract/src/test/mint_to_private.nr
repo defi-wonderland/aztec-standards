@@ -4,10 +4,7 @@ use aztec::prelude::AztecAddress;
 use aztec::protocol_types::{hash::poseidon2_hash_with_separator, traits::FromField};
 
 pub global PRIVATE_OWNER_ADDRESS: AztecAddress = AztecAddress::from_field(
-    poseidon2_hash_with_separator(
-        [0x1234567890abcdef],
-        0x1234567890abcdef,
-    ), // "PRIVATE_OWNER" and "NFT_PRIVATE_OWNER" separator
+    poseidon2_hash_with_separator([0x1234567890abcdef], 0x1234567890abcdef), // "PRIVATE_OWNER" and "NFT_PRIVATE_OWNER" separator
 );
 
 #[test]

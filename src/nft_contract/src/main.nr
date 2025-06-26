@@ -39,10 +39,7 @@ pub contract NFT {
     // Using a hash of "PRIVATE" with a unique separator to avoid collisions
     // TODO: define this better
     pub global PRIVATE_OWNER_ADDRESS: AztecAddress = AztecAddress::from_field(
-        poseidon2_hash_with_separator(
-            [0x1234567890abcdef],
-            0x1234567890abcdef,
-        ), // "PRIVATE_OWNER" and "NFT_PRIVATE_OWNER" separator
+        poseidon2_hash_with_separator([0x1234567890abcdef], 0x1234567890abcdef), // "PRIVATE_OWNER" and "NFT_PRIVATE_OWNER" separator
     );
 
     /// @param symbol The symbol of the NFT
