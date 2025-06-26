@@ -1,6 +1,14 @@
 use crate::NFT;
 use crate::test::utils;
 use aztec::prelude::AztecAddress;
+use aztec::protocol_types::{hash::poseidon2_hash_with_separator, traits::FromField};
+
+pub global PRIVATE_OWNER_ADDRESS: AztecAddress = AztecAddress::from_field(
+    poseidon2_hash_with_separator(
+        [0x1234567890abcdef],
+        0x1234567890abcdef,
+    ), // "PRIVATE_OWNER" and "NFT_PRIVATE_OWNER" separator
+);
 
 #[test]
 unconstrained fn nft_mint_to_private_success() {
@@ -13,7 +21,7 @@ unconstrained fn nft_mint_to_private_success() {
 
     utils::assert_owns_private_nft(nft_contract_address, owner, token_id);
     // Verify no public owner exists
-    utils::assert_owns_public_nft(env, nft_contract_address, AztecAddress::zero(), token_id);
+    utils::assert_owns_public_nft(env, nft_contract_address, PRIVATE_OWNER_ADDRESS, token_id);
 }
 
 #[test(should_fail_with = "caller is not minter")]

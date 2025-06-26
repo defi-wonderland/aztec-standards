@@ -2,6 +2,14 @@ use crate::NFT;
 use crate::test::utils;
 use authwit::cheatcodes as authwit_cheatcodes;
 use aztec::prelude::AztecAddress;
+use aztec::protocol_types::{hash::poseidon2_hash_with_separator, traits::FromField};
+
+pub global PRIVATE_OWNER_ADDRESS: AztecAddress = AztecAddress::from_field(
+    poseidon2_hash_with_separator(
+        [0x1234567890abcdef],
+        0x1234567890abcdef,
+    ), // "PRIVATE_OWNER" and "NFT_PRIVATE_OWNER" separator
+);
 
 #[test]
 unconstrained fn nft_transfer_private_to_public_self_success() {
@@ -12,7 +20,7 @@ unconstrained fn nft_transfer_private_to_public_self_success() {
 
     // Verify initial ownership state
     utils::assert_owns_private_nft(nft_contract_address, owner, token_id);
-    utils::assert_owns_public_nft(env, nft_contract_address, AztecAddress::zero(), token_id);
+    utils::assert_owns_public_nft(env, nft_contract_address, PRIVATE_OWNER_ADDRESS, token_id);
 
     // Transfer NFT from private to public state (self-transfer)
     env.impersonate(owner);
@@ -37,7 +45,7 @@ unconstrained fn nft_transfer_private_to_public_authorized_success() {
 
     // Verify initial ownership state
     utils::assert_owns_private_nft(nft_contract_address, owner, token_id);
-    utils::assert_owns_public_nft(env, nft_contract_address, AztecAddress::zero(), token_id);
+    utils::assert_owns_public_nft(env, nft_contract_address, PRIVATE_OWNER_ADDRESS, token_id);
 
     // // Create the transfer call interface
     let transfer_call_interface =

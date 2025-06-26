@@ -2,6 +2,14 @@ use crate::NFT;
 use crate::test::utils;
 use authwit::cheatcodes as authwit_cheatcodes;
 use aztec::prelude::AztecAddress;
+use aztec::protocol_types::{hash::poseidon2_hash_with_separator, traits::FromField};
+
+pub global PRIVATE_OWNER_ADDRESS: AztecAddress = AztecAddress::from_field(
+    poseidon2_hash_with_separator(
+        [0x1234567890abcdef],
+        0x1234567890abcdef,
+    ), // "PRIVATE_OWNER" and "NFT_PRIVATE_OWNER" separator
+);
 
 #[test]
 unconstrained fn nft_transfer_public_to_private_success() {
@@ -21,7 +29,7 @@ unconstrained fn nft_transfer_public_to_private_success() {
     env.advance_block_by(1);
 
     // Verify the NFT is no longer owned publicly by owner
-    utils::assert_owns_public_nft(env, nft_contract_address, AztecAddress::zero(), token_id);
+    utils::assert_owns_public_nft(env, nft_contract_address, PRIVATE_OWNER_ADDRESS, token_id);
     // Verify the NFT is now owned privately by recipient
     utils::assert_owns_private_nft(nft_contract_address, recipient, token_id);
 }
@@ -50,7 +58,7 @@ unconstrained fn nft_transfer_public_to_private_authorized_success() {
     env.advance_block_by(1);
 
     // Verify the NFT is no longer owned publicly by owner
-    utils::assert_owns_public_nft(env, nft_contract_address, AztecAddress::zero(), token_id);
+    utils::assert_owns_public_nft(env, nft_contract_address, PRIVATE_OWNER_ADDRESS, token_id);
     // Verify the NFT is now owned privately by recipient
     utils::assert_owns_private_nft(nft_contract_address, recipient, token_id);
 }
