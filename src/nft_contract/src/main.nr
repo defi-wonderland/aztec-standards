@@ -20,7 +20,7 @@ pub contract NFT {
         },
         protocol_types::{
             constants::DEPLOYER_CONTRACT_ADDRESS, contract_class_id::ContractClassId,
-            hash::poseidon2_hash_with_separator, traits::FromField,
+            hash::poseidon2_hash_bytes, traits::FromField,
         },
         utils::comparison::Comparator,
     };
@@ -34,13 +34,8 @@ pub contract NFT {
     use contract_instance_deployer::ContractInstanceDeployer;
     // nft note structs
     use crate::types::nft_note::{NFTNote, PartialNFTNote};
-
-    // Special address to indicate private ownership
-    // Using a hash of "PRIVATE" with a unique separator to avoid collisions
-    // TODO: define this better
-    pub global PRIVATE_OWNER_ADDRESS: AztecAddress = AztecAddress::from_field(
-        poseidon2_hash_with_separator([0x1234567890abcdef], 0x1234567890abcdef), // "PRIVATE_OWNER" and "NFT_PRIVATE_OWNER" separator
-    );
+    // constants
+    use crate::types::constants::PRIVATE_OWNER_ADDRESS;
 
     /// @param symbol The symbol of the NFT
     /// @param name The name of the NFT
