@@ -973,14 +973,19 @@ pub contract Token {
 
         // TODO (optimization): partial note logs and validity_commitment nullifier are not needed
         // Initialize commitment that allows to mint outstanding shares to the recipient in public
-        let commitment =
-            _initialize_transfer_commitment(&mut context, storage.private_balances, from, to);
+        let partial_note = _initialize_transfer_commitment(
+            &mut context,
+            storage.private_balances,
+            from,
+            to,
+            context.this_address(),
+        );
 
         // Mint any outstanding shares without revealing the recipient and updates the shares total supply
         // Reverts if min_shares is greater than allowed
         Token::at(context.this_address())
             .settle_deposit_to_private_with_commitment_internal(
-                commitment.commitment(),
+                partial_note.commitment,
                 assets,
                 min_shares,
             )
@@ -1016,14 +1021,19 @@ pub contract Token {
 
         // TODO (optimization): partial note logs and validity_commitment nullifier are not needed
         // Initialize commitment that allows to mint outstanding shares to the recipient in public
-        let commitment =
-            _initialize_transfer_commitment(&mut context, storage.private_balances, from, to);
+        let partial_note = _initialize_transfer_commitment(
+            &mut context,
+            storage.private_balances,
+            from,
+            to,
+            context.this_address(),
+        );
 
         // Mint any outstanding shares without revealing the recipient and updates the shares total supply
         // Reverts if min_shares is greater than allowed
         Token::at(context.this_address())
             .settle_deposit_to_private_with_commitment_internal(
-                commitment.commitment(),
+                partial_note.commitment,
                 assets,
                 min_shares,
             )
@@ -1136,7 +1146,7 @@ pub contract Token {
         // TODO (optimization): partial note logs and validity_commitment nullifier are not needed (?)
         // Initialize commitment that allows to refund excess assets to the sender in public
         let asset_commitment = Token::at(storage.asset.read())
-            .initialize_transfer_commitment(from, from)
+            .initialize_transfer_commitment(from, from, context.this_address())
             .call(&mut context);
 
         // Validate max_assets in public and refund any surplus to the sender with a commitment
@@ -1175,7 +1185,7 @@ pub contract Token {
         // TODO (optimization): partial note logs and validity_commitment nullifier are not needed (?)
         // Initialize commitment that allows to refund excess assets to the sender in public
         let asset_commitment = Token::at(storage.asset.read())
-            .initialize_transfer_commitment(from, from)
+            .initialize_transfer_commitment(from, from, context.this_address())
             .call(&mut context);
 
         // Validate max_assets in public and refund any surplus to the sender with a commitment
@@ -1304,8 +1314,13 @@ pub contract Token {
 
         // TODO (optimization): partial note logs and validity_commitment nullifier are not needed
         // Initialize commitment that allows to refund excess shares to the sender in public
-        let commitment =
-            _initialize_transfer_commitment(&mut context, storage.private_balances, from, from);
+        let partial_note = _initialize_transfer_commitment(
+            &mut context,
+            storage.private_balances,
+            from,
+            from,
+            context.this_address(),
+        );
 
         // Burn the correct amount of shares
         // Any excess amount of shares is sent back to the sender via commitment
@@ -1313,7 +1328,7 @@ pub contract Token {
         Token::at(context.this_address())
             .settle_withdrawal_to_public_with_commitment_internal(
                 to,
-                commitment.commitment(),
+                partial_note.commitment,
                 assets,
                 max_shares,
             )
@@ -1351,15 +1366,20 @@ pub contract Token {
 
         // TODO (optimization): partial note logs and validity_commitment nullifier are not needed
         // Initialize commitment that allows to refund excess shares to the sender in public
-        let commitment =
-            _initialize_transfer_commitment(&mut context, storage.private_balances, from, from);
+        let partial_note = _initialize_transfer_commitment(
+            &mut context,
+            storage.private_balances,
+            from,
+            from,
+            context.this_address(),
+        );
 
         // Burn the correct amount of shares
         // Any excess amount of shares is sent back to the sender via commitment
         // Reverts if the amount of shares required is greater than max_shares
         Token::at(context.this_address())
             .settle_withdrawal_to_private_with_commitment_internal(
-                commitment.commitment(),
+                partial_note.commitment,
                 assets,
                 max_shares,
             )
@@ -1435,7 +1455,7 @@ pub contract Token {
         // TODO (optimization): partial note logs and validity_commitment nullifier are not needed (?)
         // Initialize commitment that allows to transfer outstanding assets to the recipient in public
         let asset_commitment = Token::at(storage.asset.read())
-            .initialize_transfer_commitment(from, to)
+            .initialize_transfer_commitment(from, to, context.this_address())
             .call(&mut context);
 
         // Transfers any outstanding assets without revealing the recipient
@@ -1475,7 +1495,7 @@ pub contract Token {
         // TODO (optimization): partial note logs and validity_commitment nullifier are not needed (?)
         // Initialize commitment that allows to transfer outstanding assets to the recipient in public
         let asset_commitment = Token::at(storage.asset.read())
-            .initialize_transfer_commitment(from, to)
+            .initialize_transfer_commitment(from, to, context.this_address())
             .call(&mut context);
 
         // Transfers any outstanding assets without revealing the recipient and burn the sender's public balance
@@ -1553,7 +1573,12 @@ pub contract Token {
 
         let surplus = max_shares - shares; // Reverts with underflow if invalid
         if surplus > 0 {
-            _increase_commitment_balance(&mut context, PartialUintNote { commitment }, surplus);
+            _increase_commitment_balance(
+                &mut context,
+                PartialUintNote { commitment },
+                context.this_address(),
+                surplus,
+            );
         }
 
         _decrease_total_supply(storage.total_supply, shares);
@@ -1603,7 +1628,12 @@ pub contract Token {
 
         let surplus = max_shares - shares; // Reverts with underflow if invalid
         if surplus > 0 {
-            _increase_commitment_balance(&mut context, PartialUintNote { commitment }, surplus);
+            _increase_commitment_balance(
+                &mut context,
+                PartialUintNote { commitment },
+                context.this_address(),
+                surplus,
+            );
         }
 
         _decrease_total_supply(storage.total_supply, shares);
@@ -1628,6 +1658,7 @@ pub contract Token {
             _increase_commitment_balance(
                 &mut context,
                 PartialUintNote { commitment },
+                context.this_address(),
                 outstanding_shares,
             );
         }
