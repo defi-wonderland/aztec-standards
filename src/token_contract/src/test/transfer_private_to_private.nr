@@ -27,8 +27,7 @@ unconstrained fn transfer_private_on_behalf_of_other() {
     utils::check_private_balance(token_contract_address, recipient, transfer_amount);
 }
 
-// TODO: Can't figure out why this test is failing
-// #[test]
+#[test]
 unconstrained fn transfer_private_multiple_notes_recursively() {
     // Setup with account contracts. Slower since we actually deploy them, but needed for authwits.
     let (env, token_contract_address, owner, recipient, minter) = utils::setup_with_minter(true);
@@ -51,6 +50,10 @@ unconstrained fn transfer_private_multiple_notes_recursively() {
         .transfer_private_to_private(owner, recipient, transfer_amount, 0);
     transfer_private_from_call_interface.call(&mut env.private());
     env.advance_block_by(1);
+
+    // NOTE: Removing this check makes the test fail.
+    let recipient_balance = utils::get_private_balance(token_contract_address, recipient);
+    assert(recipient_balance == transfer_amount, "Incorrect recipient balance");
 
     // Check that the notes still owned by the owner are correct
     let final_owner_notes: BoundedVec<UintNote, MAX_NOTES_PER_PAGE> =

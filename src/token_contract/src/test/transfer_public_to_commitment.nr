@@ -33,7 +33,7 @@ unconstrained fn transfer_public_to_commitment_external_orchestration() {
 
     // We prepare the transfer
     let commitment = Token::at(token_contract_address)
-        .initialize_transfer_commitment(owner, recipient)
+        .initialize_transfer_commitment(owner, recipient, owner)
         .call(&mut env.private());
 
     // Finalize the transfer of the tokens (message sender owns the tokens in public)
@@ -47,7 +47,7 @@ unconstrained fn transfer_public_to_commitment_external_orchestration() {
     utils::check_private_balance(token_contract_address, recipient, mint_amount);
 }
 
-#[test(should_fail_with = "Invalid commitment")]
+#[test(should_fail_with = "Invalid partial note or completer 'context.nullifier_exists(validity_commitment, context.this_address())'")]
 unconstrained fn transfer_public_to_commitment_transfer_not_initialized() {
     // Setup without account contracts. We are not using authwits here, so dummy accounts are enough
     let (env, token_contract_address, owner, _) =
@@ -72,7 +72,7 @@ unconstrained fn transfer_public_to_commitment_failure_not_an_owner() {
     // as the token balance check is before we use the value but that would made the test less robust against changes
     // in the contract.)
     let commitment = Token::at(token_contract_address)
-        .initialize_transfer_commitment(owner, not_owner)
+        .initialize_transfer_commitment(owner, not_owner, owner)
         .call(&mut env.private());
 
     // Try transferring someone else's token balance
