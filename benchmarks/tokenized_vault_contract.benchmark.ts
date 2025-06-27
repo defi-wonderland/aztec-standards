@@ -29,7 +29,7 @@ interface TokenBenchmarkContext extends BenchmarkContext {
 
 function amt(x: bigint | number | string) {
   // Using 18 decimals as standard for Token examples
-  return parseUnits(x.toString(), 18);
+  return parseUnits(x.toString(), 6);
 }
 
 // Use export default class extending Benchmark
