@@ -1,10 +1,10 @@
-use crate::{test::utils, Token};
+use crate::{test::utils::{self, mint_amount}, Token};
 use authwit::cheatcodes as authwit_cheatcodes;
 
 #[test(should_fail_with = "Artifact not found when enriching public simulation error. Contract address: 0x0000000000000000000000000000000000000000000000000000000000000000.")]
 unconstrained fn issue_public_to_private_without_asset() {
     // Setup without account contracts. We are not using authwits here, so dummy accounts are enough
-    let (_, asset_address, owner, recipient, mint_amount) =
+    let (_, asset_address, owner, recipient) =
         utils::setup_and_mint_to_public_without_minter(false);
 
     let (env, vault_address, _, _, minter) = utils::setup_with_minter(false);
@@ -23,7 +23,7 @@ unconstrained fn issue_public_to_private_success() {
     let (env, vault_address, owner, recipient, asset_address) = utils::setup_with_asset(false);
 
     // Mint some asset tokens to owner
-    let max_assets: u128 = 10_000;
+    let max_assets: u128 = mint_amount;
     env.impersonate(owner);
     Token::at(asset_address).mint_to_public(owner, max_assets).call(&mut env.public());
     env.advance_block_by(1);
@@ -65,7 +65,7 @@ unconstrained fn issue_public_to_private_with_change_success() {
     let (env, vault_address, owner, recipient, asset_address) = utils::setup_with_asset(false);
 
     // Mint some asset tokens to owner
-    let max_assets: u128 = 10_000;
+    let max_assets: u128 = mint_amount;
     env.impersonate(owner);
     Token::at(asset_address).mint_to_public(owner, max_assets).call(&mut env.public());
     env.advance_block_by(1);
@@ -113,7 +113,7 @@ unconstrained fn issue_public_to_private_after_yield() {
     env.advance_block_by(1);
 
     // Mint some asset tokens to owner
-    let max_assets: u128 = 10_000;
+    let max_assets: u128 = mint_amount;
     env.impersonate(owner);
     Token::at(asset_address).mint_to_public(owner, max_assets).call(&mut env.public());
     env.advance_block_by(1);
@@ -130,7 +130,7 @@ unconstrained fn issue_public_to_private_after_yield() {
 
     // Deposit
     env.impersonate(owner);
-    let expected_shares: u128 = 5_000; // 10_000 / 2 because of yield
+    let expected_shares: u128 = 5_000; // mint_amount / 2 because of yield
     Token::at(vault_address)
         .issue_public_to_private(owner, recipient, expected_shares, max_assets, 0)
         .call(&mut env.private());
@@ -154,7 +154,7 @@ unconstrained fn issue_public_to_private_request_too_many_shares() {
     let (env, vault_address, owner, recipient, asset_address) = utils::setup_with_asset(false);
 
     // Mint some asset tokens to owner
-    let max_assets: u128 = 10_000;
+    let max_assets: u128 = mint_amount;
     env.impersonate(owner);
     Token::at(asset_address).mint_to_public(owner, max_assets).call(&mut env.public());
     env.advance_block_by(1);
@@ -185,7 +185,7 @@ unconstrained fn issue_public_to_private_without_approval() {
     let (env, vault_address, owner, recipient, asset_address) = utils::setup_with_asset(true);
 
     // Mint some asset tokens to owner
-    let max_assets: u128 = 10_000;
+    let max_assets: u128 = mint_amount;
     env.impersonate(owner);
     Token::at(asset_address).mint_to_public(owner, max_assets).call(&mut env.public());
     env.advance_block_by(1);
@@ -206,7 +206,7 @@ unconstrained fn issue_public_to_private_on_behalf_of_wrong_caller() {
     let (env, vault_address, owner, recipient, asset_address) = utils::setup_with_asset(true);
 
     // Mint some asset tokens to owner
-    let max_assets: u128 = 10_000;
+    let max_assets: u128 = mint_amount;
     env.impersonate(owner);
     Token::at(asset_address).mint_to_public(owner, max_assets).call(&mut env.public());
     env.advance_block_by(1);
@@ -237,7 +237,7 @@ unconstrained fn issue_public_to_private_on_behalf_of_other_success() {
     let (env, vault_address, owner, recipient, asset_address) = utils::setup_with_asset(true);
 
     // Mint some asset tokens to owner
-    let max_assets: u128 = 10_000;
+    let max_assets: u128 = mint_amount;
     env.impersonate(owner);
     Token::at(asset_address).mint_to_public(owner, max_assets).call(&mut env.public());
     env.advance_block_by(1);
