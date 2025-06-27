@@ -7,3 +7,6 @@ log/
 codegenCache.json
 .env
 store
+.cursor/*
+!.cursor/rules/
+!.cursor/rules/**
