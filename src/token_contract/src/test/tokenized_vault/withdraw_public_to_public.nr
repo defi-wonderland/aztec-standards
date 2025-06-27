@@ -1,10 +1,10 @@
-use crate::{test::utils, Token};
+use crate::{test::utils::{self, mint_amount}, Token};
 use authwit::cheatcodes as authwit_cheatcodes;
 
 #[test(should_fail_with = "Artifact not found when enriching public simulation error. Contract address: 0x0000000000000000000000000000000000000000000000000000000000000000.")]
 unconstrained fn withdraw_public_to_public_without_asset() {
     // Setup without account contracts. We are not using authwits here, so dummy accounts are enough
-    let (_, asset_address, owner, recipient, mint_amount) =
+    let (_, asset_address, owner, recipient) =
         utils::setup_and_mint_to_public_without_minter(false);
 
     let (env, vault_address, _, _, minter) = utils::setup_with_minter(false);
@@ -23,7 +23,7 @@ unconstrained fn withdraw_public_to_public_success() {
     let (env, vault_address, owner, recipient, asset_address) = utils::setup_with_asset(false);
 
     // Mint some asset tokens to owner
-    let deposit_amount: u128 = 10_000;
+    let deposit_amount: u128 = mint_amount;
     let deposit_recipient = owner;
     utils::deposit_public_to_public(
         env,
@@ -59,7 +59,7 @@ unconstrained fn withdraw_public_to_public_after_yield() {
     let (env, vault_address, owner, recipient, asset_address) = utils::setup_with_asset(false);
 
     // Mint some asset tokens to owner
-    let deposit_amount: u128 = 10_000;
+    let deposit_amount: u128 = mint_amount;
     let deposit_recipient = owner;
     utils::deposit_public_to_public(
         env,
@@ -102,7 +102,7 @@ unconstrained fn withdraw_public_to_public_without_approval() {
     let (env, vault_address, owner, recipient, asset_address) = utils::setup_with_asset(false);
 
     // Mint some asset tokens to owner
-    let deposit_amount: u128 = 10_000;
+    let deposit_amount: u128 = mint_amount;
     let deposit_recipient = owner;
     utils::deposit_public_to_public(
         env,
@@ -127,7 +127,7 @@ unconstrained fn withdraw_public_to_public_on_behalf_of_wrong_caller() {
     let (env, vault_address, owner, recipient, asset_address) = utils::setup_with_asset(false);
 
     // Mint some asset tokens to owner
-    let deposit_amount: u128 = 10_000;
+    let deposit_amount: u128 = mint_amount;
     let deposit_recipient = owner;
     utils::deposit_public_to_public(
         env,
@@ -161,7 +161,7 @@ unconstrained fn withdraw_public_to_public_on_behalf_of_other_success() {
     let (env, vault_address, owner, recipient, asset_address) = utils::setup_with_asset(false);
 
     // Mint some asset tokens to owner
-    let deposit_amount: u128 = 10_000;
+    let deposit_amount: u128 = mint_amount;
     let deposit_recipient = owner;
     utils::deposit_public_to_public(
         env,
