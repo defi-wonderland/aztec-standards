@@ -1,73 +1,76 @@
-import { TokenContractArtifact, TokenContract } from '../../artifacts/Token.js';
 import {
-  AccountWallet,
-  CompleteAddress,
   ContractDeployer,
   Fr,
-  PXE,
   TxStatus,
   getContractInstanceFromDeployParams,
   Contract,
   AccountWalletWithSecretKey,
   IntentAction,
+  Wallet,
+  AccountManager,
 } from '@aztec/aztec.js';
-import { getInitialTestAccountsWallets } from '@aztec/accounts/testing';
-import {
-  AMOUNT,
-  createPXE,
-  expectTokenBalances,
-  expectUintNote,
-  setupSandbox,
-  wad,
-  deployTokenWithMinter,
-} from './utils.js';
+import { AMOUNT, deployTokenWithMinter, expectTokenBalances, expectUintNote, setupPXE, wad } from './utils.js';
+import { PXE } from '@aztec/stdlib/interfaces/client';
+import { getInitialTestAccounts, getInitialTestAccountsManagers } from '@aztec/accounts/testing';
+import { TokenContractArtifact, TokenContract } from '../../artifacts/Token.js';
+import { SchnorrAccountContract } from '@aztec/accounts/schnorr';
+import { deriveSigningKey } from '@aztec/stdlib/keys';
 
-export async function deployTokenWithInitialSupply(deployer: AccountWallet) {
+export async function deployTokenWithInitialSupply(deployer: Wallet, options: any) {
   const contract = await Contract.deploy(
     deployer,
     TokenContractArtifact,
     ['PrivateToken', 'PT', 18, 0, deployer.getAddress(), deployer.getAddress()],
     'constructor_with_initial_supply',
   )
-    .send()
+    .send(options)
     .deployed();
   return contract;
 }
 
+const setupTestSuite = async () => {
+  const pxe = await setupPXE();
+  const managers = await Promise.all(
+    (await getInitialTestAccounts()).map(async (acc) => {
+      return await AccountManager.create(
+        pxe,
+        acc.secret,
+        new SchnorrAccountContract(deriveSigningKey(acc.secret)),
+        acc.salt,
+      );
+    }),
+  );
+  const wallets = await Promise.all(managers.map((acc) => acc.register()));
+  const [deployer] = wallets;
+
+  return { pxe, deployer, wallets };
+};
+
 describe('Token - Single PXE', () => {
   let pxe: PXE;
-  let wallets: AccountWalletWithSecretKey[] = [];
-  let accounts: CompleteAddress[] = [];
 
-  let alice: AccountWallet;
-  let bob: AccountWallet;
-  let carl: AccountWallet;
+  let wallets: AccountWalletWithSecretKey[];
+  let deployer: AccountWalletWithSecretKey;
+
+  let alice: AccountWalletWithSecretKey;
+  let bob: AccountWalletWithSecretKey;
+  let carl: AccountWalletWithSecretKey;
 
   let token: TokenContract;
 
   beforeAll(async () => {
-    pxe = await setupSandbox();
+    ({ pxe, deployer, wallets } = await setupTestSuite());
 
-    wallets = await getInitialTestAccountsWallets(pxe);
-    accounts = wallets.map((w) => w.getCompleteAddress());
-
-    alice = wallets[0];
-    bob = wallets[1];
-    carl = wallets[2];
-
-    console.log({
-      alice: alice.getAddress(),
-      bob: bob.getAddress(),
-    });
+    [alice, bob, carl] = wallets;
   });
 
   beforeEach(async () => {
-    token = (await deployTokenWithMinter(alice)) as TokenContract;
+    token = (await deployTokenWithMinter(alice, {})) as TokenContract;
   });
 
   it('deploys the contract with minter', async () => {
     const salt = Fr.random();
-    const [deployerWallet] = wallets; // using first account as deployer
+    const deployerWallet = alice;
 
     const deploymentData = await getContractInstanceFromDeployParams(TokenContractArtifact, {
       constructorArtifact: 'constructor_with_minter',
@@ -75,10 +78,13 @@ describe('Token - Single PXE', () => {
       salt,
       deployer: deployerWallet.getAddress(),
     });
+
     const deployer = new ContractDeployer(TokenContractArtifact, deployerWallet, undefined, 'constructor_with_minter');
     const tx = deployer
       .deploy('PrivateToken', 'PT', 18, deployerWallet.getAddress(), deployerWallet.getAddress())
-      .send({ contractAddressSalt: salt });
+      .send({
+        contractAddressSalt: salt,
+      });
     const receipt = await tx.getReceipt();
 
     expect(receipt).toEqual(
@@ -104,7 +110,7 @@ describe('Token - Single PXE', () => {
 
   it('deploys the contract with initial supply', async () => {
     const salt = Fr.random();
-    const [deployerWallet] = wallets; // using first account as deployer
+    const deployerWallet = alice; // using first account as deployer
 
     const deploymentData = await getContractInstanceFromDeployParams(TokenContractArtifact, {
       constructorArtifact: 'constructor_with_initial_supply',
@@ -358,7 +364,10 @@ describe('Token - Single PXE', () => {
     expect(await token.methods.total_supply().simulate()).toBe(AMOUNT);
 
     // alice prepares partial note for bob
-    await token.methods.initialize_transfer_commitment(bob.getAddress(), alice.getAddress()).send().wait();
+    await token.methods
+      .initialize_transfer_commitment(bob.getAddress(), alice.getAddress(), bob.getAddress())
+      .send()
+      .wait();
 
     // alice still has tokens in public
     expect(await token.methods.balance_of_public(alice.getAddress()).simulate()).toBe(AMOUNT);
@@ -446,29 +455,28 @@ describe('Token - Single PXE', () => {
 });
 
 describe('Token - Multi PXE', () => {
-  let alicePXE: PXE;
-  let bobPXE: PXE;
+  let pxe: PXE;
 
-  let aliceWallet: AccountWalletWithSecretKey;
-  let bobWallet: AccountWalletWithSecretKey;
+  let wallets: AccountWalletWithSecretKey[];
+  let deployer: AccountWalletWithSecretKey;
 
-  let alice: AccountWallet;
-  let bob: AccountWallet;
+  let alice: AccountWalletWithSecretKey;
+  let bob: AccountWalletWithSecretKey;
+  let carl: AccountWalletWithSecretKey;
 
   let token: TokenContract;
 
+  let alicePXE: PXE;
+  let bobPXE: PXE;
+
   beforeAll(async () => {
-    alicePXE = await createPXE(0);
-    bobPXE = await createPXE(1);
+    ({ pxe, deployer, wallets } = await setupTestSuite());
 
-    const initialsAlice = await getInitialTestAccountsWallets(alicePXE);
-    const initialsBob = await getInitialTestAccountsWallets(bobPXE);
-    // TODO: assert that the used PXEs are actually separate instances?
+    [alice, bob, carl] = wallets;
 
-    aliceWallet = initialsAlice[0];
-    bobWallet = initialsBob[1];
-    alice = initialsAlice[0];
-    bob = initialsBob[1];
+    // TODO: use different PXE instances.
+    alicePXE = pxe;
+    bobPXE = pxe;
   });
 
   beforeEach(async () => {
@@ -477,11 +485,11 @@ describe('Token - Multi PXE', () => {
 
     // alice knows bob
     // TODO: review this, alice shouldn't need to register bob's **secrets**!
-    await alicePXE.registerAccount(bobWallet.getSecretKey(), bob.getCompleteAddress().partialAddress);
+    await alicePXE.registerAccount(bob.getSecretKey(), bob.getCompleteAddress().partialAddress);
     await alicePXE.registerSender(bob.getAddress());
 
     // bob knows alice
-    await bobPXE.registerAccount(aliceWallet.getSecretKey(), alice.getCompleteAddress().partialAddress);
+    await bobPXE.registerAccount(alice.getSecretKey(), alice.getCompleteAddress().partialAddress);
     await bobPXE.registerSender(alice.getAddress());
   });
 
