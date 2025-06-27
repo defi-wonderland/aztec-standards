@@ -1,7 +1,5 @@
 use crate::{test::utils::{self, mint_amount}, Token};
 use authwit::cheatcodes as authwit_cheatcodes;
-use aztec::note::constants::MAX_NOTES_PER_PAGE;
-use uint_note::uint_note::UintNote;
 
 #[test(should_fail_with = "Artifact not found when enriching public simulation error. Contract address: 0x0000000000000000000000000000000000000000000000000000000000000000.")]
 unconstrained fn deposit_public_to_private_exact_without_asset() {
