@@ -15,7 +15,6 @@ version: 1.0.0
 
 ## Authorization
 - Always validate authorization with assert_current_call_valid_authwit
-- Check nonce == 0 when from == msg_sender (self-authorization)
 - Implement dedicated validation functions: _validate_from_private, _validate_minter
 - Use authwit for both private and public contexts appropriately
 
