@@ -143,8 +143,12 @@ unconstrained fn redeem_private_to_public_on_behalf_of_wrong_caller() {
 
     // Authorize someone to call redeem_private_to_public
     let requested_shares: u128 = deposit_amount;
-    let redeem_private_to_public_call_interface = Token::at(vault_address)
-        .redeem_private_to_public(deposit_recipient, recipient, requested_shares, 0);
+    let redeem_private_to_public_call_interface = Token::at(vault_address).redeem_private_to_public(
+        deposit_recipient,
+        recipient,
+        requested_shares,
+        0,
+    );
     authwit_cheatcodes::add_private_authwit_from_call_interface(
         deposit_recipient,
         owner,
@@ -178,8 +182,12 @@ unconstrained fn redeem_private_to_public_on_behalf_of_other_success() {
 
     // Authorize someone to call redeem_private_to_public
     let requested_shares: u128 = deposit_amount;
-    let redeem_private_to_public_call_interface = Token::at(vault_address)
-        .redeem_private_to_public(deposit_recipient, recipient, requested_shares, 0);
+    let redeem_private_to_public_call_interface = Token::at(vault_address).redeem_private_to_public(
+        deposit_recipient,
+        recipient,
+        requested_shares,
+        0,
+    );
     authwit_cheatcodes::add_private_authwit_from_call_interface(
         deposit_recipient,
         recipient,
