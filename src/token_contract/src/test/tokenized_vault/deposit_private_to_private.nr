@@ -1,11 +1,10 @@
-use crate::{test::utils, Token};
+use crate::{test::utils::{self, mint_amount}, Token};
 use authwit::cheatcodes as authwit_cheatcodes;
 
 #[test(should_fail_with = "Artifact not found when enriching public simulation error. Contract address: 0x0000000000000000000000000000000000000000000000000000000000000000.")]
 unconstrained fn deposit_private_to_private_without_asset() {
     // Setup without account contracts. We are not using authwits here, so dummy accounts are enough
-    let (_, asset_address, owner, recipient, mint_amount) =
-        utils::setup_and_mint_to_public_without_minter(true);
+    let (_, asset_address, owner, recipient) = utils::setup_and_mint_to_public_without_minter(true);
 
     let (env, vault_address, _, _, minter) = utils::setup_with_minter(true);
 
@@ -172,7 +171,7 @@ unconstrained fn deposit_private_to_private_request_too_many_shares() {
     // Deposit
     env.impersonate(owner);
     // At the first deposit 1 share = 1 asset
-    let shares = deposit_amount * 2;
+    let shares = deposit_amount + 1;
     Token::at(vault_address)
         .deposit_private_to_private(owner, recipient, deposit_amount, shares, 0)
         .call(&mut env.private());
