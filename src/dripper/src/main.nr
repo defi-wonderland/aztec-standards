@@ -6,7 +6,7 @@ pub contract Dripper {
     use aztec::prelude::AztecAddress;
     use token::Token;
 
-    #[private]
+    #[public]
     #[initializer]
     fn constructor() {}
 
