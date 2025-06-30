@@ -1,5 +1,7 @@
 use aztec::macros::aztec;
 
+mod test;
+
 #[aztec]
 pub contract Dripper {
     use aztec::macros::functions::{initializer, private, public};
