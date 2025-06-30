@@ -290,14 +290,53 @@ fn initialize_transfer_commitment(from: AztecAddress, to: AztecAddress) -> Field
 fn mint_to_private(from: AztecAddress, to: AztecAddress, amount: u128) { /* ... */ }
 
 /// @notice Burns tokens from a private balance
-/// @dev Requires auth witness, enqueues supply update
+/// @dev Requires authwit, enqueues supply update
 /// @param from The address of the sender
 /// @param amount The amount of tokens to burn
-/// @param nonce The nonce used for auth witness
+/// @param nonce The nonce used for authwit
 #[private]
 fn burn_private(from: AztecAddress, amount: u128, nonce: Field) { /* ... */ }
 ```
 
+### View & Utility Functions
+```rust
+/// @notice Returns the public balance of `owner`
+/// @param owner The address of the owner
+/// @return The public balance of `owner`
+#[public]
+#[view]
+fn balance_of_public(owner: AztecAddress) -> u128 { /* ... */ }
+
+/// @notice Returns the total supply of the token
+/// @return The total supply of the token
+#[public]
+#[view]
+fn total_supply() -> u128 { /* ... */ }
+
+/// @notice Returns the name of the token
+/// @return The name of the token
+#[public]
+#[view]
+fn name() -> FieldCompressedString { /* ... */ }
+
+/// @notice Returns the symbol of the token
+/// @return The symbol of the token
+#[public]
+#[view]
+fn symbol() -> FieldCompressedString { /* ... */ }
+
+/// @notice Returns the decimals of the token
+/// @return The decimals of the token
+#[public]
+#[view]
+fn decimals() -> u8 { /* ... */ }
+
+/// @notice Returns the private balance of `owner`
+/// @param owner The address of the owner
+/// @return The private balance of `owner`
+#[utility]
+unconstrained fn balance_of_private(owner: AztecAddress) -> u128 { /* ... */ }
+```
 
 ## NFT Contract
 The `NFT` contract implements an ERC-721-like non-fungible token with Aztec-specific privacy extensions. It supports transfers and interactions through both private and public ownership, offering full coverage of Aztec's confidentiality features for unique digital assets.
