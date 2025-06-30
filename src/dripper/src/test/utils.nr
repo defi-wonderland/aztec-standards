@@ -91,7 +91,7 @@ pub unconstrained fn check_private_balance(
     address: AztecAddress,
     expected_amount: u128,
 ) {
-    let balance = Token::at(token_contract_address).balance_of_private(address);
+    let balance = Token::at(token_contract_address).balance_of_private(address).view(&mut TestEnvironment::new().private());
     assert(balance == expected_amount, "Private balance is not correct");
 }
 
