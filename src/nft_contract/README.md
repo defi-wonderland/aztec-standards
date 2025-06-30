@@ -1,7 +1,8 @@
-
 # NFT Contract
 
 The `NFT` contract implements an ERC-721-like non-fungible token with Aztec-specific privacy extensions. It supports transfers and interactions through both private and public ownership, offering full coverage of Aztec's confidentiality features for unique digital assets.
+
+This contract provides a comprehensive NFT implementation that allows seamless transitions between private and public ownership states, making it ideal for applications requiring flexible privacy controls.
 
 ## Storage Fields
 

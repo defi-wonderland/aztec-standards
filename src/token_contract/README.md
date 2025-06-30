@@ -1,12 +1,12 @@
-
 # Token Contract
 
-The `Token` contract implements an ERC-20-like token with Aztec-specific privacy extensions. It supports transfers and interactions explicitly through private balances and public balances, offering full coverage of Aztec's confidentiality features.
+The `Token` contract implements an ERC-20-like token with Aztec-specific privacy extensions. It supports transfers and interactions through both private and public balances, offering full coverage of Aztec's confidentiality features.
+
+This implementation provides a robust foundation for fungible tokens on Aztec, enabling developers to build applications with flexible privacy controls and seamless interoperability between private and public states.
 
 ## AIP-20: Aztec Token Standard
 
-We published the [AIP-20 Aztec Token Standard](https://forum.aztec.network/t/request-for-comments-aip-20-aztec-token-standard/7737) to the forum.
-Feel free to review and discuss the specification there.
+This contract follows the [AIP-20 Aztec Token Standard](https://forum.aztec.network/t/request-for-comments-aip-20-aztec-token-standard/7737). Feel free to review and discuss the specification on the Aztec forum.
 
 ## Storage Fields
 
@@ -62,45 +62,63 @@ fn constructor_with_minter(
 ) { /* ... */ }
 ```
 
-## View & Utility Functions
+## View Functions
 
+### balance_of_public
 ```rust
 /// @notice Returns the public balance of `owner`
 /// @param owner The address of the owner
 /// @return The public balance of `owner`
 #[public]
 #[view]
-fn balance_of_public(owner: AztecAddress) -> u128
+fn balance_of_public(owner: AztecAddress) -> u128 { /* ... */ }
+```
 
+### total_supply
+```rust
 /// @notice Returns the total supply of the token
 /// @return The total supply of the token
 #[public]
 #[view]
-fn total_supply() -> u128
+fn total_supply() -> u128 { /* ... */ }
+```
 
+### name
+```rust
 /// @notice Returns the name of the token
 /// @return The name of the token
 #[public]
 #[view]
-fn name() -> FieldCompressedString
+fn name() -> FieldCompressedString { /* ... */ }
+```
 
+### symbol
+```rust
 /// @notice Returns the symbol of the token
 /// @return The symbol of the token
 #[public]
 #[view]
-fn symbol() -> FieldCompressedString
+fn symbol() -> FieldCompressedString { /* ... */ }
+```
 
+### decimals
+```rust
 /// @notice Returns the decimals of the token
 /// @return The decimals of the token
 #[public]
 #[view]
-fn decimals() -> u8
+fn decimals() -> u8 { /* ... */ }
+```
 
+## Utility Functions
+
+### balance_of_private
+```rust
 /// @notice Returns the private balance of `owner`
 /// @param owner The address of the owner
 /// @return The private balance of `owner`
 #[utility]
-unconstrained fn balance_of_private(owner: AztecAddress) -> u128
+unconstrained fn balance_of_private(owner: AztecAddress) -> u128 { /* ... */ }
 ```
 
 ## Public Functions
@@ -112,7 +130,7 @@ unconstrained fn balance_of_private(owner: AztecAddress) -> u128
 /// @param from The address of the sender
 /// @param to The address of the recipient
 /// @param amount The amount of tokens to transfer
-/// @param nonce The nonce used for authwitness
+/// @param nonce The nonce used for authwit
 #[public]
 fn transfer_public_to_public(
     from: AztecAddress,
@@ -130,7 +148,7 @@ fn transfer_public_to_public(
 /// @param from The address of the sender
 /// @param commitment The Field representing the commitment (privacy entrance)
 /// @param amount The amount of tokens to transfer
-/// @param nonce The nonce used for authwitness
+/// @param nonce The nonce used for authwit
 #[public]
 fn transfer_public_to_commitment(
     from: AztecAddress,
@@ -172,7 +190,7 @@ fn mint_to_commitment(
 /// @dev Burns tokens from a public balance and updates the total supply
 /// @param from The address of the sender
 /// @param amount The amount of tokens to burn
-/// @param nonce The nonce used for authwitness
+/// @param nonce The nonce used for authwit
 #[public]
 fn burn_public(
     from: AztecAddress,
@@ -199,7 +217,7 @@ fn upgrade_contract(new_contract_class_id: Field) { /* ... */ }
 /// @param from The address of the sender
 /// @param to The address of the recipient
 /// @param amount The amount of tokens to transfer
-/// @param nonce The nonce used for authwitness
+/// @param nonce The nonce used for authwit
 #[private]
 fn transfer_private_to_public(
     from: AztecAddress,
@@ -216,7 +234,7 @@ fn transfer_private_to_public(
 /// @param from The address of the sender
 /// @param to The address of the recipient
 /// @param amount The amount of tokens to transfer
-/// @param nonce The nonce used for authwitness
+/// @param nonce The nonce used for authwit
 /// @return commitment The partial note utilized for the transfer commitment (privacy entrance)
 #[private]
 fn transfer_private_to_public_with_commitment(
@@ -234,7 +252,7 @@ fn transfer_private_to_public_with_commitment(
 /// @param from The address of the sender
 /// @param to The address of the recipient
 /// @param amount The amount of tokens to transfer
-/// @param nonce The nonce used for authwitness
+/// @param nonce The nonce used for authwit
 #[private]
 fn transfer_private_to_private(
     from: AztecAddress,
@@ -251,7 +269,7 @@ fn transfer_private_to_private(
 /// @param from The address of the sender
 /// @param commitment The Field representing the commitment (privacy entrance that the recipient shares with the sender)
 /// @param amount The amount of tokens to transfer
-/// @param nonce The nonce used for authwitness
+/// @param nonce The nonce used for authwit
 #[private]
 fn transfer_private_to_commitment(
     from: AztecAddress,
@@ -268,7 +286,7 @@ fn transfer_private_to_commitment(
 /// @param from The address of the sender
 /// @param to The address of the recipient
 /// @param amount The amount of tokens to transfer
-/// @param nonce The nonce used for authwitness
+/// @param nonce The nonce used for authwit
 #[private]
 fn transfer_public_to_private(
     from: AztecAddress,
