@@ -32,8 +32,8 @@ unconstrained fn issue_public_to_private_exact_too_many_assets() {
     env.advance_block_by(1);
 
     // Check recipient got shares
-    utils::check_private_balance(vault_address, recipient, requested_shares);
-    utils::check_public_balance(vault_address, recipient, 0);
+    utils::check_private_balance(vault_address, recipient, 0);
+    utils::check_public_balance(vault_address, recipient, requested_shares);
 
     // Check the total supply got updated
     let total_supply = Token::at(vault_address).total_supply().view(&mut env.public());
