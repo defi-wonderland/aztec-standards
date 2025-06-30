@@ -35,7 +35,7 @@ fn drip_to_private(token_address: AztecAddress, amount: u64) { /* ... */ }
 The `Token` contract implements an ERC-20-like token with Aztec-specific privacy extensions. It supports transfers and interactions explicitly through private balances and public balances, offering full coverage of Aztec's confidentiality features.
 
 ### AIP-20: Aztec Token Standard
-We publish the [AIP-20 Aztec Token Standard](https://forum.aztec.network/t/request-for-comments-aip-20-aztec-token-standard/7737) to the forum.
+We published the [AIP-20 Aztec Token Standard](https://forum.aztec.network/t/request-for-comments-aip-20-aztec-token-standard/7737) to the forum.
 Feel free to review and discuss the specification there.
 
 ### Storage Fields
