@@ -20,6 +20,37 @@ unconstrained fn mint_to_private_success() {
 }
 
 #[test]
+unconstrained fn mint_to_private_from_different_address() {
+    // Test mint_to_private with msg_sender == minter and from != msg_sender
+    // Setup without account contracts. We are not using authwits here, so dummy accounts are enough
+    let (env, token_contract_address, owner, recipient, minter) = utils::setup_with_minter(false);
+
+    env.impersonate(minter);
+    let mint_amount: u128 = 5_000;
+    
+    // Minter mints tokens "from" owner "to" recipient
+    // This tests the scenario where from != msg_sender but msg_sender == minter
+    Token::at(token_contract_address).mint_to_private(owner, recipient, mint_amount).call(
+        &mut env.private(),
+    );
+    //TODO(#9257): need to advance one block to "mine a block"
+    env.advance_block_by(1);
+
+    // Verify recipient received the tokens
+    utils::check_private_balance(token_contract_address, recipient, mint_amount);
+    
+    // Verify owner did not receive tokens (since they were the "from" but not "to")
+    utils::check_private_balance(token_contract_address, owner, 0);
+    
+    // Verify minter did not receive tokens (since they were the msg_sender but not "to")
+    utils::check_private_balance(token_contract_address, minter, 0);
+
+    // Verify total supply increased
+    let total_supply = Token::at(token_contract_address).total_supply().view(&mut env.public());
+    assert(total_supply == mint_amount);
+}
+
+#[test]
 unconstrained fn mint_to_private_failures() {
     // Setup without account contracts. We are not using authwits here, so dummy accounts are enough
     let (env, token_contract_address, owner, recipient, minter) = utils::setup_with_minter(false);
