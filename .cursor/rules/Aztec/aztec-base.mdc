@@ -15,7 +15,9 @@ version: 1.0.0
 
 ## Naming Conventions
 - Use snake_case for all variables and functions
-- Prefix internal functions with underscore: _validate_minter, _increase_balance
+- All functions with the `#[contract_library_method]` attribute must be prefixed with `_`
+- Examples: `_increase_private_balance`, `_decrease_public_balance`, `_validate_minter`
 - Name transfers with clear directionality: transfer_private_to_public
+- Do NOT use underscore prefixes for regular internal functions
 - Suffix internal variants with _internal: increase_public_balance_internal
 - Use descriptive variable names: private_balances, public_owners, mint_amount

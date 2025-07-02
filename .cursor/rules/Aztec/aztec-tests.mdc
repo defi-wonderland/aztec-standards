@@ -23,7 +23,8 @@ version: 1.0.0
 - Use #[test(should_fail_with = "error message")] for expected failures
 - Advance blocks after private operations: env.advance_block_by(1)
 - Impersonate users with env.impersonate(address)
-- Use env.assert_private_call_fails for testing authorization failures
+- Use the `authwit_cheatcodes` library for testing authorization cases
+- Always test both authorization success and failure scenarios
 
 ## Best Practices
 - Never skip tests - implement or remove them
