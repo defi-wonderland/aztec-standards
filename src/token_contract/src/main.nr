@@ -1303,15 +1303,6 @@ pub contract Token {
     ) {
         _validate_from_private(&mut context, from);
 
-        // Burn shares from the sender in private
-        _decrease_private_balance(
-            &mut context,
-            storage.private_balances,
-            from,
-            max_shares,
-            INITIAL_TRANSFER_CALL_MAX_NOTES,
-        );
-
         // TODO (optimization): partial note logs and validity_commitment nullifier are not needed
         // Initialize commitment that allows to refund excess shares to the sender in public
         let partial_note = _initialize_transfer_commitment(
@@ -1320,6 +1311,15 @@ pub contract Token {
             from,
             from,
             context.this_address(),
+        );
+
+        // Burn shares from the sender in private
+        _decrease_private_balance(
+            &mut context,
+            storage.private_balances,
+            from,
+            max_shares,
+            INITIAL_TRANSFER_CALL_MAX_NOTES,
         );
 
         // Burn the correct amount of shares
@@ -1355,15 +1355,6 @@ pub contract Token {
     ) {
         _validate_from_private(&mut context, from);
 
-        // Burn shares from the sender in private
-        _decrease_private_balance(
-            &mut context,
-            storage.private_balances,
-            from,
-            max_shares,
-            INITIAL_TRANSFER_CALL_MAX_NOTES,
-        );
-
         // TODO (optimization): partial note logs and validity_commitment nullifier are not needed
         // Initialize commitment that allows to refund excess shares to the sender in public
         let partial_note = _initialize_transfer_commitment(
@@ -1372,6 +1363,15 @@ pub contract Token {
             from,
             from,
             context.this_address(),
+        );
+
+        // Burn shares from the sender in private
+        _decrease_private_balance(
+            &mut context,
+            storage.private_balances,
+            from,
+            max_shares,
+            INITIAL_TRANSFER_CALL_MAX_NOTES,
         );
 
         // Burn the correct amount of shares
@@ -1464,13 +1464,13 @@ pub contract Token {
             .settle_redemption_to_private_with_commitment(asset_commitment, shares, min_assets)
             .enqueue(&mut context);
 
-        // Burn shares from the sender in private
-        _burn_private(&mut context, storage.private_balances, from, shares);
-
         // Transfer min_assets to the recipient
         Token::at(storage.asset.read())
             .transfer_public_to_private(context.this_address(), to, min_assets, 0)
             .call(&mut context);
+
+        // Burn shares from the sender in private
+        _burn_private(&mut context, storage.private_balances, from, shares);
     }
 
     /// @notice Redeems an amount of the shares from a public balance to a private balance
@@ -1498,19 +1498,19 @@ pub contract Token {
             .initialize_transfer_commitment(from, to, context.this_address())
             .call(&mut context);
 
-        // Transfers any outstanding assets without revealing the recipient and burn the sender's public balance
+        // Transfers any outstanding assets without revealing the recipient
         // Reverts if min_assets is greater than allowed
         Token::at(context.this_address())
             .settle_redemption_to_private_with_commitment(asset_commitment, shares, min_assets)
             .enqueue(&mut context);
 
-        // Burn the shares being redeemed
-        Token::at(context.this_address()).burn_public_internal(from, shares).enqueue(&mut context);
-
         // Transfer min_assets to the recipient
         Token::at(storage.asset.read())
             .transfer_public_to_private(context.this_address(), to, min_assets, 0)
             .call(&mut context);
+
+        // Burn the shares being redeemed
+        Token::at(context.this_address()).burn_public_internal(from, shares).enqueue(&mut context);
     }
 
     /** ==========================================================
