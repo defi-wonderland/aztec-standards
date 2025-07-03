@@ -1,10 +1,4 @@
-import {
-  AccountManager,
-  type AccountWallet,
-  type ContractFunctionInteraction,
-  type PXE,
-  createPXEClient,
-} from '@aztec/aztec.js';
+import { AccountManager, type AccountWallet, type ContractFunctionInteraction, type PXE } from '@aztec/aztec.js';
 import { getInitialTestAccounts } from '@aztec/accounts/testing';
 import { parseUnits } from 'viem';
 
