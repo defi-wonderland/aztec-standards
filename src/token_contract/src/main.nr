@@ -1138,15 +1138,15 @@ pub contract Token {
     ) {
         _validate_from_private(&mut context, from);
 
-        // Take max_assets from the sender
-        Token::at(storage.asset.read())
-            .transfer_private_to_public(from, context.this_address(), max_assets, _nonce)
-            .call(&mut context);
-
         // TODO (optimization): partial note logs and validity_commitment nullifier are not needed (?)
         // Initialize commitment that allows to refund excess assets to the sender in public
         let asset_commitment = Token::at(storage.asset.read())
             .initialize_transfer_commitment(from, from, context.this_address())
+            .call(&mut context);
+
+        // Take max_assets from the sender
+        Token::at(storage.asset.read())
+            .transfer_private_to_public(from, context.this_address(), max_assets, _nonce)
             .call(&mut context);
 
         // Validate max_assets in public and refund any surplus to the sender with a commitment
@@ -1177,15 +1177,15 @@ pub contract Token {
     ) {
         _validate_from_private(&mut context, from);
 
-        // Take max_assets from the sender
-        Token::at(storage.asset.read())
-            .transfer_private_to_public(from, context.this_address(), max_assets, _nonce)
-            .call(&mut context);
-
         // TODO (optimization): partial note logs and validity_commitment nullifier are not needed (?)
         // Initialize commitment that allows to refund excess assets to the sender in public
         let asset_commitment = Token::at(storage.asset.read())
             .initialize_transfer_commitment(from, from, context.this_address())
+            .call(&mut context);
+
+        // Take max_assets from the sender
+        Token::at(storage.asset.read())
+            .transfer_private_to_public(from, context.this_address(), max_assets, _nonce)
             .call(&mut context);
 
         // Validate max_assets in public and refund any surplus to the sender with a commitment
