@@ -2,7 +2,7 @@ use crate::{test::utils::{self, mint_amount}, Token};
 use authwit::cheatcodes as authwit_cheatcodes;
 
 #[test(should_fail_with = "Artifact not found when calling private function. Contract address: 0x0000000000000000000000000000000000000000000000000000000000000000.")]
-unconstrained fn issue_private_to_public_exact_without_asset() {
+unconstrained fn issue_private_to_private_exact_without_asset() {
     // Setup without account contracts. We are not using authwits here, so dummy accounts are enough
     let (_, asset_address, owner, recipient) =
         utils::setup_and_mint_to_public_without_minter(false);
@@ -12,13 +12,13 @@ unconstrained fn issue_private_to_public_exact_without_asset() {
     // Deposit should fail because the PublicImmutable asset was not initialized
     env.impersonate(owner);
     Token::at(vault_address)
-        .issue_private_to_public_exact(owner, recipient, mint_amount, mint_amount, 0)
+        .issue_private_to_private_exact(owner, recipient, mint_amount, mint_amount, 0)
         .call(&mut env.private());
     env.advance_block_by(1);
 }
 
 #[test]
-unconstrained fn issue_private_to_public_exact_success() {
+unconstrained fn issue_private_to_private_exact_success() {
     // Setup with asset token
     let (env, vault_address, owner, recipient, asset_address) = utils::setup_with_asset(true);
 
@@ -44,13 +44,13 @@ unconstrained fn issue_private_to_public_exact_success() {
     let max_assets = deposit_amount;
     let requested_shares = deposit_amount;
     Token::at(vault_address)
-        .issue_private_to_public_exact(owner, recipient, requested_shares, max_assets, 0)
+        .issue_private_to_private_exact(owner, recipient, requested_shares, max_assets, 0)
         .call(&mut env.private());
     env.advance_block_by(1);
 
     // Check recipient got shares
-    utils::check_public_balance(vault_address, recipient, requested_shares);
-    utils::check_private_balance(vault_address, recipient, 0);
+    utils::check_private_balance(vault_address, recipient, requested_shares);
+    utils::check_public_balance(vault_address, recipient, 0);
 
     // Check the total supply got updated
     let total_supply = Token::at(vault_address).total_supply().view(&mut env.public());
@@ -61,7 +61,7 @@ unconstrained fn issue_private_to_public_exact_success() {
 }
 
 #[test]
-unconstrained fn issue_private_to_public_exact_after_yield() {
+unconstrained fn issue_private_to_private_exact_after_yield() {
     // Setup with asset token
     let (env, vault_address, owner, recipient, asset_address) = utils::setup_with_asset(true);
 
@@ -92,14 +92,14 @@ unconstrained fn issue_private_to_public_exact_after_yield() {
     let max_assets: u128 = deposit_amount; // mint_amount / 2 because of yield
     let requested_shares = 5_000;
     Token::at(vault_address)
-        .issue_private_to_public_exact(owner, recipient, requested_shares, max_assets, 0)
+        .issue_private_to_private_exact(owner, recipient, requested_shares, max_assets, 0)
         .call(&mut env.private());
     env.advance_block_by(1);
 
 
     // Check recipient got shares
-    utils::check_public_balance(vault_address, recipient, requested_shares);
-    utils::check_private_balance(vault_address, recipient, 0);
+    utils::check_private_balance(vault_address, recipient, requested_shares);
+    utils::check_public_balance(vault_address, recipient, 0);
 
     // Check the total supply got updated
     let total_supply = Token::at(vault_address).total_supply().view(&mut env.public());
@@ -135,13 +135,13 @@ unconstrained fn issue_public_to_private_exact_too_many_assets() {
     // At the first deposit 1 share = 1 asset
     let requested_shares = 9_999; // But should receive 10_000
     Token::at(vault_address)
-        .issue_private_to_public_exact(owner, recipient, requested_shares, max_deposit, 0)
+        .issue_private_to_private_exact(owner, recipient, requested_shares, max_deposit, 0)
         .call(&mut env.private());
     env.advance_block_by(1);
 
     // Check recipient got shares
-    utils::check_private_balance(vault_address, recipient, 0);
-    utils::check_public_balance(vault_address, recipient, requested_shares);
+    utils::check_private_balance(vault_address, recipient, requested_shares);
+    utils::check_public_balance(vault_address, recipient, 0);
 
     // Check the total supply got updated
     let total_supply = Token::at(vault_address).total_supply().view(&mut env.public());
@@ -153,7 +153,7 @@ unconstrained fn issue_public_to_private_exact_too_many_assets() {
 }
 
 #[test(should_fail_with = "Assertion failed: attempt to subtract with overflow ")]
-unconstrained fn issue_private_to_public_exact_request_too_many_shares() {
+unconstrained fn issue_private_to_private_exact_request_too_many_shares() {
     // Setup with asset token
     let (env, vault_address, owner, recipient, asset_address) = utils::setup_with_asset(true);
 
@@ -179,13 +179,13 @@ unconstrained fn issue_private_to_public_exact_request_too_many_shares() {
     let max_assets = deposit_amount;
     let requested_shares = deposit_amount + 1;
     Token::at(vault_address)
-        .issue_private_to_public_exact(owner, recipient, requested_shares, max_assets, 0)
+        .issue_private_to_private_exact(owner, recipient, requested_shares, max_assets, 0)
         .call(&mut env.private());
     env.advance_block_by(1);
 }
 
 #[test(should_fail_with = "Unknown auth witness for message hash ")]
-unconstrained fn issue_private_to_public_exact_without_approval() {
+unconstrained fn issue_private_to_private_exact_without_approval() {
     // Setup with asset token
     let (env, vault_address, owner, recipient, asset_address) = utils::setup_with_asset(true);
 
@@ -200,13 +200,13 @@ unconstrained fn issue_private_to_public_exact_without_approval() {
     // At the first deposit 1 share = 1 asset
     let max_assets = deposit_amount;
     Token::at(vault_address)
-        .issue_private_to_public_exact(owner, recipient, deposit_amount, max_assets, 0)
+        .issue_private_to_private_exact(owner, recipient, deposit_amount, max_assets, 0)
         .call(&mut env.private());
     env.advance_block_by(1);
 }
 
 #[test(should_fail_with = "Unknown auth witness for message hash ")]
-unconstrained fn issue_private_to_public_exact_on_behalf_of_wrong_caller() {
+unconstrained fn issue_private_to_private_exact_on_behalf_of_wrong_caller() {
     // Setup with asset token
     let (env, vault_address, owner, recipient, asset_address) = utils::setup_with_asset(true);
 
@@ -231,13 +231,13 @@ unconstrained fn issue_private_to_public_exact_on_behalf_of_wrong_caller() {
     // At the first deposit 1 share = 1 asset
     let max_assets = deposit_amount;
     Token::at(vault_address)
-        .issue_private_to_public_exact(owner, recipient, deposit_amount, max_assets, 0)
+        .issue_private_to_private_exact(owner, recipient, deposit_amount, max_assets, 0)
         .call(&mut env.private());
     env.advance_block_by(1);
 }
 
 #[test]
-unconstrained fn issue_private_to_public_exact_on_behalf_of_other_success() {
+unconstrained fn issue_private_to_private_exact_on_behalf_of_other_success() {
     // Setup with asset token
     let (env, vault_address, owner, recipient, asset_address) = utils::setup_with_asset(true);
 
@@ -257,28 +257,28 @@ unconstrained fn issue_private_to_public_exact_on_behalf_of_other_success() {
         transfer_private_to_public_call_interface,
     );
 
-    // Authorize the recipient to call issue_private_to_public_exact
+    // Authorize the recipient to call issue_private_to_private_exact
     // At the first deposit 1 share = 1 asset
     let max_assets = deposit_amount;
     let requested_shares = deposit_amount;
-    let issue_private_to_public_exact_call_interface = Token::at(vault_address)
-        .issue_private_to_public_exact(owner, recipient, requested_shares, max_assets, 0);
+    let issue_private_to_private_exact_call_interface = Token::at(vault_address)
+        .issue_private_to_private_exact(owner, recipient, requested_shares, max_assets, 0);
     authwit_cheatcodes::add_private_authwit_from_call_interface(
         owner,
         recipient,
-        issue_private_to_public_exact_call_interface,
+        issue_private_to_private_exact_call_interface,
     );
 
     // Deposit
     env.impersonate(recipient);
     Token::at(vault_address)
-        .issue_private_to_public_exact(owner, recipient, requested_shares, max_assets, 0)
+        .issue_private_to_private_exact(owner, recipient, requested_shares, max_assets, 0)
         .call(&mut env.private());
     env.advance_block_by(1);
 
     // Check recipient got shares
-    utils::check_public_balance(vault_address, recipient, requested_shares);
-    utils::check_private_balance(vault_address, recipient, 0);
+    utils::check_private_balance(vault_address, recipient, requested_shares);
+    utils::check_public_balance(vault_address, recipient, 0);
 
     // Check the total supply got updated
     let total_supply = Token::at(vault_address).total_supply().view(&mut env.public());

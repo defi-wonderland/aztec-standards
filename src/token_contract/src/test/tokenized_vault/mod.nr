@@ -9,3 +9,4 @@ mod withdraw_public_to_public;
 mod withdraw_public_to_private;
 mod withdraw_private_to_private;
 mod issue_private_to_public_exact;
+mod issue_private_to_private_exact;
