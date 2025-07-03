@@ -1732,7 +1732,7 @@ pub contract Token {
         let mul_term = assets * (total_supply.read() + offset());
         let denominator = (total_assets + 1);
         let mut shares = mul_term / denominator;
-        if rounding == ROUND_UP & (mul_term % denominator > 0) {
+        if (rounding == ROUND_UP) & (mul_term % denominator > 0) {
             shares = shares + 1;
         }
         shares
@@ -1750,7 +1750,7 @@ pub contract Token {
         let mul_term = shares * (total_assets + 1);
         let denominator = (total_supply.read() + offset());
         let mut assets = mul_term / denominator;
-        if rounding == ROUND_UP & (mul_term % denominator > 0) {
+        if (rounding == ROUND_UP) & (mul_term % denominator > 0) {
             assets = assets + 1;
         }
         assets
