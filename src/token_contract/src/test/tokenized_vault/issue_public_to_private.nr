@@ -195,7 +195,7 @@ unconstrained fn issue_public_to_private_without_approval() {
     // At the first deposit 1 share = 1 asset
     let shares_requested = max_assets;
     Token::at(vault_address)
-        .issue_public_to_private(owner, recipient, max_assets, shares_requested, 0)
+        .issue_public_to_private(owner, recipient, shares_requested, max_assets, 0)
         .call(&mut env.private());
     env.advance_block_by(1);
 }
@@ -226,7 +226,7 @@ unconstrained fn issue_public_to_private_on_behalf_of_wrong_caller() {
     // At the first deposit 1 share = 1 asset
     let shares_requested = max_assets;
     Token::at(vault_address)
-        .issue_public_to_private(owner, recipient, max_assets, shares_requested, 0)
+        .issue_public_to_private(owner, recipient, shares_requested, max_assets, 0)
         .call(&mut env.private());
     env.advance_block_by(1);
 }

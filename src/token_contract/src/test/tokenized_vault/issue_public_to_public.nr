@@ -183,9 +183,10 @@ unconstrained fn issue_public_to_public_without_approval() {
 
     // Issue
     env.impersonate(owner);
-    Token::at(vault_address).issue_public_to_public(owner, recipient, max_assets, 0, 0).call(
-        &mut env.public(),
-    );
+    let shares_requested = max_assets;
+    Token::at(vault_address)
+        .issue_public_to_public(owner, recipient, shares_requested, max_assets, 0)
+        .call(&mut env.public());
     env.advance_block_by(1);
 }
 
