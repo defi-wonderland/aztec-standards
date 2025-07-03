@@ -1,0 +1,28 @@
+---
+description: Aztec contract design patterns
+globs: **/*.nr
+version: 1.0.0
+---
+
+# Aztec Contract Design Patterns
+
+## Contract Structure
+- Define storage struct with appropriate visibility modifiers
+- Group storage by type: immutable config, mutable state, private collections
+- Implement standard interfaces consistently (token, NFT patterns)
+- Use #[aztec] macro for contract definition
+- Apply appropriate function decorators: #[public], #[private], #[view], #[utility]
+
+## Common Patterns
+- Commitment pattern: initialize_transfer_commitment returns Field
+- Validation pattern: separate _validate_* functions for reuse
+- Balance management: _increase_balance, _decrease_balance helpers
+- Recursive operations: recurse_subtract_balance_internal for note limits
+- Library methods: #[contract_library_method] for shared logic
+
+## State Management
+- Private state uses note-based system (UintNote, NFTNote)
+- Public state uses traditional mappings
+- Support state transitions in both directions
+- Emit encrypted notes for private recipients
+- Complete partial notes in public context
