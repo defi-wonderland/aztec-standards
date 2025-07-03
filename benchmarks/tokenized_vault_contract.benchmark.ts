@@ -60,11 +60,11 @@ export default class TokenContractBenchmark extends Benchmark {
     }
 
     // Initialize shares total supply by depositing 1 asset and sending 1 share to the zero address
-    let action = assetMethods.transfer_public_to_public(deployer.getAddress(), vaultContract.address, amt(1), 0);
+    let action = assetMethods.transfer_public_to_public(deployer.getAddress(), vaultContract.address, amt(1), 1234);
     await setPublicAuthWit(vaultContract.address, action, deployer);
     await vaultContract
       .withWallet(deployer)
-      .methods.deposit_public_to_public(deployer.getAddress(), AztecAddress.ZERO, amt(1), 0)
+      .methods.deposit_public_to_public(deployer.getAddress(), AztecAddress.ZERO, amt(1), 1234)
       .send()
       .wait();
 
