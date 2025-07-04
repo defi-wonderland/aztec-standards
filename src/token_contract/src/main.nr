@@ -1326,12 +1326,12 @@ pub contract Token {
         // Any excess amount of shares is sent back to the sender via commitment
         // Reverts if the amount of shares required is greater than max_shares
         Token::at(context.this_address())
-            .settle_withdrawal_to_public_with_commitment_internal(
-                to,
-                partial_note.commitment,
-                assets,
-                max_shares,
-            )
+            .settle_withdrawal_with_commitment_internal(partial_note.commitment, assets, max_shares)
+            .enqueue(&mut context);
+
+        // Transfer the assets to the sender
+        Token::at(storage.asset.read())
+            .transfer_public_to_public(context.this_address(), to, assets, 0)
             .enqueue(&mut context);
     }
 
@@ -1378,11 +1378,7 @@ pub contract Token {
         // Any excess amount of shares is sent back to the sender via commitment
         // Reverts if the amount of shares required is greater than max_shares
         Token::at(context.this_address())
-            .settle_withdrawal_to_private_with_commitment_internal(
-                partial_note.commitment,
-                assets,
-                max_shares,
-            )
+            .settle_withdrawal_with_commitment_internal(partial_note.commitment, assets, max_shares)
             .enqueue(&mut context);
 
         // Transfer the assets to the recipient in private
@@ -1555,39 +1551,6 @@ pub contract Token {
             .call(&mut context);
     }
 
-    /// @notice Withdraws assets to a public balance, decreases shares total supply and refunds excess shares via commitment
-    /// @param to The address of the recipient
-    /// @param commitment The partial note representing the commitment (privacy entrance)
-    /// @param assets The amount of assets being withdrawn
-    /// @param max_shares The maximum amount of shares that should be redeemed
-    #[public]
-    #[internal]
-    fn settle_withdrawal_to_public_with_commitment_internal(
-        to: AztecAddress,
-        commitment: Field,
-        assets: u128,
-        max_shares: u128,
-    ) {
-        let total_assets = _total_assets(&mut context, storage.asset);
-        let shares = _convert_to_shares(assets, total_assets, storage.total_supply, ROUND_UP);
-
-        let surplus = max_shares - shares; // Reverts with underflow if invalid
-        if surplus > 0 {
-            _increase_commitment_balance(
-                &mut context,
-                PartialUintNote { commitment },
-                context.this_address(),
-                surplus,
-            );
-        }
-
-        _decrease_total_supply(storage.total_supply, shares);
-
-        Token::at(storage.asset.read())
-            .transfer_public_to_public(context.this_address(), to, assets, 0)
-            .call(&mut context);
-    }
-
     /// @notice Mints shares to a public balance for a given amount of assets
     /// @param to The address of the recipient
     /// @param assets The amount of assets being deposited
@@ -1618,7 +1581,7 @@ pub contract Token {
     /// @param max_shares The maximum amount of shares that should be redeemed
     #[public]
     #[internal]
-    fn settle_withdrawal_to_private_with_commitment_internal(
+    fn settle_withdrawal_with_commitment_internal(
         commitment: Field,
         assets: u128,
         max_shares: u128,
