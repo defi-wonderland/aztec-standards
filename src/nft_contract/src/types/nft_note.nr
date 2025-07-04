@@ -1,4 +1,4 @@
-use dep::aztec::{
+use aztec::{
     context::{PrivateContext, PublicContext},
     keys::getters::{get_nsk_app, get_public_keys},
     macros::notes::custom_note,
