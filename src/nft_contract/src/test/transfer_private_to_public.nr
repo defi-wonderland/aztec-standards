@@ -15,7 +15,7 @@ unconstrained fn test_transfer_private_to_public() {
     let non_existent_token_id = 12345;
 
     // Mint NFTs for testing
-    env.impersonate(owner);
+    env.impersonate(minter);
     NFT::at(nft_contract_address).mint_to_private(owner, token_id_1).call(&mut env.private());
     NFT::at(nft_contract_address).mint_to_public(owner, token_id_2).call(&mut env.public());
     env.advance_block_by(1);
@@ -62,11 +62,11 @@ unconstrained fn test_transfer_private_to_public() {
     ));
 
     // Now setup with account contracts for authorization tests
-    let (env_auth, nft_contract_address_auth, owner_auth, _, recipient_auth) =
+    let (env_auth, nft_contract_address_auth, owner_auth, minter_auth, recipient_auth) =
         utils::setup_with_minter(true);
 
     // Mint NFT for authorization test
-    env_auth.impersonate(owner_auth);
+    env_auth.impersonate(minter_auth);
     NFT::at(nft_contract_address_auth).mint_to_private(owner_auth, token_id_3).call(
         &mut env_auth.private(),
     );
@@ -116,7 +116,7 @@ unconstrained fn test_transfer_private_to_public() {
 
     // Test 5: Transfer private to public unauthorized fail
     // Mint another NFT for this test
-    env_auth.impersonate(owner_auth);
+    env_auth.impersonate(minter_auth);
     NFT::at(nft_contract_address_auth).mint_to_private(owner_auth, token_id_1).call(
         &mut env_auth.private(),
     );

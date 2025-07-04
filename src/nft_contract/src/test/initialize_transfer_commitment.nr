@@ -13,7 +13,7 @@ unconstrained fn test_initialize_transfer_commitment() {
     let token_id_4 = 10003;
 
     // Mint NFTs for testing
-    env.impersonate(owner);
+    env.impersonate(minter);
     NFT::at(nft_contract_address).mint_to_private(owner, token_id_1).call(&mut env.private());
     NFT::at(nft_contract_address).mint_to_private(owner, token_id_2).call(&mut env.private());
     NFT::at(nft_contract_address).mint_to_private(owner, token_id_3).call(&mut env.private());
