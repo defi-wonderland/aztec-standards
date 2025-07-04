@@ -5,7 +5,7 @@ use crate::test::utils;
 unconstrained fn test_mint_to_public() {
     // Setup without account contracts. We are not using authwits here, so dummy accounts are enough
     let (env, nft_contract_address, owner, minter, recipient) = utils::setup_with_minter(false);
-    
+
     // Prepare multiple unique token IDs for testing
     let token_id_1 = 10000;
     let token_id_2 = 10001;
@@ -20,9 +20,7 @@ unconstrained fn test_mint_to_public() {
     // Test 2: Mint to public fail non-minter
     // Expected error: "caller is not minter"
     env.impersonate(recipient);
-    env.assert_public_call_fails(
-        NFT::at(nft_contract_address).mint_to_public(owner, token_id_2),
-    );
+    env.assert_public_call_fails(NFT::at(nft_contract_address).mint_to_public(owner, token_id_2));
 
     // Test 3: Mint to public fail same NFT twice
     env.impersonate(minter);
@@ -41,7 +39,5 @@ unconstrained fn test_mint_to_public() {
     // Test 4: Mint to public fail token ID zero
     // Expected error: "zero token ID not supported"
     env.impersonate(minter);
-    env.assert_public_call_fails(
-        NFT::at(nft_contract_address).mint_to_public(owner, 0),
-    );
+    env.assert_public_call_fails(NFT::at(nft_contract_address).mint_to_public(owner, 0));
 }
