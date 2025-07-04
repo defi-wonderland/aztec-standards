@@ -3,50 +3,47 @@ use crate::test::utils;
 use aztec::prelude::AztecAddress;
 
 #[test]
-unconstrained fn nft_mint_to_private_success() {
-    let (env, nft_contract_address, owner, minter, _) = utils::setup_with_minter(false);
+unconstrained fn test_mint_to_private() {
+    // Setup without account contracts. We are not using authwits here, so dummy accounts are enough
+    let (env, nft_contract_address, owner, minter, recipient) = utils::setup_with_minter(false);
+    
+    // Prepare multiple unique token IDs for testing
+    let token_id_1 = 10000;
+    let token_id_2 = 10001;
 
-    let token_id = 10000;
+    // Test 1: Mint to private success
     env.impersonate(minter);
-    NFT::at(nft_contract_address).mint_to_private(owner, token_id).call(&mut env.private());
+    NFT::at(nft_contract_address).mint_to_private(owner, token_id_1).call(&mut env.private());
     env.advance_block_by(1);
 
-    utils::assert_owns_private_nft(nft_contract_address, owner, token_id);
+    utils::assert_owns_private_nft(nft_contract_address, owner, token_id_1);
     // Verify no public owner exists
-    utils::assert_owns_public_nft(env, nft_contract_address, AztecAddress::zero(), token_id);
-}
+    utils::assert_owns_public_nft(env, nft_contract_address, AztecAddress::zero(), token_id_1);
 
-#[test(should_fail_with = "caller is not minter")]
-unconstrained fn nft_mint_to_private_fail_non_minter() {
-    let (env, nft_contract_address, owner, _, recipient) = utils::setup_with_minter(false);
-
-    let token_id = 10000;
+    // Test 2: Mint to private fail non-minter
+    // Expected error: "caller is not minter"
     env.impersonate(recipient);
-    NFT::at(nft_contract_address).mint_to_private(owner, token_id).call(&mut env.private());
-}
+    env.assert_private_call_fails(
+        NFT::at(nft_contract_address).mint_to_private(owner, token_id_2),
+    );
 
-#[test(should_fail_with = "token already exists")]
-unconstrained fn nft_mint_to_private_fail_same_nft_twice() {
-    let (env, nft_contract_address, owner, minter, _) = utils::setup_with_minter(false);
-
-    let token_id = 10000;
+    // Test 3: Mint to private fail same NFT twice
     env.impersonate(minter);
-    let mint_call_interface = NFT::at(nft_contract_address).mint_to_private(owner, token_id);
+    let mint_call_interface = NFT::at(nft_contract_address).mint_to_private(owner, token_id_2);
     mint_call_interface.call(&mut env.private());
     env.advance_block_by(1);
 
     // Verify the NFT was minted correctly
-    utils::assert_owns_private_nft(nft_contract_address, owner, token_id);
-    utils::assert_nft_exists(nft_contract_address, token_id);
+    utils::assert_owns_private_nft(nft_contract_address, owner, token_id_2);
+    utils::assert_nft_exists(nft_contract_address, token_id_2);
 
-    // Second call should fail
-    mint_call_interface.call(&mut env.private());
-}
+    // Expected error: "token already exists"
+    env.assert_private_call_fails(mint_call_interface);
 
-#[test(should_fail_with = "zero token ID not supported")]
-unconstrained fn nft_mint_to_private_fail_token_id_zero() {
-    let (env, nft_contract_address, owner, minter, _) = utils::setup_with_minter(false);
-
+    // Test 4: Mint to private fail token ID zero
+    // Expected error: "zero token ID not supported"
     env.impersonate(minter);
-    NFT::at(nft_contract_address).mint_to_private(owner, 0).call(&mut env.private());
+    env.assert_private_call_fails(
+        NFT::at(nft_contract_address).mint_to_private(owner, 0),
+    );
 }

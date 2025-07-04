@@ -5,23 +5,18 @@ use aztec::test::helpers::cheatcodes;
 // It is not possible to deserialize strings in Noir ATM, so name and symbol cannot be checked yet.
 
 #[test]
-unconstrained fn check_decimals_private() {
-    // Setup without account contracts. We are not using authwits here, so dummy accounts are enough
-    let (env, token_contract_address, _, _) = utils::setup(false);
-
-    // Check decimals
-    let result = Token::at(token_contract_address).private_get_decimals().view(&mut env.private());
-
-    assert(result == 18);
-}
-
-#[test]
-unconstrained fn check_decimals_public() {
-    // Setup without account contracts. We are not using authwits here, so dummy accounts are enough
-    let (env, token_contract_address, _, _) = utils::setup(false);
-
-    // Check decimals
-    let result = Token::at(token_contract_address).public_get_decimals().view(&mut env.public());
-
-    assert(result == 18);
+unconstrained fn test_reading_constants() {
+    // Setup once without account contracts since we're just reading constants
+    let (env, token_contract_address, _, _, _) = utils::setup_with_minter(false);
+    
+    // Check decimals from private context
+    let decimals_private = Token::at(token_contract_address).private_get_decimals().view(&mut env.private());
+    assert(decimals_private == 18);
+    
+    // Check decimals from public context
+    let decimals_public = Token::at(token_contract_address).public_get_decimals().view(&mut env.public());
+    assert(decimals_public == 18);
+    
+    // Verify both contexts return the same value
+    assert(decimals_private == decimals_public);
 }
