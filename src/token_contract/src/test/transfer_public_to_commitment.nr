@@ -7,12 +7,12 @@ unconstrained fn test_transfer_public_to_commitment_all_cases() {
     // Setup with large initial mint for all test cases
     let initial_mint = 1_000_000;
     let (env, token_contract_address, owner, recipient) =
-        utils::setup_with_initial_supply(false, initial_mint);
+        utils::setup_with_initial_supply(true, initial_mint);
 
     // Test 1: Internal orchestration flow
     // This test verifies the helper function that handles both initialize and transfer steps
     let (env2, token_contract_address2, user, _) =
-        utils::setup_and_mint_to_private_without_minter(false);
+        utils::setup_and_mint_to_private_without_minter(true);
     utils::check_private_balance(token_contract_address2, user, utils::mint_amount);
 
     // Test 2: External orchestration flow (manual initialize and finalize)
@@ -24,6 +24,7 @@ unconstrained fn test_transfer_public_to_commitment_all_cases() {
     let commitment = Token::at(token_contract_address)
         .initialize_transfer_commitment(owner, recipient, owner)
         .call(&mut env.private());
+    env.advance_block_by(1);
 
     // Finalize the transfer
     Token::at(token_contract_address)
@@ -58,6 +59,7 @@ unconstrained fn test_transfer_public_to_commitment_all_cases() {
     let commitment_fail = Token::at(token_contract_address)
         .initialize_transfer_commitment(owner, not_owner, owner)
         .call(&mut env.private());
+    env.advance_block_by(1);
 
     env.impersonate(not_owner);
 

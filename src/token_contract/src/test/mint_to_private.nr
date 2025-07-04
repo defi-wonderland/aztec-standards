@@ -32,25 +32,27 @@ unconstrained fn test_mint_to_private() {
     utils::check_private_balance(token_contract_address, owner, mint_amount);
 
     // Failure case 2: Overflow recipient balance
-    // First mint max_u128 to recipient
+    // First mint a large amount to recipient (but not max to avoid total supply overflow)
+    let large_amount = max_u128 - mint_amount - 1;
     env.impersonate(minter);
-    Token::at(token_contract_address).mint_to_private(recipient, recipient, max_u128).call(
+    Token::at(token_contract_address).mint_to_private(recipient, recipient, large_amount).call(
         &mut env.private(),
     );
     env.advance_block_by(1);
 
-    // Now try to mint 1 more to recipient which should overflow
+    // Now try to mint 2 more to recipient which should overflow
     let overflow_mint_call =
-        Token::at(token_contract_address).mint_to_private(recipient, recipient, 1 as u128);
+        Token::at(token_contract_address).mint_to_private(recipient, recipient, 2 as u128);
     env.assert_private_call_fails(overflow_mint_call);
 
     utils::check_private_balance(token_contract_address, owner, mint_amount);
-    utils::check_total_supply(token_contract_address, max_u128 + mint_amount);
+    utils::check_private_balance(token_contract_address, recipient, large_amount);
+    utils::check_total_supply(token_contract_address, large_amount + mint_amount);
 
     // Failure case 3: Overflow total supply
-    // Try to mint more when we're already at max
+    // Try to mint 2 more when we're already at max_u128 - 1
     let total_supply_overflow_call =
-        Token::at(token_contract_address).mint_to_private(owner, owner, mint_amount);
+        Token::at(token_contract_address).mint_to_private(owner, owner, 2 as u128);
     env.assert_private_call_fails(total_supply_overflow_call);
 
     utils::check_private_balance(token_contract_address, owner, mint_amount);

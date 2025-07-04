@@ -26,6 +26,7 @@ unconstrained fn test_transfer_private_to_commitment() {
     let commitment_1 = Token::at(token_contract_address)
         .initialize_transfer_commitment(owner, recipient, owner)
         .call(&mut env.private());
+    env.advance_block_by(1);
 
     let transfer_amount_1 = 50_000;
     Token::at(token_contract_address)
