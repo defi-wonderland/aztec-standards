@@ -64,7 +64,7 @@ unconstrained fn nft_transfer_private_to_commitment_authorized_success() {
         owner,
         token_id,
         commitment,
-        1,
+        0,
     );
 
     // Add authorization witness from owner to recipient
@@ -81,8 +81,8 @@ unconstrained fn nft_transfer_private_to_commitment_authorized_success() {
 
     // Verify NFT is removed from owner and in commitment
     utils::assert_private_nft_nullified(nft_contract_address, owner, token_id);
-    // NFT should not be in recipient's private set yet, only in commitment
-    utils::assert_private_nft_nullified(nft_contract_address, recipient, token_id);
+    // NFT should be in recipient's private set
+    utils::assert_owns_private_nft(nft_contract_address, recipient, token_id);
     assert(
         utils::get_commitment_stored(nft_contract_address, commitment),
         "Commitment not stored after transfer",

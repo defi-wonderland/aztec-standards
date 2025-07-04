@@ -162,7 +162,7 @@ pub contract NFT {
         _validate_from_private(&mut context, from);
 
         _remove_private_token_owner(storage.private_nfts.at(from), token_id);
-        let completer = context.msg_sender();
+        let completer = from;
         NFT::at(context.this_address())
             .transfer_token_to_commitment_internal(PartialNFTNote { commitment }, token_id, completer)
             .enqueue(&mut context);
