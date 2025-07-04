@@ -115,8 +115,9 @@ pub contract NFT {
         NFT::at(context.this_address())
             .update_public_token_owner_from_zero_internal(to, token_id)
             .enqueue(&mut context);
+        let completer = context.msg_sender();
         let commitment =
-            _initialize_transfer_commitment(&mut context, storage.private_nfts, from, to);
+            _initialize_transfer_commitment(&mut context, storage.private_nfts, from, to, completer);
         commitment.commitment()
     }
 
@@ -161,8 +162,9 @@ pub contract NFT {
         _validate_from_private(&mut context, from);
 
         _remove_private_token_owner(storage.private_nfts.at(from), token_id);
+        let completer = context.msg_sender();
         NFT::at(context.this_address())
-            .transfer_token_to_commitment_internal(PartialNFTNote { commitment }, token_id)
+            .transfer_token_to_commitment_internal(PartialNFTNote { commitment }, token_id, completer)
             .enqueue(&mut context);
     }
 
@@ -200,8 +202,9 @@ pub contract NFT {
     /// @return commitment The partial nft note utilized for the transfer commitment (privacy entrance)
     #[private]
     fn initialize_transfer_commitment(from: AztecAddress, to: AztecAddress) -> Field {
+        let completer = context.msg_sender();
         let commitment =
-            _initialize_transfer_commitment(&mut context, storage.private_nfts, from, to);
+            _initialize_transfer_commitment(&mut context, storage.private_nfts, from, to, completer);
         commitment.commitment()
     }
 
@@ -245,7 +248,8 @@ pub contract NFT {
         _validate_public_token_owner(storage.public_owners, from, token_id);
 
         _update_public_token_owner(storage.public_owners, AztecAddress::zero(), token_id);
-        _transfer_token_to_commitment(&mut context, PartialNFTNote { commitment }, token_id);
+        let completer = context.msg_sender();
+        _transfer_token_to_commitment(&mut context, PartialNFTNote { commitment }, token_id, completer);
     }
 
     /// @notice Stores a commitment in storage
@@ -259,10 +263,11 @@ pub contract NFT {
     /// @notice Transfers a token to a commitment
     /// @param commitment The commitment to transfer
     /// @param token_id The id of the token to transfer
+    /// @param completer The address that is authorized to complete this commitment
     #[public]
     #[internal]
-    fn transfer_token_to_commitment_internal(commitment: PartialNFTNote, token_id: Field) {
-        _transfer_token_to_commitment(&mut context, commitment, token_id);
+    fn transfer_token_to_commitment_internal(commitment: PartialNFTNote, token_id: Field, completer: AztecAddress) {
+        _transfer_token_to_commitment(&mut context, commitment, token_id, completer);
     }
 
     /// @notice Updates the public token owner
@@ -460,6 +465,7 @@ pub contract NFT {
     /// @param private_nfts The private owner
     /// @param from The address of the sender
     /// @param to The address of the recipient
+    /// @param completer The address that can complete the commitment
     /// @return commitment The partial nft note utilized for the transfer commitment (privacy entrance)
     #[contract_library_method]
     fn _initialize_transfer_commitment(
@@ -467,8 +473,9 @@ pub contract NFT {
         private_nfts: Map<AztecAddress, PrivateSet<NFTNote, &mut PrivateContext>, &mut PrivateContext>,
         from: AztecAddress,
         to: AztecAddress,
+        completer: AztecAddress,
     ) -> PartialNFTNote {
-        let commitment = NFTNote::partial(to, private_nfts.at(to).storage_slot, context, to, from);
+        let commitment = NFTNote::partial(to, private_nfts.at(to).storage_slot, context, to, from, completer);
         NFT::at(context.this_address()).store_commitment_in_storage_internal(commitment).enqueue(
             context,
         );
@@ -525,18 +532,20 @@ pub contract NFT {
     /// @param context The context of the public call
     /// @param commitment The commitment to complete
     /// @param token_id The id of the token to transfer
+    /// @param completer The address that is authorized to complete this commitment
     #[contract_library_method]
     fn _transfer_token_to_commitment(
         context: &mut PublicContext,
         commitment: PartialNFTNote,
         token_id: Field,
+        completer: AztecAddress,
     ) {
         // We verify that the commitment we're completing is valid (i.e. it uses the correct state variable's storage
         // slot, and it is internally consistent). We *could* clear the storage since each commitment should only be
         // used once, but since the AVM offers no gas refunds for doing so this would just make the transaction be more
         // expensive.
         assert(context.storage_read(commitment.commitment()), "invalid commitment");
-        commitment.complete(token_id, context);
+        commitment.complete(context, completer, token_id);
     }
 
     /// @notice Validates that the caller is the owner of a token
