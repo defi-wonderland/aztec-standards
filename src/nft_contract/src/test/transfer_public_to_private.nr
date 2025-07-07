@@ -30,8 +30,8 @@ unconstrained fn test_transfer_public_to_private() {
 
     // Test 2: Transfer public to private unauthorized fail
     // Create transfer interface with non-zero nonce (indicating authorization needed)
-    let transfer_call_interface_unauth = NFT::at(nft_contract_address)
-        .transfer_public_to_private(owner, recipient, token_id_2, 1);
+    let transfer_call_interface_unauth =
+        NFT::at(nft_contract_address).transfer_public_to_private(owner, recipient, token_id_2, 1);
 
     // Expected error: "Unknown auth witness for message hash"
     env.impersonate(recipient);
@@ -60,12 +60,8 @@ unconstrained fn test_transfer_public_to_private() {
     env.advance_block_by(1);
 
     // Create the transfer call interface
-    let transfer_call_interface = NFT::at(nft_contract_address).transfer_public_to_private(
-        owner,
-        recipient,
-        token_id_2,
-        1,
-    );
+    let transfer_call_interface =
+        NFT::at(nft_contract_address).transfer_public_to_private(owner, recipient, token_id_2, 1);
 
     // Add authorization witness from owner to recipient
     authwit_cheatcodes::add_private_authwit_from_call_interface(

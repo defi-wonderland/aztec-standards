@@ -45,8 +45,8 @@ unconstrained fn test_transfer_private_to_private() {
 
     // Test 3: Transfer private to private unauthorized fail
     // Create transfer interface with non-zero nonce
-    let transfer_call_interface_unauth = NFT::at(nft_contract_address)
-        .transfer_private_to_private(owner, recipient, token_id_2, 1);
+    let transfer_call_interface_unauth =
+        NFT::at(nft_contract_address).transfer_private_to_private(owner, recipient, token_id_2, 1);
 
     // Expected error: "Unknown auth witness for message hash"
     env.impersonate(recipient);
@@ -54,8 +54,8 @@ unconstrained fn test_transfer_private_to_private() {
 
     // Test 4: Transfer private to private wrong authwit fail
     // Create transfer interface with non-zero nonce (reuse token_id_2)
-    let transfer_call_interface_wrong = NFT::at(nft_contract_address)
-        .transfer_private_to_private(owner, recipient, token_id_2, 1);
+    let transfer_call_interface_wrong =
+        NFT::at(nft_contract_address).transfer_private_to_private(owner, recipient, token_id_2, 1);
 
     // Add authorization witness but to the wrong address (owner instead of recipient)
     authwit_cheatcodes::add_private_authwit_from_call_interface(
@@ -102,12 +102,8 @@ unconstrained fn test_transfer_private_to_private() {
     utils::assert_owns_private_nft(nft_contract_address, owner, token_id_2);
 
     // Create transfer call interface with non-zero nonce
-    let transfer_call_interface = NFT::at(nft_contract_address).transfer_private_to_private(
-        owner,
-        recipient,
-        token_id_2,
-        1,
-    );
+    let transfer_call_interface =
+        NFT::at(nft_contract_address).transfer_private_to_private(owner, recipient, token_id_2, 1);
 
     // Add authorization witness from owner to recipient
     authwit_cheatcodes::add_private_authwit_from_call_interface(

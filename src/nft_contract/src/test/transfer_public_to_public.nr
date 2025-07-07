@@ -30,8 +30,8 @@ unconstrained fn test_transfer_public_to_public() {
 
     // Test 2: Transfer public to public unauthorized fail
     // Create transfer interface with non-zero nonce (indicating authorization needed)
-    let transfer_call_interface_unauth = NFT::at(nft_contract_address)
-        .transfer_public_to_public(owner, recipient, token_id_2, 1);
+    let transfer_call_interface_unauth =
+        NFT::at(nft_contract_address).transfer_public_to_public(owner, recipient, token_id_2, 1);
 
     // Expected error: "unauthorized"
     env.impersonate(recipient);
@@ -39,8 +39,8 @@ unconstrained fn test_transfer_public_to_public() {
 
     // Test 3: Transfer public to public wrong authwit fail
     // Create transfer interface with non-zero nonce (reuse token_id_2)
-    let transfer_call_interface_wrong = NFT::at(nft_contract_address)
-        .transfer_public_to_public(owner, recipient, token_id_2, 1);
+    let transfer_call_interface_wrong =
+        NFT::at(nft_contract_address).transfer_public_to_public(owner, recipient, token_id_2, 1);
 
     // Add authorization witness but to the OWNER instead of the recipient
     // This simulates giving authorization to the wrong address
@@ -84,12 +84,8 @@ unconstrained fn test_transfer_public_to_public() {
     env.advance_block_by(1);
 
     // Create the transfer call interface
-    let transfer_call_interface = NFT::at(nft_contract_address).transfer_public_to_public(
-        owner,
-        recipient,
-        token_id_3,
-        1,
-    );
+    let transfer_call_interface =
+        NFT::at(nft_contract_address).transfer_public_to_public(owner, recipient, token_id_3, 1);
 
     // Add authorization witness from owner to recipient
     authwit_cheatcodes::add_public_authwit_from_call_interface(
