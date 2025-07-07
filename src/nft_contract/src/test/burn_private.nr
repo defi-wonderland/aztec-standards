@@ -50,12 +50,10 @@ unconstrained fn test_burn_private() {
     env.assert_private_call_fails(NFT::at(nft_contract_address).burn_private(owner, token_id_2, 0));
 
     let token_id_3 = 10004;
-    
+
     // Mint NFTs for authorization tests
     env.impersonate(minter);
-    NFT::at(nft_contract_address).mint_to_private(owner, token_id_3).call(
-        &mut env.private(),
-    );
+    NFT::at(nft_contract_address).mint_to_private(owner, token_id_3).call(&mut env.private());
     env.advance_block_by(1);
 
     // Test 4: Burn private unauthorized fail
@@ -89,8 +87,7 @@ unconstrained fn test_burn_private() {
     utils::assert_nft_exists(nft_contract_address, token_id_3);
 
     // Create burn call interface with non-zero nonce
-    let burn_call_interface =
-        NFT::at(nft_contract_address).burn_private(owner, token_id_3, 1);
+    let burn_call_interface = NFT::at(nft_contract_address).burn_private(owner, token_id_3, 1);
 
     // Add authorization witness from owner to recipient
     authwit_cheatcodes::add_private_authwit_from_call_interface(
