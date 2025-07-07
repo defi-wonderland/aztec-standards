@@ -7,6 +7,9 @@ use aztec::macros::aztec;
 pub contract NFT {
     // aztec library
     use aztec::{
+        authwit::auth::{
+            assert_current_call_valid_authwit, assert_current_call_valid_authwit_public,
+        },
         context::PrivateContext,
         macros::{
             functions::{initializer, internal, private, public, utility, view},
@@ -23,10 +26,6 @@ pub contract NFT {
             traits::FromField,
         },
         utils::comparison::Comparator,
-    };
-    // authorized witness library
-    use authwit::auth::{
-        assert_current_call_valid_authwit, assert_current_call_valid_authwit_public,
     };
     // compression library
     use compressed_string::FieldCompressedString;

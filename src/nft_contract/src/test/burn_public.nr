@@ -1,7 +1,6 @@
 use crate::NFT;
 use crate::test::utils;
-use authwit::cheatcodes as authwit_cheatcodes;
-use aztec::prelude::AztecAddress;
+use aztec::{prelude::AztecAddress, test::helpers::authwit as authwit_cheatcodes};
 
 #[test]
 unconstrained fn nft_burn_public_success() {
