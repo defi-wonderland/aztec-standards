@@ -10,13 +10,11 @@ import {
   IntentAction,
   AztecAddress,
   DeployOptions,
-  AccountManager,
 } from '@aztec/aztec.js';
 import { setupPXE } from './utils.js';
-import { getInitialTestAccounts } from '@aztec/accounts/testing';
+import { getInitialTestAccountsManagers } from '@aztec/accounts/testing';
 import { NFTContract, NFTContractArtifact } from '../../artifacts/NFT.js';
-import { SchnorrAccountContract } from '@aztec/accounts/schnorr';
-import { deriveSigningKey } from '@aztec/stdlib/keys';
+import { AztecLmdbStore } from '@aztec/kv-store/lmdb';
 
 // Deploy NFT contract with a minter
 async function deployNFTWithMinter(deployer: AccountWallet, options?: DeployOptions) {
@@ -65,26 +63,17 @@ async function assertPrivateNFTNullified(
 }
 
 const setupTestSuite = async () => {
-  const pxe = await setupPXE();
-  const managers = await Promise.all(
-    (await getInitialTestAccounts()).map(async (acc) => {
-      return await AccountManager.create(
-        pxe,
-        acc.secret,
-        new SchnorrAccountContract(deriveSigningKey(acc.secret)),
-        acc.salt,
-      );
-    }),
-  );
+  const { pxe, store } = await setupPXE();
+  const managers = await getInitialTestAccountsManagers(pxe);
   const wallets = await Promise.all(managers.map((acc) => acc.register()));
   const [deployer] = wallets;
 
-  return { pxe, deployer, wallets };
+  return { pxe, deployer, wallets, store };
 };
 
 describe('NFT - Single PXE', () => {
   let pxe: PXE;
-
+  let store: AztecLmdbStore;
   let wallets: AccountWalletWithSecretKey[];
   let deployer: AccountWalletWithSecretKey;
 
@@ -95,7 +84,7 @@ describe('NFT - Single PXE', () => {
   let nft: NFTContract;
 
   beforeAll(async () => {
-    ({ pxe, deployer, wallets } = await setupTestSuite());
+    ({ pxe, deployer, wallets, store } = await setupTestSuite());
 
     [alice, bob, carl] = wallets;
 
@@ -107,6 +96,10 @@ describe('NFT - Single PXE', () => {
 
   beforeEach(async () => {
     nft = (await deployNFTWithMinter(alice)) as NFTContract;
+  });
+
+  afterAll(async () => {
+    await store.delete();
   });
 
   it('deploys the contract with minter', async () => {
