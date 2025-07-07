@@ -36,14 +36,14 @@ unconstrained fn test_transfer_private_to_commitment() {
         .transfer_private_to_commitment(owner, commitment_1, transfer_amount_1, 0)
         .call(&mut env.private());
     env.advance_block_by(1);
-    
+
     // Note: transfer_private_to_commitment enqueues a public call to complete the commitment
     // The completion happens in the public context, creating a note for the recipient
     // After completion, the recipient should have the tokens in their private balance
-    
+
     owner_balance -= transfer_amount_1;
     utils::check_private_balance(token_contract_address, owner, owner_balance);
-    
+
     // For now, skip checking recipient balance as it seems there's an issue with commitment completion
     // utils::check_private_balance(token_contract_address, recipient, transfer_amount_1);
 

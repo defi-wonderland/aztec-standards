@@ -3,22 +3,8 @@ use crate::test::utils;
 
 #[test]
 unconstrained fn test_initialize_transfer_commitment() {
-    // Setup without account contracts
-    let (env, nft_contract_address, owner, minter, recipient) = utils::setup_with_minter(false);
-
-    // Prepare multiple unique token IDs for testing
-    let token_id_1 = 10000;
-    let token_id_2 = 10001;
-    let token_id_3 = 10002;
-    let token_id_4 = 10003;
-
-    // Mint NFTs for testing
-    env.impersonate(minter);
-    NFT::at(nft_contract_address).mint_to_private(owner, token_id_1).call(&mut env.private());
-    NFT::at(nft_contract_address).mint_to_private(owner, token_id_2).call(&mut env.private());
-    NFT::at(nft_contract_address).mint_to_private(owner, token_id_3).call(&mut env.private());
-    NFT::at(nft_contract_address).mint_to_private(owner, token_id_4).call(&mut env.private());
-    env.advance_block_by(1);
+    // Setup with account contracts
+    let (env, nft_contract_address, owner, minter, recipient) = utils::setup_with_minter(true);
 
     // Test 1: Initialize transfer commitment success
     env.impersonate(owner);

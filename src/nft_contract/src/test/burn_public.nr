@@ -39,8 +39,7 @@ unconstrained fn test_burn_public() {
 
     // Test 3: Burn public wrong authwit fail
     // Create burn interface with non-zero nonce
-    let burn_call_interface_wrong =
-        NFT::at(nft_contract_address).burn_public(owner, token_id_2, 1);
+    let burn_call_interface_wrong = NFT::at(nft_contract_address).burn_public(owner, token_id_2, 1);
 
     // Add authorization witness but to the wrong address (owner instead of recipient)
     authwit_cheatcodes::add_public_authwit_from_call_interface(
@@ -69,8 +68,7 @@ unconstrained fn test_burn_public() {
 
     // Test 5: Burn public authorized success
     // Create burn call interface with non-zero nonce
-    let burn_call_interface =
-        NFT::at(nft_contract_address).burn_public(owner, token_id_2, 1);
+    let burn_call_interface = NFT::at(nft_contract_address).burn_public(owner, token_id_2, 1);
 
     // Add authorization witness from owner to recipient
     authwit_cheatcodes::add_public_authwit_from_call_interface(
@@ -85,11 +83,6 @@ unconstrained fn test_burn_public() {
     env.advance_block_by(1);
 
     // Verify NFT is burned
-    utils::assert_owns_public_nft(
-        env,
-        nft_contract_address,
-        AztecAddress::zero(),
-        token_id_2,
-    );
+    utils::assert_owns_public_nft(env, nft_contract_address, AztecAddress::zero(), token_id_2);
     utils::assert_nft_does_not_exist(nft_contract_address, token_id_2);
 }
