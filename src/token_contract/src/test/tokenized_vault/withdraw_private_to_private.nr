@@ -1,4 +1,4 @@
-use crate::{test::utils::{self, mint_amount}, Token};
+use crate::{test::{tokenized_vault::tokenized_vault_utils, utils::{self, mint_amount}}, Token};
 use authwit::cheatcodes as authwit_cheatcodes;
 
 #[test(should_fail_with = "Artifact not found when enriching public simulation error. Contract address: 0x0000000000000000000000000000000000000000000000000000000000000000.")]
@@ -27,7 +27,7 @@ unconstrained fn withdraw_private_to_private_success() {
     // Mint some asset tokens to owner
     let deposit_amount: u128 = mint_amount;
     let deposit_recipient = owner;
-    utils::deposit_public_to_private(
+    tokenized_vault_utils::mint_and_deposit_public_to_private(
         env,
         owner,
         asset_address,
@@ -67,7 +67,7 @@ unconstrained fn withdraw_private_to_private_after_yield() {
     // Mint some asset tokens to owner
     let deposit_amount: u128 = mint_amount;
     let deposit_recipient = owner;
-    utils::deposit_public_to_private(
+    tokenized_vault_utils::mint_and_deposit_public_to_private(
         env,
         owner,
         asset_address,
@@ -119,7 +119,7 @@ unconstrained fn withdraw_private_to_private_request_fewer_assets() {
     // Mint some asset tokens to owner
     let deposit_amount: u128 = mint_amount;
     let deposit_recipient = owner;
-    utils::deposit_public_to_private(
+    tokenized_vault_utils::mint_and_deposit_public_to_private(
         env,
         owner,
         asset_address,
@@ -166,7 +166,7 @@ unconstrained fn withdraw_private_to_private_request_too_many_assets() {
     // Mint some asset tokens to owner
     let deposit_amount: u128 = mint_amount;
     let deposit_recipient = owner;
-    utils::deposit_public_to_private(
+    tokenized_vault_utils::mint_and_deposit_public_to_private(
         env,
         owner,
         asset_address,
@@ -192,7 +192,7 @@ unconstrained fn withdraw_private_to_private_without_approval() {
     // Mint some asset tokens to owner
     let deposit_amount: u128 = mint_amount;
     let deposit_recipient = owner;
-    utils::deposit_public_to_private(
+    tokenized_vault_utils::mint_and_deposit_public_to_private(
         env,
         owner,
         asset_address,
@@ -219,7 +219,7 @@ unconstrained fn withdraw_private_to_private_on_behalf_of_wrong_caller() {
     // Mint some asset tokens to owner
     let deposit_amount: u128 = mint_amount;
     let deposit_recipient = owner;
-    utils::deposit_public_to_private(
+    tokenized_vault_utils::mint_and_deposit_public_to_private(
         env,
         owner,
         asset_address,
@@ -258,7 +258,7 @@ unconstrained fn withdraw_private_to_private_on_behalf_of_other_success() {
     // Mint some asset tokens to owner
     let deposit_amount: u128 = mint_amount;
     let deposit_recipient = owner;
-    utils::deposit_public_to_private(
+    tokenized_vault_utils::mint_and_deposit_public_to_private(
         env,
         owner,
         asset_address,
