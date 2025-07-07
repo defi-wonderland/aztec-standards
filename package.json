@@ -19,7 +19,8 @@
     "test:nr": "aztec test",
     "lint:prettier": "prettier '**/*.{js,ts}' --write",
     "bench": "NODE_NO_WARNINGS=1 aztec-benchmark --suffix _base",
-    "ccc": "yarn clean && yarn compile && yarn codegen"
+    "ccc": "yarn clean && yarn compile && yarn codegen",
+    "deploy": "NODE_NO_WARNINGS=1 AZTEC_NODE_URL=http://localhost:8081 PXE_URL=http://localhost:8081 tsx src/ts/deploy.ts"
   },
   "lint-staged": {
     "*.ts": "prettier --write -u"
@@ -30,7 +31,7 @@
     "@aztec/noir-contracts.js": "0.87.8",
     "@aztec/protocol-contracts": "0.87.8",
     "@aztec/pxe": "0.87.8",
-    "@aztec/stdlib": "0.87.8",    
+    "@aztec/stdlib": "0.87.8",
     "@defi-wonderland/aztec-benchmark": "1.0.0",
     "@types/node": "22.5.1"
   },
@@ -44,6 +45,7 @@
     "prettier": "3.4.2",
     "ts-jest": "29.2.5",
     "ts-node": "10.9.2",
+    "tsx": "^4.20.3",
     "typescript": "5.7.2"
   },
   "jest": {
