@@ -5,8 +5,8 @@ use aztec::prelude::AztecAddress;
 
 #[test]
 unconstrained fn test_transfer_public_to_private() {
-    // Setup without account contracts first
-    let (env, nft_contract_address, owner, minter, recipient) = utils::setup_with_minter(false);
+    // Setup with account contracts
+    let (env, nft_contract_address, owner, minter, recipient) = utils::setup_with_minter(true);
 
     // Prepare multiple unique token IDs for testing
     let token_id_1 = 10000;
@@ -18,7 +18,26 @@ unconstrained fn test_transfer_public_to_private() {
     NFT::at(nft_contract_address).mint_to_public(owner, token_id_1).call(&mut env.public());
     env.advance_block_by(1);
 
-    // Test 1: Transfer public to private success
+    // Test 1: Transfer public to private not owned fail
+    // Expected error: "caller is not owner"
+    env.impersonate(owner);
+    env.assert_private_call_fails(NFT::at(nft_contract_address).transfer_public_to_private(
+        owner,
+        recipient,
+        non_existent_token_id,
+        0,
+    ));
+
+    // Test 2: Transfer public to private unauthorized fail
+    // Create transfer interface with non-zero nonce (indicating authorization needed)
+    let transfer_call_interface_unauth = NFT::at(nft_contract_address)
+        .transfer_public_to_private(owner, recipient, token_id_2, 1);
+
+    // Expected error: "Unknown auth witness for message hash"
+    env.impersonate(recipient);
+    env.assert_private_call_fails(transfer_call_interface_unauth);
+
+    // Test 3: Transfer public to private success
     // Verify initial ownership state
     utils::assert_owns_public_nft(env, nft_contract_address, owner, token_id_1);
 
@@ -34,71 +53,34 @@ unconstrained fn test_transfer_public_to_private() {
     // Verify the NFT is now owned privately by recipient
     utils::assert_owns_private_nft(nft_contract_address, recipient, token_id_1);
 
-    // Test 2: Transfer public to private not owned fail
-    // Expected error: "caller is not owner"
-    env.impersonate(owner);
-    env.assert_private_call_fails(NFT::at(nft_contract_address).transfer_public_to_private(
+    // Test 4: Transfer public to private authorized success
+    // Need to mint a new NFT since token_id_1 was consumed in the success test
+    env.impersonate(minter);
+    NFT::at(nft_contract_address).mint_to_public(owner, token_id_2).call(&mut env.public());
+    env.advance_block_by(1);
+
+    // Create the transfer call interface
+    let transfer_call_interface = NFT::at(nft_contract_address).transfer_public_to_private(
         owner,
         recipient,
-        non_existent_token_id,
-        0,
-    ));
-
-    // Now setup with account contracts for authorization tests
-    let (env_auth, nft_contract_address_auth, owner_auth, minter_auth, recipient_auth) =
-        utils::setup_with_minter(true);
-
-    // Mint NFT for authorization tests
-    env_auth.impersonate(minter_auth);
-    NFT::at(nft_contract_address_auth).mint_to_public(owner_auth, token_id_2).call(
-        &mut env_auth.public(),
-    );
-    env_auth.advance_block_by(1);
-
-    // Test 3: Transfer public to private authorized success
-    // Create the transfer call interface
-    let transfer_call_interface = NFT::at(nft_contract_address_auth).transfer_public_to_private(
-        owner_auth,
-        recipient_auth,
         token_id_2,
         1,
     );
 
     // Add authorization witness from owner to recipient
     authwit_cheatcodes::add_private_authwit_from_call_interface(
-        owner_auth,
-        recipient_auth,
+        owner,
+        recipient,
         transfer_call_interface,
     );
 
     // Impersonate recipient to perform the authorized transfer
-    env_auth.impersonate(recipient_auth);
-    transfer_call_interface.call(&mut env_auth.private());
-    env_auth.advance_block_by(1);
+    env.impersonate(recipient);
+    transfer_call_interface.call(&mut env.private());
+    env.advance_block_by(1);
 
     // Verify the NFT is no longer owned publicly by owner
-    utils::assert_owns_public_nft(
-        env_auth,
-        nft_contract_address_auth,
-        AztecAddress::zero(),
-        token_id_2,
-    );
+    utils::assert_owns_public_nft(env, nft_contract_address, AztecAddress::zero(), token_id_2);
     // Verify the NFT is now owned privately by recipient
-    utils::assert_owns_private_nft(nft_contract_address_auth, recipient_auth, token_id_2);
-
-    // Test 4: Transfer public to private unauthorized fail
-    // Mint another NFT for this test
-    env_auth.impersonate(minter_auth);
-    NFT::at(nft_contract_address_auth).mint_to_public(owner_auth, token_id_1).call(
-        &mut env_auth.public(),
-    );
-    env_auth.advance_block_by(1);
-
-    // Create transfer interface with non-zero nonce (indicating authorization needed)
-    let transfer_call_interface_unauth = NFT::at(nft_contract_address_auth)
-        .transfer_public_to_private(owner_auth, recipient_auth, token_id_1, 1);
-
-    // Expected error: "Unknown auth witness for message hash"
-    env_auth.impersonate(recipient_auth);
-    env_auth.assert_private_call_fails(transfer_call_interface_unauth);
+    utils::assert_owns_private_nft(nft_contract_address, recipient, token_id_2);
 }

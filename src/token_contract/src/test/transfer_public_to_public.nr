@@ -37,7 +37,18 @@ unconstrained fn test_transfer_public_to_public_all_cases() {
         initial_mint - transfer_amount,
     );
 
-    // Test 3: Transfer on behalf of other with authwit (need account contracts)
+    // Test 3: Transfer more than balance failure
+    let transfer_too_much = initial_mint + 1;
+
+    // Expected error: attempt to subtract with overflow 'public_balances.at(from).read() - amount'
+    env.assert_public_call_fails(Token::at(token_contract_address).transfer_public_to_public(
+        owner,
+        recipient,
+        transfer_too_much,
+        0,
+    ));
+
+    // Test 4: Transfer on behalf of other with authwit (need account contracts)
     let (env2, token_contract_address2, owner2, recipient2) =
         utils::setup_with_initial_supply(true, initial_mint);
 
@@ -60,17 +71,6 @@ unconstrained fn test_transfer_public_to_public_all_cases() {
         initial_mint - transfer_amount2,
     );
     utils::check_public_balance(token_contract_address2, recipient2, transfer_amount2);
-
-    // Test 4: Transfer more than balance failure
-    let transfer_too_much = initial_mint + 1;
-
-    // Expected error: attempt to subtract with overflow 'public_balances.at(from).read() - amount'
-    env.assert_public_call_fails(Token::at(token_contract_address).transfer_public_to_public(
-        owner,
-        recipient,
-        transfer_too_much,
-        0,
-    ));
 
     // Test 5: Transfer on behalf without approval failure
     let transfer_amount3 = 75_000;

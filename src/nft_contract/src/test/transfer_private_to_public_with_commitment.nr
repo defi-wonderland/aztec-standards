@@ -109,23 +109,30 @@ unconstrained fn test_transfer_private_to_public_with_commitment() {
     let (env_auth, nft_contract_address_auth, owner_auth, minter_auth, recipient_auth) =
         utils::setup_with_minter(true);
 
-    // Mint NFTs for authorization tests
+    // Mint NFTs for authorization tests with different token IDs
+    let token_id_5 = 10004;
     env_auth.impersonate(minter_auth);
-    NFT::at(nft_contract_address_auth).mint_to_private(owner_auth, token_id_1).call(
-        &mut env_auth.private(),
-    );
-    NFT::at(nft_contract_address_auth).mint_to_private(owner_auth, token_id_2).call(
+    NFT::at(nft_contract_address_auth).mint_to_private(owner_auth, token_id_5).call(
         &mut env_auth.private(),
     );
     env_auth.advance_block_by(1);
 
-    // Test 6: Transfer private to public with commitment authorized success
+    // Test 6: Transfer private to public with commitment unauthorized fail
+    // Create transfer interface with non-zero nonce
+    let transfer_call_interface_unauth = NFT::at(nft_contract_address_auth)
+        .transfer_private_to_public_with_commitment(owner_auth, recipient_auth, token_id_5, 1);
+
+    // Expected error: "Unknown auth witness for message hash"
+    env_auth.impersonate(recipient_auth);
+    env_auth.assert_private_call_fails(transfer_call_interface_unauth);
+
+    // Test 7: Transfer private to public with commitment authorized success
     // Verify initial ownership
-    utils::assert_owns_private_nft(nft_contract_address_auth, owner_auth, token_id_1);
+    utils::assert_owns_private_nft(nft_contract_address_auth, owner_auth, token_id_5);
 
     // Create transfer call interface with non-zero nonce
     let transfer_call_interface = NFT::at(nft_contract_address_auth)
-        .transfer_private_to_public_with_commitment(owner_auth, recipient_auth, token_id_1, 1);
+        .transfer_private_to_public_with_commitment(owner_auth, recipient_auth, token_id_5, 1);
 
     // Add authorization witness from owner to recipient
     authwit_cheatcodes::add_private_authwit_from_call_interface(
@@ -140,12 +147,12 @@ unconstrained fn test_transfer_private_to_public_with_commitment() {
     env_auth.advance_block_by(1);
 
     // Verify ownership transfer
-    utils::assert_private_nft_nullified(nft_contract_address_auth, owner_auth, token_id_1);
+    utils::assert_private_nft_nullified(nft_contract_address_auth, owner_auth, token_id_5);
     utils::assert_owns_public_nft(
         env_auth,
         nft_contract_address_auth,
         recipient_auth,
-        token_id_1,
+        token_id_5,
     );
 
     // Verify commitment is stored
@@ -153,13 +160,4 @@ unconstrained fn test_transfer_private_to_public_with_commitment() {
         utils::get_commitment_stored(nft_contract_address_auth, returned_commitment),
         "Commitment not stored",
     );
-
-    // Test 7: Transfer private to public with commitment unauthorized fail
-    // Create transfer interface with non-zero nonce
-    let transfer_call_interface_unauth = NFT::at(nft_contract_address_auth)
-        .transfer_private_to_public_with_commitment(owner_auth, recipient_auth, token_id_2, 1);
-
-    // Expected error: "Unknown auth witness for message hash"
-    env_auth.impersonate(recipient_auth);
-    env_auth.assert_private_call_fails(transfer_call_interface_unauth);
 }
