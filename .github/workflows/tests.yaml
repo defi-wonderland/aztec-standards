@@ -8,6 +8,10 @@ on:
 
 jobs:
     setup-and-run:
+      strategy:
+        matrix:
+          os: [ubuntu-latest-xl,ubuntu-latest-l,ubuntu-latest-arm-l]
+
       runs-on: 
         labels: ${{ matrix.os }}
       timeout-minutes: 60
@@ -15,10 +19,6 @@ jobs:
       concurrency:
         group: pr-${{ github.head_ref }}-${{ matrix.os }}
         cancel-in-progress: true
-
-      strategy:
-        matrix:
-          os: [ubuntu-latest-xl,ubuntu-latest-l,ubuntu-latest-arm-l]
 
       steps:
         - name: Checkout repository
