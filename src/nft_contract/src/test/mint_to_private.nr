@@ -13,7 +13,7 @@ unconstrained fn test_mint_to_private() {
     // Test 1: Mint to private fail non-minter
     // Expected error: "caller is not minter"
     env.impersonate(recipient);
-    env.assert_private_call_fails(NFT::at(nft_contract_address).mint_to_private(owner, token_id_2));
+    env.assert_private_call_fails(NFT::at(nft_contract_address).mint_to_private(owner, token_id_1));
 
     // Test 2: Mint to private fail token ID zero
     // Expected error: "zero token ID not supported"
@@ -32,7 +32,7 @@ unconstrained fn test_mint_to_private() {
     // Test 4: Mint to private fail same NFT twice
     env.impersonate(minter);
     let mint_call_interface = NFT::at(nft_contract_address).mint_to_private(owner, token_id_1);
-    
+
     // Expected error: "token already exists"
     env.assert_private_call_fails(mint_call_interface);
 }
