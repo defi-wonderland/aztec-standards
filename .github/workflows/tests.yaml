@@ -7,7 +7,7 @@ on:
     pull_request:
 
 concurrency:
-  group: pr-${{ github.head_ref }}
+  group: pr-${{ github.head_ref }}-${{ matrix.os }}
   cancel-in-progress: true
 
 jobs:
