@@ -15,9 +15,9 @@ unconstrained fn test_transfer_private_to_commitment() {
     // TODO: This is a workaround to avoid the issue with change notes on commitment transfers
     let transfer_amount_1: u128 = 500_000;
     let transfer_amount_2: u128 = 300_000;
-    
+
     env.impersonate(minter);
-    
+
     // Mint exactly the amounts we plan to transfer
     Token::at(token_contract_address).mint_to_private(owner, owner, transfer_amount_1).call(
         &mut env.private(),
@@ -29,7 +29,7 @@ unconstrained fn test_transfer_private_to_commitment() {
 
     let total_minted = transfer_amount_1 + transfer_amount_2;
     let mut owner_balance = total_minted;
-    
+
     // Verify initial balances
     utils::check_private_balance(token_contract_address, owner, owner_balance);
     utils::check_private_balance(token_contract_address, recipient, 0);
@@ -75,5 +75,9 @@ unconstrained fn test_transfer_private_to_commitment() {
 
     // Check balances
     utils::check_private_balance(token_contract_address, owner, 0 as u128);
-    utils::check_private_balance(token_contract_address, recipient, transfer_amount_1 + transfer_amount_2);
+    utils::check_private_balance(
+        token_contract_address,
+        recipient,
+        transfer_amount_1 + transfer_amount_2,
+    );
 }
