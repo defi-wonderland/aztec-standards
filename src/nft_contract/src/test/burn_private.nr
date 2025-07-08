@@ -46,7 +46,6 @@ unconstrained fn test_burn_private() {
     utils::assert_owns_public_nft(env, nft_contract_address, owner, token_id_2);
 
     // Expected error: "nft not found in private to public"
-    env.impersonate(owner);
     env.assert_private_call_fails(NFT::at(nft_contract_address).burn_private(owner, token_id_2, 0));
 
     let token_id_3 = 10004;

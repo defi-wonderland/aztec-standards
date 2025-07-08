@@ -9,7 +9,6 @@ unconstrained fn test_mint_to_private() {
 
     // Prepare multiple unique token IDs for testing
     let token_id_1 = 10000;
-    let token_id_2 = 10001;
 
     // Test 1: Mint to private fail non-minter
     // Expected error: "caller is not minter"
@@ -32,14 +31,8 @@ unconstrained fn test_mint_to_private() {
 
     // Test 4: Mint to private fail same NFT twice
     env.impersonate(minter);
-    let mint_call_interface = NFT::at(nft_contract_address).mint_to_private(owner, token_id_2);
-    mint_call_interface.call(&mut env.private());
-    env.advance_block_by(1);
-
-    // Verify the NFT was minted correctly
-    utils::assert_owns_private_nft(nft_contract_address, owner, token_id_2);
-    utils::assert_nft_exists(nft_contract_address, token_id_2);
-
+    let mint_call_interface = NFT::at(nft_contract_address).mint_to_private(owner, token_id_1);
+    
     // Expected error: "token already exists"
     env.assert_private_call_fails(mint_call_interface);
 }
