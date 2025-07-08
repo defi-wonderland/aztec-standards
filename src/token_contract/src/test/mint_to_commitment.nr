@@ -12,7 +12,6 @@ unconstrained fn test_mint_to_commitment() {
     let two_pow_127_minus_one = two_pow_127 - 1;
     let max_u128 = (two_pow_127 + two_pow_127_minus_one) as u128;
 
-    // Success case: Mint to commitment
     env.impersonate(minter);
     let commitment = Token::at(token_contract_address)
         .initialize_transfer_commitment(minter, recipient, minter)
@@ -20,6 +19,16 @@ unconstrained fn test_mint_to_commitment() {
     env.advance_block_by(1);
 
     let mint_amount: u128 = 10_000;
+
+    // Failure case 1: Unauthorized minter
+    // "caller is not minter"
+    env.impersonate(recipient);
+    let mint_to_commitment_call =
+        Token::at(token_contract_address).mint_to_commitment(commitment, mint_amount);
+    env.assert_public_call_fails(mint_to_commitment_call);
+
+    // Success case: Mint to commitment
+    env.impersonate(minter);
     Token::at(token_contract_address).mint_to_commitment(commitment, mint_amount).call(
         &mut env.public(),
     );
@@ -29,19 +38,13 @@ unconstrained fn test_mint_to_commitment() {
     let total_supply = Token::at(token_contract_address).total_supply().view(&mut env.public());
     assert(total_supply == mint_amount);
 
-    // Failure case 1: Unauthorized minter
-    // "caller is not minter"
-    env.impersonate(recipient);
-    let commitment_2 = Token::at(token_contract_address)
-        .initialize_transfer_commitment(recipient, recipient, recipient)
-        .call(&mut env.private());
-    env.advance_block_by(1);
+    // Failure case 2: Mint to an already completed commitment
+    // "Got 2 logs for tag"
+    let duplicate_mint_call =
+        Token::at(token_contract_address).mint_to_commitment(commitment, mint_amount);
+    env.assert_public_call_fails(duplicate_mint_call);
 
-    let mint_to_commitment_call =
-        Token::at(token_contract_address).mint_to_commitment(commitment_2, mint_amount);
-    env.assert_public_call_fails(mint_to_commitment_call);
-
-    // Failure case 2: Balance overflow - mint max then try to mint more
+    // Failure case 3: Balance overflow - mint max then try to mint more
     // "attempt to add with overflow 'total_supply.read() + amount'"
     env.impersonate(minter);
     let commitment_3 = Token::at(token_contract_address)
@@ -68,37 +71,6 @@ unconstrained fn test_mint_to_commitment() {
     utils::check_private_balance(token_contract_address, owner, 0);
     utils::check_total_supply(token_contract_address, max_u128);
 
-    // Failure case 3: Total supply overflow (alternative approach)
-    // "attempt to add with overflow 'total_supply.read() + amount'"
-    // Reset by deploying new token
-    let (env2, token_contract_address2, owner2, recipient2, minter2) =
-        utils::setup_with_minter(false);
-
-    env2.impersonate(minter2);
-    let commitment_5 = Token::at(token_contract_address2)
-        .initialize_transfer_commitment(minter2, recipient2, minter2)
-        .call(&mut env2.private());
-    env2.advance_block_by(1);
-
-    // Mint max_u128 - 1 to avoid overflow
-    Token::at(token_contract_address2).mint_to_commitment(commitment_5, max_u128 - 1).call(
-        &mut env2.public(),
-    );
-    env2.advance_block_by(1);
-
-    utils::check_private_balance(token_contract_address2, recipient2, max_u128 - 1);
-    utils::check_private_balance(token_contract_address2, owner2, 0);
-
-    let commitment_6 = Token::at(token_contract_address2)
-        .initialize_transfer_commitment(minter2, recipient2, minter2)
-        .call(&mut env2.private());
-    env2.advance_block_by(1);
-
-    // Now try to mint 2 more which should overflow
-    let overflow_mint_call_2 =
-        Token::at(token_contract_address2).mint_to_commitment(commitment_6, 2 as u128);
-    env2.assert_public_call_fails(overflow_mint_call_2);
-
     // Failure case 4: Invalid commitment - random value
     // "Invalid partial note or completer 'context.nullifier_exists(validity_commitment, context.this_address())'"
     env.impersonate(minter);
@@ -110,30 +82,4 @@ unconstrained fn test_mint_to_commitment() {
     // "Invalid partial note or completer 'context.nullifier_exists(validity_commitment, context.this_address())'"
     let invalid_mint_call_2 = Token::at(token_contract_address).mint_to_commitment(0, mint_amount);
     env.assert_public_call_fails(invalid_mint_call_2);
-
-    // Failure case 6: Already completed commitment
-    // Start fresh with a new token contract to avoid overflow issues
-    let (env3, token_contract_address3, owner3, recipient3, minter3) =
-        utils::setup_with_minter(false);
-
-    env3.impersonate(minter3);
-    let commitment_7 = Token::at(token_contract_address3)
-        .initialize_transfer_commitment(minter3, recipient3, minter3)
-        .call(&mut env3.private());
-    env3.advance_block_by(1);
-
-    // First mint succeeds
-    Token::at(token_contract_address3).mint_to_commitment(commitment_7, mint_amount).call(
-        &mut env3.public(),
-    );
-    env3.advance_block_by(1);
-
-    // Verify balance was minted
-    utils::check_private_balance(token_contract_address3, recipient3, mint_amount);
-
-    // Second mint to same commitment should fail
-    // "Got 2 logs for tag"
-    let duplicate_mint_call =
-        Token::at(token_contract_address3).mint_to_commitment(commitment_7, mint_amount);
-    env3.assert_public_call_fails(duplicate_mint_call);
 }
