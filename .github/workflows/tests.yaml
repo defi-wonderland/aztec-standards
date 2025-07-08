@@ -16,12 +16,11 @@ jobs:
         group: pr-${{ github.head_ref }}-${{ matrix.os }}
         cancel-in-progress: true
 
-      steps:
-
       strategy:
         matrix:
           os: [ubuntu-latest-xl,ubuntu-latest-l,ubuntu-latest-arm-l]
 
+      steps:
         - name: Checkout repository
           uses: actions/checkout@v3
           with:
