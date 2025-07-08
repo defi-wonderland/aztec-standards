@@ -28,11 +28,7 @@ unconstrained fn test_transfer_public_to_private_all_cases() {
     sender_balance -= transfer_amount;
     recipient_balance += transfer_amount;
     // Check balances after transfer
-    utils::check_public_balance(
-        token_contract_address,
-        sender,
-        sender_balance,
-    );
+    utils::check_public_balance(token_contract_address, sender, sender_balance);
     utils::check_private_balance(token_contract_address, recipient, recipient_balance);
 
     // Test 2: Not enough balance failure
@@ -57,21 +53,16 @@ unconstrained fn test_transfer_public_to_private_all_cases() {
         transfer_public_to_private_call_interface,
     );
 
-
     env.impersonate(recipient);
     transfer_public_to_private_call_interface.call(&mut env.private());
     env.advance_block_by(1);
 
     sender_balance -= transfer_amount2;
     recipient_balance += transfer_amount2;
-    
+
     // Check balances after authwit transfer
     utils::check_private_balance(token_contract_address, recipient, recipient_balance);
-    utils::check_public_balance(
-        token_contract_address,
-        sender,
-        sender_balance,
-    );
+    utils::check_public_balance(token_contract_address, sender, sender_balance);
 
     // Test 4: Authwitness unauthorized failure
     let transfer_amount3 = 100_000;
