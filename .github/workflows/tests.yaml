@@ -13,7 +13,7 @@ concurrency:
 jobs:
     setup-and-run:
       runs-on: 
-        labels: {{ matrix.os }} 
+        labels: ${{ matrix.os }}
       timeout-minutes: 60
 
       strategy:
