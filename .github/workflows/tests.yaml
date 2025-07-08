@@ -12,7 +12,8 @@ concurrency:
 
 jobs:
     setup-and-run:
-      runs-on: ubuntu-latest-xl
+      runs-on: 
+        labels: ubuntu-latest-xl
       timeout-minutes: 60
 
       # strategy:
