@@ -7,17 +7,17 @@ on:
     pull_request:
 
 concurrency:
-  group: pr-${{ github.head_ref }}-${{ matrix.os }}
+  group: pr-${{ github.head_ref }}
   cancel-in-progress: true
 
 jobs:
     setup-and-run:
-      runs-on: ${{ matrix.os }}
+      runs-on: ubuntu-latest-xl
       timeout-minutes: 60
 
-      strategy:
-        matrix:
-          os: [ubuntu-latest-xl,ubuntu-latest-l,ubuntu-latest-arm-l]
+      # strategy:
+      #   matrix:
+      #     os: [,ubuntu-latest-l,ubuntu-latest-arm-l]
 
       steps:
         - name: Checkout repository
