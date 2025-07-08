@@ -13,12 +13,12 @@ concurrency:
 jobs:
     setup-and-run:
       runs-on: 
-        labels: ubuntu-latest-xl
+        labels: {{ matrix.os }} 
       timeout-minutes: 60
 
-      # strategy:
-      #   matrix:
-      #     os: [,ubuntu-latest-l,ubuntu-latest-arm-l]
+      strategy:
+        matrix:
+          os: [ubuntu-latest-xl,ubuntu-latest-l,ubuntu-latest-arm-l]
 
       steps:
         - name: Checkout repository
