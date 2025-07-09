@@ -6,6 +6,10 @@ on:
         - main
     pull_request:
 
+concurrency:
+  group: pr-${{ github.head_ref }}
+  cancel-in-progress: true
+
 jobs:
     setup-and-run:
       runs-on: 
@@ -13,8 +17,8 @@ jobs:
       timeout-minutes: 60
 
       concurrency:
-        group: pr-${{ github.head_ref }}-${{ matrix.os }}-${{ matrix.threads }}
-        cancel-in-progress: true
+        group: job-${{ github.head_ref }}-${{ matrix.os }}-${{ matrix.threads }}
+        cancel-in-progress: false
 
       strategy:
         matrix:
