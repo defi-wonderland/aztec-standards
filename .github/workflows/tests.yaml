@@ -58,7 +58,7 @@ jobs:
 
         - name: Start PXE
           run: |
-            aztec start --port 8081 --pxe --pxe.nodeUrl=http://localhost:8080/ --pxe.proverEnabled false &
+            VERSION=${{ steps.aztec-version.outputs.version }} aztec start --port 8081 --pxe --pxe.nodeUrl=http://localhost:8080/ --pxe.proverEnabled false &
 
         - name: Run nr tests
           run: |

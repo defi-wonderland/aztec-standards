@@ -43,30 +43,30 @@
     "@jridgewell/gen-mapping" "^0.3.5"
     "@jridgewell/trace-mapping" "^0.3.24"
 
-"@aztec/accounts@0.87.8":
-  version "0.87.8"
-  resolved "https://registry.yarnpkg.com/@aztec/accounts/-/accounts-0.87.8.tgz#382dafa2d7375c2bdb26e958d251f8af0171c28f"
-  integrity sha512-fDxOEntA/4lV2gcdk9imsPuJ0DFQbs1HEHCInTJYlTHtwvYmHWc8DEGs+y/5UcljhLpbILYHox0xMxiBFcSTmg==
+"@aztec/accounts@1.0.0":
+  version "1.0.0"
+  resolved "https://registry.yarnpkg.com/@aztec/accounts/-/accounts-1.0.0.tgz#fae195d00c96ccd967e60383d2fd2bccfb215303"
+  integrity sha512-uCOPsWg0Qxum5x0yxT3F030amy5+7634mDlv1fss7tbJMVpXc+1Xi5R5E3lHGPcQPjHW9t5JRPgc/fGPCemSHg==
   dependencies:
-    "@aztec/aztec.js" "0.87.8"
-    "@aztec/entrypoints" "0.87.8"
-    "@aztec/ethereum" "0.87.8"
-    "@aztec/foundation" "0.87.8"
-    "@aztec/stdlib" "0.87.8"
+    "@aztec/aztec.js" "1.0.0"
+    "@aztec/entrypoints" "1.0.0"
+    "@aztec/ethereum" "1.0.0"
+    "@aztec/foundation" "1.0.0"
+    "@aztec/stdlib" "1.0.0"
     tslib "^2.4.0"
 
-"@aztec/aztec.js@0.87.8":
-  version "0.87.8"
-  resolved "https://registry.yarnpkg.com/@aztec/aztec.js/-/aztec.js-0.87.8.tgz#50e43fbecce9b6babd6ec8736301e42b83d6df7b"
-  integrity sha512-iPh13JMp9im6IHS37tAvkEsr5dkhIksBrDhWPIMxhxn5r0EQ0ApLcK2pHGAa8/gW4jgTgCXKoqnurrHVcbei3Q==
+"@aztec/aztec.js@1.0.0":
+  version "1.0.0"
+  resolved "https://registry.yarnpkg.com/@aztec/aztec.js/-/aztec.js-1.0.0.tgz#14f9f7cc98ea955829be5829588254a8fe30b36f"
+  integrity sha512-CT/HUOuIXfsq1iiLxzzlnw1WfneE7zSLPbtJG6NlSdPetedSgMW1FILj34MXBRRIbn9xu1rihi5rwuFpy8Jdig==
   dependencies:
-    "@aztec/constants" "0.87.8"
-    "@aztec/entrypoints" "0.87.8"
-    "@aztec/ethereum" "0.87.8"
-    "@aztec/foundation" "0.87.8"
-    "@aztec/l1-artifacts" "0.87.8"
-    "@aztec/protocol-contracts" "0.87.8"
-    "@aztec/stdlib" "0.87.8"
+    "@aztec/constants" "1.0.0"
+    "@aztec/entrypoints" "1.0.0"
+    "@aztec/ethereum" "1.0.0"
+    "@aztec/foundation" "1.0.0"
+    "@aztec/l1-artifacts" "1.0.0"
+    "@aztec/protocol-contracts" "1.0.0"
+    "@aztec/stdlib" "1.0.0"
     axios "^1.8.2"
     tslib "^2.4.0"
     viem "2.23.7"
@@ -87,21 +87,21 @@
     tslib "^2.4.0"
     viem "2.23.7"
 
-"@aztec/bb-prover@0.87.8":
-  version "0.87.8"
-  resolved "https://registry.yarnpkg.com/@aztec/bb-prover/-/bb-prover-0.87.8.tgz#5c844faa393c580ae818a6fdb8adccccd337e114"
-  integrity sha512-Up2ItKLmPkH0UGKR6XbQKYYAmMNMS+aU1BbwlY/AKa1Ocgk+k9uCJOMTS+PB+rlyE0hW9F7LrxBim16HJ47zdA==
+"@aztec/bb-prover@1.0.0":
+  version "1.0.0"
+  resolved "https://registry.yarnpkg.com/@aztec/bb-prover/-/bb-prover-1.0.0.tgz#581013ef628bb830480e01a37471f75c28383982"
+  integrity sha512-2aSjq2vPPm18VNrUofY7vLRuvAfeY7rdD43dzCGP4EnS54JH2tIizX4cDuR5nErXy8zOxP+UFy7RJNuJxo4q2A==
   dependencies:
-    "@aztec/bb.js" "0.87.8"
-    "@aztec/constants" "0.87.8"
-    "@aztec/foundation" "0.87.8"
-    "@aztec/noir-noirc_abi" "0.87.8"
-    "@aztec/noir-protocol-circuits-types" "0.87.8"
-    "@aztec/noir-types" "0.87.8"
-    "@aztec/simulator" "0.87.8"
-    "@aztec/stdlib" "0.87.8"
-    "@aztec/telemetry-client" "0.87.8"
-    "@aztec/world-state" "0.87.8"
+    "@aztec/bb.js" "1.0.0"
+    "@aztec/constants" "1.0.0"
+    "@aztec/foundation" "1.0.0"
+    "@aztec/noir-noirc_abi" "1.0.0"
+    "@aztec/noir-protocol-circuits-types" "1.0.0"
+    "@aztec/noir-types" "1.0.0"
+    "@aztec/simulator" "1.0.0"
+    "@aztec/stdlib" "1.0.0"
+    "@aztec/telemetry-client" "1.0.0"
+    "@aztec/world-state" "1.0.0"
     commander "^12.1.0"
     pako "^2.1.0"
     source-map-support "^0.5.21"
@@ -119,10 +119,10 @@
     pako "^2.1.0"
     tslib "^2.4.0"
 
-"@aztec/bb.js@0.87.8":
-  version "0.87.8"
-  resolved "https://registry.yarnpkg.com/@aztec/bb.js/-/bb.js-0.87.8.tgz#ef18216397f15f19550a1e5d7d47f8d28dcad73c"
-  integrity sha512-QXxTgdc8SYOQNk3XlvL1J8KfXVWu00seVn/nrvUTd4cC932WxvIp408DNend5kApLj4jJO9izaHAY2KI0pkvSA==
+"@aztec/bb.js@1.0.0":
+  version "1.0.0"
+  resolved "https://registry.yarnpkg.com/@aztec/bb.js/-/bb.js-1.0.0.tgz#d324969e38e6656f77131dca51507f99216ecd0c"
+  integrity sha512-gPpYLDYTMYtKWDnPPcIuiHBjSRQaPs9G9QC9tXBNGtP1keo7xoOdp6a37MA8ezB56dY30UnIbuv0UE1rRCFp7Q==
   dependencies:
     comlink "^4.4.1"
     commander "^12.1.0"
@@ -142,23 +142,23 @@
     c-kzg "4.0.0-alpha.1"
     tslib "^2.4.0"
 
-"@aztec/blob-lib@0.87.8":
-  version "0.87.8"
-  resolved "https://registry.yarnpkg.com/@aztec/blob-lib/-/blob-lib-0.87.8.tgz#6903fbe17f8cd12b9155a1ad17ac6b7419e87a2b"
-  integrity sha512-imcJYaTlbkFg5MdOkRjlriJMEW+YhhnK6cB5CjuxKJJ2DhjRDM88UdR9CWZJhbHoFKvPa3i8WfJSrtLlJ39TnA==
+"@aztec/blob-lib@1.0.0":
+  version "1.0.0"
+  resolved "https://registry.yarnpkg.com/@aztec/blob-lib/-/blob-lib-1.0.0.tgz#d81bc668d9b3bb655df3f698a9176ac4c08ca384"
+  integrity sha512-m2p0vBW2Q+gK9TgAtdTPZkai+p57bZlw+D/8mmIcg50BDCiyS5mzLk/paZGnIVaQUQaxe0pnptynhptwJPTPNA==
   dependencies:
-    "@aztec/constants" "0.87.8"
-    "@aztec/foundation" "0.87.8"
+    "@aztec/constants" "1.0.0"
+    "@aztec/foundation" "1.0.0"
     c-kzg "4.0.0-alpha.1"
     tslib "^2.4.0"
 
-"@aztec/builder@0.87.8":
-  version "0.87.8"
-  resolved "https://registry.yarnpkg.com/@aztec/builder/-/builder-0.87.8.tgz#67dbf856815913a310cfc77d0b0538d659833ff8"
-  integrity sha512-cgi9zIWvYvMx2ZYw+jsQJrB0C9ALkbRaU2VNLqiIwHnBAb8ybwrmPvrDukyfBLeUTnf+hZYLf1myAGPoZOZCKg==
+"@aztec/builder@1.0.0":
+  version "1.0.0"
+  resolved "https://registry.yarnpkg.com/@aztec/builder/-/builder-1.0.0.tgz#2fa4e713cb4a10e12e4975cca3d6bfa693597bc0"
+  integrity sha512-eT6O4m4yuSztEAd6qh0NEyPvM7ytQ4lDw3YknD3Mh2GL7xT/Oby/ooT/vF1Ge91g0f42/SPUcRacCFZz4FbVEA==
   dependencies:
-    "@aztec/foundation" "0.87.8"
-    "@aztec/stdlib" "0.87.8"
+    "@aztec/foundation" "1.0.0"
+    "@aztec/stdlib" "1.0.0"
     commander "^12.1.0"
 
 "@aztec/constants@0.86.0":
@@ -168,10 +168,10 @@
   dependencies:
     tslib "^2.4.0"
 
-"@aztec/constants@0.87.8":
-  version "0.87.8"
-  resolved "https://registry.yarnpkg.com/@aztec/constants/-/constants-0.87.8.tgz#d704083535e1c3360994fcadbc577e29cfb30359"
-  integrity sha512-EbUSY6la7DYIDy7Z+72Rl/VrhOQdJoep3bEd22gF3y4bx9GtdpjR26K8hhjtZ/eF1cDW0jCYsG58ebB7tjDCyg==
+"@aztec/constants@1.0.0":
+  version "1.0.0"
+  resolved "https://registry.yarnpkg.com/@aztec/constants/-/constants-1.0.0.tgz#c62e82e72b3cd8b905cd352245c8ad583793f683"
+  integrity sha512-Fm3q9HK3TBLdCnxagtGmfHTZZu32jEk+osSioXMSwQ0hFKbn9QCKqDhkq+fN1Xrbg1iGn1qfmtFD0YdpRjfKaQ==
   dependencies:
     tslib "^2.4.0"
 
@@ -186,15 +186,15 @@
     "@aztec/stdlib" "0.86.0"
     tslib "^2.4.0"
 
-"@aztec/entrypoints@0.87.8":
-  version "0.87.8"
-  resolved "https://registry.yarnpkg.com/@aztec/entrypoints/-/entrypoints-0.87.8.tgz#08e19e68228a0b7263bad46dda85da3961154878"
-  integrity sha512-OucqC96Cw+PY0aOf1piofsX0cwIJ9lONfpCQmH7OEgjTN1kaube6WluuHJ1RU71XQsZmyQmjtZB3vaoerhWO/Q==
+"@aztec/entrypoints@1.0.0":
+  version "1.0.0"
+  resolved "https://registry.yarnpkg.com/@aztec/entrypoints/-/entrypoints-1.0.0.tgz#a6abce6a57aa5d9af2190bbdadfa7f0fa4eef219"
+  integrity sha512-NgRDN3x4oXGbBindaCXcR+OAR1pjETDCYTWadwDKDXdjyqO328saM5kTS2hIy7MKMaVGuZcDDzawNHcWclyi6w==
   dependencies:
-    "@aztec/constants" "0.87.8"
-    "@aztec/foundation" "0.87.8"
-    "@aztec/protocol-contracts" "0.87.8"
-    "@aztec/stdlib" "0.87.8"
+    "@aztec/constants" "1.0.0"
+    "@aztec/foundation" "1.0.0"
+    "@aztec/protocol-contracts" "1.0.0"
+    "@aztec/stdlib" "1.0.0"
     tslib "^2.4.0"
 
 "@aztec/ethereum@0.86.0":
@@ -211,14 +211,14 @@
     viem "2.23.7"
     zod "^3.23.8"
 
-"@aztec/ethereum@0.87.8":
-  version "0.87.8"
-  resolved "https://registry.yarnpkg.com/@aztec/ethereum/-/ethereum-0.87.8.tgz#02cf35fd516b80c87166c44369f64592b337d74c"
-  integrity sha512-4KMF3Tl0i2YNlu6ZqQhRaUo8e24NTdZej4vsZJ1KoyRRSnbvL59Podg3ygx9hPAjVT5eXMdCX70s5BSKY5UT4A==
+"@aztec/ethereum@1.0.0":
+  version "1.0.0"
+  resolved "https://registry.yarnpkg.com/@aztec/ethereum/-/ethereum-1.0.0.tgz#ce2194cbea510c56cc28331da832ac2afaded887"
+  integrity sha512-0Cgf7rg+wqMUoOiuGJiMJsIIwS0gwYdWaaWN6/hPuWmUzFFUQcLXOWKnMdVPpKaMezwE4eB2sMAZPpOaGAS2Qw==
   dependencies:
-    "@aztec/blob-lib" "0.87.8"
-    "@aztec/foundation" "0.87.8"
-    "@aztec/l1-artifacts" "0.87.8"
+    "@aztec/blob-lib" "1.0.0"
+    "@aztec/foundation" "1.0.0"
+    "@aztec/l1-artifacts" "1.0.0"
     "@viem/anvil" "^0.0.10"
     dotenv "^16.0.3"
     tslib "^2.4.0"
@@ -253,15 +253,15 @@
     undici "^5.28.5"
     zod "^3.23.8"
 
-"@aztec/foundation@0.87.8":
-  version "0.87.8"
-  resolved "https://registry.yarnpkg.com/@aztec/foundation/-/foundation-0.87.8.tgz#2061495622af55d84decc4647b03f2bde8943c8f"
-  integrity sha512-Y1Qgxv2wt86+dIHq7OcjKgxLPJdhQkbeIasyJklhKBhsvZRiMEWc61/SwEoBg24Vi22+bfvRkqsMdzvqGhMHQQ==
+"@aztec/foundation@1.0.0":
+  version "1.0.0"
+  resolved "https://registry.yarnpkg.com/@aztec/foundation/-/foundation-1.0.0.tgz#12053a8d71f014cafb08e50e5a713481629aea87"
+  integrity sha512-7GlnIZIY3qvgVy+n3CMgNzK8cdDF2vPPtVuSwvhiIU5WEqYkrNM7fghIHN8dAuSIiX9rcVH+vXymx70OurlmZw==
   dependencies:
-    "@aztec/bb.js" "0.87.8"
+    "@aztec/bb.js" "1.0.0"
     "@koa/cors" "^5.0.0"
     "@noble/curves" "^1.2.0"
-    c-kzg "4.0.0-alpha.1"
+    bn.js "^5.2.1"
     colorette "^2.0.20"
     detect-node "^2.1.0"
     hash.js "^1.1.7"
@@ -279,26 +279,26 @@
     undici "^5.28.5"
     zod "^3.23.8"
 
-"@aztec/key-store@0.87.8":
-  version "0.87.8"
-  resolved "https://registry.yarnpkg.com/@aztec/key-store/-/key-store-0.87.8.tgz#973f4936a1f0ed05118e23b42004e37ba78eb9be"
-  integrity sha512-yYLCMqXf23wwf6bWaBt/67MnUTfh0rNQ4zWfnwl8AudVQRwSAltKlD6dFGaQeeIB+JF31QcaVoltBogVq1pnoA==
+"@aztec/key-store@1.0.0":
+  version "1.0.0"
+  resolved "https://registry.yarnpkg.com/@aztec/key-store/-/key-store-1.0.0.tgz#6d0a4dc3354290afd48fcb279ee09df9070fbbb5"
+  integrity sha512-BweFQkw4T6MU/559fmbiZmEuXsb9i75nJ8B73q3ZkVIvomzNaXlQCyncA69UE3/AFlU82NGntBSmZonaOpSVwg==
   dependencies:
-    "@aztec/constants" "0.87.8"
-    "@aztec/foundation" "0.87.8"
-    "@aztec/kv-store" "0.87.8"
-    "@aztec/stdlib" "0.87.8"
+    "@aztec/constants" "1.0.0"
+    "@aztec/foundation" "1.0.0"
+    "@aztec/kv-store" "1.0.0"
+    "@aztec/stdlib" "1.0.0"
     tslib "^2.4.0"
 
-"@aztec/kv-store@0.87.8":
-  version "0.87.8"
-  resolved "https://registry.yarnpkg.com/@aztec/kv-store/-/kv-store-0.87.8.tgz#887ab05386ed4b7ec5d593b946ed723be6cb9be9"
-  integrity sha512-VOYezDajNM3PCnvweLC/YaT0/PGctwVWLXrHXIc5YSDUVRmwXeyEB+pOt1LdKD+7XExA0EPdwbdf6zAdZ+qi9g==
+"@aztec/kv-store@1.0.0":
+  version "1.0.0"
+  resolved "https://registry.yarnpkg.com/@aztec/kv-store/-/kv-store-1.0.0.tgz#de0cae7481a489c7999b0993600dd6f058a3b36d"
+  integrity sha512-HrkjfTGzzemcrqowLYb488Ao+gKT7C3ede+cG8k1vJXKQuFERlXjgosOmnobjQvmL1q4lRGbtt7Kllem7i+A1A==
   dependencies:
-    "@aztec/ethereum" "0.87.8"
-    "@aztec/foundation" "0.87.8"
-    "@aztec/native" "0.87.8"
-    "@aztec/stdlib" "0.87.8"
+    "@aztec/ethereum" "1.0.0"
+    "@aztec/foundation" "1.0.0"
+    "@aztec/native" "1.0.0"
+    "@aztec/stdlib" "1.0.0"
     idb "^8.0.0"
     lmdb "^3.2.0"
     msgpackr "^1.11.2"
@@ -312,53 +312,53 @@
   dependencies:
     tslib "^2.4.0"
 
-"@aztec/l1-artifacts@0.87.8":
-  version "0.87.8"
-  resolved "https://registry.yarnpkg.com/@aztec/l1-artifacts/-/l1-artifacts-0.87.8.tgz#e2879dca323247478d25c891bfb744b31228a310"
-  integrity sha512-OW4DgZ6ocZog+18RnMdlnr0PTShbZCSgkQDyrI4NP5MK7gWM5yxgFeic7QxF6GnXXy0LNM0V5UiIoHIpSpstGw==
+"@aztec/l1-artifacts@1.0.0":
+  version "1.0.0"
+  resolved "https://registry.yarnpkg.com/@aztec/l1-artifacts/-/l1-artifacts-1.0.0.tgz#c65db49274087320f4d2a4c1b251483d53ce5d2a"
+  integrity sha512-2GpgzO7+FlZJMGes2GIYgz65WLTJprTRCWcSiDu8KZcZzr0RfzwXTuSthPuVLNgSPW2VVBzcDobyDgZTuuo7Eg==
   dependencies:
     tslib "^2.4.0"
 
-"@aztec/merkle-tree@0.87.8":
-  version "0.87.8"
-  resolved "https://registry.yarnpkg.com/@aztec/merkle-tree/-/merkle-tree-0.87.8.tgz#c5b4b112b2cbdff5d51dae6daaede3e7323073f9"
-  integrity sha512-AV1/57VTzTvMHGukHq+c80ZVmqHkMmYR7LTj9GADPK4lvvHbxofkoGa9Pz8OEY6WV8uHGsd7Oewb2Pm5TRv/8Q==
+"@aztec/merkle-tree@1.0.0":
+  version "1.0.0"
+  resolved "https://registry.yarnpkg.com/@aztec/merkle-tree/-/merkle-tree-1.0.0.tgz#36bcb402ea8b89e11b0cf98f1569298c01805137"
+  integrity sha512-emVm1a0bNPAD6TiZlKYQX9XxeDNy6wlzcENsz68c/MfhgYcybmK+WLDAB52xmrEX+IOtayBxP0t1oGuX33PnzA==
   dependencies:
-    "@aztec/foundation" "0.87.8"
-    "@aztec/kv-store" "0.87.8"
-    "@aztec/stdlib" "0.87.8"
+    "@aztec/foundation" "1.0.0"
+    "@aztec/kv-store" "1.0.0"
+    "@aztec/stdlib" "1.0.0"
     sha256 "^0.2.0"
     tslib "^2.4.0"
 
-"@aztec/native@0.87.8":
-  version "0.87.8"
-  resolved "https://registry.yarnpkg.com/@aztec/native/-/native-0.87.8.tgz#5a99f78f87473745e2f6b5e9f8cf742d23d53d7c"
-  integrity sha512-vdQ0M7Caj5vsR63XTnbol6V29cqR9qF76GuOBfYrPtHuBHTctVdT30bVTi7CnRnZvadXIUa5zhzrW1yFebYF0w==
+"@aztec/native@1.0.0":
+  version "1.0.0"
+  resolved "https://registry.yarnpkg.com/@aztec/native/-/native-1.0.0.tgz#00498205d0f42b7a78978e7a5289c491d783d3d2"
+  integrity sha512-HthC/VWWq6xpeUTdoIOshfTbQs+gsKOwNgcbjTbB4Y0uGTcCdO/JyqWmZeg2yMYWwEndDazT9tp+5gjoCl+Umg==
   dependencies:
-    "@aztec/foundation" "0.87.8"
+    "@aztec/foundation" "1.0.0"
     bindings "^1.5.0"
     msgpackr "^1.11.2"
 
-"@aztec/noir-acvm_js@0.87.8":
-  version "0.87.8"
-  resolved "https://registry.yarnpkg.com/@aztec/noir-acvm_js/-/noir-acvm_js-0.87.8.tgz#2244e8f8e684990bf19b49ebb98f89800483034d"
-  integrity sha512-Slw7oSHjxmOho4Ebjr+cWM6MR2Bp+gm8h6VMkZKDFlp+EpIvhExm7DgVWbPKcjwJQysXdkK4hUkEtGYibb1d+g==
+"@aztec/noir-acvm_js@1.0.0":
+  version "1.0.0"
+  resolved "https://registry.yarnpkg.com/@aztec/noir-acvm_js/-/noir-acvm_js-1.0.0.tgz#f4c9528a121c9f3d530700ecfb4be8cdc048a417"
+  integrity sha512-FNm5p0uBVq22ofChZAEcMwRebf4rOo1AvKhwemQtgyxcDYviSR5jMTL9a5Mpe5YNkX4PFoYJPphvwcdddCaVKg==
 
-"@aztec/noir-contracts.js@0.87.8":
-  version "0.87.8"
-  resolved "https://registry.yarnpkg.com/@aztec/noir-contracts.js/-/noir-contracts.js-0.87.8.tgz#b20d7c41a3bebd11df6fff62756ca7d1a65589b3"
-  integrity sha512-nrH9K7jCdlBBuYYUsGSfj3ca+pmqyHr4KG5YbnNn3Dm46s9WmTcwCqKM5aha7yaNbGiBtGW4E30bjDkrZxUvZg==
+"@aztec/noir-contracts.js@1.0.0":
+  version "1.0.0"
+  resolved "https://registry.yarnpkg.com/@aztec/noir-contracts.js/-/noir-contracts.js-1.0.0.tgz#9ded6514d05f1945941fef7e1e42bbb9ae009639"
+  integrity sha512-bpVRsGXCp1KlHsOdCzlCEGr76eo84Ll6xs0Eq3CkzsC9526N3tfdZQjz8UknOqkIhHHb85DSKAnkbG2Kgp57PA==
   dependencies:
-    "@aztec/aztec.js" "0.87.8"
+    "@aztec/aztec.js" "1.0.0"
     tslib "^2.4.0"
 
-"@aztec/noir-noir_codegen@0.87.8":
-  version "0.87.8"
-  resolved "https://registry.yarnpkg.com/@aztec/noir-noir_codegen/-/noir-noir_codegen-0.87.8.tgz#b742a1f7c0d2760379dc321440e34a2d64a225fd"
-  integrity sha512-cV+OXNPD4FE8uGNkqVatdB44od7zX4FZLAkwSGCJfNEOKsgjlznR5ROQ44C2USUD4JEnczptlBnZbp25Ql4P0g==
+"@aztec/noir-noir_codegen@1.0.0":
+  version "1.0.0"
+  resolved "https://registry.yarnpkg.com/@aztec/noir-noir_codegen/-/noir-noir_codegen-1.0.0.tgz#8a99b5018c2a0d6fa0ed8b934f66e9573798d544"
+  integrity sha512-Wpo6NoU4H5TmUnZy5G8YkL0Mvk89kacNasWz/GNGr7+XTcngkjsoDQA5OtEFkHSeL0JLPXhEuh5sbHk0nsBnBg==
   dependencies:
-    "@aztec/noir-types" "0.87.8"
-    glob "^11.0.1"
+    "@aztec/noir-types" "1.0.0"
+    glob "^11.0.2"
     ts-command-line-args "^2.5.1"
 
 "@aztec/noir-noirc_abi@0.86.0":
@@ -368,26 +368,26 @@
   dependencies:
     "@aztec/noir-types" "0.86.0"
 
-"@aztec/noir-noirc_abi@0.87.8":
-  version "0.87.8"
-  resolved "https://registry.yarnpkg.com/@aztec/noir-noirc_abi/-/noir-noirc_abi-0.87.8.tgz#a21c1fb018178d3a699e98ca420e2b8f7bdc6455"
-  integrity sha512-actxMfhZEoX9dTFMTRUv8NfJr9UFm3M3aKkFRbJDm4O2+Wz7/LJ26co+lV7VdNydI3WCaEDtp5kNhQpWOcgbKg==
+"@aztec/noir-noirc_abi@1.0.0":
+  version "1.0.0"
+  resolved "https://registry.yarnpkg.com/@aztec/noir-noirc_abi/-/noir-noirc_abi-1.0.0.tgz#fa241faaf1b770003a9ad796f6782907820e5014"
+  integrity sha512-tICQGIdwr9x4vpi6x35Xo77x37iBNMZYHtKTLGEa/rWhRewc3JYB6DNjuZyt9zocL6NRH3SfzArbkBU8JhCRJg==
   dependencies:
-    "@aztec/noir-types" "0.87.8"
+    "@aztec/noir-types" "1.0.0"
 
-"@aztec/noir-protocol-circuits-types@0.87.8":
-  version "0.87.8"
-  resolved "https://registry.yarnpkg.com/@aztec/noir-protocol-circuits-types/-/noir-protocol-circuits-types-0.87.8.tgz#4f2e02e659350597c6dd9fc44b207458ff059512"
-  integrity sha512-9gUPokedG9O8xzZ4jBZlcKldZyRM7b3EbB/zF/qhrDF0qLZ+Mt2Ld/3d9tV8oaVsSw5HZKW0b2wynI8pDx+ASA==
+"@aztec/noir-protocol-circuits-types@1.0.0":
+  version "1.0.0"
+  resolved "https://registry.yarnpkg.com/@aztec/noir-protocol-circuits-types/-/noir-protocol-circuits-types-1.0.0.tgz#474cdee33015174e871862694e0ed733e302d802"
+  integrity sha512-aR7l0Us47vaAOMzSOsaf2fNm2tfxhTPN/xc8CUZNGYvxXEHIx1vHyhE2qqHAzVSxQIRJ2paegl6J5bPmLWzUeA==
   dependencies:
-    "@aztec/blob-lib" "0.87.8"
-    "@aztec/constants" "0.87.8"
-    "@aztec/foundation" "0.87.8"
-    "@aztec/noir-acvm_js" "0.87.8"
-    "@aztec/noir-noir_codegen" "0.87.8"
-    "@aztec/noir-noirc_abi" "0.87.8"
-    "@aztec/noir-types" "0.87.8"
-    "@aztec/stdlib" "0.87.8"
+    "@aztec/blob-lib" "1.0.0"
+    "@aztec/constants" "1.0.0"
+    "@aztec/foundation" "1.0.0"
+    "@aztec/noir-acvm_js" "1.0.0"
+    "@aztec/noir-noir_codegen" "1.0.0"
+    "@aztec/noir-noirc_abi" "1.0.0"
+    "@aztec/noir-types" "1.0.0"
+    "@aztec/stdlib" "1.0.0"
     change-case "^5.4.4"
     tslib "^2.4.0"
 
@@ -396,10 +396,10 @@
   resolved "https://registry.yarnpkg.com/@aztec/noir-types/-/noir-types-0.86.0.tgz#f07fd5133f00ffbb1a34f181babd8ef14e652339"
   integrity sha512-+Q7Ql8SFklbtG1oIN8+6BNLEvXQRji9kmmgT2pARQwMNa3tfU3ybPUHTPMpapcB58Hbn1Sv84TpZvr9cweycEA==
 
-"@aztec/noir-types@0.87.8":
-  version "0.87.8"
-  resolved "https://registry.yarnpkg.com/@aztec/noir-types/-/noir-types-0.87.8.tgz#3a82ba180cb7a49aff53189bf4717fea5031cbc6"
-  integrity sha512-LZS6gaI6dEAcRgpZd7hc+uREjfOOUwQbBkoNQf4L96Tb11sF+IvZ32h8eR4GYM/vrofW24ZUS4AvS3JSB4PZrQ==
+"@aztec/noir-types@1.0.0":
+  version "1.0.0"
+  resolved "https://registry.yarnpkg.com/@aztec/noir-types/-/noir-types-1.0.0.tgz#4c3dd09a1f2506f86fe1cc6257a231c95a4f3c3b"
+  integrity sha512-8CII24V4meh/TvbCN+x4tjJAY1Q15mLn6r1xvLvpP3GYKXSEbqYAoAPAxgbi8KFCnWYkahDSmojX45faXTb/gw==
 
 "@aztec/protocol-contracts@0.86.0":
   version "0.86.0"
@@ -413,36 +413,36 @@
     lodash.omit "^4.5.0"
     tslib "^2.4.0"
 
-"@aztec/protocol-contracts@0.87.8":
-  version "0.87.8"
-  resolved "https://registry.yarnpkg.com/@aztec/protocol-contracts/-/protocol-contracts-0.87.8.tgz#1d119ad0992b65398f5bfc127d264cad4ac329dc"
-  integrity sha512-Y0wHf8m3Jj5Fj6Xk02Vn1UH2SHzRgjQcscr4R3jKyT0eR+5Qyf5gDXwAMImhA8gEuSvPczwZ2y8Uk3JcylMfRg==
+"@aztec/protocol-contracts@1.0.0":
+  version "1.0.0"
+  resolved "https://registry.yarnpkg.com/@aztec/protocol-contracts/-/protocol-contracts-1.0.0.tgz#a8710b325fc99247324dce97bbbeae23da7aaf48"
+  integrity sha512-Q7mcMOYw5wrn6676NYl5PX3pnhO+MhdGB56w4lSjbAImE03W0mMGmasNYQ3q6beN9El9t+Q6tcVMj+BgXURxJQ==
   dependencies:
-    "@aztec/constants" "0.87.8"
-    "@aztec/foundation" "0.87.8"
-    "@aztec/stdlib" "0.87.8"
+    "@aztec/constants" "1.0.0"
+    "@aztec/foundation" "1.0.0"
+    "@aztec/stdlib" "1.0.0"
     lodash.chunk "^4.2.0"
     lodash.omit "^4.5.0"
     tslib "^2.4.0"
 
-"@aztec/pxe@0.87.8":
-  version "0.87.8"
-  resolved "https://registry.yarnpkg.com/@aztec/pxe/-/pxe-0.87.8.tgz#bbac7341cdb27e3bed23c2484fafbcb9e97938f5"
-  integrity sha512-1egvKI+TP2gFwNr31JaOIdNKwDxBnB6tAmfsSQ+VsqDWAg0QZjFTl2t69p8aRtHFKDW/RUFAeHZZB5rCU96ACA==
+"@aztec/pxe@1.0.0":
+  version "1.0.0"
+  resolved "https://registry.yarnpkg.com/@aztec/pxe/-/pxe-1.0.0.tgz#e5aca2722b331b806a1df08a6a2765ea44f89109"
+  integrity sha512-3PThf6k1JbE46kagN7Gq/ZW4om1obEr2TjSRZpDw0zdD+5FA+xsqZUz8S/9Jjytg1wxo8GlRlYDcT1Wi/yDAtw==
   dependencies:
-    "@aztec/bb-prover" "0.87.8"
-    "@aztec/bb.js" "0.87.8"
-    "@aztec/builder" "0.87.8"
-    "@aztec/constants" "0.87.8"
-    "@aztec/ethereum" "0.87.8"
-    "@aztec/foundation" "0.87.8"
-    "@aztec/key-store" "0.87.8"
-    "@aztec/kv-store" "0.87.8"
-    "@aztec/noir-protocol-circuits-types" "0.87.8"
-    "@aztec/noir-types" "0.87.8"
-    "@aztec/protocol-contracts" "0.87.8"
-    "@aztec/simulator" "0.87.8"
-    "@aztec/stdlib" "0.87.8"
+    "@aztec/bb-prover" "1.0.0"
+    "@aztec/bb.js" "1.0.0"
+    "@aztec/builder" "1.0.0"
+    "@aztec/constants" "1.0.0"
+    "@aztec/ethereum" "1.0.0"
+    "@aztec/foundation" "1.0.0"
+    "@aztec/key-store" "1.0.0"
+    "@aztec/kv-store" "1.0.0"
+    "@aztec/noir-protocol-circuits-types" "1.0.0"
+    "@aztec/noir-types" "1.0.0"
+    "@aztec/protocol-contracts" "1.0.0"
+    "@aztec/simulator" "1.0.0"
+    "@aztec/stdlib" "1.0.0"
     koa "^2.16.1"
     koa-router "^12.0.0"
     lodash.omit "^4.5.0"
@@ -450,21 +450,21 @@
     tslib "^2.4.0"
     viem "2.23.7"
 
-"@aztec/simulator@0.87.8":
-  version "0.87.8"
-  resolved "https://registry.yarnpkg.com/@aztec/simulator/-/simulator-0.87.8.tgz#971b9580d918d7e90a1a6332278bdff5b9b8c004"
-  integrity sha512-xE7BuYD4Z0POgKGv9YAdgzaE+ZBy5r3ChKDlmuFuG7WPvQmTTclmNbs5x+usmuq37jmPq7auM3C7RggftjOByg==
+"@aztec/simulator@1.0.0":
+  version "1.0.0"
+  resolved "https://registry.yarnpkg.com/@aztec/simulator/-/simulator-1.0.0.tgz#86a08ecb913453a984625ac4111ea32fb564179f"
+  integrity sha512-/FZ20EbG6m5iLTF1EMstI3uTLQSRdcv2Gao8Tj/B2bygKDJy42JpocabJ+hHKjeitIIeS+1okfCNYnRd8sYcww==
   dependencies:
-    "@aztec/constants" "0.87.8"
-    "@aztec/foundation" "0.87.8"
-    "@aztec/noir-acvm_js" "0.87.8"
-    "@aztec/noir-noirc_abi" "0.87.8"
-    "@aztec/noir-protocol-circuits-types" "0.87.8"
-    "@aztec/noir-types" "0.87.8"
-    "@aztec/protocol-contracts" "0.87.8"
-    "@aztec/stdlib" "0.87.8"
-    "@aztec/telemetry-client" "0.87.8"
-    "@aztec/world-state" "0.87.8"
+    "@aztec/constants" "1.0.0"
+    "@aztec/foundation" "1.0.0"
+    "@aztec/noir-acvm_js" "1.0.0"
+    "@aztec/noir-noirc_abi" "1.0.0"
+    "@aztec/noir-protocol-circuits-types" "1.0.0"
+    "@aztec/noir-types" "1.0.0"
+    "@aztec/protocol-contracts" "1.0.0"
+    "@aztec/stdlib" "1.0.0"
+    "@aztec/telemetry-client" "1.0.0"
+    "@aztec/world-state" "1.0.0"
     lodash.clonedeep "^4.5.0"
     lodash.merge "^4.6.2"
     tslib "^2.4.0"
@@ -491,17 +491,17 @@
     viem "2.23.7"
     zod "^3.23.8"
 
-"@aztec/stdlib@0.87.8":
-  version "0.87.8"
-  resolved "https://registry.yarnpkg.com/@aztec/stdlib/-/stdlib-0.87.8.tgz#b8d29746b6e6625cd2505704d6c587abc86f07eb"
-  integrity sha512-lTqHfQaBd2mZTCpMIOCUN58q87v5jZfWzG6A+9X5He9sR1uDoWweG3qWaKJU2tGAaVKCZa20ewXaPUfpdM5acw==
+"@aztec/stdlib@1.0.0":
+  version "1.0.0"
+  resolved "https://registry.yarnpkg.com/@aztec/stdlib/-/stdlib-1.0.0.tgz#7c259b6d725d879c6544dec054e488a9fd6f5aee"
+  integrity sha512-kdEawvfMm/LdhtsCUOpMSAqU3ZiprzIP5PKQZlYbF1RDkPKwPr5NZR2Exy1yCSt+eqHdSDOlcIZThgmqIdchmA==
   dependencies:
-    "@aztec/bb.js" "0.87.8"
-    "@aztec/blob-lib" "0.87.8"
-    "@aztec/constants" "0.87.8"
-    "@aztec/ethereum" "0.87.8"
-    "@aztec/foundation" "0.87.8"
-    "@aztec/noir-noirc_abi" "0.87.8"
+    "@aztec/bb.js" "1.0.0"
+    "@aztec/blob-lib" "1.0.0"
+    "@aztec/constants" "1.0.0"
+    "@aztec/ethereum" "1.0.0"
+    "@aztec/foundation" "1.0.0"
+    "@aztec/noir-noirc_abi" "1.0.0"
     "@google-cloud/storage" "^7.15.0"
     axios "^1.9.0"
     json-stringify-deterministic "1.0.12"
@@ -515,13 +515,13 @@
     viem "2.23.7"
     zod "^3.23.8"
 
-"@aztec/telemetry-client@0.87.8":
-  version "0.87.8"
-  resolved "https://registry.yarnpkg.com/@aztec/telemetry-client/-/telemetry-client-0.87.8.tgz#fcd30ce97081f84a0a8540f68dae76ca377e5921"
-  integrity sha512-YzHhT6GbrteueqbeCnNMTLmrSkQtp4DLss60RATEJ8VehylfoH5m2BCGA/LQ7eHQqz9+979QeM6ZzVDXqfHUTQ==
+"@aztec/telemetry-client@1.0.0":
+  version "1.0.0"
+  resolved "https://registry.yarnpkg.com/@aztec/telemetry-client/-/telemetry-client-1.0.0.tgz#747ad71231fd658451ba8e33b6a0e6425b0b09d4"
+  integrity sha512-Xobc6syCBGWDKaazcibj41yTkv7Bd6aZCmz+o1/k+wkpjYO+LPZD35FqHifGLljDW8cBp/vOKwp6jzo4XCqCjg==
   dependencies:
-    "@aztec/foundation" "0.87.8"
-    "@aztec/stdlib" "0.87.8"
+    "@aztec/foundation" "1.0.0"
+    "@aztec/stdlib" "1.0.0"
     "@opentelemetry/api" "^1.9.0"
     "@opentelemetry/api-logs" "^0.55.0"
     "@opentelemetry/core" "^1.28.0"
@@ -539,19 +539,19 @@
     prom-client "^15.1.3"
     viem "2.23.7"
 
-"@aztec/world-state@0.87.8":
-  version "0.87.8"
-  resolved "https://registry.yarnpkg.com/@aztec/world-state/-/world-state-0.87.8.tgz#d8e9decf39928b3c029bd0d6634b90a23fc7842e"
-  integrity sha512-McxaWk5++aSsCciHr9wVefaMcCd4WM6Q+er5JtJYUIpLVAbaspfLOPsApoSQh9pskn+paqEE233xU3ZpaNisDw==
+"@aztec/world-state@1.0.0":
+  version "1.0.0"
+  resolved "https://registry.yarnpkg.com/@aztec/world-state/-/world-state-1.0.0.tgz#018903a5c42a1d9c90f824254c6a166efb1f038d"
+  integrity sha512-ZA+e76NpckuIA6ST2WBG7n36X7HZ10lDv56ao7DL90+twvxDvtG78MNRTwJGqsBlPhoNBOP5n//Vwo01YjTTAg==
   dependencies:
-    "@aztec/constants" "0.87.8"
-    "@aztec/foundation" "0.87.8"
-    "@aztec/kv-store" "0.87.8"
-    "@aztec/merkle-tree" "0.87.8"
-    "@aztec/native" "0.87.8"
-    "@aztec/protocol-contracts" "0.87.8"
-    "@aztec/stdlib" "0.87.8"
-    "@aztec/telemetry-client" "0.87.8"
+    "@aztec/constants" "1.0.0"
+    "@aztec/foundation" "1.0.0"
+    "@aztec/kv-store" "1.0.0"
+    "@aztec/merkle-tree" "1.0.0"
+    "@aztec/native" "1.0.0"
+    "@aztec/protocol-contracts" "1.0.0"
+    "@aztec/stdlib" "1.0.0"
+    "@aztec/telemetry-client" "1.0.0"
     tslib "^2.4.0"
     zod "^3.23.8"
 
@@ -3212,7 +3212,7 @@ get-tsconfig@^4.7.5:
   dependencies:
     resolve-pkg-maps "^1.0.0"
 
-glob@^11.0.1:
+glob@^11.0.2:
   version "11.0.3"
   resolved "https://registry.yarnpkg.com/glob/-/glob-11.0.3.tgz#9d8087e6d72ddb3c4707b1d2778f80ea3eaefcd6"
   integrity sha512-2Nim7dha1KVkaiF4q6Dj+ngPPMdfvLJEOpZk/jKiUAkqKebpGAWQXAq9z1xu9HKu5lWfqw/FASuccEjyznjPaA==
