@@ -1,7 +1,7 @@
 use crate::{test::utils::{self, mint_amount}, Token};
 use authwit::cheatcodes as authwit_cheatcodes;
 
-#[test(should_fail_with = "Artifact not found when enriching public simulation error. Contract address: 0x0000000000000000000000000000000000000000000000000000000000000000.")]
+#[test(should_fail_with = "Trying to read from uninitialized PublicImmutable")]
 unconstrained fn issue_public_to_public_without_asset() {
     // Setup without account contracts. We are not using authwits here, so dummy accounts are enough
     let (env, vault_address, owner, recipient, minter) = utils::setup_with_minter(false);
