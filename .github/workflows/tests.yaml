@@ -18,7 +18,7 @@ jobs:
 
       strategy:
         matrix:
-          os: [ubuntu-latest-xs,ubuntu-latest-s,ubuntu-latest-m,ubuntu-latest-l,ubuntu-latest-xl,ubuntu-latest-arm-l]
+          os: [ubuntu-latest-m,ubuntu-latest-l]
           threads: [12, 24, 64]
 
       steps:
