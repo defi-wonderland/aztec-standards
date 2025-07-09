@@ -18,7 +18,8 @@ jobs:
 
       strategy:
         matrix:
-          os: [ubuntu-latest-xs,ubuntu-latest-s,ubuntu-latest-m,ubuntu-latest-l,ubuntu-latest-xlubuntu-latest-arm-l]
+          os: [ubuntu-latest-xs,ubuntu-latest-s,ubuntu-latest-m,ubuntu-latest-l,ubuntu-latest-xl,ubuntu-latest-arm-l]
+          threads: [12, 24, 64]
 
       steps:
         - name: Checkout repository
@@ -71,7 +72,7 @@ jobs:
 
         - name: Run nr tests
           run: |
-            script -e -c "aztec test"
+            script -e -c "aztec test --test-threads ${{ matrix.threads }}"
 
         - name: Run js tests
           run: script -e -c "BASE_PXE_URL=http://localhost NODE_NO_WARNINGS=1 node --experimental-vm-modules $(yarn bin jest) --no-cache --runInBand --config jest.integration.config.json"
