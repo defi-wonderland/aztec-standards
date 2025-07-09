@@ -1,0 +1,25 @@
+---
+description: Aztec privacy and security guidelines
+globs: **/*.nr
+version: 1.0.0
+---
+
+# Aztec Privacy & Security Guidelines
+
+## Privacy Patterns
+- Implement both private and public versions of core functions
+- Use commitment pattern for privacy entrance (return Field from private functions)
+- Handle note encryption with encode_and_encrypt_note for recipient discovery
+- Separate private/public state transitions clearly
+- Use PartialUintNote for incomplete notes that complete in public
+
+## Authorization
+- Always validate authorization with assert_current_call_valid_authwit
+- Implement dedicated validation functions: _validate_from_private, _validate_minter
+- Use authwit for both private and public contexts appropriately
+
+## Note Management
+- Define note limits: INITIAL_TRANSFER_CALL_MAX_NOTES, RECURSIVE_TRANSFER_CALL_MAX_NOTES
+- Handle recursive balance operations when exceeding note limits
+- Always emit notes with proper encryption for recipient
+- Use preprocess_notes_min_sum for efficient note selection
