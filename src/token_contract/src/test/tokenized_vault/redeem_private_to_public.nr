@@ -1,4 +1,4 @@
-use crate::{test::utils::{self, mint_amount}, Token};
+use crate::{test::{tokenized_vault::tokenized_vault_utils, utils::{self, mint_amount}}, Token};
 use authwit::cheatcodes as authwit_cheatcodes;
 
 #[test(should_fail_with = "Trying to read from uninitialized PublicImmutable")]
@@ -25,7 +25,7 @@ unconstrained fn redeem_private_to_public_success() {
     // Mint some asset tokens to owner
     let deposit_amount: u128 = mint_amount;
     let deposit_recipient = owner;
-    utils::deposit_public_to_private(
+    tokenized_vault_utils::mint_and_deposit_public_to_private(
         env,
         owner,
         asset_address,
@@ -62,7 +62,7 @@ unconstrained fn redeem_private_to_public_after_yield() {
     // Mint some asset tokens to owner
     let deposit_amount: u128 = mint_amount;
     let deposit_recipient = owner;
-    utils::deposit_public_to_private(
+    tokenized_vault_utils::mint_and_deposit_public_to_private(
         env,
         owner,
         asset_address,
@@ -106,7 +106,7 @@ unconstrained fn redeem_private_to_public_without_approval() {
     // Mint some asset tokens to owner
     let deposit_amount: u128 = mint_amount;
     let deposit_recipient = owner;
-    utils::deposit_public_to_private(
+    tokenized_vault_utils::mint_and_deposit_public_to_private(
         env,
         owner,
         asset_address,
@@ -132,7 +132,7 @@ unconstrained fn redeem_private_to_public_on_behalf_of_wrong_caller() {
     // Mint some asset tokens to owner
     let deposit_amount: u128 = mint_amount;
     let deposit_recipient = owner;
-    utils::deposit_public_to_private(
+    tokenized_vault_utils::mint_and_deposit_public_to_private(
         env,
         owner,
         asset_address,
@@ -171,7 +171,7 @@ unconstrained fn redeem_private_to_public_on_behalf_of_other_success() {
     // Mint some asset tokens to owner
     let deposit_amount: u128 = mint_amount;
     let deposit_recipient = owner;
-    utils::deposit_public_to_private(
+    tokenized_vault_utils::mint_and_deposit_public_to_private(
         env,
         owner,
         asset_address,
