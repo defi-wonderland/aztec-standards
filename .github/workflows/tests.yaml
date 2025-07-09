@@ -13,7 +13,7 @@ jobs:
       timeout-minutes: 60
 
       concurrency:
-        group: pr-${{ github.head_ref }}-${{ matrix.os }}
+        group: pr-${{ github.head_ref }}-${{ matrix.os }}-${{ matrix.threads }}
         cancel-in-progress: true
 
       strategy:
