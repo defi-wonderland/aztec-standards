@@ -1,0 +1,27 @@
+---
+description: Aztec gas and performance optimization guidelines
+globs: **/*.nr
+version: 1.0.0
+---
+
+# Aztec Optimization Guidelines
+
+## Note Efficiency
+- Set appropriate max notes limits (2 for initial, 8 for recursive typically)
+- Sort notes by value descending for optimal selection
+- Use recursive patterns for handling many notes
+- Minimize note reads with preprocess_notes_min_sum
+- Batch operations where possible to reduce note overhead
+
+## Storage Optimization
+- Use PublicImmutable for deployment-time constants (name, symbol, decimals)
+- Use PublicMutable for changing state (balances, total_supply)
+- Pack related data into single storage slots where possible
+- Use Map<AztecAddress, Type> for address-indexed storage
+- Prefer PrivateSet for private note collections
+
+## Function Optimization
+- Extract common logic to #[contract_library_method] functions
+- Use internal function variants to avoid redundant validation
+- Minimize context switches between private and public
+- Batch public calls when transitioning from private
