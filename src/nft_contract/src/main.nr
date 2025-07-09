@@ -201,8 +201,7 @@ pub contract NFT {
     /// @param to The address of the recipient
     /// @return commitment The partial nft note utilized for the transfer commitment (privacy entrance)
     #[private]
-    fn initialize_transfer_commitment(from: AztecAddress, to: AztecAddress) -> Field {
-        let completer = context.msg_sender();
+    fn initialize_transfer_commitment(from: AztecAddress, to: AztecAddress, completer: AztecAddress) -> Field {
         let commitment =
             _initialize_transfer_commitment(&mut context, storage.private_nfts, from, to, completer);
         commitment.commitment()

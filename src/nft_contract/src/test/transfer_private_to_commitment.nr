@@ -15,7 +15,7 @@ unconstrained fn nft_transfer_private_to_commitment_success() {
     // Prepare commitment
     env.impersonate(owner);
     let commitment: Field = NFT::at(nft_contract_address)
-        .initialize_transfer_commitment(owner, recipient)
+        .initialize_transfer_commitment(owner, recipient, owner)
         .call(&mut env.private());
     env.advance_block_by(1);
 
@@ -52,7 +52,7 @@ unconstrained fn nft_transfer_private_to_commitment_authorized_success() {
     // Prepare commitment
     env.impersonate(owner);
     let commitment: Field = NFT::at(nft_contract_address)
-        .initialize_transfer_commitment(owner, recipient)
+        .initialize_transfer_commitment(owner, recipient, owner)
         .call(&mut env.private());
     env.advance_block_by(1);
 
@@ -98,7 +98,7 @@ unconstrained fn nft_transfer_private_to_commitment_non_existent_fail() {
     // Prepare commitment as recipient
     env.impersonate(recipient);
     let commitment: Field = NFT::at(nft_contract_address)
-        .initialize_transfer_commitment(owner, recipient)
+        .initialize_transfer_commitment(owner, recipient, recipient)
         .call(&mut env.private());
     env.advance_block_by(1);
 
@@ -119,7 +119,7 @@ unconstrained fn nft_transfer_private_to_commitment_unauthorized_fail() {
     // Prepare commitment as recipient
     env.impersonate(recipient);
     let commitment: Field = NFT::at(nft_contract_address)
-        .initialize_transfer_commitment(owner, recipient)
+        .initialize_transfer_commitment(owner, recipient, recipient)
         .call(&mut env.private());
     env.advance_block_by(1);
 
@@ -146,7 +146,7 @@ unconstrained fn nft_transfer_private_to_commitment_wrong_authwit_fail() {
     // Prepare commitment as recipient
     env.impersonate(recipient);
     let commitment: Field = NFT::at(nft_contract_address)
-        .initialize_transfer_commitment(owner, recipient)
+        .initialize_transfer_commitment(owner, recipient, recipient)
         .call(&mut env.private());
     env.advance_block_by(1);
 
@@ -180,7 +180,7 @@ unconstrained fn nft_transfer_private_to_commitment_public_nft_fail() {
     // Prepare commitment as recipient
     env.impersonate(recipient);
     let commitment: Field = NFT::at(nft_contract_address)
-        .initialize_transfer_commitment(owner, recipient)
+        .initialize_transfer_commitment(owner, recipient, recipient)
         .call(&mut env.private());
     env.advance_block_by(1);
 
