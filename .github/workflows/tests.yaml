@@ -6,10 +6,6 @@ on:
         - main
     pull_request:
 
-concurrency:
-  group: pr-${{ github.head_ref }}
-  cancel-in-progress: true
-
 jobs:
     setup-and-run:
       runs-on: 
@@ -22,7 +18,7 @@ jobs:
 
       strategy:
         matrix:
-          os: [ubuntu-latest-xl,ubuntu-latest-l,ubuntu-latest-arm-l]
+          os: [ubuntu-latest-xs,ubuntu-latest-s,ubuntu-latest-m,ubuntu-latest-l,ubuntu-latest-xlubuntu-latest-arm-l]
 
       steps:
         - name: Checkout repository
