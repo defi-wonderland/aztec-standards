@@ -6,19 +6,24 @@ on:
         - main
     pull_request:
 
+concurrency:
+  group: pr-${{ github.head_ref }}
+  cancel-in-progress: true
+
 jobs:
     setup-and-run:
       strategy:
         matrix:
-          os: [ubuntu-latest-xs,ubuntu-latest-s,ubuntu-latest-m,ubuntu-latest-l,ubuntu-latest-xl,ubuntu-latest-arm-l]
+          os: [ubuntu-latest-m,ubuntu-latest-l,ubuntu-latest-arm-l]
+          threads: [12, 48]
 
       runs-on: 
         labels: ${{ matrix.os }}
       timeout-minutes: 60
 
       concurrency:
-        group: pr-${{ github.head_ref }}-${{ matrix.os }}
-        cancel-in-progress: true
+        group: job-${{ github.head_ref }}-${{ matrix.os }}-${{ matrix.threads }}
+        cancel-in-progress: false
 
       steps:
         - name: Checkout repository
@@ -71,7 +76,7 @@ jobs:
 
         - name: Run nr tests
           run: |
-            script -e -c "aztec test"
+            script -e -c "aztec test --test-threads ${{ matrix.threads }}"
 
         - name: Run js tests
           run: script -e -c "BASE_PXE_URL=http://localhost NODE_NO_WARNINGS=1 node --experimental-vm-modules $(yarn bin jest) --no-cache --runInBand --config jest.integration.config.json"
