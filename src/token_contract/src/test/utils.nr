@@ -11,6 +11,7 @@ use aztec::{
     test::helpers::{cheatcodes, test_environment::TestEnvironment},
 };
 use std::test::OracleMock;
+use std::ops::WrappingSub;
 use uint_note::uint_note::UintNote;
 
 pub global mint_amount: u128 = 10_000 as u128;
@@ -318,4 +319,9 @@ pub unconstrained fn _commitment_storage_read(
     // restore current contract address
     cheatcodes::set_contract_address(current_contract_address);
     value
+}
+
+/// @notice Returns the u128 maximum value
+pub unconstrained fn max_u128() -> u128 {
+    (0 as u128).wrapping_sub(1)
 }
