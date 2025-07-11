@@ -10,8 +10,8 @@ use aztec::{
     protocol_types::storage::map::derive_storage_slot_in_map,
     test::helpers::{cheatcodes, test_environment::TestEnvironment},
 };
-use std::test::OracleMock;
 use std::ops::WrappingSub;
+use std::test::OracleMock;
 use uint_note::uint_note::UintNote;
 
 pub global mint_amount: u128 = 10_000 as u128;
