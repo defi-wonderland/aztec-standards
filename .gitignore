@@ -10,3 +10,17 @@ store
 .cursor/*
 !.cursor/rules/
 !.cursor/rules/**
+
+# Deployment backups and generated files
+src/deployments.backup.*.json
+deployment_summary.md
+scripts/*.log
+
+# TypeScript build artifacts
+dest/
+*.tsbuildinfo
+
+# OS generated files
+Thumbs.db
+*.swp
+*.swo

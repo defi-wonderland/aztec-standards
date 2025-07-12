@@ -19,7 +19,9 @@
     "test:nr": "aztec test",
     "lint:prettier": "prettier '**/*.{js,ts}' --write",
     "bench": "NODE_NO_WARNINGS=1 aztec-benchmark --suffix _base",
-    "ccc": "yarn clean && yarn compile && yarn codegen"
+    "ccc": "yarn clean && yarn compile && yarn codegen",
+    "deploy": "tsx scripts/deploy.ts",
+    "deploy:testnet": "tsx scripts/deploy.ts"
   },
   "lint-staged": {
     "*.ts": "prettier --write -u"
@@ -38,6 +40,7 @@
     "@types/jest": "29.5.11",
     "@types/mocha": "10.0.6",
     "@types/node": "22.5.1",
+    "tsx": "^4.7.0",
     "husky": "9.1.7",
     "jest": "29.7.0",
     "lint-staged": "15.4.3",

@@ -6,6 +6,7 @@ Aztec Standards is a comprehensive collection of reusable, standardized contract
 - [Dripper Contract](#dripper-contract)
 - [Token Contract](#token-contract)
 - [NFT Contract](#nft-contract)
+- [Deployment System](#deployment-system)
 - [Future Contracts](#future-contracts)
 
 ## Dripper Contract
@@ -27,6 +28,37 @@ We published the [AIP-20 Aztec Token Standard](https://forum.aztec.network/t/req
 The `NFT` contract implements an ERC-721-like non-fungible token with Aztec-specific privacy extensions. It supports transfers and interactions through both private and public ownership, offering full coverage of Aztec's confidentiality features for unique digital assets.
 
 📖 **[View detailed NFT documentation](src/nft_contract/README.md)**
+
+## Deployment System
+
+This repository includes a robust, automated deployment system for deploying contracts to Aztec testnet with built-in retry functionality to handle testnet instability.
+
+### ✨ Features
+- 🔄 **Automatic retries** with exponential backoff for testnet stability
+- 🤖 **GitHub Actions integration** for automated deployments on main branch merges
+- 📋 **Automatic PR creation** with updated deployment addresses
+- ✅ **Address validation** and deployment verification
+- 📊 **Detailed deployment summaries** and reporting
+
+### 🚀 Quick Start
+
+```bash
+# Install dependencies
+yarn install
+
+# Deploy contracts to Aztec testnet
+yarn deploy
+```
+
+The deployment system automatically:
+1. Deploys the Dripper contract
+2. Deploys ETH, USDC, and DAI token contracts  
+3. Updates `src/deployments.json` with new addresses
+4. Creates backup files for safety
+
+### 📖 Documentation
+
+📖 **[View complete deployment documentation](DEPLOYMENT.md)**
 
 ## Future Contracts
 

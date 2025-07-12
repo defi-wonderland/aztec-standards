@@ -1,25 +1,31 @@
 {
   "compilerOptions": {
-    "rootDir": ".",
-    "outDir": "dest",
-    "tsBuildInfoFile": ".tsbuildinfo",
-    "target": "es2020",
-    "lib": ["esnext", "dom", "es2017.object"],
-    "module": "NodeNext",
-    "moduleResolution": "NodeNext",
-    "strict": true,
+    "target": "ES2022",
+    "lib": ["ES2022"],
+    "module": "ESNext",
+    "moduleResolution": "node",
     "declaration": true,
+    "outDir": "./dest",
+    "rootDir": ".",
+    "strict": true,
     "allowSyntheticDefaultImports": true,
-    "allowJs": true,
     "esModuleInterop": true,
-    "downlevelIteration": true,
-    "inlineSourceMap": true,
-    "declarationMap": true,
-    "importHelpers": true,
-    "resolveJsonModule": true,
-    "composite": true,
     "skipLibCheck": true,
-    "jsx": "react-jsx"
+    "forceConsistentCasingInFileNames": true,
+    "resolveJsonModule": true,
+    "allowImportingTsExtensions": true,
+    "noEmit": true
   },
-  "include": ["src", "scripts/**/*", "src/**/*.json", "src/artifacts/*", "target/**/*"]
+  "ts-node": {
+    "esm": true,
+    "experimentalSpecifierResolution": "node"
+  },
+  "include": [
+    "src/**/*",
+    "scripts/**/*"
+  ],
+  "exclude": [
+    "node_modules",
+    "dest"
+  ]
 }
