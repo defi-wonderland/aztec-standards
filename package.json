@@ -20,17 +20,18 @@
     "lint:prettier": "prettier '**/*.{js,ts}' --write",
     "bench": "NODE_NO_WARNINGS=1 aztec-benchmark --suffix _base",
     "ccc": "yarn clean && yarn compile && yarn codegen",
-    "deploy": "NODE_NO_WARNINGS=1 AZTEC_NODE_URL=http://localhost:8081 PXE_URL=http://localhost:8081 tsx src/ts/deploy.ts"
+    "deploy:sandbox": "NODE_NO_WARNINGS=1 AZTEC_NODE_URL=http://localhost:8080 PXE_URL=http://localhost:8080 tsx src/ts/deploy.ts",
+    "deploy:testnet": "NODE_NO_WARNINGS=1 AZTEC_NODE_URL=http://localhost:8081 PXE_URL=http://localhost:8081 tsx src/ts/deploy.ts"
   },
   "lint-staged": {
     "*.ts": "prettier --write -u"
   },
   "dependencies": {
-    "@aztec/accounts": "0.87.8",
-    "@aztec/aztec.js": "0.87.8",
-    "@aztec/noir-contracts.js": "0.87.8",
-    "@aztec/protocol-contracts": "0.87.8",
-    "@aztec/pxe": "0.87.8",
+    "@aztec/accounts": "0.87.9",
+    "@aztec/aztec.js": "0.87.9",
+    "@aztec/noir-contracts.js": "0.87.9",
+    "@aztec/protocol-contracts": "0.87.9",
+    "@aztec/pxe": "0.87.9",
     "@aztec/stdlib": "0.87.8",
     "@defi-wonderland/aztec-benchmark": "1.0.0",
     "@types/node": "22.5.1"
