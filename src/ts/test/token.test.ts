@@ -29,7 +29,7 @@ export async function deployTokenWithInitialSupply(deployer: Wallet, options: an
 }
 
 const setupTestSuite = async () => {
-  const pxe = await setupPXE();
+  const { pxe, store } = await setupPXE();
   const managers = await Promise.all(
     (await getInitialTestAccounts()).map(async (acc) => {
       return await AccountManager.create(

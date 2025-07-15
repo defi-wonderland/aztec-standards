@@ -32,7 +32,7 @@ export default class TokenContractBenchmark extends Benchmark {
    * Creates PXE client, gets accounts, and deploys the contract.
    */
   async setup(): Promise<TokenBenchmarkContext> {
-    const pxe = await setupPXE();
+    const { pxe, store } = await setupPXE();
     const managers = await Promise.all(
       (await getInitialTestAccounts()).map(async (acc) => {
         return await AccountManager.create(
