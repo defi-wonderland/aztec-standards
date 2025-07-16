@@ -30,12 +30,12 @@ unconstrained fn issue_private_to_private_exact_success() {
 
     // Deposit assets to get shares
     // Authorize the vault to use the caller's assets
-    let transfer_private_to_public_call_interface = Token::at(asset_address)
-        .transfer_private_to_public(owner, vault_address, deposit_amount, 0);
-    authwit_cheatcodes::add_private_authwit_from_call_interface(
-        owner,
+    utils::authorize_transfer_private_to_public(
+        asset_address,
         vault_address,
-        transfer_private_to_public_call_interface,
+        owner,
+        deposit_amount,
+        0,
     );
 
     // Deposit
@@ -79,12 +79,12 @@ unconstrained fn issue_private_to_private_exact_after_yield() {
 
     // Deposit assets to get shares
     // Authorize the vault to use the caller's assets
-    let transfer_private_to_public_call_interface = Token::at(asset_address)
-        .transfer_private_to_public(owner, vault_address, deposit_amount, 0);
-    authwit_cheatcodes::add_private_authwit_from_call_interface(
-        owner,
+    utils::authorize_transfer_private_to_public(
+        asset_address,
         vault_address,
-        transfer_private_to_public_call_interface,
+        owner,
+        deposit_amount,
+        0,
     );
 
     // Deposit
@@ -123,12 +123,12 @@ unconstrained fn issue_private_to_private_exact_too_many_assets() {
 
     // Deposit assets to get shares
     // Authorize the vault to use the caller's assets
-    let transfer_private_to_public_call_interface =
-        Token::at(asset_address).transfer_private_to_public(owner, vault_address, max_deposit, 0);
-    authwit_cheatcodes::add_private_authwit_from_call_interface(
-        owner,
+    utils::authorize_transfer_private_to_public(
+        asset_address,
         vault_address,
-        transfer_private_to_public_call_interface,
+        owner,
+        max_deposit,
+        0,
     );
 
     // Deposit
@@ -166,12 +166,12 @@ unconstrained fn issue_private_to_private_exact_request_too_many_shares() {
 
     // Deposit assets to get shares
     // Authorize the vault to use the caller's assets
-    let transfer_private_to_public_call_interface = Token::at(asset_address)
-        .transfer_private_to_public(owner, vault_address, deposit_amount, 0);
-    authwit_cheatcodes::add_private_authwit_from_call_interface(
-        owner,
+    utils::authorize_transfer_private_to_public(
+        asset_address,
         vault_address,
-        transfer_private_to_public_call_interface,
+        owner,
+        deposit_amount,
+        0,
     );
 
     // Deposit
@@ -219,12 +219,12 @@ unconstrained fn issue_private_to_private_exact_on_behalf_of_wrong_caller() {
 
     // Deposit assets to get shares
     // Authorize the vault to use the caller's assets
-    let transfer_private_to_public_call_interface = Token::at(asset_address)
-        .transfer_private_to_public(owner, vault_address, deposit_amount, 0);
-    authwit_cheatcodes::add_private_authwit_from_call_interface(
-        owner,
+    utils::authorize_transfer_private_to_public(
+        asset_address,
         vault_address,
-        transfer_private_to_public_call_interface,
+        owner,
+        deposit_amount,
+        0,
     );
 
     // Deposit
@@ -250,12 +250,12 @@ unconstrained fn issue_private_to_private_exact_on_behalf_of_other_success() {
 
     // Deposit assets to get shares
     // Authorize the vault to use the caller's assets
-    let transfer_private_to_public_call_interface = Token::at(asset_address)
-        .transfer_private_to_public(owner, vault_address, deposit_amount, 0);
-    authwit_cheatcodes::add_private_authwit_from_call_interface(
-        owner,
+    utils::authorize_transfer_private_to_public(
+        asset_address,
         vault_address,
-        transfer_private_to_public_call_interface,
+        owner,
+        deposit_amount,
+        0,
     );
 
     // Authorize the recipient to call issue_private_to_private_exact
