@@ -344,12 +344,12 @@ describe('NFT - Single PXE', () => {
     await assertOwnsPrivateNFT(nft, tokenId, alice.getAddress());
 
     // Bob initializes a transfer commitment for receiving the NFT
-    await nft.withWallet(bob).methods.initialize_transfer_commitment(bob.getAddress(), bob.getAddress()).send().wait();
+    await nft.withWallet(bob).methods.initialize_transfer_commitment(bob.getAddress(), bob.getAddress(), bob.getAddress()).send().wait();
 
     // Get the commitment value through simulation
     const commitment = await nft
       .withWallet(bob)
-      .methods.initialize_transfer_commitment(alice.getAddress(), bob.getAddress())
+      .methods.initialize_transfer_commitment(alice.getAddress(), bob.getAddress(), bob.getAddress())
       .simulate();
 
     // Alice transfers NFT to the commitment
@@ -375,7 +375,7 @@ describe('NFT - Single PXE', () => {
     // Create an invalid commitment (using wrong sender)
     const invalidCommitment = await nft
       .withWallet(bob)
-      .methods.initialize_transfer_commitment(carl.getAddress(), bob.getAddress())
+      .methods.initialize_transfer_commitment(carl.getAddress(), bob.getAddress(), bob.getAddress())
       .simulate();
 
     // Alice attempts to transfer to invalid commitment
