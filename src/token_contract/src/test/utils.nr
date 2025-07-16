@@ -375,7 +375,7 @@ pub unconstrained fn authorize_transfer_private_to_public(
     caller: AztecAddress,
     from: AztecAddress,
     amount: u128,
-    nonce: u128,
+    nonce: Field,
 ) {
     let transfer_private_to_public_call_interface =
         Token::at(token).transfer_private_to_public(from, caller, amount, nonce);
@@ -392,7 +392,7 @@ pub unconstrained fn authorize_transfer_public_to_public(
     caller: AztecAddress,
     from: AztecAddress,
     amount: u128,
-    nonce: u128,
+    nonce: Field,
 ) {
     let transfer_public_to_public_call_interface =
         Token::at(token).transfer_public_to_public(from, caller, amount, nonce);
