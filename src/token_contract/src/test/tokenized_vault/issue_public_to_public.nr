@@ -106,7 +106,7 @@ unconstrained fn issue_public_to_public_after_yield() {
 
     // Issue
     env.impersonate(owner);
-    let shares_requested: u128 = deposit_amount / 2; // The initial rate, when shares' supply is still 0, is given by the amount of assets held by the vault + 1. Since yield = 1, the rate is 1:2. 
+    let shares_requested: u128 = deposit_amount / 2; // The initial rate, when shares' supply is still 0, is given by the amount of assets held by the vault + 1. Since yield = 1, the rate is 1:2.
     Token::at(vault_address)
         .issue_public_to_public(owner, recipient, shares_requested, max_assets, 0)
         .call(&mut env.public());

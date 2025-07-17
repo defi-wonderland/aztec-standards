@@ -90,7 +90,7 @@ unconstrained fn issue_private_to_public_exact_after_yield() {
     // Deposit
     env.impersonate(owner);
     let max_assets: u128 = deposit_amount; // mint_amount / 2 because of yield
-    let requested_shares = deposit_amount / 2; // The initial rate, when shares' supply is still 0, is given by the amount of assets held by the vault + 1. Since yield = 1, the rate is 1:2. 
+    let requested_shares = deposit_amount / 2; // The initial rate, when shares' supply is still 0, is given by the amount of assets held by the vault + 1. Since yield = 1, the rate is 1:2.
     Token::at(vault_address)
         .issue_private_to_public_exact(owner, recipient, requested_shares, max_assets, 0)
         .call(&mut env.private());

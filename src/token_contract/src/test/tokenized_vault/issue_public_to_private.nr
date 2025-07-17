@@ -112,7 +112,7 @@ unconstrained fn issue_public_to_private_after_yield() {
 
     // Deposit
     env.impersonate(owner);
-    let expected_shares: u128 = deposit_amount / 2; // The initial rate, when shares' supply is still 0, is given by the amount of assets held by the vault + 1. Since yield = 1, the rate is 1:2. 
+    let expected_shares: u128 = deposit_amount / 2; // The initial rate, when shares' supply is still 0, is given by the amount of assets held by the vault + 1. Since yield = 1, the rate is 1:2.
     Token::at(vault_address)
         .issue_public_to_private(owner, recipient, expected_shares, max_assets, 0)
         .call(&mut env.private());

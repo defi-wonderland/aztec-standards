@@ -90,7 +90,7 @@ unconstrained fn deposit_public_to_private_exact_after_yield() {
 
     // Deposit
     env.impersonate(owner);
-    let min_shares: u128 = deposit_amount / 2; // The initial rate, when shares' supply is still 0, is given by the amount of assets held by the vault + 1. Since yield = 1, the rate is 1:2. 
+    let min_shares: u128 = deposit_amount / 2; // The initial rate, when shares' supply is still 0, is given by the amount of assets held by the vault + 1. Since yield = 1, the rate is 1:2.
     Token::at(vault_address)
         .deposit_public_to_private_exact(owner, recipient, deposit_amount, min_shares, 0)
         .call(&mut env.private());
