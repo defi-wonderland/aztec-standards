@@ -134,7 +134,7 @@ unconstrained fn issue_private_to_private_exact_too_many_assets() {
     // Deposit
     env.impersonate(owner);
     // At the first deposit 1 share = 1 asset
-    let requested_shares = deposit_amount - 1; // But should receive deposit_amount
+    let requested_shares = max_deposit - 1; // But should receive deposit_amount
     Token::at(vault_address)
         .issue_private_to_private_exact(owner, recipient, requested_shares, max_deposit, 0)
         .call(&mut env.private());
