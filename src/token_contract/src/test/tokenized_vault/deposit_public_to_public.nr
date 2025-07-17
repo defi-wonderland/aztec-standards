@@ -11,17 +11,18 @@ unconstrained fn deposit_public_to_public_without_asset() {
 
     // Deposit assets to get shares
     // Authorize the vault to use the caller's assets
-    let public_transfer_public_to_public_call_interface =
-        Token::at(asset_address).transfer_public_to_public(owner, vault_address, mint_amount, 0);
-    authwit_cheatcodes::add_public_authwit_from_call_interface(
-        owner,
+    let deposit_amount: u128 = mint_amount;
+    utils::authorize_transfer_public_to_public(
+        asset_address,
         vault_address,
-        public_transfer_public_to_public_call_interface,
+        owner,
+        deposit_amount,
+        0,
     );
 
     // Deposit should fail because the PublicImmutable asset was not initialized
     env.impersonate(owner);
-    Token::at(vault_address).deposit_public_to_public(owner, recipient, mint_amount, 0).call(
+    Token::at(vault_address).deposit_public_to_public(owner, recipient, deposit_amount, 0).call(
         &mut env.public(),
     );
     env.advance_block_by(1);
@@ -40,12 +41,12 @@ unconstrained fn deposit_public_to_public_success() {
 
     // Deposit assets to get shares
     // Authorize the vault to use the caller's assets
-    let public_transfer_public_to_public_call_interface =
-        Token::at(asset_address).transfer_public_to_public(owner, vault_address, deposit_amount, 0);
-    authwit_cheatcodes::add_public_authwit_from_call_interface(
-        owner,
+    utils::authorize_transfer_public_to_public(
+        asset_address,
         vault_address,
-        public_transfer_public_to_public_call_interface,
+        owner,
+        deposit_amount,
+        0,
     );
 
     // Deposit
@@ -86,12 +87,12 @@ unconstrained fn deposit_public_to_public_after_yield() {
 
     // Deposit assets to get shares
     // Authorize the vault to use the caller's assets
-    let public_transfer_public_to_public_call_interface =
-        Token::at(asset_address).transfer_public_to_public(owner, vault_address, deposit_amount, 0);
-    authwit_cheatcodes::add_public_authwit_from_call_interface(
-        owner,
+    utils::authorize_transfer_public_to_public(
+        asset_address,
         vault_address,
-        public_transfer_public_to_public_call_interface,
+        owner,
+        deposit_amount,
+        0,
     );
 
     // Deposit
@@ -145,12 +146,12 @@ unconstrained fn deposit_public_to_public_on_behalf_of_wrong_caller() {
 
     // Deposit assets to get shares
     // Authorize the vault to use the caller's assets
-    let public_transfer_public_to_public_call_interface =
-        Token::at(asset_address).transfer_public_to_public(owner, vault_address, deposit_amount, 0);
-    authwit_cheatcodes::add_public_authwit_from_call_interface(
-        owner,
+    utils::authorize_transfer_public_to_public(
+        asset_address,
         vault_address,
-        public_transfer_public_to_public_call_interface,
+        owner,
+        deposit_amount,
+        0,
     );
 
     // Deposit
@@ -173,12 +174,12 @@ unconstrained fn deposit_public_to_public_on_behalf_of_other_success() {
     env.advance_block_by(1);
 
     // Authorize the vault to use the caller's assets
-    let public_transfer_public_to_public_call_interface =
-        Token::at(asset_address).transfer_public_to_public(owner, vault_address, deposit_amount, 0);
-    authwit_cheatcodes::add_public_authwit_from_call_interface(
-        owner,
+    utils::authorize_transfer_public_to_public(
+        asset_address,
         vault_address,
-        public_transfer_public_to_public_call_interface,
+        owner,
+        deposit_amount,
+        0,
     );
 
     // Authorize the recipient to call deposit_public_to_public

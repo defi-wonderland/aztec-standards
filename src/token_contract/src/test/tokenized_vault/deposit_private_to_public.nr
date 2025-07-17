@@ -2,7 +2,7 @@ use crate::{test::utils::{self, mint_amount}, Token};
 use authwit::cheatcodes as authwit_cheatcodes;
 
 // #[test(should_fail_with = "Artifact not found when enriching public simulation error. Contract address: 0x0000000000000000000000000000000000000000000000000000000000000000.")]
-// TODO: private --> public execution flow is broken in noir tests. While this should fail in private context, the public context error is currently thrown.
+// TODO(https://defi-wonderland.slack.com/archives/C086S2Y2925/p1751922367349379): private --> public execution flow is broken in noir tests. While this should fail in private context, the public context error is currently thrown.
 #[test(should_fail_with = "Trying to read from uninitialized PublicImmutable")]
 unconstrained fn deposit_private_to_public_without_asset() {
     // Setup without account contracts. We are not using authwits here, so dummy accounts are enough
@@ -31,12 +31,12 @@ unconstrained fn deposit_private_to_public_success() {
 
     // Deposit assets to get shares
     // Authorize the vault to use the caller's assets
-    let transfer_private_to_public_call_interface = Token::at(asset_address)
-        .transfer_private_to_public(owner, vault_address, deposit_amount, 0);
-    authwit_cheatcodes::add_private_authwit_from_call_interface(
-        owner,
+    utils::authorize_transfer_private_to_public(
+        asset_address,
         vault_address,
-        transfer_private_to_public_call_interface,
+        owner,
+        deposit_amount,
+        0,
     );
 
     // Deposit
@@ -78,12 +78,12 @@ unconstrained fn deposit_private_to_public_after_yield() {
 
     // Deposit assets to get shares
     // Authorize the vault to use the caller's assets
-    let transfer_private_to_public_call_interface = Token::at(asset_address)
-        .transfer_private_to_public(owner, vault_address, deposit_amount, 0);
-    authwit_cheatcodes::add_private_authwit_from_call_interface(
-        owner,
+    utils::authorize_transfer_private_to_public(
+        asset_address,
         vault_address,
-        transfer_private_to_public_call_interface,
+        owner,
+        deposit_amount,
+        0,
     );
 
     // Deposit
@@ -137,12 +137,12 @@ unconstrained fn deposit_private_to_public_on_behalf_of_wrong_caller() {
 
     // Deposit assets to get shares
     // Authorize the vault to use the caller's assets
-    let transfer_private_to_public_call_interface = Token::at(asset_address)
-        .transfer_private_to_public(owner, vault_address, deposit_amount, 0);
-    authwit_cheatcodes::add_private_authwit_from_call_interface(
-        owner,
+    utils::authorize_transfer_private_to_public(
+        asset_address,
         vault_address,
-        transfer_private_to_public_call_interface,
+        owner,
+        deposit_amount,
+        0,
     );
 
     // Deposit
@@ -166,12 +166,12 @@ unconstrained fn deposit_private_to_public_on_behalf_of_other_success() {
 
     // Deposit assets to get shares
     // Authorize the vault to use the caller's assets
-    let transfer_private_to_public_call_interface = Token::at(asset_address)
-        .transfer_private_to_public(owner, vault_address, deposit_amount, 0);
-    authwit_cheatcodes::add_private_authwit_from_call_interface(
-        owner,
+    utils::authorize_transfer_private_to_public(
+        asset_address,
         vault_address,
-        transfer_private_to_public_call_interface,
+        owner,
+        deposit_amount,
+        0,
     );
 
     // Authorize the recipient to call deposit_private_to_public
