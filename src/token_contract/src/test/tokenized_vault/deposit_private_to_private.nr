@@ -182,7 +182,7 @@ unconstrained fn deposit_private_to_private_request_too_many_shares() {
 
 // Unknown auth witness for message hash 0x232f5ba6edab22c5556f3c3ab5560760cc4e579cb15f1ced71986c45ae9907b2
 #[test(should_fail_with = "Unknown auth witness for message hash ")]
-unconstrained fn deposit_private_to_private_without_approval() {
+unconstrained fn deposit_private_to_private_without_asset_approval() {
     // Setup with asset token
     let (env, vault_address, owner, recipient, asset_address) = utils::setup_with_asset(true);
 

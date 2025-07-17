@@ -115,7 +115,7 @@ unconstrained fn deposit_public_to_public_after_yield() {
 }
 
 #[test(should_fail_with = "unauthorized")]
-unconstrained fn deposit_public_to_public_without_approval() {
+unconstrained fn deposit_public_to_public_without_asset_approval() {
     // Setup with asset token
     let (env, vault_address, owner, recipient, asset_address) = utils::setup_with_asset(false);
 

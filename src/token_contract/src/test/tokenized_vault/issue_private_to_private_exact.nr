@@ -186,7 +186,7 @@ unconstrained fn issue_private_to_private_exact_request_too_many_shares() {
 }
 
 #[test(should_fail_with = "Unknown auth witness for message hash ")]
-unconstrained fn issue_private_to_private_exact_without_approval() {
+unconstrained fn issue_private_to_private_exact_without_asset_approval() {
     // Setup with asset token
     let (env, vault_address, owner, recipient, asset_address) = utils::setup_with_asset(true);
 
