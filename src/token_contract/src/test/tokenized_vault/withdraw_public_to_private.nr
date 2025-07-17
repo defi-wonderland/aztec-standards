@@ -19,7 +19,7 @@ unconstrained fn withdraw_public_to_private_without_asset() {
     env.advance_block_by(1);
 }
 
-// TODO: this test fails because the ivsk is currently needed for emitting a note, but the vault contract doesn't have one.
+// TODO(#15666): this test fails because the ivsk is currently needed for emitting a note, but the vault contract doesn't have one.
 // #[test]
 #[test(should_fail_with = "No public key registered for address")]
 unconstrained fn withdraw_public_to_private_success() {
@@ -57,7 +57,7 @@ unconstrained fn withdraw_public_to_private_success() {
     utils::check_public_balance(asset_address, vault_address, 0);
 }
 
-// TODO: this test fails because the ivsk is currently needed for emitting a note, but the vault contract doesn't have one.
+// TODO(#15666): this test fails because the ivsk is currently needed for emitting a note, but the vault contract doesn't have one.
 // #[test]
 #[test(should_fail_with = "No public key registered for address")]
 unconstrained fn withdraw_public_to_private_after_yield() {
@@ -161,7 +161,7 @@ unconstrained fn withdraw_public_to_private_on_behalf_of_wrong_caller() {
     env.advance_block_by(1);
 }
 
-// TODO: this test fails because the ivsk is currently needed for emitting a note, but the vault contract doesn't have one.
+// TODO(#15666): this test fails because the ivsk is currently needed for emitting a note, but the vault contract doesn't have one.
 // #[test]
 #[test(should_fail_with = "No public key registered for address")]
 unconstrained fn withdraw_public_to_private_on_behalf_of_other_success() {
