@@ -90,7 +90,7 @@ unconstrained fn issue_private_to_public_exact_after_yield() {
     // Deposit
     env.impersonate(owner);
     let max_assets: u128 = deposit_amount; // mint_amount / 2 because of yield
-    let requested_shares = 5_000;
+    let requested_shares = deposit_amount / 2; // The initial rate, when shares' supply is still 0, is given by the amount of assets held by the vault + 1. Since yield = 1, the rate is 1:2. 
     Token::at(vault_address)
         .issue_private_to_public_exact(owner, recipient, requested_shares, max_assets, 0)
         .call(&mut env.private());
@@ -132,7 +132,7 @@ unconstrained fn issue_private_to_public_exact_too_many_assets() {
     // Deposit
     env.impersonate(owner);
     // At the first deposit 1 share = 1 asset
-    let requested_shares = 9_999; // But should receive 10_000
+    let requested_shares = deposit_amount - 1; // But should receive deposit_amount
     Token::at(vault_address)
         .issue_private_to_public_exact(owner, recipient, requested_shares, max_deposit, 0)
         .call(&mut env.private());
