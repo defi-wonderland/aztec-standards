@@ -109,7 +109,7 @@ unconstrained fn issue_private_to_public_exact_after_yield() {
 }
 
 #[test]
-unconstrained fn issue_public_to_private_exact_too_many_assets() {
+unconstrained fn issue_private_to_public_exact_too_many_assets() {
     // Setup with asset token
     let (env, vault_address, owner, recipient, asset_address) = utils::setup_with_asset(true);
 
