@@ -167,22 +167,22 @@ export default class TokenContractBenchmark extends Benchmark {
 
       // Withdraw methods
       vaultContract.withWallet(bob).methods.withdraw_public_to_public(bobAddress, aliceAddress, amt(1), 0),
-      // TODO(#15666): uncomment withdraw_public_to_private when the ivsk is no longer needed for computing the app tagging secret.
+      // TODO(#15666 & #15118): uncomment withdraw_public_to_private when the ivsk is no longer needed for computing the app tagging secret.
       // vaultContract.withWallet(bob).methods.withdraw_public_to_private(bobAddress, aliceAddress, amt(1), 0),
-      // TODO(#15666): uncomment withdraw_private_to_private when the ivsk is no longer needed for computing the app tagging secret.
+      // TODO(#15666 & #15118): uncomment withdraw_private_to_private when the ivsk is no longer needed for computing the app tagging secret.
       // vaultContract.withWallet(bob).methods.withdraw_private_to_private(bobAddress, aliceAddress, amt(1), amt(1), 0),
       vaultContract
         .withWallet(bob)
         .methods.withdraw_private_to_public_exact(bobAddress, aliceAddress, amt(1), amt(1), 0),
-      // TODO(#15666): uncomment withdraw_private_to_private_exact when the ivsk is no longer needed for computing the app tagging secret.
+      // TODO(#15666 & #15118): uncomment withdraw_private_to_private_exact when the ivsk is no longer needed for computing the app tagging secret.
       // vaultContract.withWallet(bob).methods.withdraw_private_to_private_exact(bobAddress, aliceAddress, amt(1), amt(1), 0),
 
       // Redeem methods
       vaultContract.withWallet(bob).methods.redeem_public_to_public(bobAddress, aliceAddress, amt(1), 0),
       vaultContract.withWallet(bob).methods.redeem_private_to_public(bobAddress, aliceAddress, amt(1), 0),
-      // TODO(#15666): uncomment redeem_private_to_private_exact when the ivsk is no longer needed for computing the app tagging secret.
+      // TODO(#15666 & #15118): uncomment redeem_private_to_private_exact when the ivsk is no longer needed for computing the app tagging secret.
       // vaultContract.withWallet(bob).methods.redeem_private_to_private_exact(bobAddress, aliceAddress, amt(1), amt(1), 0),
-      // TODO(#15666): uncomment redeem_public_to_private_exact when the ivsk is no longer needed for computing the app tagging secret.
+      // TODO(#15666 & #15118): uncomment redeem_public_to_private_exact when the ivsk is no longer needed for computing the app tagging secret.
       // vaultContract.withWallet(bob).methods.redeem_public_to_private_exact(bobAddress, aliceAddress, amt(1), amt(1), 0),
     ];
 
