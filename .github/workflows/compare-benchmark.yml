@@ -139,7 +139,10 @@ jobs:
           clean: false
 
       - name: Clean store
-        run: rm -rf store
+        run: |
+          ls -la
+          cat benchmarks/token_contract.benchmark.ts
+          rm -rf store
 
       # Restore the base benchmark results to avoid the benchmark results being removed by the Checkout PR step
       - name: Restore base benchmark results
