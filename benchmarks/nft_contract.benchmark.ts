@@ -1,20 +1,11 @@
-import {
-  AccountManager,
-  type AccountWallet,
-  AccountWalletWithSecretKey,
-  type ContractFunctionInteraction,
-  type PXE,
-  createPXEClient,
-} from '@aztec/aztec.js';
-import { getInitialTestAccounts } from '@aztec/accounts/testing';
+import { type AccountWallet, type ContractFunctionInteraction, type PXE } from '@aztec/aztec.js';
+import { getInitialTestAccountsManagers } from '@aztec/accounts/testing';
 
 // Import the new Benchmark base class and context
 import { Benchmark, BenchmarkContext } from '@defi-wonderland/aztec-benchmark';
 
 import { NFTContract } from '../src/artifacts/NFT.js';
 import { deployNFTWithMinter, setupPXE } from '../src/ts/test/utils.js';
-import { deriveSigningKey } from '@aztec/stdlib/keys';
-import { SchnorrAccountContract } from '@aztec/accounts/schnorr';
 
 // Extend the BenchmarkContext from the new package
 interface NFTBenchmarkContext extends BenchmarkContext {
@@ -32,16 +23,7 @@ export default class NFTContractBenchmark extends Benchmark {
    */
   async setup(): Promise<NFTBenchmarkContext> {
     const { pxe } = await setupPXE();
-    const managers = await Promise.all(
-      (await getInitialTestAccounts()).map(async (acc) => {
-        return await AccountManager.create(
-          pxe,
-          acc.secret,
-          new SchnorrAccountContract(deriveSigningKey(acc.secret)),
-          acc.salt,
-        );
-      }),
-    );
+    const managers = await getInitialTestAccountsManagers(pxe);
     const accounts = await Promise.all(managers.map((acc) => acc.register()));
     const [deployer] = accounts;
     const deployedBaseContract = await deployNFTWithMinter(deployer, { universalDeploy: true });
