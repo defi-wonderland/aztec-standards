@@ -1,11 +1,5 @@
-import {
-  AccountManager,
-  type AccountWallet,
-  type ContractFunctionInteraction,
-  type PXE,
-  createPXEClient,
-} from '@aztec/aztec.js';
-import { getInitialTestAccounts } from '@aztec/accounts/testing';
+import { type AccountWallet, type ContractFunctionInteraction, type PXE } from '@aztec/aztec.js';
+import { getInitialTestAccountsManagers } from '@aztec/accounts/testing';
 import { parseUnits } from 'viem';
 
 // Import the new Benchmark base class and context
@@ -13,8 +7,6 @@ import { Benchmark, BenchmarkContext } from '@defi-wonderland/aztec-benchmark';
 
 import { TokenContract } from '../src/artifacts/Token.js';
 import { deployTokenWithMinter, setupPXE } from '../src/ts/test/utils.js';
-import { SchnorrAccountContract } from '@aztec/accounts/schnorr';
-import { deriveSigningKey } from '@aztec/stdlib/keys';
 
 // Extend the BenchmarkContext from the new package
 interface TokenBenchmarkContext extends BenchmarkContext {
@@ -37,18 +29,12 @@ export default class TokenContractBenchmark extends Benchmark {
    * Sets up the benchmark environment for the TokenContract.
    * Creates PXE client, gets accounts, and deploys the contract.
    */
+
   async setup(): Promise<TokenBenchmarkContext> {
-    const pxe = await setupPXE();
-    const managers = await Promise.all(
-      (await getInitialTestAccounts()).map(async (acc) => {
-        return await AccountManager.create(
-          pxe,
-          acc.secret,
-          new SchnorrAccountContract(deriveSigningKey(acc.secret)),
-          acc.salt,
-        );
-      }),
-    );
+    const { pxe, store } = await setupPXE();
+    console.log(pxe, store);
+    console.log(await pxe.getNodeInfo());
+    const managers = await getInitialTestAccountsManagers(pxe);
     const accounts = await Promise.all(managers.map((acc) => acc.register()));
     const [deployer] = accounts;
     const deployedBaseContract = await deployTokenWithMinter(deployer);
@@ -66,19 +52,19 @@ export default class TokenContractBenchmark extends Benchmark {
     const methods: ContractFunctionInteraction[] = [
       // Mint methods
       tokenContract.withWallet(alice).methods.mint_to_private(owner, owner, amt(100)),
-      tokenContract.withWallet(alice).methods.mint_to_public(owner, amt(100)),
-      // Transfer methods
-      tokenContract.withWallet(alice).methods.transfer_private_to_public(owner, bob.getAddress(), amt(10), 0),
-      tokenContract
-        .withWallet(alice)
-        .methods.transfer_private_to_public_with_commitment(owner, bob.getAddress(), amt(10), 0),
-      tokenContract.withWallet(alice).methods.transfer_private_to_private(owner, bob.getAddress(), amt(10), 0),
-      tokenContract.withWallet(alice).methods.transfer_public_to_private(owner, bob.getAddress(), amt(10), 0),
-      tokenContract.withWallet(alice).methods.transfer_public_to_public(owner, bob.getAddress(), amt(10), 0),
+      // tokenContract.withWallet(alice).methods.mint_to_public(owner, amt(100)),
+      // // Transfer methods
+      // tokenContract.withWallet(alice).methods.transfer_private_to_public(owner, bob.getAddress(), amt(10), 0),
+      // tokenContract
+      //   .withWallet(alice)
+      //   .methods.transfer_private_to_public_with_commitment(owner, bob.getAddress(), amt(10), 0),
+      // tokenContract.withWallet(alice).methods.transfer_private_to_private(owner, bob.getAddress(), amt(10), 0),
+      // tokenContract.withWallet(alice).methods.transfer_public_to_private(owner, bob.getAddress(), amt(10), 0),
+      // tokenContract.withWallet(alice).methods.transfer_public_to_public(owner, bob.getAddress(), amt(10), 0),
 
-      // Burn methods
-      tokenContract.withWallet(alice).methods.burn_private(owner, amt(10), 0),
-      tokenContract.withWallet(alice).methods.burn_public(owner, amt(10), 0),
+      // // Burn methods
+      // tokenContract.withWallet(alice).methods.burn_private(owner, amt(10), 0),
+      // tokenContract.withWallet(alice).methods.burn_public(owner, amt(10), 0),
     ];
 
     return methods.filter(Boolean);
