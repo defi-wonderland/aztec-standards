@@ -38,47 +38,47 @@ jobs:
       - name: Update path
         run: echo "/home/runner/.aztec/bin" >> $GITHUB_PATH
 
-      # ──────────────────────────────────────────────────────────────
-      # 0️⃣  Run benchmark in current branch // REMOVE THIS STEP
-      # ──────────────────────────────────────────────────────────────
-      - name: Install Aztec CLI
-        run: |
-          curl -s https://install.aztec.network > tmp.sh
-          bash tmp.sh <<< yes "yes"
+      # # ──────────────────────────────────────────────────────────────
+      # # 0️⃣  Run benchmark in current branch // REMOVE THIS STEP
+      # # ──────────────────────────────────────────────────────────────
+      # - name: Install Aztec CLI
+      #   run: |
+      #     curl -s https://install.aztec.network > tmp.sh
+      #     bash tmp.sh <<< yes "yes"
 
-      - name: Detect Aztec version (PR)
-        id: prver0
-        run: |
-          VER=$(node -p "require('./package.json').config.aztecVersion")
-          echo "ver=$VER" >> "$GITHUB_OUTPUT"
-          echo "PR Aztec version is $VER"
+      # - name: Detect Aztec version (PR)
+      #   id: prver0
+      #   run: |
+      #     VER=$(node -p "require('./package.json').config.aztecVersion")
+      #     echo "ver=$VER" >> "$GITHUB_OUTPUT"
+      #     echo "PR Aztec version is $VER"
 
-      - name: Switch CLI to PR version
-        run: |
-          VERSION=${{ steps.prver0.outputs.ver }} aztec-up
+      # - name: Switch CLI to PR version
+      #   run: |
+      #     VERSION=${{ steps.prver0.outputs.ver }} aztec-up
 
-      - name: Start sandbox (PR, background)
-        run: aztec start --sandbox &
+      # - name: Start sandbox (PR, background)
+      #   run: aztec start --sandbox &
 
-      - name: Start PXE node (PR, background)
-        if: steps.prver0.outputs.ver_diff == 'true'
-        run: |
-          VERSION=${{ steps.prver0.outputs.ver }} aztec \
-            start --port 8081 --pxe --pxe.nodeUrl=http://localhost:8080/ \
-            --pxe.proverEnabled false &
+      # - name: Start PXE node (PR, background)
+      #   if: steps.prver0.outputs.ver_diff == 'true'
+      #   run: |
+      #     VERSION=${{ steps.prver0.outputs.ver }} aztec \
+      #       start --port 8081 --pxe --pxe.nodeUrl=http://localhost:8080/ \
+      #       --pxe.proverEnabled false &
 
-      - name: Install deps (PR)
-        run: yarn
+      # - name: Install deps (PR)
+      #   run: yarn
 
-      - name: Compile contracts (PR)
-        run: script -e -c "${AZTEC_NARGO:-aztec-nargo} compile"
+      # - name: Compile contracts (PR)
+      #   run: script -e -c "${AZTEC_NARGO:-aztec-nargo} compile"
 
-      - name: Codegen wrappers (PR)
-        run: script -e -c "aztec codegen target --outdir src/artifacts --force"
+      # - name: Codegen wrappers (PR)
+      #   run: script -e -c "aztec codegen target --outdir src/artifacts --force"
 
-      - name: Benchmark (PR)
-        run: |
-          npx aztec-benchmark --suffix _pr --output-dir ${{ env.BENCH_DIR }}
+      # - name: Benchmark (PR)
+      #   run: |
+      #     npx aztec-benchmark --suffix _pr --output-dir ${{ env.BENCH_DIR }}
 
       # ──────────────────────────────────────────────────────────────
       # 1️⃣  BENCHMARK BASE COMMIT
@@ -137,6 +137,9 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.head.sha }}
           clean: false
+
+      - name: Clean store
+        run: rm -rf store
 
       # Restore the base benchmark results to avoid the benchmark results being removed by the Checkout PR step
       - name: Restore base benchmark results
