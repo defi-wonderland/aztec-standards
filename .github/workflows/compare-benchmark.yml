@@ -16,14 +16,14 @@ env:
 
 jobs:
   benchmark:
-      strategy:
-        matrix:
-          os: [ubuntu-latest-m]
-          threads: [12]
+    strategy:
+      matrix:
+        os: [ubuntu-latest-m]
+        threads: [12]
 
-      runs-on: 
-        labels: ${{ matrix.os }}
-      timeout-minutes: 12
+    runs-on: 
+      labels: ${{ matrix.os }}
+    timeout-minutes: 12
 
     steps:
       # ──────────────────────────────────────────────────────────────
