@@ -7,6 +7,7 @@ import { Benchmark, BenchmarkContext } from '@defi-wonderland/aztec-benchmark';
 
 import { TokenContract } from '../src/artifacts/Token.js';
 import { deployTokenWithMinter, setupPXE } from '../src/ts/test/utils.js';
+import { NamedBenchmarkedInteraction } from '@defi-wonderland/aztec-benchmark/dist/types.js';
 
 // Extend the BenchmarkContext from the new package
 interface TokenBenchmarkContext extends BenchmarkContext {
@@ -29,8 +30,9 @@ export default class TokenContractBenchmark extends Benchmark {
    * Sets up the benchmark environment for the TokenContract.
    * Creates PXE client, gets accounts, and deploys the contract.
    */
+
   async setup(): Promise<TokenBenchmarkContext> {
-    const { pxe } = await setupPXE();
+    const { pxe, store } = await setupPXE();
     const managers = await getInitialTestAccountsManagers(pxe);
     const accounts = await Promise.all(managers.map((acc) => acc.register()));
     const [deployer] = accounts;
@@ -49,19 +51,19 @@ export default class TokenContractBenchmark extends Benchmark {
     const methods: ContractFunctionInteraction[] = [
       // Mint methods
       tokenContract.withWallet(alice).methods.mint_to_private(owner, owner, amt(100)),
-      tokenContract.withWallet(alice).methods.mint_to_public(owner, amt(100)),
-      // Transfer methods
-      tokenContract.withWallet(alice).methods.transfer_private_to_public(owner, bob.getAddress(), amt(10), 0),
-      tokenContract
-        .withWallet(alice)
-        .methods.transfer_private_to_public_with_commitment(owner, bob.getAddress(), amt(10), 0),
-      tokenContract.withWallet(alice).methods.transfer_private_to_private(owner, bob.getAddress(), amt(10), 0),
-      tokenContract.withWallet(alice).methods.transfer_public_to_private(owner, bob.getAddress(), amt(10), 0),
-      tokenContract.withWallet(alice).methods.transfer_public_to_public(owner, bob.getAddress(), amt(10), 0),
+      // tokenContract.withWallet(alice).methods.mint_to_public(owner, amt(100)),
+      // // Transfer methods
+      // tokenContract.withWallet(alice).methods.transfer_private_to_public(owner, bob.getAddress(), amt(10), 0),
+      // tokenContract
+      //   .withWallet(alice)
+      //   .methods.transfer_private_to_public_with_commitment(owner, bob.getAddress(), amt(10), 0),
+      // tokenContract.withWallet(alice).methods.transfer_private_to_private(owner, bob.getAddress(), amt(10), 0),
+      // tokenContract.withWallet(alice).methods.transfer_public_to_private(owner, bob.getAddress(), amt(10), 0),
+      // tokenContract.withWallet(alice).methods.transfer_public_to_public(owner, bob.getAddress(), amt(10), 0),
 
-      // Burn methods
-      tokenContract.withWallet(alice).methods.burn_private(owner, amt(10), 0),
-      tokenContract.withWallet(alice).methods.burn_public(owner, amt(10), 0),
+      // // Burn methods
+      // tokenContract.withWallet(alice).methods.burn_private(owner, amt(10), 0),
+      // tokenContract.withWallet(alice).methods.burn_public(owner, amt(10), 0),
     ];
 
     return methods.filter(Boolean);

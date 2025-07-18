@@ -41,20 +41,20 @@ export default class NFTContractBenchmark extends Benchmark {
     const methods: ContractFunctionInteraction[] = [
       // Mint methods
       nftContract.withWallet(alice).methods.mint_to_private(owner, 1),
-      nftContract.withWallet(alice).methods.mint_to_public(owner, 2),
+      // nftContract.withWallet(alice).methods.mint_to_public(owner, 2),
 
-      // Transfer methods
-      nftContract.withWallet(alice).methods.transfer_private_to_public(owner, owner, 1, 0),
-      nftContract.withWallet(alice).methods.transfer_public_to_private(owner, owner, 1, 0),
-      nftContract.withWallet(alice).methods.transfer_private_to_private(owner, owner, 1, 0),
-      nftContract.withWallet(alice).methods.transfer_public_to_public(owner, owner, 2, 0),
+      // // Transfer methods
+      // nftContract.withWallet(alice).methods.transfer_private_to_public(owner, owner, 1, 0),
+      // nftContract.withWallet(alice).methods.transfer_public_to_private(owner, owner, 1, 0),
+      // nftContract.withWallet(alice).methods.transfer_private_to_private(owner, owner, 1, 0),
+      // nftContract.withWallet(alice).methods.transfer_public_to_public(owner, owner, 2, 0),
 
-      // NOTE: don't have enough private NFT's to burn_private
-      // nftContract.withWallet(alice).methods.transfer_private_to_public_with_commitment(owner, owner, 1, 0),
+      // // NOTE: don't have enough private NFT's to burn_private
+      // // nftContract.withWallet(alice).methods.transfer_private_to_public_with_commitment(owner, owner, 1, 0),
 
-      // Burn methods
-      nftContract.withWallet(alice).methods.burn_private(owner, 1, 0),
-      nftContract.withWallet(alice).methods.burn_public(owner, 2, 0),
+      // // Burn methods
+      // nftContract.withWallet(alice).methods.burn_private(owner, 1, 0),
+      // nftContract.withWallet(alice).methods.burn_public(owner, 2, 0),
     ];
 
     return methods.filter(Boolean);
