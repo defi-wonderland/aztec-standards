@@ -7,7 +7,6 @@ import { Benchmark, BenchmarkContext } from '@defi-wonderland/aztec-benchmark';
 
 import { TokenContract } from '../src/artifacts/Token.js';
 import { deployTokenWithMinter, setupPXE } from '../src/ts/test/utils.js';
-import { NamedBenchmarkedInteraction } from '@defi-wonderland/aztec-benchmark/dist/types.js';
 
 // Extend the BenchmarkContext from the new package
 interface TokenBenchmarkContext extends BenchmarkContext {

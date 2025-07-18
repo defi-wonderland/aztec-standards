@@ -141,7 +141,7 @@ jobs:
       - name: Clean store
         run: |
           ls -la
-          echo "branch: $(git branch --show-current)"
+          echo $(git branch --show-current)
           cat benchmarks/token_contract.benchmark.ts
           rm -rf store
 
