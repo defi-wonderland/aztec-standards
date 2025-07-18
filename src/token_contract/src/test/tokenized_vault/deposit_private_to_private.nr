@@ -89,7 +89,7 @@ unconstrained fn deposit_private_to_private_after_yield() {
 
     // Deposit
     env.impersonate(owner);
-    let expected_shares: u128 = 5_000; // 10_000 / 2 because of yield
+    let expected_shares: u128 = deposit_amount / 2; // The initial rate, when shares' supply is still 0, is given by the amount of assets held by the vault + 1. Since yield = 1, the rate is 1:2.
     Token::at(vault_address)
         .deposit_private_to_private(owner, recipient, deposit_amount, expected_shares, 0)
         .call(&mut env.private());
@@ -131,7 +131,7 @@ unconstrained fn deposit_private_to_private_request_fewer_shares() {
     // Deposit
     env.impersonate(owner);
     // At the first deposit 1 share = 1 asset
-    let shares = 9_999;
+    let shares = deposit_amount - 1; // Request fewer shares than possible
     Token::at(vault_address)
         .deposit_private_to_private(owner, recipient, deposit_amount, shares, 0)
         .call(&mut env.private());
@@ -182,7 +182,7 @@ unconstrained fn deposit_private_to_private_request_too_many_shares() {
 
 // Unknown auth witness for message hash 0x232f5ba6edab22c5556f3c3ab5560760cc4e579cb15f1ced71986c45ae9907b2
 #[test(should_fail_with = "Unknown auth witness for message hash ")]
-unconstrained fn deposit_private_to_private_without_approval() {
+unconstrained fn deposit_private_to_private_without_asset_approval() {
     // Setup with asset token
     let (env, vault_address, owner, recipient, asset_address) = utils::setup_with_asset(true);
 

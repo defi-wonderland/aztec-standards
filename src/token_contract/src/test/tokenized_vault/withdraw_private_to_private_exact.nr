@@ -82,7 +82,7 @@ unconstrained fn withdraw_private_to_private_exact_after_yield() {
     );
 
     // Mint some asset tokens to the vault contract
-    let yield_amount: u128 = 2;
+    let yield_amount: u128 = 2; // Using 2 instead of 1 avoids rounding issues from anti-inflation logic: 1 goes to the user, 1 stays in the vault.
     env.impersonate(owner);
     Token::at(asset_address).mint_to_public(vault_address, yield_amount).call(&mut env.public());
     env.advance_block_by(1);

@@ -94,7 +94,7 @@ unconstrained fn deposit_private_to_public_after_yield() {
     env.advance_block_by(1);
 
     // Check recipient got shares
-    let expected_shares: u128 = 5_000; // 10_000 / 2 because of yield
+    let expected_shares: u128 = deposit_amount / 2; // The initial rate, when shares' supply is still 0, is given by the amount of assets held by the vault + 1. Since yield = 1, the rate is 1:2.
     utils::check_public_balance(vault_address, recipient, expected_shares);
 
     // Check the total supply got updated
@@ -106,7 +106,7 @@ unconstrained fn deposit_private_to_public_after_yield() {
 }
 
 #[test(should_fail_with = "Unknown auth witness for message hash ")]
-unconstrained fn deposit_private_to_public_without_approval() {
+unconstrained fn deposit_private_to_public_without_asset_approval() {
     // Setup with asset token
     let (env, vault_address, owner, recipient, asset_address) = utils::setup_with_asset(true);
 

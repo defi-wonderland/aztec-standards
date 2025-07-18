@@ -29,20 +29,20 @@ unconstrained fn issue_public_to_public_success() {
     utils::authorize_transfer_public_to_public(asset_address, vault_address, owner, max_assets, 0);
 
     // Issue
-    let shares_requested: u128 = max_assets;
+    let requested_shares: u128 = max_assets;
     env.impersonate(owner);
     Token::at(vault_address)
-        .issue_public_to_public(owner, recipient, shares_requested, max_assets, 0)
+        .issue_public_to_public(owner, recipient, requested_shares, max_assets, 0)
         .call(&mut env.public());
     env.advance_block_by(1);
 
     // Check recipient got shares
     // At the first deposit 1 share = 1 asset
-    utils::check_public_balance(vault_address, recipient, shares_requested);
+    utils::check_public_balance(vault_address, recipient, requested_shares);
 
     // Check the total supply got updated
     let total_supply = Token::at(vault_address).total_supply().view(&mut env.public());
-    assert(total_supply == shares_requested, "Incorrect shares total supply");
+    assert(total_supply == requested_shares, "Incorrect shares total supply");
 
     // Check vault has assets
     utils::check_public_balance(asset_address, vault_address, max_assets);
@@ -63,20 +63,20 @@ unconstrained fn issue_public_to_public_with_change_success() {
     utils::authorize_transfer_public_to_public(asset_address, vault_address, owner, max_assets, 0);
 
     // Issue
-    let shares_requested: u128 = max_assets - 1;
+    let requested_shares: u128 = max_assets - 1;
     env.impersonate(owner);
     Token::at(vault_address)
-        .issue_public_to_public(owner, recipient, shares_requested, max_assets, 0)
+        .issue_public_to_public(owner, recipient, requested_shares, max_assets, 0)
         .call(&mut env.public());
     env.advance_block_by(1);
 
     // Check recipient got shares
     // At the first deposit 1 share = 1 asset
-    utils::check_public_balance(vault_address, recipient, shares_requested);
+    utils::check_public_balance(vault_address, recipient, requested_shares);
 
     // Check the total supply got updated
     let total_supply = Token::at(vault_address).total_supply().view(&mut env.public());
-    assert(total_supply == shares_requested, "Incorrect shares total supply");
+    assert(total_supply == requested_shares, "Incorrect shares total supply");
 
     // Check vault has assets
     utils::check_public_balance(asset_address, vault_address, max_assets - 1);
@@ -106,18 +106,18 @@ unconstrained fn issue_public_to_public_after_yield() {
 
     // Issue
     env.impersonate(owner);
-    let shares_requested: u128 = 5_000;
+    let requested_shares: u128 = max_assets / 2; // The initial rate, when shares' supply is still 0, is given by the amount of assets held by the vault + 1. Since yield = 1, the rate is 1:2.
     Token::at(vault_address)
-        .issue_public_to_public(owner, recipient, shares_requested, max_assets, 0)
+        .issue_public_to_public(owner, recipient, requested_shares, max_assets, 0)
         .call(&mut env.public());
     env.advance_block_by(1);
 
     // Check recipient got shares
-    utils::check_public_balance(vault_address, recipient, shares_requested);
+    utils::check_public_balance(vault_address, recipient, requested_shares);
 
     // Check the total supply got updated
     let total_supply = Token::at(vault_address).total_supply().view(&mut env.public());
-    assert(total_supply == shares_requested, "Incorrect shares total supply");
+    assert(total_supply == requested_shares, "Incorrect shares total supply");
 
     // Check vault has assets
     utils::check_public_balance(asset_address, vault_address, max_assets + yield_amount);
@@ -138,16 +138,16 @@ unconstrained fn issue_public_to_public_request_too_many_shares() {
     utils::authorize_transfer_public_to_public(asset_address, vault_address, owner, max_assets, 0);
 
     // Issue
-    let shares_requested: u128 = max_assets + 1;
+    let requested_shares: u128 = max_assets + 1;
     env.impersonate(owner);
     Token::at(vault_address)
-        .issue_public_to_public(owner, recipient, shares_requested, max_assets, 0)
+        .issue_public_to_public(owner, recipient, requested_shares, max_assets, 0)
         .call(&mut env.public());
     env.advance_block_by(1);
 }
 
 #[test(should_fail_with = "unauthorized")]
-unconstrained fn issue_public_to_public_without_approval() {
+unconstrained fn issue_public_to_public_without_asset_approval() {
     // Setup with asset token
     let (env, vault_address, owner, recipient, asset_address) = utils::setup_with_asset(false);
 
@@ -159,9 +159,9 @@ unconstrained fn issue_public_to_public_without_approval() {
 
     // Issue
     env.impersonate(owner);
-    let shares_requested = max_assets;
+    let requested_shares = max_assets;
     Token::at(vault_address)
-        .issue_public_to_public(owner, recipient, shares_requested, max_assets, 0)
+        .issue_public_to_public(owner, recipient, requested_shares, max_assets, 0)
         .call(&mut env.public());
     env.advance_block_by(1);
 }
@@ -204,11 +204,11 @@ unconstrained fn issue_public_to_public_on_behalf_of_other_success() {
     utils::authorize_transfer_public_to_public(asset_address, vault_address, owner, max_assets, 0);
 
     // Authorize the recipient to call issue_public_to_public
-    let shares_requested: u128 = max_assets;
+    let requested_shares: u128 = max_assets;
     let issue_public_to_public_call_interface = Token::at(vault_address).issue_public_to_public(
         owner,
         recipient,
-        shares_requested,
+        requested_shares,
         max_assets,
         0,
     );
@@ -221,17 +221,17 @@ unconstrained fn issue_public_to_public_on_behalf_of_other_success() {
     // Issue
     env.impersonate(recipient);
     Token::at(vault_address)
-        .issue_public_to_public(owner, recipient, shares_requested, max_assets, 0)
+        .issue_public_to_public(owner, recipient, requested_shares, max_assets, 0)
         .call(&mut env.public());
     env.advance_block_by(1);
 
     // Check recipient got shares
     // At the first deposit 1 share = 1 asset
-    utils::check_public_balance(vault_address, recipient, shares_requested);
+    utils::check_public_balance(vault_address, recipient, requested_shares);
 
     // Check the total supply got updated
     let total_supply = Token::at(vault_address).total_supply().view(&mut env.public());
-    assert(total_supply == shares_requested, "Incorrect shares total supply");
+    assert(total_supply == requested_shares, "Incorrect shares total supply");
 
     // Check vault has assets
     utils::check_public_balance(asset_address, vault_address, max_assets);
