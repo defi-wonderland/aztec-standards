@@ -337,7 +337,11 @@ describe('NFT - Single PXE', () => {
     await assertOwnsPrivateNFT(nft, tokenId, alice.getAddress());
 
     // Bob initializes a transfer commitment for receiving the NFT
-    await nft.withWallet(bob).methods.initialize_transfer_commitment(bob.getAddress(), bob.getAddress(), bob.getAddress()).send().wait();
+    await nft
+      .withWallet(bob)
+      .methods.initialize_transfer_commitment(bob.getAddress(), bob.getAddress(), bob.getAddress())
+      .send()
+      .wait();
 
     // Get the commitment value through simulation
     const commitment = await nft
