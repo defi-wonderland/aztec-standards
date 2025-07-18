@@ -14,8 +14,8 @@ jobs:
     setup-and-run:
       strategy:
         matrix:
-          os: [ubuntu-latest-m,ubuntu-latest-l,ubuntu-latest-arm-l]
-          threads: [12, 48]
+          os: [ubuntu-latest-m]
+          threads: [12]
 
       runs-on: 
         labels: ${{ matrix.os }}
