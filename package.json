@@ -31,7 +31,7 @@
     "@aztec/protocol-contracts": "v1.1.0",
     "@aztec/pxe": "v1.1.0",
     "@aztec/stdlib": "v1.1.0",
-    "@defi-wonderland/aztec-benchmark": "1.0.0",
+    "@defi-wonderland/aztec-benchmark": "1.0.1",
     "@types/node": "22.5.1"
   },
   "devDependencies": {
