@@ -47,7 +47,7 @@ jobs:
           bash tmp.sh <<< yes "yes"
 
       - name: Detect Aztec version (PR)
-        id: prver
+        id: prver0
         run: |
           VER=$(node -p "require('./package.json').config.aztecVersion")
           echo "ver=$VER" >> "$GITHUB_OUTPUT"
@@ -55,15 +55,15 @@ jobs:
 
       - name: Switch CLI to PR version
         run: |
-          VERSION=${{ steps.prver.outputs.ver }} aztec-up
+          VERSION=${{ steps.prver0.outputs.ver }} aztec-up
 
       - name: Start sandbox (PR, background)
         run: aztec start --sandbox &
 
       - name: Start PXE node (PR, background)
-        if: steps.prver.outputs.ver_diff == 'true'
+        if: steps.prver0.outputs.ver_diff == 'true'
         run: |
-          VERSION=${{ steps.prver.outputs.ver }} aztec \
+          VERSION=${{ steps.prver0.outputs.ver }} aztec \
             start --port 8081 --pxe --pxe.nodeUrl=http://localhost:8080/ \
             --pxe.proverEnabled false &
 
