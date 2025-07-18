@@ -162,23 +162,23 @@ jobs:
           echo "ver=$VER" >> "$GITHUB_OUTPUT"
 
       - name: Kill BASE services
-        if: steps.prver.outputs.ver_diff == 'true'
+        # if: steps.prver.outputs.ver_diff == 'true'
         run: |
           pkill -f "aztec.*--sandbox" || true                   
           pkill -f "aztec.*--pxe.*8081" || true                   
           sleep 5      
 
       - name: Switch CLI to PR version
-        if: steps.prver.outputs.ver_diff == 'true'
+        # if: steps.prver.outputs.ver_diff == 'true'
         run: |
           VERSION=${{ steps.prver.outputs.ver }} aztec-up
 
       - name: Start sandbox (PR, background)
-        if: steps.prver.outputs.ver_diff == 'true'
+        # if: steps.prver.outputs.ver_diff == 'true'
         run: aztec start --sandbox &
 
       - name: Start PXE node (PR, background)
-        if: steps.prver.outputs.ver_diff == 'true'
+        # if: steps.prver.outputs.ver_diff == 'true'
         run: |
           VERSION=${{ steps.prver.outputs.ver }} aztec \
             start --port 8081 --pxe --pxe.nodeUrl=http://localhost:8080/ \
