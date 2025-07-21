@@ -7,4 +7,3 @@ members = [
 
 [benchmark]
 token = "benchmarks/token_contract.benchmark.ts"
-nft = "benchmarks/nft_contract.benchmark.ts"
