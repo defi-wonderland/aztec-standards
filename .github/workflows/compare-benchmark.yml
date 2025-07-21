@@ -106,13 +106,11 @@ jobs:
       - name: Restore base benchmark results
         run: mv ../benchmarks_base/* ${{ env.BENCH_DIR }}/
 
-      - name: debugggg
+      - name: debuggggggg
         run: echo "git branch: $GITHUB_REF"
 
       - name: catttt
         run: cat benchmarks/token_contract.benchmark.ts
-
-
 
       - name: Detect Aztec version (PR)
         id: prver
