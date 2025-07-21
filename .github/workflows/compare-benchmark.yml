@@ -146,7 +146,9 @@ jobs:
             --pxe.proverEnabled false &
 
       - name: Install deps (PR)
-        run: yarn
+        run: |
+          rm -rf node_modules
+          yarn
 
       - name: Compile contracts (PR)
         run: script -e -c "yarn ccc"
