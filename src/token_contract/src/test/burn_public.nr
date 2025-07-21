@@ -1,7 +1,7 @@
 use crate::test::utils::{self, mint_amount};
 use crate::Token;
-use authwit::cheatcodes as authwit_cheatcodes;
 use aztec::oracle::random::random;
+use aztec::{prelude::AztecAddress, test::helpers::authwit as authwit_cheatcodes};
 
 #[test]
 unconstrained fn burn_public_success() {

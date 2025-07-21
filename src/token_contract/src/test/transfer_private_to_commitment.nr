@@ -1,6 +1,6 @@
 use crate::test::utils::{self, mint_amount};
 use crate::Token;
-use authwit::cheatcodes as authwit_cheatcodes;
+use aztec::{prelude::AztecAddress, test::helpers::authwit as authwit_cheatcodes};
 
 #[test]
 unconstrained fn transfer_private_to_commitment() {

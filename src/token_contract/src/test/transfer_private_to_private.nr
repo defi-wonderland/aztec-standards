@@ -1,7 +1,7 @@
 use crate::test::utils::{self, mint_amount};
 use crate::Token;
-use authwit::cheatcodes as authwit_cheatcodes;
 use aztec::note::constants::MAX_NOTES_PER_PAGE;
+use aztec::{prelude::AztecAddress, test::helpers::authwit as authwit_cheatcodes};
 use uint_note::uint_note::UintNote;
 
 #[test]

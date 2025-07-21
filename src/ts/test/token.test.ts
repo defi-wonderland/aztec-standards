@@ -7,14 +7,13 @@ import {
   AccountWalletWithSecretKey,
   IntentAction,
   Wallet,
-  AccountManager,
 } from '@aztec/aztec.js';
 import { AMOUNT, deployTokenWithMinter, expectTokenBalances, expectUintNote, setupPXE, wad } from './utils.js';
 import { PXE } from '@aztec/stdlib/interfaces/client';
-import { getInitialTestAccounts, getInitialTestAccountsManagers } from '@aztec/accounts/testing';
+import { getInitialTestAccountsManagers } from '@aztec/accounts/testing';
+import { AztecLmdbStore } from '@aztec/kv-store/lmdb';
+
 import { TokenContractArtifact, TokenContract } from '../../artifacts/Token.js';
-import { SchnorrAccountContract } from '@aztec/accounts/schnorr';
-import { deriveSigningKey } from '@aztec/stdlib/keys';
 
 export async function deployTokenWithInitialSupply(deployer: Wallet, options: any) {
   const contract = await Contract.deploy(
@@ -29,26 +28,17 @@ export async function deployTokenWithInitialSupply(deployer: Wallet, options: an
 }
 
 const setupTestSuite = async () => {
-  const pxe = await setupPXE();
-  const managers = await Promise.all(
-    (await getInitialTestAccounts()).map(async (acc) => {
-      return await AccountManager.create(
-        pxe,
-        acc.secret,
-        new SchnorrAccountContract(deriveSigningKey(acc.secret)),
-        acc.salt,
-      );
-    }),
-  );
+  const { pxe, store } = await setupPXE();
+  const managers = await getInitialTestAccountsManagers(pxe);
   const wallets = await Promise.all(managers.map((acc) => acc.register()));
   const [deployer] = wallets;
 
-  return { pxe, deployer, wallets };
+  return { pxe, store, deployer, wallets };
 };
 
 describe('Token - Single PXE', () => {
   let pxe: PXE;
-
+  let store: AztecLmdbStore;
   let wallets: AccountWalletWithSecretKey[];
   let deployer: AccountWalletWithSecretKey;
 
@@ -59,13 +49,17 @@ describe('Token - Single PXE', () => {
   let token: TokenContract;
 
   beforeAll(async () => {
-    ({ pxe, deployer, wallets } = await setupTestSuite());
+    ({ pxe, store, deployer, wallets } = await setupTestSuite());
 
     [alice, bob, carl] = wallets;
   });
 
   beforeEach(async () => {
     token = (await deployTokenWithMinter(alice, {})) as TokenContract;
+  });
+
+  afterAll(async () => {
+    await store.delete();
   });
 
   it('deploys the contract with minter', async () => {
