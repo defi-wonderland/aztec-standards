@@ -264,7 +264,12 @@ pub contract NFT {
         _validate_public_token_owner(storage.public_owners, from, token_id);
 
         _update_public_token_owner(storage.public_owners, PRIVATE_OWNER_ADDRESS, token_id);
-        _transfer_token_to_commitment(&mut context, PartialNFTNote { commitment }, token_id, completer);
+        _transfer_token_to_commitment(
+            &mut context,
+            PartialNFTNote { commitment },
+            token_id,
+            completer,
+        );
     }
 
     /// @notice Stores a commitment in storage
