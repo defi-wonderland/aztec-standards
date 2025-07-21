@@ -62,7 +62,7 @@ jobs:
             aztec start --sandbox &
 
         - name: Install project dependencies
-          run: yarn
+          run: yarn --frozen-lockfile
   
         - name: Compile
           run: script -e -c "${AZTEC_NARGO:-aztec-nargo} compile"

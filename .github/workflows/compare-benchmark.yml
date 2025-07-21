@@ -74,7 +74,7 @@ jobs:
             --pxe.proverEnabled false &
 
       - name: Install deps (BASE)
-        run: yarn
+        run: yarn --frozen-lockfile
 
       - name: Compile contracts (BASE)
         run: script -e -c "${AZTEC_NARGO:-aztec-nargo} compile"
@@ -143,7 +143,7 @@ jobs:
             --pxe.proverEnabled false &
 
       - name: Install deps (PR)
-        run: yarn
+        run: yarn --frozen-lockfile
 
       - name: Compile contracts (PR)
         run: script -e -c "${AZTEC_NARGO:-aztec-nargo} compile"
