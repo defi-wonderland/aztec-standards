@@ -11,16 +11,15 @@ import {
   AztecAddress,
   DeployOptions,
 } from '@aztec/aztec.js';
-import { poseidon2Hash } from '@aztec/foundation/crypto';
 import { setupPXE } from './utils.js';
 import { getInitialTestAccountsManagers } from '@aztec/accounts/testing';
 import { NFTContract, NFTContractArtifact } from '../../artifacts/NFT.js';
 import { AztecLmdbStore } from '@aztec/kv-store/lmdb';
 
-const stringBytes = Buffer.from('PRIVATE_OWNER', 'utf8');
-const fieldElements = Array.from(stringBytes).map((byte) => new Fr(byte));
-
-const PRIVATE_OWNER_ADDRESS = AztecAddress.fromField(await poseidon2Hash(fieldElements));
+// NOTE: AztecAddress::from_field(poseidon2_hash_bytes("PRIVATE_OWNER".as_bytes()));
+const PRIVATE_OWNER_ADDRESS = AztecAddress.fromField(
+  Fr.fromHexString('0x14d1930ab8c3b74b2ed36bf586d2b6d2049b25e50466970b55ba0c27978c5b1e'),
+);
 
 // Deploy NFT contract with a minter
 async function deployNFTWithMinter(deployer: AccountWallet, options?: DeployOptions) {

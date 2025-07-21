@@ -23,7 +23,7 @@ pub contract NFT {
         },
         protocol_types::{
             constants::DEPLOYER_CONTRACT_ADDRESS, contract_class_id::ContractClassId,
-            hash::poseidon2_hash_bytes, traits::FromField,
+            traits::FromField,
         },
         utils::comparison::Comparator,
     };
@@ -264,6 +264,7 @@ pub contract NFT {
         _validate_public_token_owner(storage.public_owners, from, token_id);
 
         _update_public_token_owner(storage.public_owners, PRIVATE_OWNER_ADDRESS, token_id);
+        let completer = context.msg_sender();
         _transfer_token_to_commitment(
             &mut context,
             PartialNFTNote { commitment },
