@@ -88,7 +88,7 @@ jobs:
         run: rm -rf store
 
       - name: debugggg
-        run: echo "git branch: $GITHUB_REF"
+        run: echo "git branch: ${{ github.ref }}"
 
       # ──────────────────────────────────────────────────────────────
       # 2️⃣  BENCHMARK PR HEAD  (github.event.pull_request.head.sha)
@@ -107,7 +107,7 @@ jobs:
         run: mv ../benchmarks_base/* ${{ env.BENCH_DIR }}/
 
       - name: debuggggggg
-        run: echo "git branch: $GITHUB_REF"
+        run: echo "git branch: ${{ github.ref }}"
 
       - name: catttt
         run: cat benchmarks/token_contract.benchmark.ts
