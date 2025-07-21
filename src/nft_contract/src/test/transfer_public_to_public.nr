@@ -1,6 +1,6 @@
 use crate::NFT;
 use crate::test::utils;
-use authwit::cheatcodes as authwit_cheatcodes;
+use aztec::test::helpers::authwit as authwit_cheatcodes;
 
 #[test]
 unconstrained fn nft_transfer_public_to_public_success() {

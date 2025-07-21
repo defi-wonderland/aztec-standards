@@ -10,6 +10,7 @@ use aztec::{
     protocol_types::storage::map::derive_storage_slot_in_map,
     test::helpers::{cheatcodes, test_environment::TestEnvironment},
 };
+use std::ops::WrappingSub;
 use std::test::OracleMock;
 use uint_note::uint_note::UintNote;
 
@@ -318,4 +319,9 @@ pub unconstrained fn _commitment_storage_read(
     // restore current contract address
     cheatcodes::set_contract_address(current_contract_address);
     value
+}
+
+/// @notice Returns the u128 maximum value
+pub unconstrained fn max_u128() -> u128 {
+    (0 as u128).wrapping_sub(1)
 }

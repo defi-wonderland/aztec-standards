@@ -1,7 +1,7 @@
 use crate::NFT;
 use crate::test::utils;
 use crate::types::constants::PRIVATE_OWNER_ADDRESS;
-use authwit::cheatcodes as authwit_cheatcodes;
+use aztec::{test::helpers::authwit as authwit_cheatcodes};
 
 #[test]
 unconstrained fn nft_transfer_public_to_private_success() {

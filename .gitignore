@@ -6,5 +6,7 @@ log/
 .DS_Store
 codegenCache.json
 .env
-.cursor
 store
+.cursor/*
+!.cursor/rules/
+!.cursor/rules/**
