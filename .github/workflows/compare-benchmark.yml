@@ -87,6 +87,9 @@ jobs:
       - name: Clean store
         run: rm -rf store
 
+      - name: debugggg
+        run: echo "git branch: $GITHUB_REF"
+
       # ──────────────────────────────────────────────────────────────
       # 2️⃣  BENCHMARK PR HEAD  (github.event.pull_request.head.sha)
       # ──────────────────────────────────────────────────────────────
@@ -103,8 +106,13 @@ jobs:
       - name: Restore base benchmark results
         run: mv ../benchmarks_base/* ${{ env.BENCH_DIR }}/
 
+      - name: debugggg
+        run: echo "git branch: $GITHUB_REF"
+
       - name: catttt
         run: cat benchmarks/token_contract.benchmark.ts
+
+
 
       - name: Detect Aztec version (PR)
         id: prver
