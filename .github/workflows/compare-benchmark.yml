@@ -70,10 +70,7 @@ jobs:
         run: yarn
 
       - name: Compile contracts (BASE)
-        run: script -e -c "${AZTEC_NARGO:-aztec-nargo} compile"
-
-      - name: Codegen wrappers (BASE)
-        run: script -e -c "aztec codegen target --outdir src/artifacts --force"
+        run: script -e -c "yarn ccc"
 
       - name: Benchmark (BASE)
         run: |
@@ -93,6 +90,9 @@ jobs:
       # ──────────────────────────────────────────────────────────────
       # 2️⃣  BENCHMARK PR HEAD  (github.event.pull_request.head.sha)
       # ──────────────────────────────────────────────────────────────
+
+      - name: cleannnn
+        run: rm -rf store
 
       # clean does not work correctly and is removing the benchmark results anyways
       # https://github.com/actions/checkout/issues/1201
@@ -151,10 +151,7 @@ jobs:
         run: yarn
 
       - name: Compile contracts (PR)
-        run: script -e -c "${AZTEC_NARGO:-aztec-nargo} compile"
-
-      - name: Codegen wrappers (PR)
-        run: script -e -c "aztec codegen target --outdir src/artifacts --force"
+        run: script -e -c "yarn ccc"
 
       # ──────────────────────────────────────────────────────────────
       # 3️⃣  DIFF &  COMMENT
