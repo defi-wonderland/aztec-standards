@@ -107,7 +107,7 @@ jobs:
         run: mv ../benchmarks_base/* ${{ env.BENCH_DIR }}/
 
       - name: debuggggggg
-        run: echo "git branch: ${{ github.ref }}"
+        run: echo "Current ref is ${{ github.ref }}"
 
       - name: catttt
         run: cat benchmarks/token_contract.benchmark.ts
