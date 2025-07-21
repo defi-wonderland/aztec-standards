@@ -106,7 +106,7 @@ jobs:
       - name: catttt
         run: cat benchmarks/token_contract.benchmark.ts
 
-     - name: Detect Aztec version (PR)
+      - name: Detect Aztec version (PR)
         id: prver
         run: |
           VER=$(node -p "require('./package.json').config.aztecVersion")
