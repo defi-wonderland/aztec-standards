@@ -84,6 +84,11 @@ jobs:
         run: |
           mkdir -p ../benchmarks_base && mv ${{ env.BENCH_DIR }}/* ../benchmarks_base/
 
+      - name: Clean store
+        run: |
+          cat benchmarks/token_contract.benchmark.ts
+          rm -rf store
+
       # ──────────────────────────────────────────────────────────────
       # 2️⃣  BENCHMARK PR HEAD  (github.event.pull_request.head.sha)
       # ──────────────────────────────────────────────────────────────
