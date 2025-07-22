@@ -25,12 +25,12 @@
     "*.ts": "prettier --write -u"
   },
   "dependencies": {
-    "@aztec/accounts": "v1.1.2",
-    "@aztec/aztec.js": "v1.1.2",
-    "@aztec/noir-contracts.js": "v1.1.2",
-    "@aztec/protocol-contracts": "v1.1.2",
-    "@aztec/pxe": "v1.1.2",
-    "@aztec/stdlib": "v1.1.2",
+    "@aztec/accounts": "1.1.2",
+    "@aztec/aztec.js": "1.1.2",
+    "@aztec/noir-contracts.js": "1.1.2",
+    "@aztec/protocol-contracts": "1.1.2",
+    "@aztec/pxe": "1.1.2",
+    "@aztec/stdlib": "1.1.2",
     "@defi-wonderland/aztec-benchmark": "1.0.1",
     "@types/node": "22.5.1"
   },

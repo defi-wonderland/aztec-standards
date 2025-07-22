@@ -47,6 +47,54 @@ const defaultWaitOptions: WaitOpts = {
   timeout: 600,
 };
 
+interface RetryOptions {
+  maxRetries?: number;
+  initialDelayMs?: number;
+  backoffMultiplier?: number;
+  maxDelayMs?: number;
+}
+
+const defaultRetryOptions: RetryOptions = {
+  maxRetries: 3,
+  initialDelayMs: 5000,
+  backoffMultiplier: 2,
+  maxDelayMs: 30000,
+};
+
+async function withRetry<T>(
+  operation: () => Promise<T>,
+  operationName: string,
+  options: RetryOptions = {},
+): Promise<T> {
+  const { maxRetries, initialDelayMs, backoffMultiplier, maxDelayMs } = {
+    ...defaultRetryOptions,
+    ...options,
+  };
+
+  let lastError: Error;
+  let delayMs = initialDelayMs!;
+
+  for (let attempt = 1; attempt <= maxRetries!; attempt++) {
+    try {
+      logger.info(`${operationName}: Attempt ${attempt}/${maxRetries}`);
+      return await operation();
+    } catch (error) {
+      lastError = error as Error;
+      logger.warn(`${operationName}: Attempt ${attempt} failed:`, error);
+
+      if (attempt < maxRetries!) {
+        const actualDelay = Math.min(delayMs, maxDelayMs!);
+        logger.info(`${operationName}: Retrying in ${actualDelay / 1000} seconds...`);
+        await sleep(actualDelay);
+        delayMs *= backoffMultiplier!;
+      }
+    }
+  }
+
+  logger.error(`${operationName}: All ${maxRetries} attempts failed`);
+  throw lastError!;
+}
+
 export function logDeployedContracts(contracts: DeployedContracts): void {
   logger.info('Deployed contracts:');
 
@@ -242,6 +290,57 @@ export async function dripToPrivate(
   logger.info(`Private drip completed, tx hash: ${tx.txHash.toString()}`);
 }
 
+export async function deployTokenWithRetry(
+  deployer: AccountWallet,
+  params: TokenDeployParams,
+  options: DeployOptions,
+  retryOptions?: RetryOptions,
+): Promise<TokenContract> {
+  return withRetry(
+    () => deployToken(deployer, params, options),
+    `Deploy Token ${params.name} (${params.symbol})`,
+    retryOptions,
+  );
+}
+
+export async function deployDripperWithRetry(
+  deployer: AccountWallet,
+  options: DeployOptions,
+  retryOptions?: RetryOptions,
+): Promise<DripperContract> {
+  return withRetry(() => deployDripper(deployer, options), 'Deploy Dripper', retryOptions);
+}
+
+export async function dripToPublicWithRetry(
+  dripper: DripperContract,
+  tokenAddress: AztecAddress,
+  amount: bigint,
+  fromWallet: AccountWallet,
+  options: DeployOptions,
+  retryOptions?: RetryOptions,
+): Promise<void> {
+  return withRetry(
+    () => dripToPublic(dripper, tokenAddress, amount, fromWallet, options),
+    `Drip to public for ${tokenAddress.toString()}`,
+    retryOptions,
+  );
+}
+
+export async function dripToPrivateWithRetry(
+  dripper: DripperContract,
+  tokenAddress: AztecAddress,
+  amount: bigint,
+  fromWallet: AccountWallet,
+  options: DeployOptions,
+  retryOptions?: RetryOptions,
+): Promise<void> {
+  return withRetry(
+    () => dripToPrivate(dripper, tokenAddress, amount, fromWallet, options),
+    `Drip to private for ${tokenAddress.toString()}`,
+    retryOptions,
+  );
+}
+
 export async function deployToTestnet(): Promise<DeployedContracts> {
   logger.info('Deploying to Aztec Testnet...');
 
@@ -272,10 +371,19 @@ export async function deployToTestnet(): Promise<DeployedContracts> {
         logger.debug('Dripper already registered');
       }
     } else {
-      dripper = await deployDripper(deployer, deployOptions);
+      dripper = await deployDripperWithRetry(deployer, deployOptions);
     }
 
-    const weth = await deployToken(
+    // Deploy token with dripper as the minter
+    // const tokenParams: TokenDeployParams = {
+    //   name: 'Private Token',
+    //   symbol: 'PT',
+    //   decimals: 18,
+    //   minter: dripper.address,
+    //   upgradeAuthority: AztecAddress.ZERO,
+    // };
+
+    const weth = await deployTokenWithRetry(
       deployer,
       {
         name: 'WETH',
@@ -287,7 +395,7 @@ export async function deployToTestnet(): Promise<DeployedContracts> {
       deployOptions,
     );
     await sleep(24000);
-    const dai = await deployToken(
+    const dai = await deployTokenWithRetry(
       deployer,
       {
         name: 'DAI',
@@ -298,7 +406,7 @@ export async function deployToTestnet(): Promise<DeployedContracts> {
       },
       deployOptions,
     );
-    const usdc = await deployToken(
+    const usdc = await deployTokenWithRetry(
       deployer,
       {
         name: 'USDC',
@@ -310,12 +418,12 @@ export async function deployToTestnet(): Promise<DeployedContracts> {
       deployOptions,
     );
 
-    await dripToPublic(dripper, weth.address, amt(1), deployer, deployOptions);
-    await dripToPublic(dripper, dai.address, amt(1000, 9), deployer, deployOptions);
-    await dripToPublic(dripper, usdc.address, amt(1000, 6), deployer, deployOptions);
-    await dripToPrivate(dripper, weth.address, amt(1), deployer, deployOptions);
-    await dripToPrivate(dripper, dai.address, amt(1000, 9), deployer, deployOptions);
-    await dripToPrivate(dripper, usdc.address, amt(1000, 6), deployer, deployOptions);
+    await dripToPublicWithRetry(dripper, weth.address, amt(1), deployer, deployOptions);
+    await dripToPublicWithRetry(dripper, dai.address, amt(1000, 9), deployer, deployOptions);
+    await dripToPublicWithRetry(dripper, usdc.address, amt(1000, 6), deployer, deployOptions);
+    await dripToPrivateWithRetry(dripper, weth.address, amt(1), deployer, deployOptions);
+    await dripToPrivateWithRetry(dripper, dai.address, amt(1000, 9), deployer, deployOptions);
+    await dripToPrivateWithRetry(dripper, usdc.address, amt(1000, 6), deployer, deployOptions);
 
     logger.info(`Token minter set to Dripper: ${dripper.address.toString()}`);
 
