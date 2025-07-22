@@ -43,7 +43,7 @@
     "@jridgewell/gen-mapping" "^0.3.5"
     "@jridgewell/trace-mapping" "^0.3.24"
 
-"@aztec/accounts@v1.1.2":
+"@aztec/accounts@1.1.2":
   version "1.1.2"
   resolved "https://registry.yarnpkg.com/@aztec/accounts/-/accounts-1.1.2.tgz#f9efec5fde5c061f020062ed949c08ddb34175fd"
   integrity sha512-an5Q6ANNkWjBtl9Uk0HOvJ8e/kAJN0sReeHE/lN7svFp78rLcDhJxwlOLrXYTEJdca8lU3MgUAQMtZG83KTGsA==
@@ -71,7 +71,7 @@
     tslib "^2.4.0"
     viem "2.23.7"
 
-"@aztec/aztec.js@1.1.2", "@aztec/aztec.js@v1.1.2":
+"@aztec/aztec.js@1.1.2":
   version "1.1.2"
   resolved "https://registry.yarnpkg.com/@aztec/aztec.js/-/aztec.js-1.1.2.tgz#4e71f53ab4f60f25fe3a0704b291e2ddd5c423f5"
   integrity sha512-P9QoqEboZzqAdIstl3NhbYDFT7PLWK5AjumF7h/bfBTbFNlYHmn27DbWgbwlVd+xr5AnDaq8uGAh/N1pZcKWew==
@@ -346,7 +346,7 @@
   resolved "https://registry.yarnpkg.com/@aztec/noir-acvm_js/-/noir-acvm_js-1.1.2.tgz#c2d26ba25d537cf623ea80a36f893f558a411163"
   integrity sha512-h0IZSPIuZu85tPelklWHck91DQ4vbPtdpnXCyxM+Rm0ZOrrYzZ4ZMGksZe4ouk/grImOynOv5Os13VX0Z5/HBw==
 
-"@aztec/noir-contracts.js@v1.1.2":
+"@aztec/noir-contracts.js@1.1.2":
   version "1.1.2"
   resolved "https://registry.yarnpkg.com/@aztec/noir-contracts.js/-/noir-contracts.js-1.1.2.tgz#c5b93b81dd32213125bd79ee7e8a38fde864ee22"
   integrity sha512-zmnTGRyWDEQ4W5YdoWfc7rTO/jMJWQ1LlL8njJadFiyIbHZPa81k/GXAx0Wvnr8dW+uiWHgnnuOeHWN6/YpF/w==
@@ -415,7 +415,7 @@
     lodash.omit "^4.5.0"
     tslib "^2.4.0"
 
-"@aztec/protocol-contracts@1.1.2", "@aztec/protocol-contracts@v1.1.2":
+"@aztec/protocol-contracts@1.1.2":
   version "1.1.2"
   resolved "https://registry.yarnpkg.com/@aztec/protocol-contracts/-/protocol-contracts-1.1.2.tgz#46fbf669451735802effdd3d60221fac67ba67d8"
   integrity sha512-d+W+gqsGDiJk3ZoQJeWtIGlFpLcdErUac42WCZ6Cs/M/iZbAy7q9eRvETwfC5+aTmjuK/mDQFMB7hK+CA4DAcw==
@@ -427,7 +427,7 @@
     lodash.omit "^4.5.0"
     tslib "^2.4.0"
 
-"@aztec/pxe@v1.1.2":
+"@aztec/pxe@1.1.2":
   version "1.1.2"
   resolved "https://registry.yarnpkg.com/@aztec/pxe/-/pxe-1.1.2.tgz#26d2f93215674d68b495da1209e1ce86ec935d5a"
   integrity sha512-vDT6G608P8zvFhss3CfwkXi2HXtuXiBO83e932yXK5QvdrvhdcaMWUbbvwcGhGq0nmf32h8YcNwHCObOU3oglQ==
@@ -495,7 +495,7 @@
     viem "2.23.7"
     zod "^3.23.8"
 
-"@aztec/stdlib@1.1.2", "@aztec/stdlib@v1.1.2":
+"@aztec/stdlib@1.1.2":
   version "1.1.2"
   resolved "https://registry.yarnpkg.com/@aztec/stdlib/-/stdlib-1.1.2.tgz#8492fd4d546e9bea2f80bec473e911108c2febc5"
   integrity sha512-S6Z7XHZVG3qdvqnTjfLuiVkgQue4rERC7S/MuJFV6XEGMOa8fyuan4WhC6UYl3MB8pZfV8IzTPsWn3R10grv8A==
