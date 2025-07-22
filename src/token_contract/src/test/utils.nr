@@ -402,6 +402,7 @@ pub unconstrained fn authorize_transfer_public_to_public(
         caller,
         transfer_public_to_public_call_interface,
     );
+}
 
 /// @notice Returns the u128 maximum value
 pub unconstrained fn max_u128() -> u128 {
