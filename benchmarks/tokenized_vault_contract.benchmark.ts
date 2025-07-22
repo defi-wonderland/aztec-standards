@@ -1,5 +1,4 @@
 import {
-  AccountManager,
   type AccountWallet,
   type ContractFunctionInteraction,
   type PXE,
@@ -7,9 +6,7 @@ import {
   AuthWitness,
 } from '@aztec/aztec.js';
 import { parseUnits } from 'viem';
-import { getInitialTestAccounts } from '@aztec/accounts/testing';
-import { SchnorrAccountContract } from '@aztec/accounts/schnorr';
-import { deriveSigningKey } from '@aztec/stdlib/keys';
+import { getInitialTestAccountsManagers } from '@aztec/accounts/testing';
 
 // Import the new Benchmark base class and context
 import { Benchmark, BenchmarkContext } from '@defi-wonderland/aztec-benchmark';
@@ -41,19 +38,10 @@ export default class TokenContractBenchmark extends Benchmark {
    * Creates PXE client, gets accounts, and deploys the contract.
    */
   async setup(): Promise<TokenBenchmarkContext> {
-    const pxe = await setupPXE();
-    const managers = await Promise.all(
-      (await getInitialTestAccounts()).map(async (acc) => {
-        return await AccountManager.create(
-          pxe,
-          acc.secret,
-          new SchnorrAccountContract(deriveSigningKey(acc.secret)),
-          acc.salt,
-        );
-      }),
-    );
+    const { pxe } = await setupPXE();
+    const managers = await getInitialTestAccountsManagers(pxe);
     const accounts = await Promise.all(managers.map((acc) => acc.register()));
-    const deployer = accounts[0]!;
+    const [deployer] = accounts;
     const [deployedBaseContract, deployedAssetContract] = await deployVaultAndAssetWithMinter(deployer);
     const vaultContract = await TokenContract.at(deployedBaseContract.address, deployer);
     const assetContract = await TokenContract.at(deployedAssetContract.address, deployer);
