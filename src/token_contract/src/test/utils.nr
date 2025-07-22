@@ -1,5 +1,4 @@
 use crate::Token;
-use aztec::test::helpers::authwit as authwit_cheatcodes;
 use aztec::{
     note::{constants::MAX_NOTES_PER_PAGE, note_getter::view_notes},
     oracle::{
@@ -11,6 +10,7 @@ use aztec::{
     protocol_types::storage::map::derive_storage_slot_in_map,
     test::helpers::{cheatcodes, test_environment::TestEnvironment},
 };
+use aztec::test::helpers::authwit as authwit_cheatcodes;
 use std::ops::WrappingSub;
 use std::test::OracleMock;
 use uint_note::uint_note::UintNote;
