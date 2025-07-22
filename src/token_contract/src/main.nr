@@ -7,6 +7,9 @@ use aztec::macros::aztec;
 pub contract Token {
     // aztec library
     use aztec::{
+        authwit::auth::{
+            assert_current_call_valid_authwit, assert_current_call_valid_authwit_public,
+        },
         context::PrivateContext,
         macros::{
             functions::{initializer, internal, private, public, utility, view},
@@ -18,10 +21,6 @@ pub contract Token {
             constants::DEPLOYER_CONTRACT_ADDRESS, contract_class_id::ContractClassId,
             traits::FromField,
         },
-    };
-    // authorized witness library
-    use authwit::auth::{
-        assert_current_call_valid_authwit, assert_current_call_valid_authwit_public,
     };
     // note library
     use uint_note::uint_note::{PartialUintNote, UintNote};
