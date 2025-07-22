@@ -1,5 +1,5 @@
 use crate::{test::utils::{self, mint_amount}, Token};
-use authwit::cheatcodes as authwit_cheatcodes;
+use aztec::test::helpers::authwit as authwit_cheatcodes;
 
 #[test(should_fail_with = "Trying to read from uninitialized PublicImmutable")]
 unconstrained fn issue_public_to_public_without_asset() {

@@ -1,5 +1,5 @@
 use crate::Token;
-use authwit::cheatcodes as authwit_cheatcodes;
+use aztec::test::helpers::authwit as authwit_cheatcodes;
 use aztec::{
     note::{constants::MAX_NOTES_PER_PAGE, note_getter::view_notes},
     oracle::{

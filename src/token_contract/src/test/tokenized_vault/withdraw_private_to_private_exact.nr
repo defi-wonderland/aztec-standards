@@ -1,5 +1,5 @@
 use crate::{test::{tokenized_vault::tokenized_vault_utils, utils::{self, mint_amount}}, Token};
-use authwit::cheatcodes as authwit_cheatcodes;
+use aztec::test::helpers::authwit as authwit_cheatcodes;
 
 #[test(should_fail_with = "Assertion failed: Balance too low")]
 unconstrained fn withdraw_private_to_private_exact_without_asset() {
