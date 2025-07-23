@@ -1,5 +1,5 @@
-import { AccountManager, type AccountWallet, type ContractFunctionInteraction, type PXE } from '@aztec/aztec.js';
-import { getInitialTestAccounts } from '@aztec/accounts/testing';
+import { type AccountWallet, type ContractFunctionInteraction, type PXE } from '@aztec/aztec.js';
+import { getInitialTestAccountsManagers } from '@aztec/accounts/testing';
 import { parseUnits } from 'viem';
 
 // Import the new Benchmark base class and context
@@ -7,8 +7,6 @@ import { Benchmark, BenchmarkContext } from '@defi-wonderland/aztec-benchmark';
 
 import { TokenContract } from '../src/artifacts/Token.js';
 import { deployTokenWithMinter, setupPXE } from '../src/ts/test/utils.js';
-import { SchnorrAccountContract } from '@aztec/accounts/schnorr';
-import { deriveSigningKey } from '@aztec/stdlib/keys';
 
 // Extend the BenchmarkContext from the new package
 interface TokenBenchmarkContext extends BenchmarkContext {
@@ -31,18 +29,10 @@ export default class TokenContractBenchmark extends Benchmark {
    * Sets up the benchmark environment for the TokenContract.
    * Creates PXE client, gets accounts, and deploys the contract.
    */
+
   async setup(): Promise<TokenBenchmarkContext> {
     const { pxe, store } = await setupPXE();
-    const managers = await Promise.all(
-      (await getInitialTestAccounts()).map(async (acc) => {
-        return await AccountManager.create(
-          pxe,
-          acc.secret,
-          new SchnorrAccountContract(deriveSigningKey(acc.secret)),
-          acc.salt,
-        );
-      }),
-    );
+    const managers = await getInitialTestAccountsManagers(pxe);
     const accounts = await Promise.all(managers.map((acc) => acc.register()));
     const [deployer] = accounts;
     const deployedBaseContract = await deployTokenWithMinter(deployer);

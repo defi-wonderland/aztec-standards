@@ -1,5 +1,5 @@
 use crate::{test::{tokenized_vault::tokenized_vault_utils, utils::{self, mint_amount}}, Token};
-use authwit::cheatcodes as authwit_cheatcodes;
+use aztec::test::helpers::authwit as authwit_cheatcodes;
 
 #[test(should_fail_with = "Artifact not found when calling private function. Contract address: 0x0000000000000000000000000000000000000000000000000000000000000000.")]
 unconstrained fn redeem_public_to_private_exact_without_asset() {
@@ -17,7 +17,7 @@ unconstrained fn redeem_public_to_private_exact_without_asset() {
     env.advance_block_by(1);
 }
 
-// TODO: this test fails because the ivsk is currently needed for emitting a note, but the vault contract doesn't have one.
+// TODO(#15666 & #15118): this test fails because the ivsk is currently needed for emitting a note, but the vault contract doesn't have one.
 // #[test]
 #[test(should_fail_with = "No public key registered for address")]
 unconstrained fn redeem_public_to_private_exact_success() {
@@ -57,7 +57,7 @@ unconstrained fn redeem_public_to_private_exact_success() {
     utils::check_public_balance(asset_address, vault_address, 0);
 }
 
-// TODO: this test fails because the ivsk is currently needed for emitting a note, but the vault contract doesn't have one.
+// TODO(#15666 & #15118): this test fails because the ivsk is currently needed for emitting a note, but the vault contract doesn't have one.
 // #[test]
 #[test(should_fail_with = "No public key registered for address")]
 unconstrained fn redeem_public_to_private_exact_after_yield() {
@@ -77,7 +77,7 @@ unconstrained fn redeem_public_to_private_exact_after_yield() {
     );
 
     // Mint some asset tokens to the vault contract
-    let yield_amount: u128 = 2;
+    let yield_amount: u128 = 2; // Using 2 instead of 1 avoids rounding issues from anti-inflation logic: 1 goes to the user, 1 stays in the vault.
     env.impersonate(owner);
     Token::at(asset_address).mint_to_public(vault_address, yield_amount).call(&mut env.public());
     env.advance_block_by(1);
@@ -104,7 +104,7 @@ unconstrained fn redeem_public_to_private_exact_after_yield() {
     utils::check_public_balance(asset_address, recipient, deposit_amount + 1);
 }
 
-// TODO: this test fails because the ivsk is currently needed for emitting a note, but the vault contract doesn't have one.
+// TODO(#15666 & #15118): this test fails because the ivsk is currently needed for emitting a note, but the vault contract doesn't have one.
 // #[test]
 #[test(should_fail_with = "No public key registered for address")]
 unconstrained fn redeem_public_to_private_exact_request_fewer_assets() {
@@ -244,7 +244,7 @@ unconstrained fn redeem_public_to_private_exact_on_behalf_of_wrong_caller() {
         env.advance_block_by(1);
     }
 
-// TODO: this test fails because the ivsk is currently needed for emitting a note, but the vault contract doesn't have one.
+// TODO(#15666 & #15118): this test fails because the ivsk is currently needed for emitting a note, but the vault contract doesn't have one.
 // #[test]
 #[test(should_fail_with = "No public key registered for address")]
 unconstrained fn redeem_public_to_private_exact_on_behalf_of_other_success() {

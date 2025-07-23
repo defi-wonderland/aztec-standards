@@ -1,5 +1,5 @@
 use crate::{test::utils::{self, mint_amount}, Token};
-use authwit::cheatcodes as authwit_cheatcodes;
+use aztec::test::helpers::authwit as authwit_cheatcodes;
 
 #[test(should_fail_with = "Artifact not found when enriching public simulation error. Contract address: 0x0000000000000000000000000000000000000000000000000000000000000000.")]
 unconstrained fn issue_public_to_private_without_asset() {
@@ -30,30 +30,24 @@ unconstrained fn issue_public_to_private_success() {
 
     // Deposit assets to get shares
     // Authorize the vault to use the caller's assets
-    let public_transfer_public_to_public_call_interface =
-        Token::at(asset_address).transfer_public_to_public(owner, vault_address, max_assets, 0);
-    authwit_cheatcodes::add_public_authwit_from_call_interface(
-        owner,
-        vault_address,
-        public_transfer_public_to_public_call_interface,
-    );
+    utils::authorize_transfer_public_to_public(asset_address, vault_address, owner, max_assets, 0);
 
     // Deposit
     env.impersonate(owner);
     // At the first deposit 1 share = 1 asset
-    let shares_requested: u128 = max_assets;
+    let requested_shares: u128 = max_assets;
     Token::at(vault_address)
-        .issue_public_to_private(owner, recipient, shares_requested, max_assets, 0)
+        .issue_public_to_private(owner, recipient, requested_shares, max_assets, 0)
         .call(&mut env.private());
     env.advance_block_by(1);
 
     // Check recipient got shares
-    utils::check_private_balance(vault_address, recipient, shares_requested);
+    utils::check_private_balance(vault_address, recipient, requested_shares);
     utils::check_public_balance(vault_address, recipient, 0);
 
     // Check the total supply got updated
     let total_supply = Token::at(vault_address).total_supply().view(&mut env.public());
-    assert(total_supply == shares_requested, "Incorrect shares total supply");
+    assert(total_supply == requested_shares, "Incorrect shares total supply");
 
     // Check vault has assets
     utils::check_public_balance(asset_address, vault_address, max_assets);
@@ -72,29 +66,23 @@ unconstrained fn issue_public_to_private_with_change_success() {
 
     // Deposit assets to get shares
     // Authorize the vault to use the caller's assets
-    let public_transfer_public_to_public_call_interface =
-        Token::at(asset_address).transfer_public_to_public(owner, vault_address, max_assets, 0);
-    authwit_cheatcodes::add_public_authwit_from_call_interface(
-        owner,
-        vault_address,
-        public_transfer_public_to_public_call_interface,
-    );
+    utils::authorize_transfer_public_to_public(asset_address, vault_address, owner, max_assets, 0);
 
     // Deposit
     env.impersonate(owner);
-    let shares_requested: u128 = max_assets - 1;
+    let requested_shares: u128 = max_assets - 1;
     Token::at(vault_address)
-        .issue_public_to_private(owner, recipient, shares_requested, max_assets, 0)
+        .issue_public_to_private(owner, recipient, requested_shares, max_assets, 0)
         .call(&mut env.private());
     env.advance_block_by(1);
 
     // Check recipient got shares
-    utils::check_private_balance(vault_address, recipient, shares_requested);
+    utils::check_private_balance(vault_address, recipient, requested_shares);
     utils::check_public_balance(vault_address, recipient, 0);
 
     // Check the total supply got updated
     let total_supply = Token::at(vault_address).total_supply().view(&mut env.public());
-    assert(total_supply == shares_requested, "Incorrect shares total supply");
+    assert(total_supply == requested_shares, "Incorrect shares total supply");
 
     // Check vault has assets
     utils::check_public_balance(asset_address, vault_address, max_assets - 1);
@@ -120,17 +108,11 @@ unconstrained fn issue_public_to_private_after_yield() {
 
     // Deposit assets to get shares
     // Authorize the vault to use the caller's assets
-    let public_transfer_public_to_public_call_interface =
-        Token::at(asset_address).transfer_public_to_public(owner, vault_address, max_assets, 0);
-    authwit_cheatcodes::add_public_authwit_from_call_interface(
-        owner,
-        vault_address,
-        public_transfer_public_to_public_call_interface,
-    );
+    utils::authorize_transfer_public_to_public(asset_address, vault_address, owner, max_assets, 0);
 
     // Deposit
     env.impersonate(owner);
-    let expected_shares: u128 = 5_000; // mint_amount / 2 because of yield
+    let expected_shares: u128 = max_assets / 2; // The initial rate, when shares' supply is still 0, is given by the amount of assets held by the vault + 1. Since yield = 1, the rate is 1:2.
     Token::at(vault_address)
         .issue_public_to_private(owner, recipient, expected_shares, max_assets, 0)
         .call(&mut env.private());
@@ -161,26 +143,20 @@ unconstrained fn issue_public_to_private_request_too_many_shares() {
 
     // Deposit assets to get shares
     // Authorize the vault to use the caller's assets
-    let public_transfer_public_to_public_call_interface =
-        Token::at(asset_address).transfer_public_to_public(owner, vault_address, max_assets, 0);
-    authwit_cheatcodes::add_public_authwit_from_call_interface(
-        owner,
-        vault_address,
-        public_transfer_public_to_public_call_interface,
-    );
+    utils::authorize_transfer_public_to_public(asset_address, vault_address, owner, max_assets, 0);
 
     // Deposit
     env.impersonate(owner);
     // At the first deposit 1 share = 1 asset
-    let shares_requested = max_assets + 1;
+    let requested_shares = max_assets + 1;
     Token::at(vault_address)
-        .issue_public_to_private(owner, recipient, shares_requested, max_assets, 0)
+        .issue_public_to_private(owner, recipient, requested_shares, max_assets, 0)
         .call(&mut env.private());
     env.advance_block_by(1);
 }
 
 #[test(should_fail_with = "unauthorized")]
-unconstrained fn issue_public_to_private_without_approval() {
+unconstrained fn issue_public_to_private_without_asset_approval() {
     // Setup with asset token
     let (env, vault_address, owner, recipient, asset_address) = utils::setup_with_asset(true);
 
@@ -193,9 +169,9 @@ unconstrained fn issue_public_to_private_without_approval() {
     // Deposit
     env.impersonate(owner);
     // At the first deposit 1 share = 1 asset
-    let shares_requested = max_assets;
+    let requested_shares = max_assets;
     Token::at(vault_address)
-        .issue_public_to_private(owner, recipient, shares_requested, max_assets, 0)
+        .issue_public_to_private(owner, recipient, requested_shares, max_assets, 0)
         .call(&mut env.private());
     env.advance_block_by(1);
 }
@@ -213,20 +189,14 @@ unconstrained fn issue_public_to_private_on_behalf_of_wrong_caller() {
 
     // Deposit assets to get shares
     // Authorize the vault to use the caller's assets
-    let public_transfer_public_to_public_call_interface =
-        Token::at(asset_address).transfer_public_to_public(owner, vault_address, max_assets, 0);
-    authwit_cheatcodes::add_public_authwit_from_call_interface(
-        owner,
-        vault_address,
-        public_transfer_public_to_public_call_interface,
-    );
+    utils::authorize_transfer_public_to_public(asset_address, vault_address, owner, max_assets, 0);
 
     // Deposit
     env.impersonate(recipient);
     // At the first deposit 1 share = 1 asset
-    let shares_requested = max_assets;
+    let requested_shares = max_assets;
     Token::at(vault_address)
-        .issue_public_to_private(owner, recipient, shares_requested, max_assets, 0)
+        .issue_public_to_private(owner, recipient, requested_shares, max_assets, 0)
         .call(&mut env.private());
     env.advance_block_by(1);
 }
@@ -244,21 +214,15 @@ unconstrained fn issue_public_to_private_on_behalf_of_other_success() {
 
     // Deposit assets to get shares
     // Authorize the vault to use the caller's assets
-    let public_transfer_public_to_public_call_interface =
-        Token::at(asset_address).transfer_public_to_public(owner, vault_address, max_assets, 0);
-    authwit_cheatcodes::add_public_authwit_from_call_interface(
-        owner,
-        vault_address,
-        public_transfer_public_to_public_call_interface,
-    );
+    utils::authorize_transfer_public_to_public(asset_address, vault_address, owner, max_assets, 0);
 
     // Authorize the recipient to call issue_public_to_private
     // At the first deposit 1 share = 1 asset
-    let shares_requested = max_assets;
+    let requested_shares = max_assets;
     let issue_public_to_private_call_interface = Token::at(vault_address).issue_public_to_private(
         owner,
         recipient,
-        shares_requested,
+        requested_shares,
         max_assets,
         0,
     );
@@ -271,17 +235,17 @@ unconstrained fn issue_public_to_private_on_behalf_of_other_success() {
     // Deposit
     env.impersonate(recipient);
     Token::at(vault_address)
-        .issue_public_to_private(owner, recipient, shares_requested, max_assets, 0)
+        .issue_public_to_private(owner, recipient, requested_shares, max_assets, 0)
         .call(&mut env.private());
     env.advance_block_by(1);
 
     // Check recipient got shares
-    utils::check_private_balance(vault_address, recipient, shares_requested);
+    utils::check_private_balance(vault_address, recipient, requested_shares);
     utils::check_public_balance(vault_address, recipient, 0);
 
     // Check the total supply got updated
     let total_supply = Token::at(vault_address).total_supply().view(&mut env.public());
-    assert(total_supply == shares_requested, "Incorrect shares total supply");
+    assert(total_supply == requested_shares, "Incorrect shares total supply");
 
     // Check vault has assets
     utils::check_public_balance(asset_address, vault_address, max_assets);
