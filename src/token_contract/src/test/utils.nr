@@ -1,5 +1,4 @@
 use crate::Token;
-use authwit::cheatcodes as authwit_cheatcodes;
 use aztec::{
     note::{constants::MAX_NOTES_PER_PAGE, note_getter::view_notes},
     oracle::{
@@ -11,6 +10,8 @@ use aztec::{
     protocol_types::storage::map::derive_storage_slot_in_map,
     test::helpers::{cheatcodes, test_environment::TestEnvironment},
 };
+use aztec::test::helpers::authwit as authwit_cheatcodes;
+use std::ops::WrappingSub;
 use std::test::OracleMock;
 use uint_note::uint_note::UintNote;
 
@@ -367,4 +368,43 @@ pub unconstrained fn _commitment_storage_read(
     // restore current contract address
     cheatcodes::set_contract_address(current_contract_address);
     value
+}
+
+/// @notice Sets private authwit for the `transfer_private_to_public` method. `caller` is also the recipient.
+pub unconstrained fn authorize_transfer_private_to_public(
+    token: AztecAddress,
+    caller: AztecAddress,
+    from: AztecAddress,
+    amount: u128,
+    nonce: Field,
+) {
+    let transfer_private_to_public_call_interface =
+        Token::at(token).transfer_private_to_public(from, caller, amount, nonce);
+    authwit_cheatcodes::add_private_authwit_from_call_interface(
+        from,
+        caller,
+        transfer_private_to_public_call_interface,
+    );
+}
+
+/// @notice Sets public authwit for the `transfer_private_to_public` method. `caller` is also the recipient.
+pub unconstrained fn authorize_transfer_public_to_public(
+    token: AztecAddress,
+    caller: AztecAddress,
+    from: AztecAddress,
+    amount: u128,
+    nonce: Field,
+) {
+    let transfer_public_to_public_call_interface =
+        Token::at(token).transfer_public_to_public(from, caller, amount, nonce);
+    authwit_cheatcodes::add_public_authwit_from_call_interface(
+        from,
+        caller,
+        transfer_public_to_public_call_interface,
+    );
+}
+
+/// @notice Returns the u128 maximum value
+pub unconstrained fn max_u128() -> u128 {
+    (0 as u128).wrapping_sub(1)
 }

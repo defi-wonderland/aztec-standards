@@ -1,5 +1,5 @@
 use crate::{test::utils::{self, mint_amount}, Token};
-use authwit::cheatcodes as authwit_cheatcodes;
+use aztec::test::helpers::authwit as authwit_cheatcodes;
 
 #[test(should_fail_with = "Artifact not found when calling private function. Contract address: 0x0000000000000000000000000000000000000000000000000000000000000000.")]
 unconstrained fn issue_private_to_public_exact_without_asset() {
@@ -30,12 +30,12 @@ unconstrained fn issue_private_to_public_exact_success() {
 
     // Deposit assets to get shares
     // Authorize the vault to use the caller's assets
-    let transfer_private_to_public_call_interface = Token::at(asset_address)
-        .transfer_private_to_public(owner, vault_address, deposit_amount, 0);
-    authwit_cheatcodes::add_private_authwit_from_call_interface(
-        owner,
+    utils::authorize_transfer_private_to_public(
+        asset_address,
         vault_address,
-        transfer_private_to_public_call_interface,
+        owner,
+        deposit_amount,
+        0,
     );
 
     // Deposit
@@ -79,18 +79,18 @@ unconstrained fn issue_private_to_public_exact_after_yield() {
 
     // Deposit assets to get shares
     // Authorize the vault to use the caller's assets
-    let transfer_private_to_public_call_interface = Token::at(asset_address)
-        .transfer_private_to_public(owner, vault_address, deposit_amount, 0);
-    authwit_cheatcodes::add_private_authwit_from_call_interface(
-        owner,
+    utils::authorize_transfer_private_to_public(
+        asset_address,
         vault_address,
-        transfer_private_to_public_call_interface,
+        owner,
+        deposit_amount,
+        0,
     );
 
     // Deposit
     env.impersonate(owner);
     let max_assets: u128 = deposit_amount; // mint_amount / 2 because of yield
-    let requested_shares = 5_000;
+    let requested_shares = deposit_amount / 2; // The initial rate, when shares' supply is still 0, is given by the amount of assets held by the vault + 1. Since yield = 1, the rate is 1:2.
     Token::at(vault_address)
         .issue_private_to_public_exact(owner, recipient, requested_shares, max_assets, 0)
         .call(&mut env.private());
@@ -109,7 +109,7 @@ unconstrained fn issue_private_to_public_exact_after_yield() {
 }
 
 #[test]
-unconstrained fn issue_public_to_private_exact_too_many_assets() {
+unconstrained fn issue_private_to_public_exact_too_many_assets() {
     // Setup with asset token
     let (env, vault_address, owner, recipient, asset_address) = utils::setup_with_asset(true);
 
@@ -121,18 +121,18 @@ unconstrained fn issue_public_to_private_exact_too_many_assets() {
 
     // Deposit assets to get shares
     // Authorize the vault to use the caller's assets
-    let transfer_private_to_public_call_interface =
-        Token::at(asset_address).transfer_private_to_public(owner, vault_address, max_deposit, 0);
-    authwit_cheatcodes::add_private_authwit_from_call_interface(
-        owner,
+    utils::authorize_transfer_private_to_public(
+        asset_address,
         vault_address,
-        transfer_private_to_public_call_interface,
+        owner,
+        max_deposit,
+        0,
     );
 
     // Deposit
     env.impersonate(owner);
     // At the first deposit 1 share = 1 asset
-    let requested_shares = 9_999; // But should receive 10_000
+    let requested_shares = max_deposit - 1; // But should receive deposit_amount
     Token::at(vault_address)
         .issue_private_to_public_exact(owner, recipient, requested_shares, max_deposit, 0)
         .call(&mut env.private());
@@ -164,12 +164,12 @@ unconstrained fn issue_private_to_public_exact_request_too_many_shares() {
 
     // Deposit assets to get shares
     // Authorize the vault to use the caller's assets
-    let transfer_private_to_public_call_interface = Token::at(asset_address)
-        .transfer_private_to_public(owner, vault_address, deposit_amount, 0);
-    authwit_cheatcodes::add_private_authwit_from_call_interface(
-        owner,
+    utils::authorize_transfer_private_to_public(
+        asset_address,
         vault_address,
-        transfer_private_to_public_call_interface,
+        owner,
+        deposit_amount,
+        0,
     );
 
     // Deposit
@@ -184,7 +184,7 @@ unconstrained fn issue_private_to_public_exact_request_too_many_shares() {
 }
 
 #[test(should_fail_with = "Unknown auth witness for message hash ")]
-unconstrained fn issue_private_to_public_exact_without_approval() {
+unconstrained fn issue_private_to_public_exact_without_asset_approval() {
     // Setup with asset token
     let (env, vault_address, owner, recipient, asset_address) = utils::setup_with_asset(true);
 
@@ -217,12 +217,12 @@ unconstrained fn issue_private_to_public_exact_on_behalf_of_wrong_caller() {
 
     // Deposit assets to get shares
     // Authorize the vault to use the caller's assets
-    let transfer_private_to_public_call_interface = Token::at(asset_address)
-        .transfer_private_to_public(owner, vault_address, deposit_amount, 0);
-    authwit_cheatcodes::add_private_authwit_from_call_interface(
-        owner,
+    utils::authorize_transfer_private_to_public(
+        asset_address,
         vault_address,
-        transfer_private_to_public_call_interface,
+        owner,
+        deposit_amount,
+        0,
     );
 
     // Deposit
@@ -248,12 +248,12 @@ unconstrained fn issue_private_to_public_exact_on_behalf_of_other_success() {
 
     // Deposit assets to get shares
     // Authorize the vault to use the caller's assets
-    let transfer_private_to_public_call_interface = Token::at(asset_address)
-        .transfer_private_to_public(owner, vault_address, deposit_amount, 0);
-    authwit_cheatcodes::add_private_authwit_from_call_interface(
-        owner,
+    utils::authorize_transfer_private_to_public(
+        asset_address,
         vault_address,
-        transfer_private_to_public_call_interface,
+        owner,
+        deposit_amount,
+        0,
     );
 
     // Authorize the recipient to call issue_private_to_public_exact

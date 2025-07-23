@@ -50,10 +50,7 @@ unconstrained fn mint_to_private_failure_balance_overflow() {
         .call(&mut env.private());
 
     // TODO: is there something like type(u128).max?
-    // assert((2.pow_32(128) as u128) == 0);
-    let two_pow_127 = 2.pow_32(127);
-    let two_pow_127_minus_one = two_pow_127 - 1;
-    let max_u128 = (two_pow_127 + two_pow_127_minus_one) as u128;
+    let max_u128 = utils::max_u128();
     Token::at(token_contract_address).mint_to_commitment(commitment, max_u128).call(
         &mut env.public(),
     );
@@ -78,10 +75,7 @@ unconstrained fn mint_to_private_failure_total_supply_overflow() {
         .call(&mut env.private());
 
     let mint_amount: u128 = 10_000;
-    let two_pow_127 = 2.pow_32(127);
-    let two_pow_127_minus_one = two_pow_127 - 1;
-    let max_u128 = (two_pow_127 + two_pow_127_minus_one) as u128;
-
+    let max_u128 = utils::max_u128();
     Token::at(token_contract_address).mint_to_commitment(commitment, max_u128).call(
         &mut env.public(),
     );
