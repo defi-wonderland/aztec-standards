@@ -1,5 +1,5 @@
 use crate::{test::{tokenized_vault::tokenized_vault_utils, utils::{self, mint_amount}}, Token};
-use authwit::cheatcodes as authwit_cheatcodes;
+use aztec::test::helpers::authwit as authwit_cheatcodes;
 
 #[test(should_fail_with = "Trying to read from uninitialized PublicImmutable")]
 unconstrained fn redeem_private_to_public_without_asset() {
@@ -72,7 +72,7 @@ unconstrained fn redeem_private_to_public_after_yield() {
     );
 
     // Mint some asset tokens to the vault contract
-    let yield_amount: u128 = 2;
+    let yield_amount: u128 = 2; // Using 2 instead of 1 avoids rounding issues from anti-inflation logic: 1 goes to the user, 1 stays in the vault.
     env.impersonate(owner);
     Token::at(asset_address).mint_to_public(vault_address, yield_amount).call(&mut env.public());
     env.advance_block_by(1);

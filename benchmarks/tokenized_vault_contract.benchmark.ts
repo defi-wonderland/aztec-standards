@@ -7,9 +7,7 @@ import {
   AuthWitness,
 } from '@aztec/aztec.js';
 import { parseUnits } from 'viem';
-import { getInitialTestAccounts } from '@aztec/accounts/testing';
-import { SchnorrAccountContract } from '@aztec/accounts/schnorr';
-import { deriveSigningKey } from '@aztec/stdlib/keys';
+import { getInitialTestAccountsManagers } from '@aztec/accounts/testing';
 
 // Import the new Benchmark base class and context
 import { Benchmark, BenchmarkContext } from '@defi-wonderland/aztec-benchmark';
@@ -41,19 +39,10 @@ export default class TokenContractBenchmark extends Benchmark {
    * Creates PXE client, gets accounts, and deploys the contract.
    */
   async setup(): Promise<TokenBenchmarkContext> {
-    const { pxe, store } = await setupPXE();
-    const managers = await Promise.all(
-      (await getInitialTestAccounts()).map(async (acc) => {
-        return await AccountManager.create(
-          pxe,
-          acc.secret,
-          new SchnorrAccountContract(deriveSigningKey(acc.secret)),
-          acc.salt,
-        );
-      }),
-    );
+    const { pxe } = await setupPXE();
+    const managers = await getInitialTestAccountsManagers(pxe);
     const accounts = await Promise.all(managers.map((acc) => acc.register()));
-    const deployer = accounts[0]!;
+    const [deployer] = accounts;
     const [deployedBaseContract, deployedAssetContract] = await deployVaultAndAssetWithMinter(deployer);
     const vaultContract = await TokenContract.at(deployedBaseContract.address, deployer);
     const assetContract = await TokenContract.at(deployedAssetContract.address, deployer);
@@ -167,22 +156,22 @@ export default class TokenContractBenchmark extends Benchmark {
 
       // Withdraw methods
       vaultContract.withWallet(bob).methods.withdraw_public_to_public(bobAddress, aliceAddress, amt(1), 0),
-      // TODO: uncomment withdraw_public_to_private when the ivsk is no longer needed for computing the app tagging secret.
+      // TODO(#15666 & #15118): uncomment withdraw_public_to_private when the ivsk is no longer needed for computing the app tagging secret.
       // vaultContract.withWallet(bob).methods.withdraw_public_to_private(bobAddress, aliceAddress, amt(1), 0),
-      // TODO: uncomment withdraw_private_to_private when the ivsk is no longer needed for computing the app tagging secret.
+      // TODO(#15666 & #15118): uncomment withdraw_private_to_private when the ivsk is no longer needed for computing the app tagging secret.
       // vaultContract.withWallet(bob).methods.withdraw_private_to_private(bobAddress, aliceAddress, amt(1), amt(1), 0),
       vaultContract
         .withWallet(bob)
         .methods.withdraw_private_to_public_exact(bobAddress, aliceAddress, amt(1), amt(1), 0),
-      // TODO: uncomment withdraw_private_to_private_exact when the ivsk is no longer needed for computing the app tagging secret.
+      // TODO(#15666 & #15118): uncomment withdraw_private_to_private_exact when the ivsk is no longer needed for computing the app tagging secret.
       // vaultContract.withWallet(bob).methods.withdraw_private_to_private_exact(bobAddress, aliceAddress, amt(1), amt(1), 0),
 
       // Redeem methods
       vaultContract.withWallet(bob).methods.redeem_public_to_public(bobAddress, aliceAddress, amt(1), 0),
       vaultContract.withWallet(bob).methods.redeem_private_to_public(bobAddress, aliceAddress, amt(1), 0),
-      // TODO: uncomment redeem_private_to_private_exact when the ivsk is no longer needed for computing the app tagging secret.
+      // TODO(#15666 & #15118): uncomment redeem_private_to_private_exact when the ivsk is no longer needed for computing the app tagging secret.
       // vaultContract.withWallet(bob).methods.redeem_private_to_private_exact(bobAddress, aliceAddress, amt(1), amt(1), 0),
-      // TODO: uncomment redeem_public_to_private_exact when the ivsk is no longer needed for computing the app tagging secret.
+      // TODO(#15666 & #15118): uncomment redeem_public_to_private_exact when the ivsk is no longer needed for computing the app tagging secret.
       // vaultContract.withWallet(bob).methods.redeem_public_to_private_exact(bobAddress, aliceAddress, amt(1), amt(1), 0),
     ];
 

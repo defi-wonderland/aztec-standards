@@ -1,8 +1,8 @@
 use crate::{test::utils::{self, mint_amount}, Token};
-use authwit::cheatcodes as authwit_cheatcodes;
+use aztec::test::helpers::authwit as authwit_cheatcodes;
 
 // #[test(should_fail_with = "Artifact not found when enriching public simulation error. Contract address: 0x0000000000000000000000000000000000000000000000000000000000000000.")]
-// TODO: private --> public execution flow is broken in noir tests. While this should fail in private context, the public context error is currently thrown.
+// TODO(https://defi-wonderland.slack.com/archives/C086S2Y2925/p1751922367349379): private --> public execution flow is broken in noir tests. While this should fail in private context, the public context error is currently thrown.
 #[test(should_fail_with = "Trying to read from uninitialized PublicImmutable")]
 unconstrained fn deposit_public_to_private_exact_without_asset() {
     // Setup without account contracts. We are not using authwits here, so dummy accounts are enough
@@ -32,12 +32,12 @@ unconstrained fn deposit_public_to_private_exact_success() {
 
     // Deposit assets to get shares
     // Authorize the vault to use the caller's assets
-    let public_transfer_public_to_public_call_interface =
-        Token::at(asset_address).transfer_public_to_public(owner, vault_address, deposit_amount, 0);
-    authwit_cheatcodes::add_public_authwit_from_call_interface(
-        owner,
+    utils::authorize_transfer_public_to_public(
+        asset_address,
         vault_address,
-        public_transfer_public_to_public_call_interface,
+        owner,
+        deposit_amount,
+        0,
     );
 
     // Deposit
@@ -80,17 +80,17 @@ unconstrained fn deposit_public_to_private_exact_after_yield() {
 
     // Deposit assets to get shares
     // Authorize the vault to use the caller's assets
-    let public_transfer_public_to_public_call_interface =
-        Token::at(asset_address).transfer_public_to_public(owner, vault_address, deposit_amount, 0);
-    authwit_cheatcodes::add_public_authwit_from_call_interface(
-        owner,
+    utils::authorize_transfer_public_to_public(
+        asset_address,
         vault_address,
-        public_transfer_public_to_public_call_interface,
+        owner,
+        deposit_amount,
+        0,
     );
 
     // Deposit
     env.impersonate(owner);
-    let min_shares: u128 = 5_000; // mint_amount / 2 because of yield
+    let min_shares: u128 = deposit_amount / 2; // The initial rate, when shares' supply is still 0, is given by the amount of assets held by the vault + 1. Since yield = 1, the rate is 1:2.
     Token::at(vault_address)
         .deposit_public_to_private_exact(owner, recipient, deposit_amount, min_shares, 0)
         .call(&mut env.private());
@@ -124,18 +124,18 @@ unconstrained fn deposit_public_to_private_exact_request_fewer_shares() {
 
     // Deposit assets to get shares
     // Authorize the vault to use the caller's assets
-    let public_transfer_public_to_public_call_interface =
-        Token::at(asset_address).transfer_public_to_public(owner, vault_address, deposit_amount, 0);
-    authwit_cheatcodes::add_public_authwit_from_call_interface(
-        owner,
+    utils::authorize_transfer_public_to_public(
+        asset_address,
         vault_address,
-        public_transfer_public_to_public_call_interface,
+        owner,
+        deposit_amount,
+        0,
     );
 
     // Deposit
     env.impersonate(owner);
     // At the first deposit 1 share = 1 asset
-    let min_shares = 9_999; // But should receive 10_000
+    let min_shares = deposit_amount - 1; // But should receive deposit_amount
     Token::at(vault_address)
         .deposit_public_to_private_exact(owner, recipient, deposit_amount, min_shares, 0)
         .call(&mut env.private());
@@ -166,12 +166,12 @@ unconstrained fn deposit_public_to_private_exact_request_too_many_shares() {
 
     // Deposit assets to get shares
     // Authorize the vault to use the caller's assets
-    let public_transfer_public_to_public_call_interface =
-        Token::at(asset_address).transfer_public_to_public(owner, vault_address, deposit_amount, 0);
-    authwit_cheatcodes::add_public_authwit_from_call_interface(
-        owner,
+    utils::authorize_transfer_public_to_public(
+        asset_address,
         vault_address,
-        public_transfer_public_to_public_call_interface,
+        owner,
+        deposit_amount,
+        0,
     );
 
     // Deposit
@@ -185,7 +185,7 @@ unconstrained fn deposit_public_to_private_exact_request_too_many_shares() {
 }
 
 #[test(should_fail_with = "unauthorized")]
-unconstrained fn deposit_public_to_private_exact_without_approval() {
+unconstrained fn deposit_public_to_private_exact_without_asset_approval() {
     // Setup with asset token
     let (env, vault_address, owner, recipient, asset_address) = utils::setup_with_asset(true);
 
@@ -218,12 +218,12 @@ unconstrained fn deposit_public_to_private_exact_on_behalf_of_wrong_caller() {
 
     // Deposit assets to get shares
     // Authorize the vault to use the caller's assets
-    let public_transfer_public_to_public_call_interface =
-        Token::at(asset_address).transfer_public_to_public(owner, vault_address, deposit_amount, 0);
-    authwit_cheatcodes::add_public_authwit_from_call_interface(
-        owner,
+    utils::authorize_transfer_public_to_public(
+        asset_address,
         vault_address,
-        public_transfer_public_to_public_call_interface,
+        owner,
+        deposit_amount,
+        0,
     );
 
     // Deposit
@@ -249,12 +249,12 @@ unconstrained fn deposit_public_to_private_exact_on_behalf_of_other_success() {
 
     // Deposit assets to get shares
     // Authorize the vault to use the caller's assets
-    let public_transfer_public_to_public_call_interface =
-        Token::at(asset_address).transfer_public_to_public(owner, vault_address, deposit_amount, 0);
-    authwit_cheatcodes::add_public_authwit_from_call_interface(
-        owner,
+    utils::authorize_transfer_public_to_public(
+        asset_address,
         vault_address,
-        public_transfer_public_to_public_call_interface,
+        owner,
+        deposit_amount,
+        0,
     );
 
     // Authorize the recipient to call deposit_public_to_private_exact
