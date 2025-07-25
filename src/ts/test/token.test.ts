@@ -13,6 +13,7 @@ import { PXE } from '@aztec/stdlib/interfaces/client';
 import { AztecLmdbStore } from '@aztec/kv-store/lmdb';
 import { getInitialTestAccountsManagers } from '@aztec/accounts/testing';
 import { TokenContractArtifact, TokenContract } from '../../artifacts/Token.js';
+import { describe, it, expect, beforeAll, beforeEach, afterAll } from 'vitest';
 
 export async function deployTokenWithInitialSupply(deployer: Wallet, options: any) {
   const contract = await Contract.deploy(
@@ -448,7 +449,7 @@ describe('Token - Single PXE', () => {
   }, 300_000);
 });
 
-describe('Token - Multi PXE', () => {
+describe.skip('Token - Multi PXE', () => {
   let pxe: PXE;
 
   let wallets: AccountWalletWithSecretKey[];

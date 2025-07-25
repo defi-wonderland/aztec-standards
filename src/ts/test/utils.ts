@@ -15,6 +15,7 @@ import { createPXEService } from '@aztec/pxe/server';
 import { createStore } from '@aztec/kv-store/lmdb';
 import { TokenContract, TokenContractArtifact } from '../../artifacts/Token.js';
 import { NFTContractArtifact } from '../../artifacts/NFT.js';
+import { expect } from 'vitest';
 
 export const logger = createLogger('aztec:aztec-standards');
 
@@ -22,8 +23,11 @@ const { NODE_URL = 'http://localhost:8080' } = process.env;
 const node = createAztecNodeClient(NODE_URL);
 const l1Contracts = await node.getL1ContractAddresses();
 const config = getPXEServiceConfig();
-const fullConfig = { ...config, l1Contracts };
-fullConfig.proverEnabled = false;
+const fullConfig = {
+  ...config,
+  l1Contracts,
+  proverEnabled: false,
+};
 
 export const setupPXE = async () => {
   const store = await createStore('pxe', {
@@ -32,6 +36,7 @@ export const setupPXE = async () => {
   });
   const pxe = await createPXEService(node, fullConfig, { store });
   await waitForPXE(pxe);
+  console.log('PXE created');
   return { pxe, store };
 };
 
