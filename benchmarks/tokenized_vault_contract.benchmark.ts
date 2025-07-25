@@ -1,4 +1,5 @@
 import {
+  AccountManager,
   type AccountWallet,
   type ContractFunctionInteraction,
   type PXE,
