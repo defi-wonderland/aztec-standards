@@ -1,17 +1,18 @@
 use crate::{test::utils, Token};
 use aztec::oracle::random::random;
+use uint_note::uint_note::PartialUintNote;
 
 #[test]
 unconstrained fn mint_to_commitment_success() {
     // Setup without account contracts. We are not using authwits here, so dummy accounts are enough
     let (env, token_contract_address, _, recipient, minter) = utils::setup_with_minter(false);
 
+    env.impersonate(minter);
     let commitment = Token::at(token_contract_address)
-        .initialize_transfer_commitment(recipient, recipient)
+        .initialize_transfer_commitment(minter, recipient, minter)
         .call(&mut env.private());
 
     let mint_amount: u128 = 10_000;
-    env.impersonate(minter);
     Token::at(token_contract_address).mint_to_commitment(commitment, mint_amount).call(
         &mut env.public(),
     );
@@ -29,7 +30,7 @@ unconstrained fn mint_to_private_failure_unauthorized() {
 
     env.impersonate(recipient);
     let commitment = Token::at(token_contract_address)
-        .initialize_transfer_commitment(recipient, recipient)
+        .initialize_transfer_commitment(recipient, recipient, recipient)
         .call(&mut env.private());
 
     let mint_amount: u128 = 10_000;
@@ -43,17 +44,13 @@ unconstrained fn mint_to_private_failure_unauthorized() {
 unconstrained fn mint_to_private_failure_balance_overflow() {
     let (env, token_contract_address, owner, recipient, minter) = utils::setup_with_minter(false);
 
-    env.impersonate(recipient);
+    env.impersonate(minter);
     let commitment = Token::at(token_contract_address)
-        .initialize_transfer_commitment(recipient, recipient)
+        .initialize_transfer_commitment(minter, recipient, minter)
         .call(&mut env.private());
 
     // TODO: is there something like type(u128).max?
-    // assert((2.pow_32(128) as u128) == 0);
-    let two_pow_127 = 2.pow_32(127);
-    let two_pow_127_minus_one = two_pow_127 - 1;
-    let max_u128 = (two_pow_127 + two_pow_127_minus_one) as u128;
-    env.impersonate(minter);
+    let max_u128 = utils::max_u128();
     Token::at(token_contract_address).mint_to_commitment(commitment, max_u128).call(
         &mut env.public(),
     );
@@ -72,17 +69,13 @@ unconstrained fn mint_to_private_failure_balance_overflow() {
 unconstrained fn mint_to_private_failure_total_supply_overflow() {
     let (env, token_contract_address, owner, recipient, minter) = utils::setup_with_minter(false);
 
-    env.impersonate(recipient);
+    env.impersonate(minter);
     let commitment = Token::at(token_contract_address)
-        .initialize_transfer_commitment(recipient, recipient)
+        .initialize_transfer_commitment(minter, recipient, minter)
         .call(&mut env.private());
 
     let mint_amount: u128 = 10_000;
-    let two_pow_127 = 2.pow_32(127);
-    let two_pow_127_minus_one = two_pow_127 - 1;
-    let max_u128 = (two_pow_127 + two_pow_127_minus_one) as u128;
-
-    env.impersonate(minter);
+    let max_u128 = utils::max_u128();
     Token::at(token_contract_address).mint_to_commitment(commitment, max_u128).call(
         &mut env.public(),
     );
@@ -90,16 +83,15 @@ unconstrained fn mint_to_private_failure_total_supply_overflow() {
     utils::check_private_balance(token_contract_address, owner, 0);
 
     let another_commitment = Token::at(token_contract_address)
-        .initialize_transfer_commitment(recipient, recipient)
+        .initialize_transfer_commitment(minter, recipient, minter)
         .call(&mut env.private());
 
-    env.impersonate(minter);
     Token::at(token_contract_address).mint_to_commitment(another_commitment, mint_amount).call(
         &mut env.public(),
     );
 }
 
-#[test(should_fail_with = "Invalid commitment 'context.storage_read(commitment.commitment())'")]
+#[test(should_fail_with = "Invalid partial note or completer 'context.nullifier_exists(validity_commitment, context.this_address())'")]
 unconstrained fn mint_to_private_failure_invalid_commitments_random() {
     let (env, token_contract_address, _, _, minter) = utils::setup_with_minter(false);
 
@@ -111,7 +103,7 @@ unconstrained fn mint_to_private_failure_invalid_commitments_random() {
     );
 }
 
-#[test(should_fail_with = "Invalid commitment 'context.storage_read(commitment.commitment())'")]
+#[test(should_fail_with = "Invalid partial note or completer 'context.nullifier_exists(validity_commitment, context.this_address())'")]
 unconstrained fn mint_to_private_failure_invalid_commitments_zero() {
     let (env, token_contract_address, _, _, minter) = utils::setup_with_minter(false);
 
@@ -124,15 +116,14 @@ unconstrained fn mint_to_private_failure_invalid_commitments_zero() {
 unconstrained fn mint_to_private_failure_already_completed_commitment() {
     let (env, token_contract_address, _, recipient, minter) = utils::setup_with_minter(false);
 
-    env.impersonate(recipient);
+    env.impersonate(minter);
     let commitment = Token::at(token_contract_address)
-        .initialize_transfer_commitment(recipient, recipient)
+        .initialize_transfer_commitment(minter, recipient, minter)
         .call(&mut env.private());
 
     let mint_amount: u128 = 10_000;
 
     // mint to a commitment once
-    env.impersonate(minter);
     Token::at(token_contract_address).mint_to_commitment(commitment, mint_amount).call(
         &mut env.public(),
     );

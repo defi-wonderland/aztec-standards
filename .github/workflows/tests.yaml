@@ -12,18 +12,39 @@ concurrency:
 
 jobs:
     setup-and-run:
-      runs-on: ubuntu-latest
+      strategy:
+        matrix:
+          os: [ubuntu-latest-m]
+          threads: [12]
+
+      runs-on: 
+        labels: ${{ matrix.os }}
       timeout-minutes: 60
-  
+
+      concurrency:
+        group: job-${{ github.head_ref }}-${{ matrix.os }}-${{ matrix.threads }}
+        cancel-in-progress: false
+
       steps:
         - name: Checkout repository
           uses: actions/checkout@v3
           with:
             fetch-depth: 0 # Fetch all history for comparison
   
+        - uses: actions/setup-node@v4
+          with:
+            node-version: 20
+  
         - name: Set up Docker
           uses: docker/setup-buildx-action@v2
   
+        - name: Detect Aztec version
+          id: aztec-version
+          run: |
+            AZTEC_VERSION=$(node -p "require('./package.json').config.aztecVersion")
+            echo "version=$AZTEC_VERSION" >> "$GITHUB_OUTPUT"
+            echo "Aztec version is ${{ steps.aztec-version.outputs.version }}"
+
         - name: Install Aztec CLI
           run: |
             curl -s https://install.aztec.network > tmp.sh
@@ -34,14 +55,14 @@ jobs:
   
         - name: Set Aztec version
           run: |
-            VERSION=0.87.2 aztec-up
+            VERSION=${{ steps.aztec-version.outputs.version }} aztec-up
         
         - name: Start sandbox
           run: |
             aztec start --sandbox &
 
         - name: Install project dependencies
-          run: yarn
+          run: yarn --frozen-lockfile
   
         - name: Compile
           run: script -e -c "${AZTEC_NARGO:-aztec-nargo} compile"
@@ -51,11 +72,11 @@ jobs:
 
         - name: Start PXE
           run: |
-            VERSION=0.87.2 aztec start --port 8081 --pxe --pxe.nodeUrl=http://localhost:8080/ --pxe.proverEnabled false &
+            VERSION=${{ steps.aztec-version.outputs.version }} aztec start --port 8081 --pxe --pxe.nodeUrl=http://localhost:8080/ --pxe.proverEnabled false &
 
         - name: Run nr tests
           run: |
-            script -e -c "aztec test"
+            script -e -c "aztec test --test-threads ${{ matrix.threads }}"
 
         - name: Run js tests
           run: script -e -c "BASE_PXE_URL=http://localhost NODE_NO_WARNINGS=1 node --experimental-vm-modules $(yarn bin jest) --no-cache --runInBand --config jest.integration.config.json"

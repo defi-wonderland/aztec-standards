@@ -1,31 +1,31 @@
 {
     "tokens": [
         {
-            "name": "ETH",
-            "symbol": "ETH",
-            "address": "0x1848f4a84947391632f106de66335b649b8356b05f64feed80889d899ee82187",
+            "name": "WETH",
+            "symbol": "WETH",
+            "address": "0x24055f7c76f7ffe12080e127a31ee44db6db733e458d3c3812dce620099520c2",
             "decimals": 18,
             "minter": "contracts:dripper",
-            "upgrade_authority": "0x2b4ae02fdc1a0d31c423daafc14727b8e9c270f4fbaac8279828ae7d83c41e11"
+            "upgrade_authority": "0x0000000000000000000000000000000000000000000000000000000000000000"
         },
         {
             "name": "DAI",
             "symbol": "DAI",    
-            "address": "0x0c68f1e7e15af4d8138b3e48ef013dd1948728aee5d2806586becd5696ec96a1",
+            "address": "0x0e681c896f114ed3c8e31eca23b5741b8f1c48895e636b916daee0ce4f18deb2",
             "decimals": 9,
             "minter": "contracts:dripper",
-            "upgrade_authority": "0x2b4ae02fdc1a0d31c423daafc14727b8e9c270f4fbaac8279828ae7d83c41e11"
+            "upgrade_authority": "0x0000000000000000000000000000000000000000000000000000000000000000"
         },
         {
             "name": "USDC",
             "symbol": "USDC",
-            "address": "0x0cd9912580b900c3685c6fa2f7098eae9eae222eb4f3cf7724eb9bfb1a038297",
+            "address": "0x0d08d064f85c5aeee7e6792d863ad6fbf4c4eae99c3d2fa784c02fbebd02dc5d",
             "decimals": 6,
             "minter": "contracts:dripper",
-            "upgrade_authority": "0x2b4ae02fdc1a0d31c423daafc14727b8e9c270f4fbaac8279828ae7d83c41e11"
+            "upgrade_authority": "0x0000000000000000000000000000000000000000000000000000000000000000"
         }
     ],
     "dripper" : {
-        "address": "0x1b9bce2b757c23f74aac7cec435c7f0d8a552ba364da1b04b1574682aaa0eadc"
+        "address": "0x0515cc4e5f58ebff5566873d125cd7d054976b07af1cdbb93c3217e27f7c324b"
     }
 }

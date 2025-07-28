@@ -1,6 +1,6 @@
 use crate::NFT;
 use crate::test::utils;
-use authwit::cheatcodes as authwit_cheatcodes;
+use aztec::test::helpers::authwit as authwit_cheatcodes;
 
 #[test]
 unconstrained fn nft_burn_private_self_success() {
@@ -52,18 +52,6 @@ unconstrained fn nft_burn_private_authorized_success() {
     // Verify NFT is burned
     utils::assert_private_nft_nullified(nft_contract_address, owner, token_id);
     utils::assert_nft_does_not_exist(nft_contract_address, token_id);
-}
-
-#[test(should_fail_with = "invalid nonce")]
-unconstrained fn nft_burn_private_self_non_zero_nonce_fail() {
-    // Setup and mint NFT to owner
-    let token_id = 10000;
-    let (env, nft_contract_address, owner, _, _) =
-        utils::setup_and_mint_to_private(false, token_id);
-
-    // Attempt to burn with non-zero nonce as owner
-    env.impersonate(owner);
-    NFT::at(nft_contract_address).burn_private(owner, token_id, 1).call(&mut env.private());
 }
 
 #[test(should_fail_with = "nft not found in private to public")]

@@ -1,11 +1,11 @@
-import { type AccountWallet, type ContractFunctionInteraction, type PXE, createPXEClient } from '@aztec/aztec.js';
-import { getInitialTestAccountsWallets } from '@aztec/accounts/testing';
+import { type AccountWallet, type ContractFunctionInteraction, type PXE } from '@aztec/aztec.js';
+import { getInitialTestAccountsManagers } from '@aztec/accounts/testing';
 
 // Import the new Benchmark base class and context
 import { Benchmark, BenchmarkContext } from '@defi-wonderland/aztec-benchmark';
 
 import { NFTContract } from '../src/artifacts/NFT.js';
-import { deployNFTWithMinter } from '../src/ts/test/utils.js';
+import { deployNFTWithMinter, setupPXE } from '../src/ts/test/utils.js';
 
 // Extend the BenchmarkContext from the new package
 interface NFTBenchmarkContext extends BenchmarkContext {
@@ -22,11 +22,11 @@ export default class NFTContractBenchmark extends Benchmark {
    * Creates PXE client, gets accounts, and deploys the contract.
    */
   async setup(): Promise<NFTBenchmarkContext> {
-    const { BASE_PXE_URL = 'http://localhost' } = process.env;
-    const pxe = createPXEClient(`${BASE_PXE_URL}:8080`);
-    const accounts = await getInitialTestAccountsWallets(pxe);
-    const deployer = accounts[0]!;
-    const deployedBaseContract = await deployNFTWithMinter(deployer);
+    const { pxe } = await setupPXE();
+    const managers = await getInitialTestAccountsManagers(pxe);
+    const accounts = await Promise.all(managers.map((acc) => acc.register()));
+    const [deployer] = accounts;
+    const deployedBaseContract = await deployNFTWithMinter(deployer, { universalDeploy: true });
     const nftContract = await NFTContract.at(deployedBaseContract.address, deployer);
     return { pxe, deployer, accounts, nftContract };
   }
@@ -35,10 +35,9 @@ export default class NFTContractBenchmark extends Benchmark {
    * Returns the list of NFTContract methods to be benchmarked.
    */
   getMethods(context: NFTBenchmarkContext): ContractFunctionInteraction[] {
-    const { nftContract, deployer, accounts } = context;
-    const alice = deployer;
+    const { nftContract, accounts } = context;
+    const [alice] = accounts;
     const owner = alice.getAddress();
-
     const methods: ContractFunctionInteraction[] = [
       // Mint methods
       nftContract.withWallet(alice).methods.mint_to_private(owner, 1),

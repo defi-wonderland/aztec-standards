@@ -1,7 +1,6 @@
 use crate::NFT;
 use crate::test::utils;
-use authwit::cheatcodes as authwit_cheatcodes;
-use aztec::prelude::AztecAddress;
+use aztec::{prelude::AztecAddress, test::helpers::authwit as authwit_cheatcodes};
 
 #[test]
 unconstrained fn nft_transfer_private_to_public_self_success() {
@@ -39,11 +38,11 @@ unconstrained fn nft_transfer_private_to_public_authorized_success() {
     utils::assert_owns_private_nft(nft_contract_address, owner, token_id);
     utils::assert_owns_public_nft(env, nft_contract_address, AztecAddress::zero(), token_id);
 
-    // // Create the transfer call interface
+    // Create the transfer call interface
     let transfer_call_interface =
         NFT::at(nft_contract_address).transfer_private_to_public(owner, recipient, token_id, 0);
 
-    // // Add authorization witness from owner to recipient
+    // Add authorization witness from owner to recipient
     authwit_cheatcodes::add_private_authwit_from_call_interface(
         owner,
         recipient,
@@ -79,20 +78,6 @@ unconstrained fn nft_transfer_private_to_public_unauthorized_fail() {
 
     // Should fail because recipient has no authorization witness from owner
     transfer_call_interface.call(&mut env.private());
-}
-
-#[test(should_fail_with = "invalid nonce")]
-unconstrained fn nft_transfer_private_to_public_self_non_zero_nonce_fail() {
-    // Setup and mint NFT to owner in private state
-    let token_id = 10000;
-    let (env, nft_contract_address, owner, _, _) =
-        utils::setup_and_mint_to_private(false, token_id);
-
-    // Attempt transfer with non-zero nonce (using 1 for determinism)
-    env.impersonate(owner);
-    NFT::at(nft_contract_address).transfer_private_to_public(owner, owner, token_id, 1).call(
-        &mut env.private(),
-    );
 }
 
 #[test(should_fail_with = "nft not found in private to public")]

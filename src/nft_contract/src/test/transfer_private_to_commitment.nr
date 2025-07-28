@@ -1,7 +1,6 @@
 use crate::NFT;
 use crate::test::utils;
-use crate::types::nft_note::PartialNFTNote;
-use authwit::cheatcodes as authwit_cheatcodes;
+use aztec::test::helpers::authwit as authwit_cheatcodes;
 
 #[test]
 unconstrained fn nft_transfer_private_to_commitment_success() {
@@ -13,18 +12,15 @@ unconstrained fn nft_transfer_private_to_commitment_success() {
     // Verify initial ownership
     utils::assert_owns_private_nft(nft_contract_address, owner, token_id);
 
-    // Prepare commitment as recipient
-    env.impersonate(recipient);
-    let commitment: PartialNFTNote = NFT::at(nft_contract_address)
-        .initialize_transfer_commitment(owner, recipient)
+    // Prepare commitment
+    env.impersonate(owner);
+    let commitment: Field = NFT::at(nft_contract_address)
+        .initialize_transfer_commitment(owner, recipient, owner)
         .call(&mut env.private());
     env.advance_block_by(1);
 
     // Verify commitment is stored
-    assert(
-        utils::get_commitment_stored(nft_contract_address, commitment.commitment()),
-        "Commitment not stored",
-    );
+    assert(utils::get_commitment_stored(nft_contract_address, commitment), "Commitment not stored");
 
     // Transfer NFT to commitment
     env.impersonate(owner);
@@ -35,10 +31,10 @@ unconstrained fn nft_transfer_private_to_commitment_success() {
 
     // Verify NFT is removed from owner and in commitment
     utils::assert_private_nft_nullified(nft_contract_address, owner, token_id);
-    // NFT should not be in recipient's private set yet, only in commitment
-    utils::assert_private_nft_nullified(nft_contract_address, recipient, token_id);
+    // NFT should be in recipient's private set
+    utils::assert_owns_private_nft(nft_contract_address, recipient, token_id);
     assert(
-        utils::get_commitment_stored(nft_contract_address, commitment.commitment()),
+        utils::get_commitment_stored(nft_contract_address, commitment),
         "Commitment not stored after transfer",
     );
 }
@@ -53,25 +49,22 @@ unconstrained fn nft_transfer_private_to_commitment_authorized_success() {
     // Verify initial ownership
     utils::assert_owns_private_nft(nft_contract_address, owner, token_id);
 
-    // Prepare commitment as recipient
-    env.impersonate(recipient);
-    let commitment: PartialNFTNote = NFT::at(nft_contract_address)
-        .initialize_transfer_commitment(owner, recipient)
+    // Prepare commitment
+    env.impersonate(owner);
+    let commitment: Field = NFT::at(nft_contract_address)
+        .initialize_transfer_commitment(owner, recipient, owner)
         .call(&mut env.private());
     env.advance_block_by(1);
 
     // Verify commitment is stored
-    assert(
-        utils::get_commitment_stored(nft_contract_address, commitment.commitment()),
-        "Commitment not stored",
-    );
+    assert(utils::get_commitment_stored(nft_contract_address, commitment), "Commitment not stored");
 
     // Create transfer call interface with non-zero nonce
     let transfer_call_interface = NFT::at(nft_contract_address).transfer_private_to_commitment(
         owner,
         token_id,
         commitment,
-        1,
+        0,
     );
 
     // Add authorization witness from owner to recipient
@@ -88,33 +81,12 @@ unconstrained fn nft_transfer_private_to_commitment_authorized_success() {
 
     // Verify NFT is removed from owner and in commitment
     utils::assert_private_nft_nullified(nft_contract_address, owner, token_id);
-    // NFT should not be in recipient's private set yet, only in commitment
-    utils::assert_private_nft_nullified(nft_contract_address, recipient, token_id);
+    // NFT should be in recipient's private set
+    utils::assert_owns_private_nft(nft_contract_address, recipient, token_id);
     assert(
-        utils::get_commitment_stored(nft_contract_address, commitment.commitment()),
+        utils::get_commitment_stored(nft_contract_address, commitment),
         "Commitment not stored after transfer",
     );
-}
-
-#[test(should_fail_with = "invalid nonce")]
-unconstrained fn nft_transfer_private_to_commitment_self_non_zero_nonce_fail() {
-    // Setup and mint NFT to owner
-    let token_id = 10000;
-    let (env, nft_contract_address, owner, _, recipient) =
-        utils::setup_and_mint_to_private(false, token_id);
-
-    // Prepare commitment as recipient
-    env.impersonate(recipient);
-    let commitment: PartialNFTNote = NFT::at(nft_contract_address)
-        .initialize_transfer_commitment(owner, recipient)
-        .call(&mut env.private());
-    env.advance_block_by(1);
-
-    // Attempt transfer with non-zero nonce as owner
-    env.impersonate(owner);
-    NFT::at(nft_contract_address)
-        .transfer_private_to_commitment(owner, token_id, commitment, 1)
-        .call(&mut env.private());
 }
 
 #[test(should_fail_with = "nft not found in private to public")]
@@ -125,8 +97,8 @@ unconstrained fn nft_transfer_private_to_commitment_non_existent_fail() {
 
     // Prepare commitment as recipient
     env.impersonate(recipient);
-    let commitment: PartialNFTNote = NFT::at(nft_contract_address)
-        .initialize_transfer_commitment(owner, recipient)
+    let commitment: Field = NFT::at(nft_contract_address)
+        .initialize_transfer_commitment(owner, recipient, recipient)
         .call(&mut env.private());
     env.advance_block_by(1);
 
@@ -146,8 +118,8 @@ unconstrained fn nft_transfer_private_to_commitment_unauthorized_fail() {
 
     // Prepare commitment as recipient
     env.impersonate(recipient);
-    let commitment: PartialNFTNote = NFT::at(nft_contract_address)
-        .initialize_transfer_commitment(owner, recipient)
+    let commitment: Field = NFT::at(nft_contract_address)
+        .initialize_transfer_commitment(owner, recipient, recipient)
         .call(&mut env.private());
     env.advance_block_by(1);
 
@@ -173,8 +145,8 @@ unconstrained fn nft_transfer_private_to_commitment_wrong_authwit_fail() {
 
     // Prepare commitment as recipient
     env.impersonate(recipient);
-    let commitment: PartialNFTNote = NFT::at(nft_contract_address)
-        .initialize_transfer_commitment(owner, recipient)
+    let commitment: Field = NFT::at(nft_contract_address)
+        .initialize_transfer_commitment(owner, recipient, recipient)
         .call(&mut env.private());
     env.advance_block_by(1);
 
@@ -207,8 +179,8 @@ unconstrained fn nft_transfer_private_to_commitment_public_nft_fail() {
 
     // Prepare commitment as recipient
     env.impersonate(recipient);
-    let commitment: PartialNFTNote = NFT::at(nft_contract_address)
-        .initialize_transfer_commitment(owner, recipient)
+    let commitment: Field = NFT::at(nft_contract_address)
+        .initialize_transfer_commitment(owner, recipient, recipient)
         .call(&mut env.private());
     env.advance_block_by(1);
 

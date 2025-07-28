@@ -3,6 +3,10 @@ name: Aztec Benchmark Diff
 on:
   pull_request:
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
 permissions:
   contents: read
   pull-requests: write
@@ -12,14 +16,21 @@ env:
 
 jobs:
   benchmark:
-    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        os: [ubuntu-latest-m]
+        threads: [12]
+
+    runs-on: 
+      labels: ${{ matrix.os }}
+    timeout-minutes: 12
 
     steps:
       # ──────────────────────────────────────────────────────────────
       # 0️⃣  SHARED TOOLING – Buildx + Aztec CLI skeleton
       # ──────────────────────────────────────────────────────────────
       - name: Checkout repo (full history)
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
@@ -38,7 +49,7 @@ jobs:
       # 1️⃣  BENCHMARK BASE COMMIT
       # ──────────────────────────────────────────────────────────────
       - name: Checkout BASE branch
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           ref: ${{ github.event.pull_request.base.sha }}
 
@@ -63,7 +74,7 @@ jobs:
             --pxe.proverEnabled false &
 
       - name: Install deps (BASE)
-        run: yarn
+        run: yarn --frozen-lockfile
 
       - name: Compile contracts (BASE)
         run: script -e -c "${AZTEC_NARGO:-aztec-nargo} compile"
@@ -78,7 +89,7 @@ jobs:
       # This is required to avoid the benchmark results being removed by the Checkout PR step
       - name: Store base benchmark results
         run: |
-          mkdir -p ../benchmarks_base && mv ${{ env.BENCH_DIR }}/* ../benchmarks_base/
+          mkdir -p ../benchmarks_base && mv ${{ env.BENCH_DIR }}/*.json ../benchmarks_base/
 
       # ──────────────────────────────────────────────────────────────
       # 2️⃣  BENCHMARK PR HEAD  (github.event.pull_request.head.sha)
@@ -87,7 +98,7 @@ jobs:
       # clean does not work correctly and is removing the benchmark results anyways
       # https://github.com/actions/checkout/issues/1201
       - name: Checkout PR branch
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           ref: ${{ github.event.pull_request.head.sha }}
           clean: false
@@ -132,7 +143,7 @@ jobs:
             --pxe.proverEnabled false &
 
       - name: Install deps (PR)
-        run: yarn
+        run: yarn --frozen-lockfile
 
       - name: Compile contracts (PR)
         run: script -e -c "${AZTEC_NARGO:-aztec-nargo} compile"
