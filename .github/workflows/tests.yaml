@@ -79,4 +79,4 @@ jobs:
             script -e -c "aztec test --test-threads ${{ matrix.threads }}"
 
         - name: Run js tests
-          run: script -e -c "yarn test:js
+          run: script -e -c "yarn test:js"
