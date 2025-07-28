@@ -18,7 +18,7 @@ const setupTestSuite = async () => {
   return { pxe, wallets, store };
 };
 
-describe('Tokenized Vault - Asset/Share Combinations', () => {
+describe('Tokenized Vault', () => {
   let pxe: PXE;
   let store: AztecLmdbStore;
   let wallets: AccountWalletWithSecretKey[];
@@ -796,6 +796,473 @@ describe('Tokenized Vault - Asset/Share Combinations', () => {
       // await expectTokenBalances(vault, bob.getAddress(), BigInt(0), BigInt(0));
       // await expectTokenBalances(vault, carl.getAddress(), BigInt(0), BigInt(0));
       // expect(await vault.methods.total_supply().simulate()).toBe(BigInt(0));
+    }, 300_000);
+  });
+
+  describe('Deposit failures: incorrect amounts', () => {
+    it('deposit_public_to_public', async () => {
+      // Mint some assets to Alice
+      await asset.withWallet(alice).methods.mint_to_public(alice.getAddress(), initialAmount).send().wait();
+
+      // Attempt depositing more assets than Alice actually has
+      let transfer = asset.methods.transfer_public_to_public(alice.getAddress(), vault.address, initialAmount + 1, 0);
+      await setPublicAuthWit(vault.address, transfer, alice);
+      await expect(
+        vault
+          .withWallet(alice)
+          .methods.deposit_public_to_public(alice.getAddress(), alice.getAddress(), initialAmount + 1, 0)
+          .send()
+          .wait(),
+      ).rejects.toThrow(/app_logic_reverted/);
+
+      // Attemp to deposit with an incorrect allowance
+      transfer = asset.methods.transfer_public_to_public(alice.getAddress(), vault.address, assetsAlice - 1, 0);
+      await setPublicAuthWit(vault.address, transfer, alice);
+      await expect(
+        vault
+          .withWallet(alice)
+          .methods.deposit_public_to_public(alice.getAddress(), alice.getAddress(), assetsAlice, 0)
+          .send()
+          .wait(),
+      ).rejects.toThrow(/app_logic_reverted/);
+    }, 300_000);
+
+    it('deposit_public_to_private', async () => {
+      // Mint some assets to Alice
+      await asset.withWallet(alice).methods.mint_to_public(alice.getAddress(), initialAmount).send().wait();
+
+      // Attempt depositing more assets than Alice actually has
+      let sharesRequested = initialAmount + 1;
+      let transfer = asset.methods.transfer_public_to_public(alice.getAddress(), vault.address, initialAmount + 1, 0);
+      await setPublicAuthWit(vault.address, transfer, alice);
+      await expect(
+        vault
+          .withWallet(alice)
+          .methods.deposit_public_to_private(
+            alice.getAddress(),
+            alice.getAddress(),
+            initialAmount + 1,
+            sharesRequested,
+            0,
+          )
+          .send()
+          .wait(),
+      ).rejects.toThrow(/app_logic_reverted/);
+
+      // Attemp to deposit with an incorrect allowance
+      sharesRequested = assetsAlice;
+      transfer = asset.methods.transfer_public_to_public(alice.getAddress(), vault.address, assetsAlice - 1, 0);
+      await setPublicAuthWit(vault.address, transfer, alice);
+      await expect(
+        vault
+          .withWallet(alice)
+          .methods.deposit_public_to_private(alice.getAddress(), alice.getAddress(), assetsAlice, sharesRequested, 0)
+          .send()
+          .wait(),
+      ).rejects.toThrow(/app_logic_reverted/);
+
+      // Attemp to request more shares than allowed for the given deposit
+      sharesRequested = assetsAlice + 1;
+      transfer = asset.methods.transfer_public_to_public(alice.getAddress(), vault.address, assetsAlice, 0);
+      await setPublicAuthWit(vault.address, transfer, alice);
+      await expect(
+        vault
+          .withWallet(alice)
+          .methods.deposit_public_to_private(alice.getAddress(), alice.getAddress(), assetsAlice, sharesRequested, 0)
+          .send()
+          .wait(),
+      ).rejects.toThrow(/app_logic_reverted/); // Too many shares requested
+    }, 300_000);
+
+    it('deposit_private_to_public', async () => {
+      // Mint some assets to Alice
+      await asset
+        .withWallet(alice)
+        .methods.mint_to_private(alice.getAddress(), alice.getAddress(), initialAmount)
+        .send()
+        .wait();
+
+      // Attempt depositing more assets than Alice actually has
+      let transfer = asset.methods.transfer_private_to_public(alice.getAddress(), vault.address, initialAmount + 1, 0);
+      let transferAuthWitness = await setPrivateAuthWit(vault.address, transfer, alice);
+      await expect(
+        vault
+          .withWallet(alice)
+          .methods.deposit_private_to_public(alice.getAddress(), alice.getAddress(), initialAmount + 1, 0)
+          .with({ authWitnesses: [transferAuthWitness] })
+          .send()
+          .wait(),
+      ).rejects.toThrow(/Assertion failed: Balance too low 'subtracted > 0'/);
+
+      // Attemp to deposit with an incorrect allowance
+      transfer = asset.methods.transfer_private_to_public(alice.getAddress(), vault.address, assetsAlice - 1, 0);
+      transferAuthWitness = await setPrivateAuthWit(vault.address, transfer, alice);
+      await expect(
+        vault
+          .withWallet(alice)
+          .methods.deposit_private_to_public(alice.getAddress(), alice.getAddress(), assetsAlice, 0)
+          .with({ authWitnesses: [transferAuthWitness] })
+          .send()
+          .wait(),
+      ).rejects.toThrow(/Unknown auth witness for message hash /);
+    }, 300_000);
+
+    it('deposit_private_to_private', async () => {
+      // Mint some assets to Alice
+      await asset
+        .withWallet(alice)
+        .methods.mint_to_private(alice.getAddress(), alice.getAddress(), initialAmount)
+        .send()
+        .wait();
+
+      // Attempt depositing more assets than Alice actually has
+      let sharesRequested = initialAmount + 1;
+      let transfer = asset.methods.transfer_private_to_public(alice.getAddress(), vault.address, initialAmount + 1, 0);
+      let transferAuthWitness = await setPrivateAuthWit(vault.address, transfer, alice);
+      await expect(
+        vault
+          .withWallet(alice)
+          .methods.deposit_private_to_private(
+            alice.getAddress(),
+            alice.getAddress(),
+            initialAmount + 1,
+            sharesRequested,
+            0,
+          )
+          .with({ authWitnesses: [transferAuthWitness] })
+          .send()
+          .wait(),
+      ).rejects.toThrow(/Assertion failed: Balance too low 'subtracted > 0'/);
+
+      // Attemp to deposit with an incorrect allowance
+      sharesRequested = assetsAlice;
+      transfer = asset.methods.transfer_private_to_public(alice.getAddress(), vault.address, assetsAlice - 1, 0);
+      transferAuthWitness = await setPrivateAuthWit(vault.address, transfer, alice);
+      await expect(
+        vault
+          .withWallet(alice)
+          .methods.deposit_private_to_private(alice.getAddress(), alice.getAddress(), assetsAlice, sharesRequested, 0)
+          .with({ authWitnesses: [transferAuthWitness] })
+          .send()
+          .wait(),
+      ).rejects.toThrow(/Unknown auth witness for message hash /);
+
+      // Attemp to request more shares than allowed for the given deposit
+      sharesRequested = assetsAlice + 1;
+      transfer = asset.methods.transfer_private_to_public(alice.getAddress(), vault.address, assetsAlice, 0);
+      transferAuthWitness = await setPrivateAuthWit(vault.address, transfer, alice);
+      await expect(
+        vault
+          .withWallet(alice)
+          .methods.deposit_private_to_private(alice.getAddress(), alice.getAddress(), assetsAlice, sharesRequested, 0)
+          .with({ authWitnesses: [transferAuthWitness] })
+          .send()
+          .wait(),
+      ).rejects.toThrow(/app_logic_reverted/); // Too many shares requested
+    }, 300_000);
+
+    it('deposit_public_to_private_exact', async () => {
+      // Mint some assets to Alice
+      await asset.withWallet(alice).methods.mint_to_public(alice.getAddress(), initialAmount).send().wait();
+
+      // Attempt depositing more assets than Alice actually has
+      let sharesRequested = initialAmount + 1;
+      let transfer = asset.methods.transfer_public_to_public(alice.getAddress(), vault.address, initialAmount + 1, 0);
+      await setPublicAuthWit(vault.address, transfer, alice);
+      await expect(
+        vault
+          .withWallet(alice)
+          .methods.deposit_public_to_private_exact(
+            alice.getAddress(),
+            alice.getAddress(),
+            initialAmount + 1,
+            sharesRequested,
+            0,
+          )
+          .send()
+          .wait(),
+      ).rejects.toThrow(/app_logic_reverted/);
+
+      // Attemp to deposit with an incorrect allowance
+      sharesRequested = assetsAlice;
+      transfer = asset.methods.transfer_public_to_public(alice.getAddress(), vault.address, assetsAlice - 1, 0);
+      await setPublicAuthWit(vault.address, transfer, alice);
+      await expect(
+        vault
+          .withWallet(alice)
+          .methods.deposit_public_to_private_exact(
+            alice.getAddress(),
+            alice.getAddress(),
+            assetsAlice,
+            sharesRequested,
+            0,
+          )
+          .send()
+          .wait(),
+      ).rejects.toThrow(/app_logic_reverted/);
+
+      // Attemp to request more shares than allowed for the given deposit
+      sharesRequested = assetsAlice + 1;
+      transfer = asset.methods.transfer_public_to_public(alice.getAddress(), vault.address, assetsAlice, 0);
+      await setPublicAuthWit(vault.address, transfer, alice);
+      await expect(
+        vault
+          .withWallet(alice)
+          .methods.deposit_public_to_private_exact(
+            alice.getAddress(),
+            alice.getAddress(),
+            assetsAlice,
+            sharesRequested,
+            0,
+          )
+          .send()
+          .wait(),
+      ).rejects.toThrow(/app_logic_reverted/); // Underflow
+    }, 300_000);
+
+    it('deposit_private_to_private_exact', async () => {
+      // Mint some assets to Alice
+      await asset
+        .withWallet(alice)
+        .methods.mint_to_private(alice.getAddress(), alice.getAddress(), initialAmount)
+        .send()
+        .wait();
+
+      // Attempt depositing more assets than Alice actually has
+      let sharesRequested = initialAmount + 1;
+      let transfer = asset.methods.transfer_private_to_public(alice.getAddress(), vault.address, initialAmount + 1, 0);
+      let transferAuthWitness = await setPrivateAuthWit(vault.address, transfer, alice);
+      await expect(
+        vault
+          .withWallet(alice)
+          .methods.deposit_private_to_private_exact(
+            alice.getAddress(),
+            alice.getAddress(),
+            initialAmount + 1,
+            sharesRequested,
+            0,
+          )
+          .with({ authWitnesses: [transferAuthWitness] })
+          .send()
+          .wait(),
+      ).rejects.toThrow(/Assertion failed: Balance too low 'subtracted > 0'/);
+
+      // Attemp to deposit with an incorrect allowance
+      sharesRequested = assetsAlice;
+      transfer = asset.methods.transfer_private_to_public(alice.getAddress(), vault.address, assetsAlice - 1, 0);
+      transferAuthWitness = await setPrivateAuthWit(vault.address, transfer, alice);
+      await expect(
+        vault
+          .withWallet(alice)
+          .methods.deposit_private_to_private_exact(
+            alice.getAddress(),
+            alice.getAddress(),
+            assetsAlice,
+            sharesRequested,
+            0,
+          )
+          .with({ authWitnesses: [transferAuthWitness] })
+          .send()
+          .wait(),
+      ).rejects.toThrow(/Unknown auth witness for message hash /);
+
+      // Attemp to request more shares than allowed for the given deposit
+      sharesRequested = assetsAlice + 1;
+      transfer = asset.methods.transfer_private_to_public(alice.getAddress(), vault.address, assetsAlice, 0);
+      transferAuthWitness = await setPrivateAuthWit(vault.address, transfer, alice);
+      await expect(
+        vault
+          .withWallet(alice)
+          .methods.deposit_private_to_private_exact(
+            alice.getAddress(),
+            alice.getAddress(),
+            assetsAlice,
+            sharesRequested,
+            0,
+          )
+          .with({ authWitnesses: [transferAuthWitness] })
+          .send()
+          .wait(),
+      ).rejects.toThrow(/app_logic_reverted/); // Underflow
+    }, 300_000);
+  });
+
+  describe('Issue failures: incorrect amounts', () => {
+    it('issue_public_to_public', async () => {
+      // Mint some assets to Alice
+      await asset.withWallet(alice).methods.mint_to_public(alice.getAddress(), initialAmount).send().wait();
+
+      // Attempt depositing more assets than Alice actually has
+      let sharesRequested = initialAmount + 1;
+      let maxAssets = initialAmount + 1;
+      let transfer = asset.methods.transfer_public_to_public(alice.getAddress(), vault.address, maxAssets, 0);
+      await setPublicAuthWit(vault.address, transfer, alice);
+      await expect(
+        vault
+          .withWallet(alice)
+          .methods.issue_public_to_public(alice.getAddress(), alice.getAddress(), sharesRequested, maxAssets, 0)
+          .send()
+          .wait(),
+      ).rejects.toThrow(/app_logic_reverted/);
+
+      // Attemp to deposit with an incorrect allowance
+      sharesRequested = assetsAlice;
+      maxAssets = assetsAlice;
+      transfer = asset.methods.transfer_public_to_public(alice.getAddress(), vault.address, maxAssets - 1, 0);
+      await setPublicAuthWit(vault.address, transfer, alice);
+      await expect(
+        vault
+          .withWallet(alice)
+          .methods.issue_public_to_public(alice.getAddress(), alice.getAddress(), sharesRequested, maxAssets, 0)
+          .send()
+          .wait(),
+      ).rejects.toThrow(/app_logic_reverted/);
+    }, 300_000);
+
+    it('issue_public_to_private', async () => {
+      // Mint some assets to Alice
+      await asset.withWallet(alice).methods.mint_to_public(alice.getAddress(), initialAmount).send().wait();
+
+      // Attempt depositing more assets than Alice actually has
+      let sharesRequested = initialAmount + 1;
+      let maxAssets = initialAmount + 1;
+      let transfer = asset.methods.transfer_public_to_public(alice.getAddress(), vault.address, maxAssets, 0);
+      await setPublicAuthWit(vault.address, transfer, alice);
+      await expect(
+        vault
+          .withWallet(alice)
+          .methods.issue_public_to_private(alice.getAddress(), alice.getAddress(), sharesRequested, maxAssets, 0)
+          .send()
+          .wait(),
+      ).rejects.toThrow(/app_logic_reverted/);
+
+      // Attemp to deposit with an incorrect allowance
+      sharesRequested = assetsAlice;
+      maxAssets = assetsAlice;
+      transfer = asset.methods.transfer_public_to_public(alice.getAddress(), vault.address, maxAssets - 1, 0);
+      await setPublicAuthWit(vault.address, transfer, alice);
+      await expect(
+        vault
+          .withWallet(alice)
+          .methods.issue_public_to_private(alice.getAddress(), alice.getAddress(), sharesRequested, maxAssets, 0)
+          .send()
+          .wait(),
+      ).rejects.toThrow(/app_logic_reverted/);
+
+      // Attemp to request more shares than allowed for the given deposit
+      sharesRequested = assetsAlice + 1;
+      maxAssets = assetsAlice;
+      transfer = asset.methods.transfer_public_to_public(alice.getAddress(), vault.address, maxAssets, 0);
+      await setPublicAuthWit(vault.address, transfer, alice);
+      await expect(
+        vault
+          .withWallet(alice)
+          .methods.issue_public_to_private(alice.getAddress(), alice.getAddress(), sharesRequested, maxAssets, 0)
+          .send()
+          .wait(),
+      ).rejects.toThrow(/app_logic_reverted/); // Underflow
+    }, 300_000);
+
+    it('issue_private_to_public_exact', async () => {
+      // Mint some assets to Alice
+      await asset
+        .withWallet(alice)
+        .methods.mint_to_private(alice.getAddress(), alice.getAddress(), initialAmount)
+        .send()
+        .wait();
+
+      // Attempt depositing more assets than Alice actually has
+      let sharesRequested = initialAmount + 1;
+      let maxAssets = initialAmount + 1;
+      let transfer = asset.methods.transfer_private_to_public(alice.getAddress(), vault.address, maxAssets, 0);
+      let transferAuthWitness = await setPrivateAuthWit(vault.address, transfer, alice);
+      await expect(
+        vault
+          .withWallet(alice)
+          .methods.issue_private_to_public_exact(alice.getAddress(), alice.getAddress(), sharesRequested, maxAssets, 0)
+          .with({ authWitnesses: [transferAuthWitness] })
+          .send()
+          .wait(),
+      ).rejects.toThrow(/Assertion failed: Balance too low 'subtracted > 0'/);
+
+      // Attemp to deposit with an incorrect allowance
+      sharesRequested = assetsAlice;
+      maxAssets = assetsAlice;
+      transfer = asset.methods.transfer_private_to_public(alice.getAddress(), vault.address, maxAssets - 1, 0);
+      transferAuthWitness = await setPrivateAuthWit(vault.address, transfer, alice);
+      await expect(
+        vault
+          .withWallet(alice)
+          .methods.issue_private_to_public_exact(alice.getAddress(), alice.getAddress(), sharesRequested, maxAssets, 0)
+          .with({ authWitnesses: [transferAuthWitness] })
+          .send()
+          .wait(),
+      ).rejects.toThrow(/Unknown auth witness for message hash /);
+
+      // Attemp to request more shares than allowed for the given deposit
+      sharesRequested = assetsAlice + 1;
+      maxAssets = assetsAlice;
+      transfer = asset.methods.transfer_private_to_public(alice.getAddress(), vault.address, maxAssets, 0);
+      transferAuthWitness = await setPrivateAuthWit(vault.address, transfer, alice);
+      await expect(
+        vault
+          .withWallet(alice)
+          .methods.issue_private_to_public_exact(alice.getAddress(), alice.getAddress(), sharesRequested, maxAssets, 0)
+          .with({ authWitnesses: [transferAuthWitness] })
+          .send()
+          .wait(),
+      ).rejects.toThrow(/app_logic_reverted/); // Underflow
+    }, 300_000);
+
+    it('issue_private_to_private_exact', async () => {
+      // Mint some assets to Alice
+      await asset
+        .withWallet(alice)
+        .methods.mint_to_private(alice.getAddress(), alice.getAddress(), initialAmount)
+        .send()
+        .wait();
+
+      // Attempt depositing more assets than Alice actually has
+      let sharesRequested = initialAmount + 1;
+      let maxAssets = initialAmount + 1;
+      let transfer = asset.methods.transfer_private_to_public(alice.getAddress(), vault.address, maxAssets, 0);
+      let transferAuthWitness = await setPrivateAuthWit(vault.address, transfer, alice);
+      await expect(
+        vault
+          .withWallet(alice)
+          .methods.issue_private_to_private_exact(alice.getAddress(), alice.getAddress(), sharesRequested, maxAssets, 0)
+          .with({ authWitnesses: [transferAuthWitness] })
+          .send()
+          .wait(),
+      ).rejects.toThrow(/Assertion failed: Balance too low 'subtracted > 0'/);
+
+      // Attemp to deposit with an incorrect allowance
+      sharesRequested = assetsAlice;
+      maxAssets = assetsAlice;
+      transfer = asset.methods.transfer_private_to_public(alice.getAddress(), vault.address, maxAssets - 1, 0);
+      transferAuthWitness = await setPrivateAuthWit(vault.address, transfer, alice);
+      await expect(
+        vault
+          .withWallet(alice)
+          .methods.issue_private_to_private_exact(alice.getAddress(), alice.getAddress(), sharesRequested, maxAssets, 0)
+          .with({ authWitnesses: [transferAuthWitness] })
+          .send()
+          .wait(),
+      ).rejects.toThrow(/Unknown auth witness for message hash /);
+
+      // Attemp to request more shares than allowed for the given deposit
+      sharesRequested = assetsAlice + 1;
+      maxAssets = assetsAlice;
+      transfer = asset.methods.transfer_private_to_public(alice.getAddress(), vault.address, maxAssets, 0);
+      transferAuthWitness = await setPrivateAuthWit(vault.address, transfer, alice);
+      await expect(
+        vault
+          .withWallet(alice)
+          .methods.issue_private_to_private_exact(alice.getAddress(), alice.getAddress(), sharesRequested, maxAssets, 0)
+          .with({ authWitnesses: [transferAuthWitness] })
+          .send()
+          .wait(),
+      ).rejects.toThrow(/app_logic_reverted/); // Underflow
     }, 300_000);
   });
 });
