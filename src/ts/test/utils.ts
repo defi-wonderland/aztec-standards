@@ -16,7 +16,6 @@ import { createStore } from '@aztec/kv-store/lmdb';
 import { type L1ContractAddresses } from '@aztec/ethereum/l1-contract-addresses';
 import { TokenContract, TokenContractArtifact } from '../../artifacts/Token.js';
 import { NFTContractArtifact } from '../../artifacts/NFT.js';
-import { expect } from 'vitest';
 
 export const logger = createLogger('aztec:aztec-standards');
 
@@ -53,12 +52,13 @@ export const setupPXE = async () => {
 
 // --- Token Utils ---
 
-export const expectUintNote = (note: UniqueNote, amount: bigint, owner: AztecAddress) => {
+export const expectUintNote = (expect: any, note: UniqueNote, amount: bigint, owner: AztecAddress) => {
   expect(note.note.items[0]).toEqual(new Fr(owner.toBigInt()));
   expect(note.note.items[2]).toEqual(new Fr(amount));
 };
 
 export const expectTokenBalances = async (
+  expect: any,
   token: TokenContract,
   address: AztecAddress,
   publicBalance: bigint,
