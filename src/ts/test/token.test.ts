@@ -451,7 +451,7 @@ describe('Token - Single PXE', () => {
 
 describe.skip('Token - Multi PXE', () => {
   let pxe: PXE;
-
+  let store: AztecLmdbStore;
   let wallets: AccountWalletWithSecretKey[];
   let deployer: AccountWalletWithSecretKey;
 
@@ -465,13 +465,16 @@ describe.skip('Token - Multi PXE', () => {
   let bobPXE: PXE;
 
   beforeAll(async () => {
-    ({ pxe, deployer, wallets } = await setupTestSuite());
-
+    ({ pxe, deployer, wallets, store } = await setupTestSuite());
     [alice, bob, carl] = wallets;
 
     // TODO: use different PXE instances.
     alicePXE = pxe;
     bobPXE = pxe;
+  });
+
+  afterAll(async () => {
+    await store.delete();
   });
 
   beforeEach(async () => {

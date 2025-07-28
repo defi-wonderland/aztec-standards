@@ -36,7 +36,6 @@ export const setupPXE = async () => {
   });
   const pxe = await createPXEService(node, fullConfig, { store });
   await waitForPXE(pxe);
-  console.log('PXE created');
   return { pxe, store };
 };
 

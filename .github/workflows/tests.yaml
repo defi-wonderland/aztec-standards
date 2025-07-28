@@ -65,7 +65,7 @@ jobs:
           run: yarn --frozen-lockfile
   
         - name: Compile
-          run: script -e -c "${AZTEC_NARGO:-aztec-nargo} compile"
+          run: script -e -c "aztec-nargo compile"
   
         - name: Codegen
           run: script -e -c "aztec codegen target --outdir src/artifacts"
@@ -79,4 +79,4 @@ jobs:
             script -e -c "aztec test --test-threads ${{ matrix.threads }}"
 
         - name: Run js tests
-          run: script -e -c "BASE_PXE_URL=http://localhost NODE_NO_WARNINGS=1 node --experimental-vm-modules $(yarn bin jest) --no-cache --runInBand --config jest.integration.config.json"
+          run: script -e -c "yarn test:js
