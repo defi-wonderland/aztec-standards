@@ -90,15 +90,24 @@ export default class TokenContractBenchmark extends Benchmark {
     // 1. deposit_private_to_private
     // 2. deposit_private_to_public
     // 3. deposit_private_to_private_exact
-    // 4. issue_private_to_public_exact
-    // 5. issue_private_to_private_exact
+    // 4. issue_private_to_private_exact
     const authWitnesses = [];
-    for (let i = 0; i < 5; i++) {
+    for (let i = 0; i < 4; i++) {
       const nonce = 100 + i;
       action = assetMethods.transfer_private_to_public(deployer.getAddress(), vaultContract.address, amt(1), nonce);
       const authWitness = await setPrivateAuthWit(vaultContract.address, action, deployer);
       authWitnesses.push(authWitness);
     }
+
+    // 5. issue_private_to_public_exact
+    action = assetMethods.transfer_private_to_public_with_commitment(
+      deployer.getAddress(),
+      vaultContract.address,
+      amt(1),
+      104,
+    );
+    const authWitness = await setPrivateAuthWit(vaultContract.address, action, deployer);
+    authWitnesses.push(authWitness);
 
     return { pxe, deployer, accounts, vaultContract, assetContract, authWitnesses };
   }
@@ -148,11 +157,11 @@ export default class TokenContractBenchmark extends Benchmark {
       vaultContract
         .withWallet(alice)
         .methods.issue_private_to_public_exact(aliceAddress, bobAddress, amt(1), amt(1), privateNonce++)
-        .with({ authWitnesses: [authWitnesses[3]] }),
+        .with({ authWitnesses: [authWitnesses[4]] }),
       vaultContract
         .withWallet(alice)
         .methods.issue_private_to_private_exact(aliceAddress, bobAddress, amt(1), amt(1), privateNonce++)
-        .with({ authWitnesses: [authWitnesses[4]] }),
+        .with({ authWitnesses: [authWitnesses[3]] }),
 
       // Withdraw methods
       vaultContract.withWallet(bob).methods.withdraw_public_to_public(bobAddress, aliceAddress, amt(1), 0),
