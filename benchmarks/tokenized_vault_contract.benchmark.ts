@@ -156,12 +156,12 @@ export default class TokenContractBenchmark extends Benchmark {
         .methods.issue_public_to_private(aliceAddress, bobAddress, amt(1), amt(1), publicNonce++),
       vaultContract
         .withWallet(alice)
-        .methods.issue_private_to_public_exact(aliceAddress, bobAddress, amt(1), amt(1), privateNonce++)
-        .with({ authWitnesses: [authWitnesses[4]] }),
-      vaultContract
-        .withWallet(alice)
         .methods.issue_private_to_private_exact(aliceAddress, bobAddress, amt(1), amt(1), privateNonce++)
         .with({ authWitnesses: [authWitnesses[3]] }),
+      vaultContract
+        .withWallet(alice)
+        .methods.issue_private_to_public_exact(aliceAddress, bobAddress, amt(1), amt(1), privateNonce++)
+        .with({ authWitnesses: [authWitnesses[4]] }),
 
       // Withdraw methods
       vaultContract.withWallet(bob).methods.withdraw_public_to_public(bobAddress, aliceAddress, amt(1), 0),
