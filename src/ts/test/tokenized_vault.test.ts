@@ -62,6 +62,41 @@ describe('Tokenized Vault', () => {
       .wait();
   }
 
+  async function mintAndDepositInPrivate(
+    account: AccountWalletWithSecretKey,
+    mint: number,
+    assets: number,
+    shares: number,
+  ) {
+    // Mint some assets to Alice
+    await asset
+      .withWallet(alice)
+      .methods.mint_to_private(account.getAddress(), account.getAddress(), mint)
+      .send()
+      .wait();
+
+    // Alice deposits private assets, receives private shares
+    await callVaultWithPrivateAuthWit(
+      vault
+        .withWallet(account)
+        .methods.deposit_private_to_private(account.getAddress(), account.getAddress(), assets, shares, 0),
+      account,
+      assets,
+    );
+  }
+
+  async function mintAndDepositInPublic(account: AccountWalletWithSecretKey, mint: number, assets: number) {
+    // Mint some assets to Alice
+    await asset.withWallet(alice).methods.mint_to_public(account.getAddress(), mint).send().wait();
+
+    // Alice deposits public assets, receives public shares
+    await callVaultWithPublicAuthWit(
+      vault.withWallet(account).methods.deposit_public_to_public(account.getAddress(), account.getAddress(), assets, 0),
+      account,
+      assets,
+    );
+  }
+
   beforeAll(async () => {
     ({ pxe, wallets, store } = await setupTestSuite());
     [alice, bob, carl] = wallets;
@@ -288,7 +323,7 @@ describe('Tokenized Vault', () => {
         .send()
         .wait();
 
-      // Alice deposits private assets, receives public shares
+      // Alice deposits private assets, receives private shares
       await callVaultWithPrivateAuthWit(
         vault
           .withWallet(alice)
@@ -300,7 +335,7 @@ describe('Tokenized Vault', () => {
       // Simulate yield: mint assets to vault
       await asset.withWallet(alice).methods.mint_to_public(vault.address, yieldAmount).send().wait();
 
-      // Bob issues public shares for public assets
+      // Bob issues private shares for private assets
       await callVaultWithPrivateAuthWit(
         vault
           .withWallet(bob)
@@ -1263,6 +1298,239 @@ describe('Tokenized Vault', () => {
           .send()
           .wait(),
       ).rejects.toThrow(/app_logic_reverted/); // Underflow
+    }, 300_000);
+  });
+
+  describe('Withdraw failures: incorrect amounts', () => {
+    it('withdraw_public_to_public', async () => {
+      // Mint some assets to Alice in public and deposit to public shares.
+      await mintAndDepositInPublic(alice, initialAmount, assetsAlice);
+
+      await expect(
+        vault
+          .withWallet(alice)
+          .methods.withdraw_public_to_public(alice.getAddress(), alice.getAddress(), assetsAlice + 1, 0)
+          .send()
+          .wait(),
+      ).rejects.toThrow(/app_logic_reverted/);
+    }, 300_000);
+
+    it('withdraw_public_to_private', async () => {
+      // Mint some assets to Alice in public and deposit to public shares.
+      await mintAndDepositInPublic(alice, initialAmount, assetsAlice);
+
+      // Attempt depositing more assets than Alice actually has
+      // TODO(#15666 & #15118): this test fails because the ivsk is currently needed for emitting a note, but the vault contract doesn't have one.
+      await expect(
+        vault
+          .withWallet(alice)
+          .methods.withdraw_public_to_private(alice.getAddress(), alice.getAddress(), assetsAlice + 1, 0)
+          .send()
+          .wait(),
+      ).rejects.toThrow(/No public key registered for address/); // /app_logic_reverted/
+    }, 300_000);
+
+    it('withdraw_private_to_private', async () => {
+      // Mint some assets to Alice in private and deposit to private shares.
+      await mintAndDepositInPrivate(alice, initialAmount, assetsAlice, sharesAlice);
+
+      // Attempt depositing more assets than Alice actually has
+      // TODO(#15666 & #15118): this test fails because the ivsk is currently needed for emitting a note, but the vault contract doesn't have one.
+      let sharesRequested = assetsAlice;
+      await expect(
+        vault
+          .withWallet(alice)
+          .methods.withdraw_private_to_private(
+            alice.getAddress(),
+            alice.getAddress(),
+            assetsAlice + 1,
+            sharesRequested,
+            0,
+          )
+          .send()
+          .wait(),
+      ).rejects.toThrow(/No public key registered for address/); // /app_logic_reverted/ /Insufficient shares burnt/
+
+      sharesRequested = assetsAlice + 1;
+      await expect(
+        vault
+          .withWallet(alice)
+          .methods.withdraw_private_to_private(alice.getAddress(), alice.getAddress(), assetsAlice, sharesRequested, 0)
+          .send()
+          .wait(),
+      ).rejects.toThrow(/Assertion failed: Balance too low 'subtracted > 0/);
+    }, 300_000);
+
+    it('withdraw_private_to_public_exact', async () => {
+      // Mint some assets to Alice in private and deposit to private shares.
+      await mintAndDepositInPrivate(alice, initialAmount, assetsAlice, sharesAlice);
+
+      // Attempt depositing more assets than Alice actually has
+      let sharesRequested = assetsAlice;
+      await expect(
+        vault
+          .withWallet(alice)
+          .methods.withdraw_private_to_public_exact(
+            alice.getAddress(),
+            alice.getAddress(),
+            assetsAlice + 1,
+            sharesRequested,
+            0,
+          )
+          .send()
+          .wait(),
+      ).rejects.toThrow(/app_logic_reverted/); // /Underflow/
+
+      sharesRequested = assetsAlice + 1;
+      await expect(
+        vault
+          .withWallet(alice)
+          .methods.withdraw_private_to_public_exact(
+            alice.getAddress(),
+            alice.getAddress(),
+            assetsAlice,
+            sharesRequested,
+            0,
+          )
+          .send()
+          .wait(),
+      ).rejects.toThrow(/Assertion failed: Balance too low 'subtracted > 0/);
+    }, 300_000);
+
+    it('withdraw_private_to_private_exact', async () => {
+      // Mint some assets to Alice in private and deposit to private shares.
+      await mintAndDepositInPrivate(alice, initialAmount, assetsAlice, sharesAlice);
+
+      // Attempt depositing more assets than Alice actually has
+      // TODO(#15666 & #15118): this test fails because the ivsk is currently needed for emitting a note, but the vault contract doesn't have one.
+      let sharesRequested = assetsAlice;
+      await expect(
+        vault
+          .withWallet(alice)
+          .methods.withdraw_private_to_private_exact(
+            alice.getAddress(),
+            alice.getAddress(),
+            assetsAlice + 1,
+            sharesRequested,
+            0,
+          )
+          .send()
+          .wait(),
+      ).rejects.toThrow(/No public key registered for address/); // /app_logic_reverted/ /Underflow/
+
+      sharesRequested = assetsAlice + 1;
+      await expect(
+        vault
+          .withWallet(alice)
+          .methods.withdraw_private_to_private_exact(
+            alice.getAddress(),
+            alice.getAddress(),
+            assetsAlice,
+            sharesRequested,
+            0,
+          )
+          .send()
+          .wait(),
+      ).rejects.toThrow(/Assertion failed: Balance too low 'subtracted > 0/);
+    }, 300_000);
+  });
+
+  describe('Redeem failures: incorrect amounts', () => {
+    it('redeem_public_to_public', async () => {
+      // Mint some assets to Alice in public and deposit to public shares.
+      await mintAndDepositInPublic(alice, initialAmount, assetsAlice);
+
+      let sharesRequested = assetsAlice + 1;
+      await expect(
+        vault
+          .withWallet(alice)
+          .methods.redeem_public_to_public(alice.getAddress(), alice.getAddress(), sharesRequested, 0)
+          .send()
+          .wait(),
+      ).rejects.toThrow(/app_logic_reverted/); // Underflow
+    }, 300_000);
+
+    it('redeem_public_to_private_exact', async () => {
+      // Mint some assets to Alice in public and deposit to public shares.
+      await mintAndDepositInPublic(alice, initialAmount, assetsAlice);
+
+      // Attempt burning more shares than Alice actually has
+      let sharesRequested = assetsAlice + 1;
+      let minAssets = 0; // minAssets > 0 would cause fail with "No public key registered for address" (TODO(#15666 & #15118))
+      await expect(
+        vault
+          .withWallet(alice)
+          .methods.redeem_public_to_private_exact(alice.getAddress(), alice.getAddress(), sharesRequested, minAssets, 0)
+          .send()
+          .wait(),
+      ).rejects.toThrow(/app_logic_reverted/); // /Underflow/
+
+      // Attempt redeeming with an invalid rate
+      // TODO(#15666 & #15118): this test fails because the ivsk is currently needed for emitting a note, but the vault contract doesn't have one.
+      sharesRequested = assetsAlice;
+      minAssets = assetsAlice + 1;
+      await expect(
+        vault
+          .withWallet(alice)
+          .methods.redeem_public_to_private_exact(alice.getAddress(), alice.getAddress(), sharesRequested, minAssets, 0)
+          .send()
+          .wait(),
+      ).rejects.toThrow(/No public key registered for address/); // /app_logic_reverted/ /Underflow/
+    }, 300_000);
+
+    it('redeem_private_to_public', async () => {
+      // Mint some assets to Alice in private and deposit to private shares.
+      await mintAndDepositInPrivate(alice, initialAmount, assetsAlice, sharesAlice);
+
+      // Attempt burning more shares than Alice actually has
+      let sharesRequested = assetsAlice + 1;
+      await expect(
+        vault
+          .withWallet(alice)
+          .methods.redeem_private_to_public(alice.getAddress(), alice.getAddress(), sharesRequested, 0)
+          .send()
+          .wait(),
+      ).rejects.toThrow(/Assertion failed: Balance too low 'subtracted > 0/);
+    }, 300_000);
+
+    it('redeem_private_to_private_exact', async () => {
+      // Mint some assets to Alice in private and deposit to private shares.
+      await mintAndDepositInPrivate(alice, initialAmount, assetsAlice, sharesAlice);
+
+      // Attempt burning more shares than Alice actually has
+      let sharesRequested = assetsAlice + 1;
+      let minAssets = 0; // minAssets > 0 would cause fail with "No public key registered for address" (TODO(#15666 & #15118))
+      await expect(
+        vault
+          .withWallet(alice)
+          .methods.redeem_private_to_private_exact(
+            alice.getAddress(),
+            alice.getAddress(),
+            sharesRequested,
+            minAssets,
+            0,
+          )
+          .send()
+          .wait(),
+      ).rejects.toThrow(/Assertion failed: Balance too low 'subtracted > 0/);
+
+      // Attempt redeeming with an invalid rate
+      // TODO(#15666 & #15118): this test fails because the ivsk is currently needed for emitting a note, but the vault contract doesn't have one.
+      sharesRequested = assetsAlice;
+      minAssets = assetsAlice + 1;
+      await expect(
+        vault
+          .withWallet(alice)
+          .methods.redeem_private_to_private_exact(
+            alice.getAddress(),
+            alice.getAddress(),
+            sharesRequested,
+            minAssets,
+            0,
+          )
+          .send()
+          .wait(),
+      ).rejects.toThrow(/No public key registered for address/); // /app_logic_reverted/ /Underflow/
     }, 300_000);
   });
 });
