@@ -15,6 +15,7 @@ import { setupPXE } from './utils.js';
 import { getInitialTestAccountsManagers } from '@aztec/accounts/testing';
 import { NFTContract, NFTContractArtifact } from '../../artifacts/NFT.js';
 import { AztecLmdbStore } from '@aztec/kv-store/lmdb';
+import { describe, it, expect, beforeAll, beforeEach, afterAll } from 'vitest';
 
 // Deploy NFT contract with a minter
 async function deployNFTWithMinter(deployer: AccountWallet, options?: DeployOptions) {
