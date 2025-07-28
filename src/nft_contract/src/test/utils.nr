@@ -2,7 +2,7 @@ use crate::NFT;
 use aztec::{
     oracle::{execution::{get_block_number, get_contract_address}, storage::storage_read},
     prelude::AztecAddress,
-    protocol_types::storage::map::derive_storage_slot_in_map,
+    protocol_types::{storage::map::derive_storage_slot_in_map, traits::FromField},
     test::helpers::{cheatcodes, test_environment::TestEnvironment},
 };
 
@@ -89,12 +89,15 @@ pub unconstrained fn get_nft_exists(nft_contract_address: AztecAddress, token_id
     cheatcodes::set_contract_address(nft_contract_address);
     let block_number = get_block_number();
 
-    let nft_exists_slot = NFT::storage_layout().nft_exists.slot;
-    let nft_slot = derive_storage_slot_in_map(nft_exists_slot, token_id);
-    let exists: bool = storage_read(nft_contract_address, nft_slot, block_number);
+    let public_owners_slot = NFT::storage_layout().public_owners.slot;
+    let owner_slot = derive_storage_slot_in_map(public_owners_slot, token_id);
+    let owner: AztecAddress =
+        AztecAddress::from_field(storage_read(nft_contract_address, owner_slot, block_number));
 
     cheatcodes::set_contract_address(current_contract_address);
-    exists
+
+    // Token exists if owner is not zero
+    !owner.eq(AztecAddress::zero())
 }
 
 pub unconstrained fn assert_nft_exists(nft_contract_address: AztecAddress, token_id: Field) {
