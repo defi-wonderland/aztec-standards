@@ -24,6 +24,7 @@ describe('Tokenized Vault - Asset/Share Combinations', () => {
   let wallets: AccountWalletWithSecretKey[];
   let alice: AccountWalletWithSecretKey;
   let bob: AccountWalletWithSecretKey;
+  let carl: AccountWalletWithSecretKey;
   let vault: TokenContract;
   let asset: TokenContract;
 
@@ -63,7 +64,7 @@ describe('Tokenized Vault - Asset/Share Combinations', () => {
 
   beforeAll(async () => {
     ({ pxe, wallets, store } = await setupTestSuite());
-    [alice, bob] = wallets;
+    [alice, bob, carl] = wallets;
   });
 
   beforeEach(async () => {
@@ -74,336 +75,727 @@ describe('Tokenized Vault - Asset/Share Combinations', () => {
     await store.delete();
   });
 
-  it('Public assets, Public shares: Alice deposits/withdraws, Bob issues/redeems', async () => {
-    // Mint some assets to Alice and Bob for deposit/issue
-    await asset.withWallet(alice).methods.mint_to_public(alice.getAddress(), initialAmount).send().wait();
-    await asset.withWallet(alice).methods.mint_to_public(bob.getAddress(), initialAmount).send().wait();
+  describe('Successful interactions, no authwits.', () => {
+    it('Public assets, Public shares: Alice deposits/withdraws, Bob issues/redeems', async () => {
+      // Mint some assets to Alice and Bob for deposit/issue
+      await asset.withWallet(alice).methods.mint_to_public(alice.getAddress(), initialAmount).send().wait();
+      await asset.withWallet(alice).methods.mint_to_public(bob.getAddress(), initialAmount).send().wait();
 
-    // Alice deposits public assets, receives public shares
-    await callVaultWithPublicAuthWit(
-      vault.withWallet(alice).methods.deposit_public_to_public(alice.getAddress(), alice.getAddress(), assetsAlice, 0),
-      alice,
-      assetsAlice,
-    );
+      // Alice deposits public assets, receives public shares
+      await callVaultWithPublicAuthWit(
+        vault
+          .withWallet(alice)
+          .methods.deposit_public_to_public(alice.getAddress(), alice.getAddress(), assetsAlice, 0),
+        alice,
+        assetsAlice,
+      );
 
-    // Simulate yield: mint assets to vault
-    await asset.withWallet(alice).methods.mint_to_public(vault.address, yieldAmount).send().wait();
+      // Simulate yield: mint assets to vault
+      await asset.withWallet(alice).methods.mint_to_public(vault.address, yieldAmount).send().wait();
 
-    // Bob issues public shares for public assets
-    await callVaultWithPublicAuthWit(
-      vault.withWallet(bob).methods.issue_public_to_public(bob.getAddress(), bob.getAddress(), sharesBob, assetsBob, 0),
-      bob,
-      assetsBob,
-    );
+      // Bob issues public shares for public assets
+      await callVaultWithPublicAuthWit(
+        vault
+          .withWallet(bob)
+          .methods.issue_public_to_public(bob.getAddress(), bob.getAddress(), sharesBob, assetsBob, 0),
+        bob,
+        assetsBob,
+      );
 
-    // Check asset balances
-    await expectTokenBalances(asset, alice.getAddress(), BigInt(initialAmount - assetsAlice), BigInt(0));
-    await expectTokenBalances(asset, bob.getAddress(), BigInt(initialAmount - assetsBob), BigInt(0));
-    await expectTokenBalances(asset, vault.address, BigInt(assetsAlice + assetsBob + yieldAmount), BigInt(0));
-    // Check shares balances
-    await expectTokenBalances(vault, alice.getAddress(), BigInt(sharesAlice), BigInt(0));
-    await expectTokenBalances(vault, bob.getAddress(), BigInt(sharesBob), BigInt(0));
-    expect(await vault.methods.total_supply().simulate()).toBe(BigInt(sharesBob + sharesAlice));
+      // Check asset balances
+      await expectTokenBalances(asset, alice.getAddress(), BigInt(initialAmount - assetsAlice), BigInt(0));
+      await expectTokenBalances(asset, bob.getAddress(), BigInt(initialAmount - assetsBob), BigInt(0));
+      await expectTokenBalances(asset, vault.address, BigInt(assetsAlice + assetsBob + yieldAmount), BigInt(0));
+      // Check shares balances
+      await expectTokenBalances(vault, alice.getAddress(), BigInt(sharesAlice), BigInt(0));
+      await expectTokenBalances(vault, bob.getAddress(), BigInt(sharesBob), BigInt(0));
+      expect(await vault.methods.total_supply().simulate()).toBe(BigInt(sharesBob + sharesAlice));
 
-    // Alice withdraws public assets by burning public shares
-    // TODO: call preview max withdraw function
-    // Cannot withdraw 14 due to rounding.
-    const maxWithdraw = assetsAlice + aliceEarnings;
-    await vault
-      .withWallet(alice)
-      .methods.withdraw_public_to_public(alice.getAddress(), alice.getAddress(), maxWithdraw, 0)
-      .send()
-      .wait();
-
-    // Bob redeems public shares for public assets
-    // Bob should get 15 asset tokens back, 1 token remains in the vault
-    await vault
-      .withWallet(bob)
-      .methods.redeem_public_to_public(bob.getAddress(), bob.getAddress(), sharesBob, 0)
-      .send()
-      .wait();
-
-    // Check asset balances
-    await expectTokenBalances(asset, alice.getAddress(), BigInt(initialAmount + aliceEarnings), BigInt(0));
-    await expectTokenBalances(asset, bob.getAddress(), BigInt(initialAmount), BigInt(0));
-    await expectTokenBalances(asset, vault.address, BigInt(dust), BigInt(0));
-    // Check shares balances
-    await expectTokenBalances(vault, alice.getAddress(), BigInt(0), BigInt(0));
-    await expectTokenBalances(vault, bob.getAddress(), BigInt(0), BigInt(0));
-    expect(await vault.methods.total_supply().simulate()).toBe(BigInt(0));
-  }, 300_000);
-
-  it('Private assets, Public shares: Alice deposits/withdraws, Bob issues/redeems', async () => {
-    // Mint some assets to Alice and Bob for deposit/issue
-    await asset
-      .withWallet(alice)
-      .methods.mint_to_private(alice.getAddress(), alice.getAddress(), initialAmount)
-      .send()
-      .wait();
-    await asset
-      .withWallet(alice)
-      .methods.mint_to_private(alice.getAddress(), bob.getAddress(), initialAmount)
-      .send()
-      .wait();
-
-    // Alice deposits private assets, receives public shares
-    await callVaultWithPrivateAuthWit(
-      vault.withWallet(alice).methods.deposit_private_to_public(alice.getAddress(), alice.getAddress(), assetsAlice, 0),
-      alice,
-      assetsAlice,
-    );
-
-    // Simulate yield: mint assets to vault
-    await asset.withWallet(alice).methods.mint_to_public(vault.address, yieldAmount).send().wait();
-
-    // Bob issues public shares for public assets
-    await callVaultWithPrivateAuthWit(
-      vault
-        .withWallet(bob)
-        .methods.issue_private_to_public_exact(bob.getAddress(), bob.getAddress(), sharesBob, assetsBob, 0),
-      bob,
-      assetsBob,
-    );
-
-    // Check asset balances
-    await expectTokenBalances(asset, alice.getAddress(), BigInt(0), BigInt(initialAmount - assetsAlice));
-    await expectTokenBalances(asset, bob.getAddress(), BigInt(0), BigInt(initialAmount - assetsBob));
-    await expectTokenBalances(asset, vault.address, BigInt(assetsAlice + assetsBob + yieldAmount), BigInt(0));
-    // Check shares balances
-    await expectTokenBalances(vault, alice.getAddress(), BigInt(sharesAlice), BigInt(0));
-    await expectTokenBalances(vault, bob.getAddress(), BigInt(sharesBob), BigInt(0));
-    expect(await vault.methods.total_supply().simulate()).toBe(BigInt(sharesBob + sharesAlice));
-
-    // TODO: vault cannot encrypt note due to lack of app tagging secret: Simulation error: No public key registered for address
-    // // Alice withdraws private assets by burning public shares
-    // // TODO: call preview max withdraw function
-    // // Cannot withdraw 14 due to rounding.
-    // const maxWithdraw = assetsAlice + aliceEarnings;
-    // await vault
-    //   .withWallet(alice)
-    //   .methods.withdraw_public_to_private(alice.getAddress(), alice.getAddress(), maxWithdraw, 0)
-    //   .send()
-    //   .wait();
-
-    // // Bob redeems private shares for public assets
-    // // Bob should get 15 asset tokens back, 1 token remains in the vault
-    // const minAssets = assetsBob;
-    // await vault
-    //   .withWallet(bob)
-    //   .methods.redeem_public_to_private_exact(bob.getAddress(), bob.getAddress(), sharesBob, minAssets, 0)
-    //   .send()
-    //   .wait();
-
-    // // Check asset balances
-    // await expectTokenBalances(asset, alice.getAddress(), BigInt(0), BigInt(initialAmount + aliceEarnings));
-    // await expectTokenBalances(asset, bob.getAddress(), BigInt(0), BigInt(initialAmount));
-    // await expectTokenBalances(asset, vault.address, BigInt(dust), BigInt(0));
-    // // Check shares balances
-    // await expectTokenBalances(vault, alice.getAddress(), BigInt(0), BigInt(0));
-    // await expectTokenBalances(vault, bob.getAddress(), BigInt(0), BigInt(0));
-    // expect(await vault.methods.total_supply().simulate()).toBe(BigInt(0));
-  }, 300_000);
-
-  it('Public assets, Private shares: Alice deposits/withdraws, Bob issues/redeems', async () => {
-    // Mint some assets to Alice and Bob for deposit/issue
-    await asset.withWallet(alice).methods.mint_to_public(alice.getAddress(), initialAmount).send().wait();
-    await asset.withWallet(alice).methods.mint_to_public(bob.getAddress(), initialAmount).send().wait();
-
-    // Alice deposits public assets, receives public shares
-    await callVaultWithPublicAuthWit(
-      vault
+      // Alice withdraws public assets by burning public shares
+      // TODO: call preview max withdraw function
+      // Cannot withdraw 14 due to rounding.
+      const maxWithdraw = assetsAlice + aliceEarnings;
+      await vault
         .withWallet(alice)
-        .methods.deposit_public_to_private(alice.getAddress(), alice.getAddress(), assetsAlice, sharesAlice, 0),
-      alice,
-      assetsAlice,
-    );
+        .methods.withdraw_public_to_public(alice.getAddress(), alice.getAddress(), maxWithdraw, 0)
+        .send()
+        .wait();
 
-    // Simulate yield: mint assets to vault
-    await asset.withWallet(alice).methods.mint_to_public(vault.address, yieldAmount).send().wait();
-
-    // Bob issues public shares for public assets
-    await callVaultWithPublicAuthWit(
-      vault
+      // Bob redeems public shares for public assets
+      // Bob should get 15 asset tokens back, 1 token remains in the vault
+      await vault
         .withWallet(bob)
-        .methods.issue_public_to_private(bob.getAddress(), bob.getAddress(), sharesBob, assetsBob, 0),
-      bob,
-      assetsBob,
-    );
+        .methods.redeem_public_to_public(bob.getAddress(), bob.getAddress(), sharesBob, 0)
+        .send()
+        .wait();
 
-    // Check asset balances
-    await expectTokenBalances(asset, alice.getAddress(), BigInt(initialAmount - assetsAlice), BigInt(0));
-    await expectTokenBalances(asset, bob.getAddress(), BigInt(initialAmount - assetsBob), BigInt(0));
-    await expectTokenBalances(asset, vault.address, BigInt(assetsAlice + assetsBob + yieldAmount), BigInt(0));
-    // Check shares balances
-    await expectTokenBalances(vault, alice.getAddress(), BigInt(0), BigInt(sharesAlice));
-    await expectTokenBalances(vault, bob.getAddress(), BigInt(0), BigInt(sharesBob));
-    expect(await vault.methods.total_supply().simulate()).toBe(BigInt(sharesBob + sharesAlice));
+      // Check asset balances
+      await expectTokenBalances(asset, alice.getAddress(), BigInt(initialAmount + aliceEarnings), BigInt(0));
+      await expectTokenBalances(asset, bob.getAddress(), BigInt(initialAmount), BigInt(0));
+      await expectTokenBalances(asset, vault.address, BigInt(dust), BigInt(0));
+      // Check shares balances
+      await expectTokenBalances(vault, alice.getAddress(), BigInt(0), BigInt(0));
+      await expectTokenBalances(vault, bob.getAddress(), BigInt(0), BigInt(0));
+      expect(await vault.methods.total_supply().simulate()).toBe(BigInt(0));
+    }, 300_000);
 
-    // Alice withdraws public assets by burning public shares
-    // TODO: call preview max withdraw function
-    // Cannot withdraw 14 due to rounding.
-    const maxWithdraw = assetsAlice + aliceEarnings;
-    await vault
-      .withWallet(alice)
-      .methods.withdraw_private_to_public_exact(alice.getAddress(), alice.getAddress(), maxWithdraw, sharesAlice, 0)
-      .send()
-      .wait();
-
-    // Bob redeems public shares for public assets
-    // Bob should get 15 asset tokens back, 1 token remains in the vault
-    await vault
-      .withWallet(bob)
-      .methods.redeem_private_to_public(bob.getAddress(), bob.getAddress(), sharesBob, 0)
-      .send()
-      .wait();
-
-    // Check asset balances
-    await expectTokenBalances(asset, alice.getAddress(), BigInt(initialAmount + aliceEarnings), BigInt(0));
-    await expectTokenBalances(asset, bob.getAddress(), BigInt(initialAmount), BigInt(0));
-    await expectTokenBalances(asset, vault.address, BigInt(dust), BigInt(0));
-    // Check shares balances
-    await expectTokenBalances(vault, alice.getAddress(), BigInt(0), BigInt(0));
-    await expectTokenBalances(vault, bob.getAddress(), BigInt(0), BigInt(0));
-    expect(await vault.methods.total_supply().simulate()).toBe(BigInt(0));
-  }, 300_000);
-
-  it('Private assets, Private shares: Alice deposits/withdraws, Bob issues/redeems', async () => {
-    // Mint some assets to Alice and Bob for deposit/issue
-    await asset
-      .withWallet(alice)
-      .methods.mint_to_private(alice.getAddress(), alice.getAddress(), initialAmount)
-      .send()
-      .wait();
-    await asset
-      .withWallet(alice)
-      .methods.mint_to_private(alice.getAddress(), bob.getAddress(), initialAmount)
-      .send()
-      .wait();
-
-    // Alice deposits private assets, receives public shares
-    await callVaultWithPrivateAuthWit(
-      vault
+    it('Private assets, Public shares: Alice deposits/withdraws, Bob issues/redeems', async () => {
+      // Mint some assets to Alice and Bob for deposit/issue
+      await asset
         .withWallet(alice)
-        .methods.deposit_private_to_private(alice.getAddress(), alice.getAddress(), assetsAlice, sharesAlice, 0),
-      alice,
-      assetsAlice,
-    );
-
-    // Simulate yield: mint assets to vault
-    await asset.withWallet(alice).methods.mint_to_public(vault.address, yieldAmount).send().wait();
-
-    // Bob issues public shares for public assets
-    await callVaultWithPrivateAuthWit(
-      vault
-        .withWallet(bob)
-        .methods.issue_private_to_private_exact(bob.getAddress(), bob.getAddress(), sharesBob, assetsBob, 0),
-      bob,
-      assetsBob,
-    );
-
-    // Check asset balances
-    await expectTokenBalances(asset, alice.getAddress(), BigInt(0), BigInt(initialAmount - assetsAlice));
-    await expectTokenBalances(asset, bob.getAddress(), BigInt(0), BigInt(initialAmount - assetsBob));
-    await expectTokenBalances(asset, vault.address, BigInt(assetsAlice + assetsBob + yieldAmount), BigInt(0));
-    // Check shares balances
-    await expectTokenBalances(vault, alice.getAddress(), BigInt(0), BigInt(sharesAlice));
-    await expectTokenBalances(vault, bob.getAddress(), BigInt(0), BigInt(sharesBob));
-    expect(await vault.methods.total_supply().simulate()).toBe(BigInt(sharesBob + sharesAlice));
-
-    // TODO: vault cannot encrypt note due to lack of app tagging secret: Simulation error: No public key registered for address
-    // // Alice withdraws public assets by burning public shares
-    // // TODO: call preview max withdraw function
-    // // Cannot withdraw 14 due to rounding.
-    // const maxWithdraw = assetsAlice + aliceEarnings;
-    // await vault
-    //   .withWallet(alice)
-    //   .methods.withdraw_private_to_private(alice.getAddress(), alice.getAddress(), maxWithdraw, sharesAlice, 0)
-    //   .send()
-    //   .wait();
-
-    // // Bob redeems public shares for public assets
-    // // Bob should get 15 asset tokens back, 1 token remains in the vault
-    // await vault
-    //   .withWallet(bob)
-    //   .methods.redeem_private_to_private_exact(bob.getAddress(), bob.getAddress(), sharesBob, assetsBob, 0)
-    //   .send()
-    //   .wait();
-
-    // // Check asset balances
-    // await expectTokenBalances(asset, alice.getAddress(), BigInt(0), BigInt(initialAmount + aliceEarnings));
-    // await expectTokenBalances(asset, bob.getAddress(), BigInt(0), BigInt(initialAmount));
-    // await expectTokenBalances(asset, vault.address, BigInt(dust), BigInt(0));
-    // // Check shares balances
-    // await expectTokenBalances(vault, alice.getAddress(), BigInt(0), BigInt(0));
-    // await expectTokenBalances(vault, bob.getAddress(), BigInt(0), BigInt(0));
-    // expect(await vault.methods.total_supply().simulate()).toBe(BigInt(0));
-  }, 300_000);
-
-  it('Exact methods, Mixed Assets, Private shares: Alice deposits/withdraws, Bob deposits/withdraws', async () => {
-    // Mint some assets to Alice and Bob for deposit/issue
-    await asset
-      .withWallet(alice)
-      .methods.mint_to_private(alice.getAddress(), alice.getAddress(), initialAmount)
-      .send()
-      .wait();
-    await asset.withWallet(alice).methods.mint_to_public(bob.getAddress(), initialAmount).send().wait();
-
-    // Alice deposits private assets, receives public shares
-    await callVaultWithPrivateAuthWit(
-      vault
+        .methods.mint_to_private(alice.getAddress(), alice.getAddress(), initialAmount)
+        .send()
+        .wait();
+      await asset
         .withWallet(alice)
-        .methods.deposit_private_to_private_exact(alice.getAddress(), alice.getAddress(), assetsAlice, sharesAlice, 0),
-      alice,
-      assetsAlice,
-    );
+        .methods.mint_to_private(alice.getAddress(), bob.getAddress(), initialAmount)
+        .send()
+        .wait();
 
-    // Simulate yield: mint assets to vault
-    await asset.withWallet(alice).methods.mint_to_public(vault.address, yieldAmount).send().wait();
+      // Alice deposits private assets, receives public shares
+      await callVaultWithPrivateAuthWit(
+        vault
+          .withWallet(alice)
+          .methods.deposit_private_to_public(alice.getAddress(), alice.getAddress(), assetsAlice, 0),
+        alice,
+        assetsAlice,
+      );
 
-    // Bob issues public shares for public assets
-    await callVaultWithPublicAuthWit(
-      vault
+      // Simulate yield: mint assets to vault
+      await asset.withWallet(alice).methods.mint_to_public(vault.address, yieldAmount).send().wait();
+
+      // Bob issues public shares for public assets
+      await callVaultWithPrivateAuthWit(
+        vault
+          .withWallet(bob)
+          .methods.issue_private_to_public_exact(bob.getAddress(), bob.getAddress(), sharesBob, assetsBob, 0),
+        bob,
+        assetsBob,
+      );
+
+      // Check asset balances
+      await expectTokenBalances(asset, alice.getAddress(), BigInt(0), BigInt(initialAmount - assetsAlice));
+      await expectTokenBalances(asset, bob.getAddress(), BigInt(0), BigInt(initialAmount - assetsBob));
+      await expectTokenBalances(asset, vault.address, BigInt(assetsAlice + assetsBob + yieldAmount), BigInt(0));
+      // Check shares balances
+      await expectTokenBalances(vault, alice.getAddress(), BigInt(sharesAlice), BigInt(0));
+      await expectTokenBalances(vault, bob.getAddress(), BigInt(sharesBob), BigInt(0));
+      expect(await vault.methods.total_supply().simulate()).toBe(BigInt(sharesBob + sharesAlice));
+
+      // TODO: vault cannot encrypt note due to lack of app tagging secret: Simulation error: No public key registered for address
+      // // Alice withdraws private assets by burning public shares
+      // // TODO: call preview max withdraw function
+      // // Cannot withdraw 14 due to rounding.
+      // const maxWithdraw = assetsAlice + aliceEarnings;
+      // await vault
+      //   .withWallet(alice)
+      //   .methods.withdraw_public_to_private(alice.getAddress(), alice.getAddress(), maxWithdraw, 0)
+      //   .send()
+      //   .wait();
+
+      // // Bob redeems private shares for public assets
+      // // Bob should get 15 asset tokens back, 1 token remains in the vault
+      // const minAssets = assetsBob;
+      // await vault
+      //   .withWallet(bob)
+      //   .methods.redeem_public_to_private_exact(bob.getAddress(), bob.getAddress(), sharesBob, minAssets, 0)
+      //   .send()
+      //   .wait();
+
+      // // Check asset balances
+      // await expectTokenBalances(asset, alice.getAddress(), BigInt(0), BigInt(initialAmount + aliceEarnings));
+      // await expectTokenBalances(asset, bob.getAddress(), BigInt(0), BigInt(initialAmount));
+      // await expectTokenBalances(asset, vault.address, BigInt(dust), BigInt(0));
+      // // Check shares balances
+      // await expectTokenBalances(vault, alice.getAddress(), BigInt(0), BigInt(0));
+      // await expectTokenBalances(vault, bob.getAddress(), BigInt(0), BigInt(0));
+      // expect(await vault.methods.total_supply().simulate()).toBe(BigInt(0));
+    }, 300_000);
+
+    it('Public assets, Private shares: Alice deposits/withdraws, Bob issues/redeems', async () => {
+      // Mint some assets to Alice and Bob for deposit/issue
+      await asset.withWallet(alice).methods.mint_to_public(alice.getAddress(), initialAmount).send().wait();
+      await asset.withWallet(alice).methods.mint_to_public(bob.getAddress(), initialAmount).send().wait();
+
+      // Alice deposits public assets, receives public shares
+      await callVaultWithPublicAuthWit(
+        vault
+          .withWallet(alice)
+          .methods.deposit_public_to_private(alice.getAddress(), alice.getAddress(), assetsAlice, sharesAlice, 0),
+        alice,
+        assetsAlice,
+      );
+
+      // Simulate yield: mint assets to vault
+      await asset.withWallet(alice).methods.mint_to_public(vault.address, yieldAmount).send().wait();
+
+      // Bob issues public shares for public assets
+      await callVaultWithPublicAuthWit(
+        vault
+          .withWallet(bob)
+          .methods.issue_public_to_private(bob.getAddress(), bob.getAddress(), sharesBob, assetsBob, 0),
+        bob,
+        assetsBob,
+      );
+
+      // Check asset balances
+      await expectTokenBalances(asset, alice.getAddress(), BigInt(initialAmount - assetsAlice), BigInt(0));
+      await expectTokenBalances(asset, bob.getAddress(), BigInt(initialAmount - assetsBob), BigInt(0));
+      await expectTokenBalances(asset, vault.address, BigInt(assetsAlice + assetsBob + yieldAmount), BigInt(0));
+      // Check shares balances
+      await expectTokenBalances(vault, alice.getAddress(), BigInt(0), BigInt(sharesAlice));
+      await expectTokenBalances(vault, bob.getAddress(), BigInt(0), BigInt(sharesBob));
+      expect(await vault.methods.total_supply().simulate()).toBe(BigInt(sharesBob + sharesAlice));
+
+      // Alice withdraws public assets by burning public shares
+      // TODO: call preview max withdraw function
+      // Cannot withdraw 14 due to rounding.
+      const maxWithdraw = assetsAlice + aliceEarnings;
+      await vault
+        .withWallet(alice)
+        .methods.withdraw_private_to_public_exact(alice.getAddress(), alice.getAddress(), maxWithdraw, sharesAlice, 0)
+        .send()
+        .wait();
+
+      // Bob redeems public shares for public assets
+      // Bob should get 15 asset tokens back, 1 token remains in the vault
+      await vault
         .withWallet(bob)
-        .methods.deposit_public_to_private_exact(bob.getAddress(), bob.getAddress(), assetsBob, sharesBob, 0),
-      bob,
-      assetsBob,
-    );
+        .methods.redeem_private_to_public(bob.getAddress(), bob.getAddress(), sharesBob, 0)
+        .send()
+        .wait();
 
-    // Check asset balances
-    await expectTokenBalances(asset, alice.getAddress(), BigInt(0), BigInt(initialAmount - assetsAlice));
-    await expectTokenBalances(asset, bob.getAddress(), BigInt(initialAmount - assetsBob), BigInt(0));
-    await expectTokenBalances(asset, vault.address, BigInt(assetsAlice + assetsBob + yieldAmount), BigInt(0));
-    // Check shares balances
-    await expectTokenBalances(vault, alice.getAddress(), BigInt(0), BigInt(sharesAlice));
-    await expectTokenBalances(vault, bob.getAddress(), BigInt(0), BigInt(sharesBob));
-    expect(await vault.methods.total_supply().simulate()).toBe(BigInt(sharesBob + sharesAlice));
+      // Check asset balances
+      await expectTokenBalances(asset, alice.getAddress(), BigInt(initialAmount + aliceEarnings), BigInt(0));
+      await expectTokenBalances(asset, bob.getAddress(), BigInt(initialAmount), BigInt(0));
+      await expectTokenBalances(asset, vault.address, BigInt(dust), BigInt(0));
+      // Check shares balances
+      await expectTokenBalances(vault, alice.getAddress(), BigInt(0), BigInt(0));
+      await expectTokenBalances(vault, bob.getAddress(), BigInt(0), BigInt(0));
+      expect(await vault.methods.total_supply().simulate()).toBe(BigInt(0));
+    }, 300_000);
 
-    // TODO: vault cannot encrypt note due to lack of app tagging secret: Simulation error: No public key registered for address
-    // // Alice withdraws public assets by burning public shares
-    // // TODO: call preview max withdraw function
-    // // Cannot withdraw 14 due to rounding.
-    // const maxWithdraw = assetsAlice + aliceEarnings;
-    // await vault
-    //   .withWallet(alice)
-    //   .methods.withdraw_private_to_private_exact(alice.getAddress(), alice.getAddress(), maxWithdraw, sharesAlice, 0)
-    //   .send()
-    //   .wait();
+    it('Private assets, Private shares: Alice deposits/withdraws, Bob issues/redeems', async () => {
+      // Mint some assets to Alice and Bob for deposit/issue
+      await asset
+        .withWallet(alice)
+        .methods.mint_to_private(alice.getAddress(), alice.getAddress(), initialAmount)
+        .send()
+        .wait();
+      await asset
+        .withWallet(alice)
+        .methods.mint_to_private(alice.getAddress(), bob.getAddress(), initialAmount)
+        .send()
+        .wait();
 
-    // // Bob redeems public shares for public assets
-    // // Bob should get 15 asset tokens back, 1 token remains in the vault
-    // await vault
-    //   .withWallet(bob)
-    //   .methods.withdraw_private_to_public_exact(bob.getAddress(), bob.getAddress(), assetsBob, sharesBob, 0)
-    //   .send()
-    //   .wait();
+      // Alice deposits private assets, receives public shares
+      await callVaultWithPrivateAuthWit(
+        vault
+          .withWallet(alice)
+          .methods.deposit_private_to_private(alice.getAddress(), alice.getAddress(), assetsAlice, sharesAlice, 0),
+        alice,
+        assetsAlice,
+      );
 
-    // // Check asset balances
-    // await expectTokenBalances(asset, alice.getAddress(), BigInt(0), BigInt(initialAmount + aliceEarnings));
-    // await expectTokenBalances(asset, bob.getAddress(), BigInt(initialAmount), BigInt(0));
-    // await expectTokenBalances(asset, vault.address, BigInt(dust), BigInt(0));
-    // // Check shares balances
-    // await expectTokenBalances(vault, alice.getAddress(), BigInt(0), BigInt(0));
-    // await expectTokenBalances(vault, bob.getAddress(), BigInt(0), BigInt(0));
-    // expect(await vault.methods.total_supply().simulate()).toBe(BigInt(0));
-  }, 300_000);
+      // Simulate yield: mint assets to vault
+      await asset.withWallet(alice).methods.mint_to_public(vault.address, yieldAmount).send().wait();
+
+      // Bob issues public shares for public assets
+      await callVaultWithPrivateAuthWit(
+        vault
+          .withWallet(bob)
+          .methods.issue_private_to_private_exact(bob.getAddress(), bob.getAddress(), sharesBob, assetsBob, 0),
+        bob,
+        assetsBob,
+      );
+
+      // Check asset balances
+      await expectTokenBalances(asset, alice.getAddress(), BigInt(0), BigInt(initialAmount - assetsAlice));
+      await expectTokenBalances(asset, bob.getAddress(), BigInt(0), BigInt(initialAmount - assetsBob));
+      await expectTokenBalances(asset, vault.address, BigInt(assetsAlice + assetsBob + yieldAmount), BigInt(0));
+      // Check shares balances
+      await expectTokenBalances(vault, alice.getAddress(), BigInt(0), BigInt(sharesAlice));
+      await expectTokenBalances(vault, bob.getAddress(), BigInt(0), BigInt(sharesBob));
+      expect(await vault.methods.total_supply().simulate()).toBe(BigInt(sharesBob + sharesAlice));
+
+      // TODO: vault cannot encrypt note due to lack of app tagging secret: Simulation error: No public key registered for address
+      // // Alice withdraws public assets by burning public shares
+      // // TODO: call preview max withdraw function
+      // // Cannot withdraw 14 due to rounding.
+      // const maxWithdraw = assetsAlice + aliceEarnings;
+      // await vault
+      //   .withWallet(alice)
+      //   .methods.withdraw_private_to_private(alice.getAddress(), alice.getAddress(), maxWithdraw, sharesAlice, 0)
+      //   .send()
+      //   .wait();
+
+      // // Bob redeems public shares for public assets
+      // // Bob should get 15 asset tokens back, 1 token remains in the vault
+      // await vault
+      //   .withWallet(bob)
+      //   .methods.redeem_private_to_private_exact(bob.getAddress(), bob.getAddress(), sharesBob, assetsBob, 0)
+      //   .send()
+      //   .wait();
+
+      // // Check asset balances
+      // await expectTokenBalances(asset, alice.getAddress(), BigInt(0), BigInt(initialAmount + aliceEarnings));
+      // await expectTokenBalances(asset, bob.getAddress(), BigInt(0), BigInt(initialAmount));
+      // await expectTokenBalances(asset, vault.address, BigInt(dust), BigInt(0));
+      // // Check shares balances
+      // await expectTokenBalances(vault, alice.getAddress(), BigInt(0), BigInt(0));
+      // await expectTokenBalances(vault, bob.getAddress(), BigInt(0), BigInt(0));
+      // expect(await vault.methods.total_supply().simulate()).toBe(BigInt(0));
+    }, 300_000);
+
+    it('Exact methods, Mixed Assets, Private shares: Alice deposits/withdraws, Bob deposits/withdraws', async () => {
+      // Mint some assets to Alice and Bob for deposit/issue
+      await asset
+        .withWallet(alice)
+        .methods.mint_to_private(alice.getAddress(), alice.getAddress(), initialAmount)
+        .send()
+        .wait();
+      await asset.withWallet(alice).methods.mint_to_public(bob.getAddress(), initialAmount).send().wait();
+
+      // Alice deposits private assets, receives public shares
+      await callVaultWithPrivateAuthWit(
+        vault
+          .withWallet(alice)
+          .methods.deposit_private_to_private_exact(
+            alice.getAddress(),
+            alice.getAddress(),
+            assetsAlice,
+            sharesAlice,
+            0,
+          ),
+        alice,
+        assetsAlice,
+      );
+
+      // Simulate yield: mint assets to vault
+      await asset.withWallet(alice).methods.mint_to_public(vault.address, yieldAmount).send().wait();
+
+      // Bob issues public shares for public assets
+      await callVaultWithPublicAuthWit(
+        vault
+          .withWallet(bob)
+          .methods.deposit_public_to_private_exact(bob.getAddress(), bob.getAddress(), assetsBob, sharesBob, 0),
+        bob,
+        assetsBob,
+      );
+
+      // Check asset balances
+      await expectTokenBalances(asset, alice.getAddress(), BigInt(0), BigInt(initialAmount - assetsAlice));
+      await expectTokenBalances(asset, bob.getAddress(), BigInt(initialAmount - assetsBob), BigInt(0));
+      await expectTokenBalances(asset, vault.address, BigInt(assetsAlice + assetsBob + yieldAmount), BigInt(0));
+      // Check shares balances
+      await expectTokenBalances(vault, alice.getAddress(), BigInt(0), BigInt(sharesAlice));
+      await expectTokenBalances(vault, bob.getAddress(), BigInt(0), BigInt(sharesBob));
+      expect(await vault.methods.total_supply().simulate()).toBe(BigInt(sharesBob + sharesAlice));
+
+      // TODO: vault cannot encrypt note due to lack of app tagging secret: Simulation error: No public key registered for address
+      // // Alice withdraws public assets by burning public shares
+      // // TODO: call preview max withdraw function
+      // // Cannot withdraw 14 due to rounding.
+      // const maxWithdraw = assetsAlice + aliceEarnings;
+      // await vault
+      //   .withWallet(alice)
+      //   .methods.withdraw_private_to_private_exact(alice.getAddress(), alice.getAddress(), maxWithdraw, sharesAlice, 0)
+      //   .send()
+      //   .wait();
+
+      // // Bob redeems public shares for public assets
+      // // Bob should get 15 asset tokens back, 1 token remains in the vault
+      // await vault
+      //   .withWallet(bob)
+      //   .methods.withdraw_private_to_public_exact(bob.getAddress(), bob.getAddress(), assetsBob, sharesBob, 0)
+      //   .send()
+      //   .wait();
+
+      // // Check asset balances
+      // await expectTokenBalances(asset, alice.getAddress(), BigInt(0), BigInt(initialAmount + aliceEarnings));
+      // await expectTokenBalances(asset, bob.getAddress(), BigInt(initialAmount), BigInt(0));
+      // await expectTokenBalances(asset, vault.address, BigInt(dust), BigInt(0));
+      // // Check shares balances
+      // await expectTokenBalances(vault, alice.getAddress(), BigInt(0), BigInt(0));
+      // await expectTokenBalances(vault, bob.getAddress(), BigInt(0), BigInt(0));
+      // expect(await vault.methods.total_supply().simulate()).toBe(BigInt(0));
+    }, 300_000);
+  });
+
+  describe('Successful interactions with authwits.', () => {
+    it('Public assets, Public shares: Alice deposits/withdraws, Bob issues/redeems', async () => {
+      // Mint some assets to Alice and Bob for deposit/issue
+      await asset.withWallet(alice).methods.mint_to_public(alice.getAddress(), initialAmount).send().wait();
+      await asset.withWallet(alice).methods.mint_to_public(bob.getAddress(), initialAmount).send().wait();
+
+      // Alice deposits public assets, receives public shares
+      const depositAction = vault
+        .withWallet(carl)
+        .methods.deposit_public_to_public(alice.getAddress(), alice.getAddress(), assetsAlice, 0);
+      await setPublicAuthWit(carl.getAddress(), depositAction, alice);
+      await callVaultWithPublicAuthWit(depositAction, alice, assetsAlice);
+
+      // Simulate yield: mint assets to vault
+      await asset.withWallet(alice).methods.mint_to_public(vault.address, yieldAmount).send().wait();
+
+      // Bob issues public shares for public assets
+      const issueAction = vault
+        .withWallet(carl)
+        .methods.issue_public_to_public(bob.getAddress(), bob.getAddress(), sharesBob, assetsBob, 0);
+      await setPublicAuthWit(carl.getAddress(), issueAction, bob);
+      await callVaultWithPublicAuthWit(issueAction, bob, assetsBob);
+
+      // Check asset balances
+      await expectTokenBalances(asset, alice.getAddress(), BigInt(initialAmount - assetsAlice), BigInt(0));
+      await expectTokenBalances(asset, bob.getAddress(), BigInt(initialAmount - assetsBob), BigInt(0));
+      await expectTokenBalances(asset, vault.address, BigInt(assetsAlice + assetsBob + yieldAmount), BigInt(0));
+      await expectTokenBalances(asset, carl.getAddress(), BigInt(0), BigInt(0));
+      // Check shares balances
+      await expectTokenBalances(vault, alice.getAddress(), BigInt(sharesAlice), BigInt(0));
+      await expectTokenBalances(vault, bob.getAddress(), BigInt(sharesBob), BigInt(0));
+      await expectTokenBalances(vault, carl.getAddress(), BigInt(0), BigInt(0));
+      expect(await vault.methods.total_supply().simulate()).toBe(BigInt(sharesBob + sharesAlice));
+
+      // Alice withdraws public assets by burning public shares
+      // TODO: call preview max withdraw function
+      // Cannot withdraw 14 due to rounding.
+      const maxWithdraw = 13;
+      const withdrawAction = vault
+        .withWallet(carl)
+        .methods.withdraw_public_to_public(alice.getAddress(), alice.getAddress(), maxWithdraw, 0);
+      await setPublicAuthWit(carl.getAddress(), withdrawAction, alice);
+      await withdrawAction.send().wait();
+
+      // Bob redeems public shares for public assets
+      // Bob should get 15 asset tokens back, 1 token remains in the vault
+      const redeemAction = vault
+        .withWallet(carl)
+        .methods.redeem_public_to_public(bob.getAddress(), bob.getAddress(), sharesBob, 0);
+      await setPublicAuthWit(carl.getAddress(), redeemAction, bob);
+      await redeemAction.send().wait();
+
+      // Check asset balances
+      await expectTokenBalances(asset, alice.getAddress(), BigInt(initialAmount + aliceEarnings), BigInt(0));
+      await expectTokenBalances(asset, bob.getAddress(), BigInt(initialAmount), BigInt(0));
+      await expectTokenBalances(asset, vault.address, BigInt(dust), BigInt(0));
+      await expectTokenBalances(asset, carl.getAddress(), BigInt(0), BigInt(0));
+      // Check shares balances
+      await expectTokenBalances(vault, alice.getAddress(), BigInt(0), BigInt(0));
+      await expectTokenBalances(vault, bob.getAddress(), BigInt(0), BigInt(0));
+      await expectTokenBalances(vault, carl.getAddress(), BigInt(0), BigInt(0));
+      expect(await vault.methods.total_supply().simulate()).toBe(BigInt(0));
+    }, 300_000);
+
+    it('Private assets, Public shares: Alice deposits/withdraws, Bob issues/redeems', async () => {
+      // Mint some assets to Alice and Bob for deposit/issue
+      await asset
+        .withWallet(alice)
+        .methods.mint_to_private(alice.getAddress(), alice.getAddress(), initialAmount)
+        .send()
+        .wait();
+      await asset
+        .withWallet(alice)
+        .methods.mint_to_private(alice.getAddress(), bob.getAddress(), initialAmount)
+        .send()
+        .wait();
+
+      // Alice deposits private assets, receives public shares
+      const depositAction = vault
+        .withWallet(carl)
+        .methods.deposit_private_to_public(alice.getAddress(), alice.getAddress(), assetsAlice, 0);
+      const depositAuthWitness = await setPrivateAuthWit(carl.getAddress(), depositAction, alice);
+      await callVaultWithPrivateAuthWit(
+        depositAction.with({ authWitnesses: [depositAuthWitness] }),
+        alice,
+        assetsAlice,
+      );
+
+      // Simulate yield: mint assets to vault
+      await asset.withWallet(alice).methods.mint_to_public(vault.address, yieldAmount).send().wait();
+
+      // Bob issues public shares for public assets
+      const issueAction = vault
+        .withWallet(carl)
+        .methods.issue_private_to_public_exact(bob.getAddress(), bob.getAddress(), sharesBob, assetsBob, 0);
+      const issueAuthWitness = await setPrivateAuthWit(carl.getAddress(), issueAction, bob);
+      await callVaultWithPrivateAuthWit(issueAction.with({ authWitnesses: [issueAuthWitness] }), bob, assetsBob);
+
+      // Check asset balances
+      await expectTokenBalances(asset, alice.getAddress(), BigInt(0), BigInt(initialAmount - assetsAlice));
+      await expectTokenBalances(asset, bob.getAddress(), BigInt(0), BigInt(initialAmount - assetsBob));
+      await expectTokenBalances(asset, vault.address, BigInt(assetsAlice + assetsBob + yieldAmount), BigInt(0));
+      await expectTokenBalances(asset, carl.getAddress(), BigInt(0), BigInt(0));
+      // Check shares balances
+      await expectTokenBalances(vault, alice.getAddress(), BigInt(sharesAlice), BigInt(0));
+      await expectTokenBalances(vault, bob.getAddress(), BigInt(sharesBob), BigInt(0));
+      await expectTokenBalances(vault, carl.getAddress(), BigInt(0), BigInt(0));
+      expect(await vault.methods.total_supply().simulate()).toBe(BigInt(sharesBob + sharesAlice));
+
+      // TODO: vault cannot encrypt note due to lack of app tagging secret: Simulation error: No public key registered for address
+      // // Alice withdraws private assets by burning public shares
+      // // TODO: call preview max withdraw function
+      // // Cannot withdraw 14 due to rounding.
+      // const maxWithdraw = 13;
+      // await vault
+      //   .withWallet(alice)
+      //   .methods.withdraw_public_to_private(alice.getAddress(), alice.getAddress(), maxWithdraw, 0)
+      //   .send()
+      //   .wait();
+
+      // // Bob redeems private shares for public assets
+      // // Bob should get 15 asset tokens back, 1 token remains in the vault
+      // const minAssets = 15;
+      // await vault
+      //   .withWallet(bob)
+      //   .methods.redeem_public_to_private_exact(bob.getAddress(), bob.getAddress(), bobShares, minAssets, 0)
+      //   .send()
+      //   .wait();
+
+      // // Check asset balances
+      // await expectTokenBalances(asset, alice.getAddress(), BigInt(0), BigInt(initialAmount + aliceEarnings));
+      // await expectTokenBalances(asset, bob.getAddress(), BigInt(0), BigInt(initialAmount));
+      // await expectTokenBalances(asset, vault.address, BigInt(dust), BigInt(0));
+      // await expectTokenBalances(asset, carl.getAddress(), BigInt(0), BigInt(0));
+      // // Check shares balances
+      // await expectTokenBalances(vault, alice.getAddress(), BigInt(0), BigInt(0));
+      // await expectTokenBalances(vault, bob.getAddress(), BigInt(0), BigInt(0));
+      // expect(await vault.methods.total_supply().simulate()).toBe(BigInt(0));
+      // await expectTokenBalances(vault, carl.getAddress(), BigInt(0), BigInt(0));
+    }, 300_000);
+
+    it('Public assets, Private shares: Alice deposits/withdraws, Bob issues/redeems', async () => {
+      // Mint some assets to Alice and Bob for deposit/issue
+      await asset.withWallet(alice).methods.mint_to_public(alice.getAddress(), initialAmount).send().wait();
+      await asset.withWallet(alice).methods.mint_to_public(bob.getAddress(), initialAmount).send().wait();
+
+      // Alice deposits public assets, receives public shares
+      const depositAction = vault
+        .withWallet(carl)
+        .methods.deposit_public_to_private(alice.getAddress(), alice.getAddress(), assetsAlice, sharesAlice, 0);
+      const depositAuthWitness = await setPrivateAuthWit(carl.getAddress(), depositAction, alice);
+      await callVaultWithPublicAuthWit(depositAction.with({ authWitnesses: [depositAuthWitness] }), alice, assetsAlice);
+
+      // Simulate yield: mint assets to vault
+      await asset.withWallet(alice).methods.mint_to_public(vault.address, yieldAmount).send().wait();
+
+      // Bob issues public shares for public assets
+      const issueAction = vault
+        .withWallet(carl)
+        .methods.issue_public_to_private(bob.getAddress(), bob.getAddress(), sharesBob, assetsBob, 0);
+      const issueAuthWitness = await setPrivateAuthWit(carl.getAddress(), issueAction, bob);
+      await callVaultWithPublicAuthWit(issueAction.with({ authWitnesses: [issueAuthWitness] }), bob, assetsBob);
+
+      // Check asset balances
+      await expectTokenBalances(asset, alice.getAddress(), BigInt(initialAmount - assetsAlice), BigInt(0));
+      await expectTokenBalances(asset, bob.getAddress(), BigInt(initialAmount - assetsBob), BigInt(0));
+      await expectTokenBalances(asset, vault.address, BigInt(assetsAlice + assetsBob + yieldAmount), BigInt(0));
+      await expectTokenBalances(asset, carl.getAddress(), BigInt(0), BigInt(0));
+      // Check shares balances
+      await expectTokenBalances(vault, alice.getAddress(), BigInt(0), BigInt(sharesAlice));
+      await expectTokenBalances(vault, bob.getAddress(), BigInt(0), BigInt(sharesBob));
+      await expectTokenBalances(vault, carl.getAddress(), BigInt(0), BigInt(0));
+      expect(await vault.methods.total_supply().simulate()).toBe(BigInt(sharesBob + sharesAlice));
+
+      // Alice withdraws public assets by burning public shares
+      // TODO: call preview max withdraw function
+      // Cannot withdraw 14 due to rounding.
+      const maxWithdraw = 13;
+      const withdrawAction = vault
+        .withWallet(carl)
+        .methods.withdraw_private_to_public_exact(alice.getAddress(), alice.getAddress(), maxWithdraw, sharesAlice, 0);
+      const withdrawAuthWitness = await setPrivateAuthWit(carl.getAddress(), withdrawAction, alice);
+      await withdrawAction
+        .with({ authWitnesses: [withdrawAuthWitness] })
+        .send()
+        .wait();
+
+      // Bob redeems public shares for public assets
+      // Bob should get 15 asset tokens back, 1 token remains in the vault
+      const redeemAction = vault
+        .withWallet(carl)
+        .methods.redeem_private_to_public(bob.getAddress(), bob.getAddress(), sharesBob, 0);
+      const redeemAuthWitness = await setPrivateAuthWit(carl.getAddress(), redeemAction, bob);
+      await redeemAction
+        .with({ authWitnesses: [redeemAuthWitness] })
+        .send()
+        .wait();
+
+      // Check asset balances
+      await expectTokenBalances(asset, alice.getAddress(), BigInt(initialAmount + aliceEarnings), BigInt(0));
+      await expectTokenBalances(asset, bob.getAddress(), BigInt(initialAmount), BigInt(0));
+      await expectTokenBalances(asset, vault.address, BigInt(dust), BigInt(0));
+      await expectTokenBalances(asset, carl.getAddress(), BigInt(0), BigInt(0));
+      // Check shares balances
+      await expectTokenBalances(vault, alice.getAddress(), BigInt(0), BigInt(0));
+      await expectTokenBalances(vault, bob.getAddress(), BigInt(0), BigInt(0));
+      await expectTokenBalances(vault, carl.getAddress(), BigInt(0), BigInt(0));
+      expect(await vault.methods.total_supply().simulate()).toBe(BigInt(0));
+    }, 300_000);
+
+    it('Private assets, Private shares: Alice deposits/withdraws, Bob issues/redeems', async () => {
+      // Mint some assets to Alice and Bob for deposit/issue
+      await asset
+        .withWallet(alice)
+        .methods.mint_to_private(alice.getAddress(), alice.getAddress(), initialAmount)
+        .send()
+        .wait();
+      await asset
+        .withWallet(alice)
+        .methods.mint_to_private(alice.getAddress(), bob.getAddress(), initialAmount)
+        .send()
+        .wait();
+
+      // Alice deposits private assets, receives public shares
+      const depositAction = vault
+        .withWallet(carl)
+        .methods.deposit_private_to_private(alice.getAddress(), alice.getAddress(), assetsAlice, sharesAlice, 0);
+      const depositAuthWitness = await setPrivateAuthWit(carl.getAddress(), depositAction, alice);
+      await callVaultWithPrivateAuthWit(
+        depositAction.with({ authWitnesses: [depositAuthWitness] }),
+        alice,
+        assetsAlice,
+      );
+
+      // Simulate yield: mint assets to vault
+      await asset.withWallet(alice).methods.mint_to_public(vault.address, yieldAmount).send().wait();
+
+      // Bob issues public shares for public assets
+      const issueAction = vault
+        .withWallet(carl)
+        .methods.issue_private_to_private_exact(bob.getAddress(), bob.getAddress(), sharesBob, assetsBob, 0);
+      const issueAuthWitness = await setPrivateAuthWit(carl.getAddress(), issueAction, bob);
+      await callVaultWithPrivateAuthWit(issueAction.with({ authWitnesses: [issueAuthWitness] }), bob, assetsBob);
+
+      // Check asset balances
+      await expectTokenBalances(asset, alice.getAddress(), BigInt(0), BigInt(initialAmount - assetsAlice));
+      await expectTokenBalances(asset, bob.getAddress(), BigInt(0), BigInt(initialAmount - assetsBob));
+      await expectTokenBalances(asset, vault.address, BigInt(assetsAlice + assetsBob + yieldAmount), BigInt(0));
+      await expectTokenBalances(asset, carl.getAddress(), BigInt(0), BigInt(0));
+      // Check shares balances
+      await expectTokenBalances(vault, alice.getAddress(), BigInt(0), BigInt(sharesAlice));
+      await expectTokenBalances(vault, bob.getAddress(), BigInt(0), BigInt(sharesBob));
+      await expectTokenBalances(vault, carl.getAddress(), BigInt(0), BigInt(0));
+      expect(await vault.methods.total_supply().simulate()).toBe(BigInt(sharesBob + sharesAlice));
+
+      // TODO: vault cannot encrypt note due to lack of app tagging secret: Simulation error: No public key registered for address
+      // // Alice withdraws public assets by burning public shares
+      // // TODO: call preview max withdraw function
+      // // Cannot withdraw 14 due to rounding.
+      // const maxWithdraw = 13;
+      // const withdrawAction = vault.methods.withdraw_private_to_private(alice.getAddress(), alice.getAddress(), maxWithdraw, 9, 0);
+      // const withdrawAuthWitness = await setPrivateAuthWit(carl.getAddress(), withdrawAction, alice);
+      // await vault
+      //   .withWallet(carl)
+      //   .methods.withdraw_private_to_private(alice.getAddress(), alice.getAddress(), maxWithdraw, 9, 0)
+      //   .with({ authWitnesses: [withdrawAuthWitness] })
+      //   .send()
+      //   .wait();
+
+      // // Bob redeems public shares for public assets
+      // // Bob should get 15 asset tokens back, 1 token remains in the vault
+      // let bobShares = await vault.methods.balance_of_private(bob.getAddress()).simulate();
+      // const redeemAction = vault.methods.redeem_private_to_private_exact(bob.getAddress(), bob.getAddress(), bobShares, 15, 0);
+      // const redeemAuthWitness = await setPrivateAuthWit(carl.getAddress(), redeemAction, bob);
+      // await vault
+      //   .withWallet(carl)
+      //   .methods.redeem_private_to_private_exact(bob.getAddress(), bob.getAddress(), bobShares, 15, 0)
+      //   .with({ authWitnesses: [redeemAuthWitness] })
+      //   .send()
+      //   .wait();
+
+      // // Check asset balances
+      // await expectTokenBalances(asset, alice.getAddress(), BigInt(0), BigInt(initialAmount + aliceEarnings));
+      // await expectTokenBalances(asset, bob.getAddress(), BigInt(0), BigInt(initialAmount));
+      // await expectTokenBalances(asset, vault.address, BigInt(dust), BigInt(0));
+      // await expectTokenBalances(asset, carl.getAddress(), BigInt(0), BigInt(0));
+      // // Check shares balances
+      // await expectTokenBalances(vault, alice.getAddress(), BigInt(0), BigInt(0));
+      // await expectTokenBalances(vault, bob.getAddress(), BigInt(0), BigInt(0));
+      // await expectTokenBalances(vault, carl.getAddress(), BigInt(0), BigInt(0));
+      // expect(await vault.methods.total_supply().simulate()).toBe(BigInt(0));
+    }, 300_000);
+
+    it('Exact methods, Mixed Assets, Private shares: Alice deposits/withdraws, Bob deposits/withdraws', async () => {
+      // Mint some assets to Alice and Bob for deposit/issue
+      await asset
+        .withWallet(alice)
+        .methods.mint_to_private(alice.getAddress(), alice.getAddress(), initialAmount)
+        .send()
+        .wait();
+      await asset.withWallet(alice).methods.mint_to_public(bob.getAddress(), initialAmount).send().wait();
+
+      // Alice deposits private assets, receives public shares
+      const depositAction = vault
+        .withWallet(carl)
+        .methods.deposit_private_to_private_exact(alice.getAddress(), alice.getAddress(), assetsAlice, sharesAlice, 0);
+      const depositAuthWitness = await setPrivateAuthWit(carl.getAddress(), depositAction, alice);
+      await callVaultWithPrivateAuthWit(
+        depositAction.with({ authWitnesses: [depositAuthWitness] }),
+        alice,
+        assetsAlice,
+      );
+
+      // Simulate yield: mint assets to vault
+      await asset.withWallet(alice).methods.mint_to_public(vault.address, yieldAmount).send().wait();
+
+      // Bob issues public shares for public assets
+      const publicDepositAction = vault
+        .withWallet(carl)
+        .methods.deposit_public_to_private_exact(bob.getAddress(), bob.getAddress(), assetsBob, sharesBob, 0);
+      const publicDepositAuthWitness = await setPrivateAuthWit(carl.getAddress(), publicDepositAction, bob);
+      await callVaultWithPublicAuthWit(
+        publicDepositAction.with({ authWitnesses: [publicDepositAuthWitness] }),
+        bob,
+        assetsBob,
+      );
+
+      // Check asset balances
+      await expectTokenBalances(asset, alice.getAddress(), BigInt(0), BigInt(initialAmount - assetsAlice));
+      await expectTokenBalances(asset, bob.getAddress(), BigInt(initialAmount - assetsBob), BigInt(0));
+      await expectTokenBalances(asset, vault.address, BigInt(assetsAlice + assetsBob + yieldAmount), BigInt(0));
+      await expectTokenBalances(asset, carl.getAddress(), BigInt(0), BigInt(0));
+      // Check shares balances
+      await expectTokenBalances(vault, alice.getAddress(), BigInt(0), BigInt(sharesAlice));
+      await expectTokenBalances(vault, bob.getAddress(), BigInt(0), BigInt(sharesBob));
+      await expectTokenBalances(vault, carl.getAddress(), BigInt(0), BigInt(0));
+      expect(await vault.methods.total_supply().simulate()).toBe(BigInt(sharesBob + sharesAlice));
+
+      // TODO: vault cannot encrypt note due to lack of app tagging secret: Simulation error: No public key registered for address
+      // // Alice withdraws public assets by burning public shares
+      // // TODO: call preview max withdraw function
+      // // Cannot withdraw 14 due to rounding.
+      // const maxWithdraw = 13;
+      // const withdrawAction = vault.methods.withdraw_private_to_private_exact(alice.getAddress(), alice.getAddress(), maxWithdraw, 9, 0);
+      // const withdrawAuthWitness = await setPrivateAuthWit(carl.getAddress(), withdrawAction, alice);
+      // await vault
+      //   .withWallet(carl)
+      //   .methods.withdraw_private_to_private_exact(alice.getAddress(), alice.getAddress(), maxWithdraw, 9, 0)
+      //   .with({ authWitnesses: [withdrawAuthWitness] })
+      //   .send()
+      //   .wait();
+
+      // // Bob redeems public shares for public assets
+      // // Bob should get 15 asset tokens back, 1 token remains in the vault
+      // const bobShares = await vault.methods.balance_of_private(bob.getAddress()).simulate();
+      // const publicWithdrawAction = vault.methods.withdraw_private_to_public_exact(alice.getAddress(), alice.getAddress(), 15, bobShares, 0);
+      // const publicWithdrawAuthWitness = await setPrivateAuthWit(carl.getAddress(), publicWithdrawAction, alice);
+      // await vault
+      //   .withWallet(carl)
+      //   .methods.withdraw_private_to_public_exact(bob.getAddress(), bob.getAddress(), 15, bobShares, 0)
+      //   .with({ authWitnesses: [publicWithdrawAuthWitness] })
+      //   .send()
+      //   .wait();
+
+      // // Check asset balances
+      // await expectTokenBalances(asset, alice.getAddress(), BigInt(0), BigInt(initialAmount + aliceEarnings));
+      // await expectTokenBalances(asset, bob.getAddress(), BigInt(initialAmount), BigInt(0));
+      // await expectTokenBalances(asset, vault.address, BigInt(dust), BigInt(0));
+      // await expectTokenBalances(asset, carl.getAddress(), BigInt(0), BigInt(0));
+      // // Check shares balances
+      // await expectTokenBalances(vault, alice.getAddress(), BigInt(0), BigInt(0));
+      // await expectTokenBalances(vault, bob.getAddress(), BigInt(0), BigInt(0));
+      // await expectTokenBalances(vault, carl.getAddress(), BigInt(0), BigInt(0));
+      // expect(await vault.methods.total_supply().simulate()).toBe(BigInt(0));
+    }, 300_000);
+  });
 });
