@@ -1360,7 +1360,7 @@ describe('Tokenized Vault', () => {
           .methods.withdraw_private_to_private(alice.getAddress(), alice.getAddress(), assetsAlice, sharesRequested, 0)
           .send()
           .wait(),
-      ).rejects.toThrow(/Assertion failed: Balance too low 'subtracted > 0/);
+      ).rejects.toThrow(/Assertion failed: Balance too low 'subtracted > 0'/);
     }, 300_000);
 
     it('withdraw_private_to_public_exact', async () => {
@@ -1397,7 +1397,7 @@ describe('Tokenized Vault', () => {
           )
           .send()
           .wait(),
-      ).rejects.toThrow(/Assertion failed: Balance too low 'subtracted > 0/);
+      ).rejects.toThrow(/Assertion failed: Balance too low 'subtracted > 0'/);
     }, 300_000);
 
     it('withdraw_private_to_private_exact', async () => {
@@ -1435,7 +1435,7 @@ describe('Tokenized Vault', () => {
           )
           .send()
           .wait(),
-      ).rejects.toThrow(/Assertion failed: Balance too low 'subtracted > 0/);
+      ).rejects.toThrow(/Assertion failed: Balance too low 'subtracted > 0'/);
     }, 300_000);
   });
 
@@ -1495,7 +1495,7 @@ describe('Tokenized Vault', () => {
           .methods.redeem_private_to_public(alice.getAddress(), alice.getAddress(), sharesRequested, 0)
           .send()
           .wait(),
-      ).rejects.toThrow(/Assertion failed: Balance too low 'subtracted > 0/);
+      ).rejects.toThrow(/Assertion failed: Balance too low 'subtracted > 0'/);
     }, 300_000);
 
     it('redeem_private_to_private_exact', async () => {
@@ -1517,7 +1517,7 @@ describe('Tokenized Vault', () => {
           )
           .send()
           .wait(),
-      ).rejects.toThrow(/Assertion failed: Balance too low 'subtracted > 0/);
+      ).rejects.toThrow(/Assertion failed: Balance too low 'subtracted > 0'/);
 
       // Attempt redeeming with an invalid rate
       // TODO(#15666 & #15118): this test fails because the ivsk is currently needed for emitting a note, but the vault contract doesn't have one.
