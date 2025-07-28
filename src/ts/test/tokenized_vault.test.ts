@@ -1306,6 +1306,7 @@ describe('Tokenized Vault', () => {
       // Mint some assets to Alice in public and deposit to public shares.
       await mintAndDepositInPublic(alice, initialAmount, assetsAlice);
 
+      // Attempt withdrawing more assets than allowed
       await expect(
         vault
           .withWallet(alice)
@@ -1319,7 +1320,7 @@ describe('Tokenized Vault', () => {
       // Mint some assets to Alice in public and deposit to public shares.
       await mintAndDepositInPublic(alice, initialAmount, assetsAlice);
 
-      // Attempt depositing more assets than Alice actually has
+      // Attempt withdrawing more assets than allowed
       // TODO(#15666 & #15118): this test fails because the ivsk is currently needed for emitting a note, but the vault contract doesn't have one.
       await expect(
         vault
@@ -1334,7 +1335,7 @@ describe('Tokenized Vault', () => {
       // Mint some assets to Alice in private and deposit to private shares.
       await mintAndDepositInPrivate(alice, initialAmount, assetsAlice, sharesAlice);
 
-      // Attempt depositing more assets than Alice actually has
+      // Attempt withdrawing more assets than allowed
       // TODO(#15666 & #15118): this test fails because the ivsk is currently needed for emitting a note, but the vault contract doesn't have one.
       let sharesRequested = assetsAlice;
       await expect(
@@ -1351,6 +1352,7 @@ describe('Tokenized Vault', () => {
           .wait(),
       ).rejects.toThrow(/No public key registered for address/); // /app_logic_reverted/ /Insufficient shares burnt/
 
+      // Attempt burning more shares than Alice actually has
       sharesRequested = assetsAlice + 1;
       await expect(
         vault
@@ -1365,7 +1367,7 @@ describe('Tokenized Vault', () => {
       // Mint some assets to Alice in private and deposit to private shares.
       await mintAndDepositInPrivate(alice, initialAmount, assetsAlice, sharesAlice);
 
-      // Attempt depositing more assets than Alice actually has
+      // Attempt withdrawing more assets than allowed
       let sharesRequested = assetsAlice;
       await expect(
         vault
@@ -1381,6 +1383,7 @@ describe('Tokenized Vault', () => {
           .wait(),
       ).rejects.toThrow(/app_logic_reverted/); // /Underflow/
 
+      // Attempt burning more shares than Alice actually has
       sharesRequested = assetsAlice + 1;
       await expect(
         vault
@@ -1401,7 +1404,7 @@ describe('Tokenized Vault', () => {
       // Mint some assets to Alice in private and deposit to private shares.
       await mintAndDepositInPrivate(alice, initialAmount, assetsAlice, sharesAlice);
 
-      // Attempt depositing more assets than Alice actually has
+      // Attempt withdrawing more assets than allowed
       // TODO(#15666 & #15118): this test fails because the ivsk is currently needed for emitting a note, but the vault contract doesn't have one.
       let sharesRequested = assetsAlice;
       await expect(
@@ -1418,6 +1421,7 @@ describe('Tokenized Vault', () => {
           .wait(),
       ).rejects.toThrow(/No public key registered for address/); // /app_logic_reverted/ /Underflow/
 
+      // Attempt burning more shares than Alice actually has
       sharesRequested = assetsAlice + 1;
       await expect(
         vault
@@ -1440,6 +1444,7 @@ describe('Tokenized Vault', () => {
       // Mint some assets to Alice in public and deposit to public shares.
       await mintAndDepositInPublic(alice, initialAmount, assetsAlice);
 
+      // Attempt redeeming more shares than Alice actually has
       let sharesRequested = assetsAlice + 1;
       await expect(
         vault
@@ -1454,7 +1459,7 @@ describe('Tokenized Vault', () => {
       // Mint some assets to Alice in public and deposit to public shares.
       await mintAndDepositInPublic(alice, initialAmount, assetsAlice);
 
-      // Attempt burning more shares than Alice actually has
+      // Attempt redeeming more shares than Alice actually has
       let sharesRequested = assetsAlice + 1;
       let minAssets = 0; // minAssets > 0 would cause fail with "No public key registered for address" (TODO(#15666 & #15118))
       await expect(
@@ -1482,7 +1487,7 @@ describe('Tokenized Vault', () => {
       // Mint some assets to Alice in private and deposit to private shares.
       await mintAndDepositInPrivate(alice, initialAmount, assetsAlice, sharesAlice);
 
-      // Attempt burning more shares than Alice actually has
+      // Attempt redeeming more shares than Alice actually has
       let sharesRequested = assetsAlice + 1;
       await expect(
         vault
@@ -1497,7 +1502,7 @@ describe('Tokenized Vault', () => {
       // Mint some assets to Alice in private and deposit to private shares.
       await mintAndDepositInPrivate(alice, initialAmount, assetsAlice, sharesAlice);
 
-      // Attempt burning more shares than Alice actually has
+      // Attempt redeeming more shares than Alice actually has
       let sharesRequested = assetsAlice + 1;
       let minAssets = 0; // minAssets > 0 would cause fail with "No public key registered for address" (TODO(#15666 & #15118))
       await expect(
