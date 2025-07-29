@@ -47,7 +47,7 @@ jobs:
       # Install dependencies AND the current latest version of the package we're releasing now.
       - name: Install dependencies
         run: |
-          yarn
+          yarn --frozen-lockfile
           yarn add @defi-wonderland/aztec-standards@latest
 
       - name: Compile
@@ -96,8 +96,8 @@ jobs:
             echo "No historical directory found, skipping copy"
           fi
 
-          # Copy the compiled JS files directly to artifacts directory
-          cp -r dist/* export/${{ env.PROJECT_NAME }}/current/artifacts/
+          # Copy the compiled JS files and target directory to current/
+          cp -r dist/artifacts/* export/${{ env.PROJECT_NAME }}/current/artifacts/
           cp -r target export/${{ env.PROJECT_NAME }}/current/
 
           # Copy deployments.json if it exists
