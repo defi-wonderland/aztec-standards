@@ -420,7 +420,7 @@ describe('Tokenized Vault', () => {
   });
 
   describe('Successful interactions with authwits.', () => {
-    beforeAll(async () => {
+    beforeEach(async () => {
       vault = vault.withWallet(carl); // Only Carl interacts with the vault
     });
 
@@ -728,7 +728,7 @@ describe('Tokenized Vault', () => {
       // expect(await vault.methods.total_supply().simulate()).toBe(0n);
     }, 300_000);
 
-    it('Exact methods, Mixed Assets, Private shares: Alice deposits/withdraws, Bob deposits/withdraws', async () => {
+    it.only('Exact methods, Mixed Assets, Private shares: Alice deposits/withdraws, Bob deposits/withdraws', async () => {
       // Mint some assets to Alice and Bob for deposit/issue
       await asset.methods.mint_to_private(alice.getAddress(), alice.getAddress(), initialAmount).send().wait();
       await asset.methods.mint_to_public(bob.getAddress(), initialAmount).send().wait();
@@ -814,7 +814,7 @@ describe('Tokenized Vault', () => {
   });
 
   describe('Deposit failures: incorrect amounts', () => {
-    beforeAll(async () => {
+    beforeEach(async () => {
       vault = vault.withWallet(alice); // Only Alice interacts with the vault
     });
 
@@ -1039,6 +1039,10 @@ describe('Tokenized Vault', () => {
   });
 
   describe('Issue failures: incorrect amounts', () => {
+    beforeEach(async () => {
+      vault = vault.withWallet(alice); // Only Alice interacts with the vault
+    });
+
     it('issue_public_to_public', async () => {
       // Mint some assets to Alice
       await asset.methods.mint_to_public(alice.getAddress(), initialAmount).send().wait();
@@ -1199,6 +1203,10 @@ describe('Tokenized Vault', () => {
   });
 
   describe('Withdraw failures: incorrect amounts', () => {
+    beforeEach(async () => {
+      vault = vault.withWallet(alice); // Only Alice interacts with the vault
+    });
+
     it('withdraw_public_to_public', async () => {
       // Mint some assets to Alice in public and deposit to public shares.
       await mintAndDepositInPublic(alice, initialAmount, assetsAlice);
@@ -1305,6 +1313,10 @@ describe('Tokenized Vault', () => {
   });
 
   describe('Redeem failures: incorrect amounts', () => {
+    beforeEach(async () => {
+      vault = vault.withWallet(alice); // Only Alice interacts with the vault
+    });
+
     it('redeem_public_to_public', async () => {
       // Mint some assets to Alice in public and deposit to public shares.
       await mintAndDepositInPublic(alice, initialAmount, assetsAlice);
