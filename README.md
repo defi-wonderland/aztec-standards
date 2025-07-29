@@ -1,5 +1,7 @@
 # Aztec Standards
 
+[![npm version](https://img.shields.io/npm/v/@defi-wonderland/aztec-standards.svg)](https://www.npmjs.com/package/@defi-wonderland/aztec-standards)
+
 Aztec Standards is a comprehensive collection of reusable, standardized contracts for the Aztec Network. It provides a robust foundation of token primitives and utilities that support both private and public operations, empowering developers to build innovative privacy-preserving applications with ease.
 
 ## Table of Contents
