@@ -47,15 +47,16 @@ export const expectUintNote = (note: UniqueNote, amount: bigint, owner: AztecAdd
 
 export const expectTokenBalances = async (
   token: TokenContract,
-  address: AztecAddress,
+  address: AztecAddress | { getAddress: () => AztecAddress },
   publicBalance: bigint,
   privateBalance: bigint,
   caller?: AccountWallet,
 ) => {
-  logger.info('checking balances for', address.toString());
+  const aztecAddress = address instanceof AztecAddress ? address : address.getAddress();
+  logger.info('checking balances for', aztecAddress.toString());
   const t = caller ? token.withWallet(caller) : token;
-  expect(await t.methods.balance_of_public(address).simulate()).toBe(publicBalance);
-  expect(await t.methods.balance_of_private(address).simulate()).toBe(privateBalance);
+  expect(await t.methods.balance_of_public(aztecAddress).simulate()).toBe(publicBalance);
+  expect(await t.methods.balance_of_private(aztecAddress).simulate()).toBe(privateBalance);
 };
 
 export const AMOUNT = 1000n;
@@ -135,24 +136,28 @@ export async function deployVaultAndAssetWithMinter(deployer: AccountWallet): Pr
 }
 
 export async function setPrivateAuthWit(
-  caller: AztecAddress,
+  caller: AztecAddress | { getAddress: () => AztecAddress },
   action: ContractFunctionInteraction,
   deployer: AccountWallet,
 ): Promise<AuthWitness> {
+  const callerAddress = caller instanceof AztecAddress ? caller : caller.getAddress();
+
   const intent: IntentAction = {
-    caller: caller,
+    caller: callerAddress,
     action: action,
   };
   return deployer.createAuthWit(intent);
 }
 
 export async function setPublicAuthWit(
-  caller: AztecAddress,
+  caller: AztecAddress | { getAddress: () => AztecAddress },
   action: ContractFunctionInteraction,
   deployer: AccountWallet,
 ) {
+  const callerAddress = caller instanceof AztecAddress ? caller : caller.getAddress();
+
   const intent: IntentAction = {
-    caller: caller,
+    caller: callerAddress,
     action: action,
   };
   await deployer.createAuthWit(intent);
