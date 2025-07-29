@@ -582,7 +582,7 @@ describe('Tokenized Vault', () => {
       // const minAssets = 15;
       // await vault
       //   .withWallet(bob)
-      //   .methods.redeem_public_to_private_exact(bob.getAddress(), bob.getAddress(), bobShares, minAssets, 0)
+      //   .methods.redeem_public_to_private_exact(bob.getAddress(), bob.getAddress(), sharesBob, minAssets, 0)
       //   .send()
       //   .wait();
 
@@ -728,12 +728,11 @@ describe('Tokenized Vault', () => {
 
       // // Bob redeems public shares for public assets
       // // Bob should get 15 asset tokens back, 1 token remains in the vault
-      // let bobShares = await vault.methods.balance_of_private(bob.getAddress()).simulate();
-      // const redeemAction = vault.methods.redeem_private_to_private_exact(bob.getAddress(), bob.getAddress(), bobShares, 15, 0);
+      // const redeemAction = vault.methods.redeem_private_to_private_exact(bob.getAddress(), bob.getAddress(), sharesBob, 15, 0);
       // const redeemAuthWitness = await setPrivateAuthWit(carl.getAddress(), redeemAction, bob);
       // await vault
       //   .withWallet(carl)
-      //   .methods.redeem_private_to_private_exact(bob.getAddress(), bob.getAddress(), bobShares, 15, 0)
+      //   .methods.redeem_private_to_private_exact(bob.getAddress(), bob.getAddress(), sharesBob, 15, 0)
       //   .with({ authWitnesses: [redeemAuthWitness] })
       //   .send()
       //   .wait();
@@ -811,12 +810,11 @@ describe('Tokenized Vault', () => {
 
       // // Bob redeems public shares for public assets
       // // Bob should get 15 asset tokens back, 1 token remains in the vault
-      // const bobShares = await vault.methods.balance_of_private(bob.getAddress()).simulate();
-      // const publicWithdrawAction = vault.methods.withdraw_private_to_public_exact(alice.getAddress(), alice.getAddress(), 15, bobShares, 0);
+      // const publicWithdrawAction = vault.methods.withdraw_private_to_public_exact(alice.getAddress(), alice.getAddress(), 15, sharesBob, 0);
       // const publicWithdrawAuthWitness = await setPrivateAuthWit(carl.getAddress(), publicWithdrawAction, alice);
       // await vault
       //   .withWallet(carl)
-      //   .methods.withdraw_private_to_public_exact(bob.getAddress(), bob.getAddress(), 15, bobShares, 0)
+      //   .methods.withdraw_private_to_public_exact(bob.getAddress(), bob.getAddress(), 15, sharesBob, 0)
       //   .with({ authWitnesses: [publicWithdrawAuthWitness] })
       //   .send()
       //   .wait();
