@@ -9,7 +9,7 @@ unconstrained fn issue_private_to_private_exact_without_asset() {
 
     let (env, vault_address, _, _, minter) = utils::setup_with_minter(true);
 
-    // Deposit should fail because the PublicImmutable asset was not initialized
+    // Issue should fail because the PublicImmutable asset was not initialized
     env.impersonate(owner);
     Token::at(vault_address)
         .issue_private_to_private_exact(owner, recipient, mint_amount, mint_amount, 0)
@@ -38,7 +38,7 @@ unconstrained fn issue_private_to_private_exact_success() {
         0,
     );
 
-    // Deposit
+    // Issue shares
     env.impersonate(owner);
     // At the first deposit 1 share = 1 asset
     let max_assets = deposit_amount;
@@ -87,7 +87,7 @@ unconstrained fn issue_private_to_private_exact_after_yield() {
         0,
     );
 
-    // Deposit
+    // Issue shares
     env.impersonate(owner);
     let max_assets: u128 = deposit_amount; // mint_amount / 2 because of yield
     let requested_shares = deposit_amount / 2; // The initial rate, when shares' supply is still 0, is given by the amount of assets held by the vault + 1. Since yield = 1, the rate is 1:2.
@@ -131,7 +131,7 @@ unconstrained fn issue_private_to_private_exact_too_many_assets() {
         0,
     );
 
-    // Deposit
+    // Issue shares
     env.impersonate(owner);
     // At the first deposit 1 share = 1 asset
     let requested_shares = max_deposit - 1; // But should receive deposit_amount
@@ -174,7 +174,7 @@ unconstrained fn issue_private_to_private_exact_request_too_many_shares() {
         0,
     );
 
-    // Deposit
+    // Issue shares
     env.impersonate(owner);
     // At the first deposit 1 share = 1 asset
     let max_assets = deposit_amount;
@@ -196,7 +196,7 @@ unconstrained fn issue_private_to_private_exact_without_asset_approval() {
     Token::at(asset_address).mint_to_private(owner, owner, deposit_amount).call(&mut env.private());
     env.advance_block_by(1);
 
-    // Deposit
+    // Issue shares
     env.impersonate(owner);
     // At the first deposit 1 share = 1 asset
     let max_assets = deposit_amount;
@@ -227,7 +227,7 @@ unconstrained fn issue_private_to_private_exact_on_behalf_of_wrong_caller() {
         0,
     );
 
-    // Deposit
+    // Issue shares
     env.impersonate(recipient);
     // At the first deposit 1 share = 1 asset
     let max_assets = deposit_amount;
@@ -270,7 +270,7 @@ unconstrained fn issue_private_to_private_exact_on_behalf_of_other_success() {
         issue_private_to_private_exact_call_interface,
     );
 
-    // Deposit
+    // Issue shares
     env.impersonate(recipient);
     Token::at(vault_address)
         .issue_private_to_private_exact(owner, recipient, requested_shares, max_assets, 0)

@@ -62,7 +62,7 @@ unconstrained fn issue_public_to_public_with_change_success() {
     // Authorize the vault to use the caller's assets
     utils::authorize_transfer_public_to_public(asset_address, vault_address, owner, max_assets, 0);
 
-    // Issue
+    // Issue shares
     let requested_shares: u128 = max_assets - 1;
     env.impersonate(owner);
     Token::at(vault_address)
@@ -100,11 +100,11 @@ unconstrained fn issue_public_to_public_after_yield() {
     Token::at(asset_address).mint_to_public(owner, max_assets).call(&mut env.public());
     env.advance_block_by(1);
 
-    // Issue assets to get shares
+    // Deposit assets to get shares
     // Authorize the vault to use the caller's assets
     utils::authorize_transfer_public_to_public(asset_address, vault_address, owner, max_assets, 0);
 
-    // Issue
+    // Issue shares
     env.impersonate(owner);
     let requested_shares: u128 = max_assets / 2; // The initial rate, when shares' supply is still 0, is given by the amount of assets held by the vault + 1. Since yield = 1, the rate is 1:2.
     Token::at(vault_address)
@@ -137,7 +137,7 @@ unconstrained fn issue_public_to_public_request_too_many_shares() {
     // Authorize the vault to use the caller's assets
     utils::authorize_transfer_public_to_public(asset_address, vault_address, owner, max_assets, 0);
 
-    // Issue
+    // Issue shares
     let requested_shares: u128 = max_assets + 1;
     env.impersonate(owner);
     Token::at(vault_address)
@@ -157,7 +157,7 @@ unconstrained fn issue_public_to_public_without_asset_approval() {
     Token::at(asset_address).mint_to_public(owner, max_assets).call(&mut env.public());
     env.advance_block_by(1);
 
-    // Issue
+    // Issue shares
     env.impersonate(owner);
     let requested_shares = max_assets;
     Token::at(vault_address)
@@ -177,11 +177,11 @@ unconstrained fn issue_public_to_public_on_behalf_of_wrong_caller() {
     Token::at(asset_address).mint_to_public(owner, max_assets).call(&mut env.public());
     env.advance_block_by(1);
 
-    // Issue assets to get shares
+    // Deposit assets to get shares
     // Authorize the vault to use the caller's assets
     utils::authorize_transfer_public_to_public(asset_address, vault_address, owner, max_assets, 0);
 
-    // Issue
+    // Issue shares
     env.impersonate(recipient);
     Token::at(vault_address).issue_public_to_public(owner, recipient, 0, max_assets, 0).call(
         &mut env.public(),
@@ -218,7 +218,7 @@ unconstrained fn issue_public_to_public_on_behalf_of_other_success() {
         issue_public_to_public_call_interface,
     );
 
-    // Issue
+    // Issue shares
     env.impersonate(recipient);
     Token::at(vault_address)
         .issue_public_to_public(owner, recipient, requested_shares, max_assets, 0)

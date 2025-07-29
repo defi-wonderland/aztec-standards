@@ -28,7 +28,7 @@ interface TokenBenchmarkContext extends BenchmarkContext {
 // --- Helper Functions ---
 
 function amt(x: bigint | number | string) {
-  // Using 18 decimals as standard for Token examples
+  // Using 6 decimals for this token to avoid running into overflows during asset-share conversion
   return parseUnits(x.toString(), 6);
 }
 

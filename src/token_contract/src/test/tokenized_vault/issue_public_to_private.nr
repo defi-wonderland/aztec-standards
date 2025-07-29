@@ -9,7 +9,7 @@ unconstrained fn issue_public_to_private_without_asset() {
 
     let (env, vault_address, _, _, minter) = utils::setup_with_minter(false);
 
-    // Deposit should fail because the PublicImmutable asset was not initialized
+    // Issue should fail because the PublicImmutable asset was not initialized
     env.impersonate(owner);
     Token::at(vault_address)
         .issue_public_to_private(owner, recipient, mint_amount, mint_amount, 0)
@@ -32,7 +32,7 @@ unconstrained fn issue_public_to_private_success() {
     // Authorize the vault to use the caller's assets
     utils::authorize_transfer_public_to_public(asset_address, vault_address, owner, max_assets, 0);
 
-    // Deposit
+    // Issue shares
     env.impersonate(owner);
     // At the first deposit 1 share = 1 asset
     let requested_shares: u128 = max_assets;
@@ -68,7 +68,7 @@ unconstrained fn issue_public_to_private_with_change_success() {
     // Authorize the vault to use the caller's assets
     utils::authorize_transfer_public_to_public(asset_address, vault_address, owner, max_assets, 0);
 
-    // Deposit
+    // Issue shares
     env.impersonate(owner);
     let requested_shares: u128 = max_assets - 1;
     Token::at(vault_address)
@@ -110,7 +110,7 @@ unconstrained fn issue_public_to_private_after_yield() {
     // Authorize the vault to use the caller's assets
     utils::authorize_transfer_public_to_public(asset_address, vault_address, owner, max_assets, 0);
 
-    // Deposit
+    // Issue shares
     env.impersonate(owner);
     let expected_shares: u128 = max_assets / 2; // The initial rate, when shares' supply is still 0, is given by the amount of assets held by the vault + 1. Since yield = 1, the rate is 1:2.
     Token::at(vault_address)
@@ -145,7 +145,7 @@ unconstrained fn issue_public_to_private_request_too_many_shares() {
     // Authorize the vault to use the caller's assets
     utils::authorize_transfer_public_to_public(asset_address, vault_address, owner, max_assets, 0);
 
-    // Deposit
+    // Issue shares
     env.impersonate(owner);
     // At the first deposit 1 share = 1 asset
     let requested_shares = max_assets + 1;
@@ -166,7 +166,7 @@ unconstrained fn issue_public_to_private_without_asset_approval() {
     Token::at(asset_address).mint_to_public(owner, max_assets).call(&mut env.public());
     env.advance_block_by(1);
 
-    // Deposit
+    // Issue shares
     env.impersonate(owner);
     // At the first deposit 1 share = 1 asset
     let requested_shares = max_assets;
@@ -191,7 +191,7 @@ unconstrained fn issue_public_to_private_on_behalf_of_wrong_caller() {
     // Authorize the vault to use the caller's assets
     utils::authorize_transfer_public_to_public(asset_address, vault_address, owner, max_assets, 0);
 
-    // Deposit
+    // Issue shares
     env.impersonate(recipient);
     // At the first deposit 1 share = 1 asset
     let requested_shares = max_assets;
@@ -232,7 +232,7 @@ unconstrained fn issue_public_to_private_on_behalf_of_other_success() {
         issue_public_to_private_call_interface,
     );
 
-    // Deposit
+    // Issue shares
     env.impersonate(recipient);
     Token::at(vault_address)
         .issue_public_to_private(owner, recipient, requested_shares, max_assets, 0)
