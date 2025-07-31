@@ -728,7 +728,7 @@ describe('Tokenized Vault', () => {
       // expect(await vault.methods.total_supply().simulate()).toBe(0n);
     }, 300_000);
 
-    it.only('Exact methods, Mixed Assets, Private shares: Alice deposits/withdraws, Bob deposits/withdraws', async () => {
+    it('Exact methods, Mixed Assets, Private shares: Alice deposits/withdraws, Bob deposits/withdraws', async () => {
       // Mint some assets to Alice and Bob for deposit/issue
       await asset.methods.mint_to_private(alice.getAddress(), alice.getAddress(), initialAmount).send().wait();
       await asset.methods.mint_to_public(bob.getAddress(), initialAmount).send().wait();
