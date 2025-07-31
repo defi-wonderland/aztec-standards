@@ -326,7 +326,6 @@ describe('NFT - Single PXE', () => {
 
   // --- Transfer tests: private to payment request ---
 
-  // TODO: This is failing because the payment request is not stored or accessible
   it.skip('transfers NFT from private to payment request and completes transfer', async () => {
     const tokenId = 1n;
 
@@ -651,7 +650,6 @@ describe('NFT - Single PXE', () => {
     await assertOwnsPublicNFT(nft, tokenId, alice.getAddress());
   }, 300_000);
 
-  // TODO: Pass this test
   it.skip('transfers NFT from public to public with authorization', async () => {
     const tokenId = 1n;
 
@@ -672,7 +670,6 @@ describe('NFT - Single PXE', () => {
       caller: bob.getAddress(),
       action,
     };
-    // TODO: failing here
     const witness = await alice.createAuthWit(intent);
 
     const validity = await alice.lookupValidity(alice.getAddress(), intent, witness);
