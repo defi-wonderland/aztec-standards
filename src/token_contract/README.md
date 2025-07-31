@@ -140,19 +140,19 @@ fn transfer_public_to_public(
 ) { /* ... */ }
 ```
 
-### transfer_public_to_commitment
+### transfer_public_to_payment_request
 ```rust
-/// @notice Finalizes a transfer of token `amount` from public balance of `from` to a commitment of `to`
-/// @dev The transfer must be prepared by calling `initialize_transfer_commitment` first and the resulting
-/// `commitment` must be passed as an argument to this function
+/// @notice Finalizes a transfer of token `amount` from public balance of `from` to a payment request of `to`
+/// @dev The transfer must be prepared by calling `initialize_payment_request` first and the resulting
+/// `payment_request` must be passed as an argument to this function
 /// @param from The address of the sender
-/// @param commitment The Field representing the commitment (privacy entrance)
+/// @param payment_request The Field representing the payment request (privacy entrance)
 /// @param amount The amount of tokens to transfer
 /// @param nonce The nonce used for authwit
 #[public]
-fn transfer_public_to_commitment(
+fn transfer_public_to_payment_request(
     from: AztecAddress,
-    commitment: Field,
+    payment_request: Field,
     amount: u128,
     nonce: Field,
 ) { /* ... */ }
@@ -171,15 +171,15 @@ fn mint_to_public(
 ) { /* ... */ }
 ```
 
-### mint_to_commitment
+### mint_to_payment_request
 ```rust
-/// @notice Finalizes a mint to a commitment
-/// @dev Finalizes a mint to a commitment and updates the total supply
-/// @param commitment The Field representing the mint commitment (privacy entrance)
+/// @notice Finalizes a mint to a payment request
+/// @dev Finalizes a mint to a payment request and updates the total supply
+/// @param payment_request The Field representing the mint payment request (privacy entrance)
 /// @param amount The amount of tokens to mint
 #[public]
-fn mint_to_commitment(
-    commitment: Field,
+fn mint_to_payment_request(
+    payment_request: Field,
     amount: u128,
 ) { /* ... */ }
 ```
@@ -227,17 +227,17 @@ fn transfer_private_to_public(
 ) { /* ... */ }
 ```
 
-### transfer_private_to_public_with_commitment
+### transfer_private_to_public_with_payment_request
 ```rust
-/// @notice Transfer tokens from private balance to public balance with a commitment
+/// @notice Transfer tokens from private balance to public balance with a payment request
 /// @dev Spends notes, emits a new note (UintNote) with any remaining change, enqueues a public call, and returns a partial note
 /// @param from The address of the sender
 /// @param to The address of the recipient
 /// @param amount The amount of tokens to transfer
 /// @param nonce The nonce used for authwit
-/// @return commitment The partial note utilized for the transfer commitment (privacy entrance)
+/// @return payment_request The partial note utilized for the transfer payment request (privacy entrance)
 #[private]
-fn transfer_private_to_public_with_commitment(
+fn transfer_private_to_public_with_payment_request(
     from: AztecAddress,
     to: AztecAddress,
     amount: u128,
@@ -262,18 +262,18 @@ fn transfer_private_to_private(
 ) { /* ... */ }
 ```
 
-### transfer_private_to_commitment
+### transfer_private_to_payment_request
 ```rust
-/// @notice Transfer tokens from private balance to the recipient commitment (recipient must create a commitment first)
+/// @notice Transfer tokens from private balance to the recipient payment request (recipient must create a payment request first)
 /// @dev Spends notes, emits a new note (UintNote) with any remaining change, and enqueues a public call
 /// @param from The address of the sender
-/// @param commitment The Field representing the commitment (privacy entrance that the recipient shares with the sender)
+/// @param payment_request The Field representing the payment request (privacy entrance that the recipient shares with the sender)
 /// @param amount The amount of tokens to transfer
 /// @param nonce The nonce used for authwit
 #[private]
-fn transfer_private_to_commitment(
+fn transfer_private_to_payment_request(
     from: AztecAddress,
-    commitment: Field,
+    payment_request: Field,
     amount: u128,
     nonce: Field,
 ) { /* ... */ }
@@ -296,15 +296,16 @@ fn transfer_public_to_private(
 ) { /* ... */ }
 ```
 
-### initialize_transfer_commitment
+### initialize_payment_request
 ```rust
-/// @notice Initializes a transfer commitment to be used for transfers/mints
+/// @notice Initializes a payment request to be used for transfers/mints
 /// @dev Returns a partial note that can be used to execute transfers/mints
 /// @param from The address of the sender
 /// @param to The address of the recipient
-/// @return commitment The partial note initialized for the transfer/mint commitment
+/// @param completer The address used to compute the validity commitment
+/// @return payment_request The partial note initialized for the transfer/mint payment request
 #[private]
-fn initialize_transfer_commitment(from: AztecAddress, to: AztecAddress) -> Field { /* ... */ }
+fn initialize_payment_request(from: AztecAddress, to: AztecAddress, completer: AztecAddress) -> Field { /* ... */ }
 ```
 
 ### mint_to_private
