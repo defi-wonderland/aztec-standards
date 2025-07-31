@@ -86,7 +86,7 @@ impl SFTNote {
     /// @param item_id The unique item ID within the token type
     /// @param owner The owner of the tokens
     pub fn new(token_id: Field, item_id: Field, owner: AztecAddress) -> Self {
-        // Safe: randomness is used to prevent note hash preimage attacks
+        // Safety: randomness is used to prevent note hash preimage attacks
         let randomness = unsafe { random() };
         Self { token_id, item_id, owner, randomness }
     }
@@ -109,7 +109,7 @@ impl SFTNote {
         sender: AztecAddress,
         completer: AztecAddress,
     ) -> PartialSFTNote {
-        // Safe: randomness is used to prevent note hash preimage attacks
+        // Safety: randomness is used to prevent note hash preimage attacks
         let randomness = unsafe { random() };
 
         let commitment = SFTPartialNotePrivateContent { owner, randomness }
