@@ -134,12 +134,12 @@ describe('Tokenized Vault', () => {
       );
 
       // Check asset balances
-      await expectTokenBalances(asset, alice, BigInt(initialAmount - assetsAlice), 0n);
-      await expectTokenBalances(asset, bob, BigInt(initialAmount - assetsBob), 0n);
-      await expectTokenBalances(asset, vault.address, BigInt(assetsAlice + assetsBob + yieldAmount), 0n);
+      await expectTokenBalances(asset, alice, initialAmount - assetsAlice, 0);
+      await expectTokenBalances(asset, bob, initialAmount - assetsBob, 0);
+      await expectTokenBalances(asset, vault.address, assetsAlice + assetsBob + yieldAmount, 0);
       // Check shares balances
-      await expectTokenBalances(vault, alice, BigInt(sharesAlice), 0n);
-      await expectTokenBalances(vault, bob, BigInt(sharesBob), 0n);
+      await expectTokenBalances(vault, alice, sharesAlice, 0);
+      await expectTokenBalances(vault, bob, sharesBob, 0);
       expect(await vault.methods.total_supply().simulate()).toBe(BigInt(sharesBob + sharesAlice));
 
       // Alice withdraws public assets by burning public shares
@@ -158,12 +158,12 @@ describe('Tokenized Vault', () => {
       await vault.methods.redeem_public_to_public(bob.getAddress(), bob.getAddress(), sharesBob, 0).send().wait();
 
       // Check asset balances
-      await expectTokenBalances(asset, alice, BigInt(initialAmount + aliceEarnings), 0n);
-      await expectTokenBalances(asset, bob, BigInt(initialAmount), 0n);
-      await expectTokenBalances(asset, vault.address, BigInt(dust), 0n);
+      await expectTokenBalances(asset, alice, initialAmount + aliceEarnings, 0);
+      await expectTokenBalances(asset, bob, initialAmount, 0);
+      await expectTokenBalances(asset, vault.address, dust, 0);
       // Check shares balances
-      await expectTokenBalances(vault, alice, 0n, 0n);
-      await expectTokenBalances(vault, bob, 0n, 0n);
+      await expectTokenBalances(vault, alice, 0, 0);
+      await expectTokenBalances(vault, bob, 0, 0);
       expect(await vault.methods.total_supply().simulate()).toBe(0n);
     }, 300_000);
 
@@ -192,12 +192,12 @@ describe('Tokenized Vault', () => {
       );
 
       // Check asset balances
-      await expectTokenBalances(asset, alice, 0n, BigInt(initialAmount - assetsAlice));
-      await expectTokenBalances(asset, bob, 0n, BigInt(initialAmount - assetsBob));
-      await expectTokenBalances(asset, vault.address, BigInt(assetsAlice + assetsBob + yieldAmount), 0n);
+      await expectTokenBalances(asset, alice, 0, initialAmount - assetsAlice);
+      await expectTokenBalances(asset, bob, 0, initialAmount - assetsBob);
+      await expectTokenBalances(asset, vault.address, assetsAlice + assetsBob + yieldAmount, 0);
       // Check shares balances
-      await expectTokenBalances(vault, alice, BigInt(sharesAlice), 0n);
-      await expectTokenBalances(vault, bob, BigInt(sharesBob), 0n);
+      await expectTokenBalances(vault, alice, sharesAlice, 0);
+      await expectTokenBalances(vault, bob, sharesBob, 0);
       expect(await vault.methods.total_supply().simulate()).toBe(BigInt(sharesBob + sharesAlice));
 
       // TODO: vault cannot encrypt note due to lack of app tagging secret: Simulation error: No public key registered for address
@@ -221,12 +221,12 @@ describe('Tokenized Vault', () => {
       //   .wait();
 
       // // Check asset balances
-      // await expectTokenBalances(asset, alice, 0n, BigInt(initialAmount + aliceEarnings));
-      // await expectTokenBalances(asset, bob, 0n, BigInt(initialAmount));
-      // await expectTokenBalances(asset, vault.address, BigInt(dust), 0n);
+      // await expectTokenBalances(asset, alice, 0, initialAmount + aliceEarnings);
+      // await expectTokenBalances(asset, bob, 0, initialAmount);
+      // await expectTokenBalances(asset, vault.address, dust, 0);
       // // Check shares balances
-      // await expectTokenBalances(vault, alice, 0n, 0n);
-      // await expectTokenBalances(vault, bob, 0n, 0n);
+      // await expectTokenBalances(vault, alice, 0, 0);
+      // await expectTokenBalances(vault, bob, 0, 0);
       // expect(await vault.methods.total_supply().simulate()).toBe(0n);
     }, 300_000);
 
@@ -255,12 +255,12 @@ describe('Tokenized Vault', () => {
       );
 
       // Check asset balances
-      await expectTokenBalances(asset, alice, BigInt(initialAmount - assetsAlice), 0n);
-      await expectTokenBalances(asset, bob, BigInt(initialAmount - assetsBob), 0n);
-      await expectTokenBalances(asset, vault.address, BigInt(assetsAlice + assetsBob + yieldAmount), 0n);
+      await expectTokenBalances(asset, alice, initialAmount - assetsAlice, 0);
+      await expectTokenBalances(asset, bob, initialAmount - assetsBob, 0);
+      await expectTokenBalances(asset, vault.address, assetsAlice + assetsBob + yieldAmount, 0);
       // Check shares balances
-      await expectTokenBalances(vault, alice, 0n, BigInt(sharesAlice));
-      await expectTokenBalances(vault, bob, 0n, BigInt(sharesBob));
+      await expectTokenBalances(vault, alice, 0, sharesAlice);
+      await expectTokenBalances(vault, bob, 0, sharesBob);
       expect(await vault.methods.total_supply().simulate()).toBe(BigInt(sharesBob + sharesAlice));
 
       // Alice withdraws public assets by burning public shares
@@ -279,12 +279,12 @@ describe('Tokenized Vault', () => {
       await vault.methods.redeem_private_to_public(bob.getAddress(), bob.getAddress(), sharesBob, 0).send().wait();
 
       // Check asset balances
-      await expectTokenBalances(asset, alice, BigInt(initialAmount + aliceEarnings), 0n);
-      await expectTokenBalances(asset, bob, BigInt(initialAmount), 0n);
-      await expectTokenBalances(asset, vault.address, BigInt(dust), 0n);
+      await expectTokenBalances(asset, alice, initialAmount + aliceEarnings, 0);
+      await expectTokenBalances(asset, bob, initialAmount, 0);
+      await expectTokenBalances(asset, vault.address, dust, 0);
       // Check shares balances
-      await expectTokenBalances(vault, alice, 0n, 0n);
-      await expectTokenBalances(vault, bob, 0n, 0n);
+      await expectTokenBalances(vault, alice, 0, 0);
+      await expectTokenBalances(vault, bob, 0, 0);
       expect(await vault.methods.total_supply().simulate()).toBe(0n);
     }, 300_000);
 
@@ -313,12 +313,12 @@ describe('Tokenized Vault', () => {
       );
 
       // Check asset balances
-      await expectTokenBalances(asset, alice, 0n, BigInt(initialAmount - assetsAlice));
-      await expectTokenBalances(asset, bob, 0n, BigInt(initialAmount - assetsBob));
-      await expectTokenBalances(asset, vault.address, BigInt(assetsAlice + assetsBob + yieldAmount), 0n);
+      await expectTokenBalances(asset, alice, 0, initialAmount - assetsAlice);
+      await expectTokenBalances(asset, bob, 0, initialAmount - assetsBob);
+      await expectTokenBalances(asset, vault.address, assetsAlice + assetsBob + yieldAmount, 0);
       // Check shares balances
-      await expectTokenBalances(vault, alice, 0n, BigInt(sharesAlice));
-      await expectTokenBalances(vault, bob, 0n, BigInt(sharesBob));
+      await expectTokenBalances(vault, alice, 0, sharesAlice);
+      await expectTokenBalances(vault, bob, 0, sharesBob);
       expect(await vault.methods.total_supply().simulate()).toBe(BigInt(sharesBob + sharesAlice));
 
       // TODO: vault cannot encrypt note due to lack of app tagging secret: Simulation error: No public key registered for address
@@ -341,12 +341,12 @@ describe('Tokenized Vault', () => {
       //   .wait();
 
       // // Check asset balances
-      // await expectTokenBalances(asset, alice, 0n, BigInt(initialAmount + aliceEarnings));
-      // await expectTokenBalances(asset, bob, 0n, BigInt(initialAmount));
-      // await expectTokenBalances(asset, vault.address, BigInt(dust), 0n);
+      // await expectTokenBalances(asset, alice, 0, initialAmount + aliceEarnings);
+      // await expectTokenBalances(asset, bob, 0, initialAmount);
+      // await expectTokenBalances(asset, vault.address, dust, 0);
       // // Check shares balances
-      // await expectTokenBalances(vault, alice, 0n, 0n);
-      // await expectTokenBalances(vault, bob, 0n, 0n);
+      // await expectTokenBalances(vault, alice, 0, 0);
+      // await expectTokenBalances(vault, bob, 0, 0);
       // expect(await vault.methods.total_supply().simulate()).toBe(0n);
     }, 300_000);
 
@@ -381,12 +381,12 @@ describe('Tokenized Vault', () => {
       );
 
       // Check asset balances
-      await expectTokenBalances(asset, alice, 0n, BigInt(initialAmount - assetsAlice));
-      await expectTokenBalances(asset, bob, BigInt(initialAmount - assetsBob), 0n);
-      await expectTokenBalances(asset, vault.address, BigInt(assetsAlice + assetsBob + yieldAmount), 0n);
+      await expectTokenBalances(asset, alice, 0, initialAmount - assetsAlice);
+      await expectTokenBalances(asset, bob, initialAmount - assetsBob, 0);
+      await expectTokenBalances(asset, vault.address, assetsAlice + assetsBob + yieldAmount, 0);
       // Check shares balances
-      await expectTokenBalances(vault, alice, 0n, BigInt(sharesAlice));
-      await expectTokenBalances(vault, bob, 0n, BigInt(sharesBob));
+      await expectTokenBalances(vault, alice, 0, sharesAlice);
+      await expectTokenBalances(vault, bob, 0, sharesBob);
       expect(await vault.methods.total_supply().simulate()).toBe(BigInt(sharesBob + sharesAlice));
 
       // TODO: vault cannot encrypt note due to lack of app tagging secret: Simulation error: No public key registered for address
@@ -409,12 +409,12 @@ describe('Tokenized Vault', () => {
       //   .wait();
 
       // // Check asset balances
-      // await expectTokenBalances(asset, alice, 0n, BigInt(initialAmount + aliceEarnings));
-      // await expectTokenBalances(asset, bob, BigInt(initialAmount), 0n);
-      // await expectTokenBalances(asset, vault.address, BigInt(dust), 0n);
+      // await expectTokenBalances(asset, alice, 0, initialAmount + aliceEarnings);
+      // await expectTokenBalances(asset, bob, initialAmount, 0);
+      // await expectTokenBalances(asset, vault.address, dust, 0);
       // // Check shares balances
-      // await expectTokenBalances(vault, alice, 0n, 0n);
-      // await expectTokenBalances(vault, bob, 0n, 0n);
+      // await expectTokenBalances(vault, alice, 0, 0);
+      // await expectTokenBalances(vault, bob, 0, 0);
       // expect(await vault.methods.total_supply().simulate()).toBe(0n);
     }, 300_000);
   });
@@ -454,14 +454,14 @@ describe('Tokenized Vault', () => {
       await callVaultWithPublicAuthWit(issueAction, bob, assetsBob);
 
       // Check asset balances
-      await expectTokenBalances(asset, alice, BigInt(initialAmount - assetsAlice), 0n);
-      await expectTokenBalances(asset, bob, BigInt(initialAmount - assetsBob), 0n);
-      await expectTokenBalances(asset, vault.address, BigInt(assetsAlice + assetsBob + yieldAmount), 0n);
-      await expectTokenBalances(asset, carl, 0n, 0n);
+      await expectTokenBalances(asset, alice, initialAmount - assetsAlice, 0);
+      await expectTokenBalances(asset, bob, initialAmount - assetsBob, 0);
+      await expectTokenBalances(asset, vault.address, assetsAlice + assetsBob + yieldAmount, 0);
+      await expectTokenBalances(asset, carl, 0, 0);
       // Check shares balances
-      await expectTokenBalances(vault, alice, BigInt(sharesAlice), 0n);
-      await expectTokenBalances(vault, bob, BigInt(sharesBob), 0n);
-      await expectTokenBalances(vault, carl, 0n, 0n);
+      await expectTokenBalances(vault, alice, sharesAlice, 0);
+      await expectTokenBalances(vault, bob, sharesBob, 0);
+      await expectTokenBalances(vault, carl, 0, 0);
       expect(await vault.methods.total_supply().simulate()).toBe(BigInt(sharesBob + sharesAlice));
 
       // Alice withdraws public assets by burning public shares
@@ -484,14 +484,14 @@ describe('Tokenized Vault', () => {
       await redeemAction.send().wait();
 
       // Check asset balances
-      await expectTokenBalances(asset, alice, BigInt(initialAmount + aliceEarnings), 0n);
-      await expectTokenBalances(asset, bob, BigInt(initialAmount), 0n);
-      await expectTokenBalances(asset, vault.address, BigInt(dust), 0n);
-      await expectTokenBalances(asset, carl, 0n, 0n);
+      await expectTokenBalances(asset, alice, initialAmount + aliceEarnings, 0);
+      await expectTokenBalances(asset, bob, initialAmount, 0);
+      await expectTokenBalances(asset, vault.address, dust, 0);
+      await expectTokenBalances(asset, carl, 0, 0);
       // Check shares balances
-      await expectTokenBalances(vault, alice, 0n, 0n);
-      await expectTokenBalances(vault, bob, 0n, 0n);
-      await expectTokenBalances(vault, carl, 0n, 0n);
+      await expectTokenBalances(vault, alice, 0, 0);
+      await expectTokenBalances(vault, bob, 0, 0);
+      await expectTokenBalances(vault, carl, 0, 0);
       expect(await vault.methods.total_supply().simulate()).toBe(0n);
     }, 300_000);
 
@@ -529,14 +529,14 @@ describe('Tokenized Vault', () => {
       await callVaultWithPrivateAuthWit(issueAction.with({ authWitnesses: [issueAuthWitness] }), bob, assetsBob);
 
       // Check asset balances
-      await expectTokenBalances(asset, alice, 0n, BigInt(initialAmount - assetsAlice));
-      await expectTokenBalances(asset, bob, 0n, BigInt(initialAmount - assetsBob));
-      await expectTokenBalances(asset, vault.address, BigInt(assetsAlice + assetsBob + yieldAmount), 0n);
-      await expectTokenBalances(asset, carl, 0n, 0n);
+      await expectTokenBalances(asset, alice, 0, initialAmount - assetsAlice);
+      await expectTokenBalances(asset, bob, 0, initialAmount - assetsBob);
+      await expectTokenBalances(asset, vault.address, assetsAlice + assetsBob + yieldAmount, 0);
+      await expectTokenBalances(asset, carl, 0, 0);
       // Check shares balances
-      await expectTokenBalances(vault, alice, BigInt(sharesAlice), 0n);
-      await expectTokenBalances(vault, bob, BigInt(sharesBob), 0n);
-      await expectTokenBalances(vault, carl, 0n, 0n);
+      await expectTokenBalances(vault, alice, sharesAlice, 0);
+      await expectTokenBalances(vault, bob, sharesBob, 0);
+      await expectTokenBalances(vault, carl, 0, 0);
       expect(await vault.methods.total_supply().simulate()).toBe(BigInt(sharesBob + sharesAlice));
 
       // TODO: vault cannot encrypt note due to lack of app tagging secret: Simulation error: No public key registered for address
@@ -558,15 +558,15 @@ describe('Tokenized Vault', () => {
       //   .wait();
 
       // // Check asset balances
-      // await expectTokenBalances(asset, alice, 0n, BigInt(initialAmount + aliceEarnings));
-      // await expectTokenBalances(asset, bob, 0n, BigInt(initialAmount));
-      // await expectTokenBalances(asset, vault.address, BigInt(dust), 0n);
-      // await expectTokenBalances(asset, carl, 0n, 0n);
+      // await expectTokenBalances(asset, alice, 0, initialAmount + aliceEarnings);
+      // await expectTokenBalances(asset, bob, 0, initialAmount);
+      // await expectTokenBalances(asset, vault.address, dust, 0);
+      // await expectTokenBalances(asset, carl, 0, 0);
       // // Check shares balances
-      // await expectTokenBalances(vault, alice, 0n, 0n);
-      // await expectTokenBalances(vault, bob, 0n, 0n);
+      // await expectTokenBalances(vault, alice, 0, 0);
+      // await expectTokenBalances(vault, bob, 0, 0);
       // expect(await vault.methods.total_supply().simulate()).toBe(0n);
-      // await expectTokenBalances(vault, carl, 0n, 0n);
+      // await expectTokenBalances(vault, carl, 0, 0);
     }, 300_000);
 
     it('Public assets, Private shares: Alice deposits/withdraws, Bob issues/redeems', async () => {
@@ -600,14 +600,14 @@ describe('Tokenized Vault', () => {
       await callVaultWithPublicAuthWit(issueAction.with({ authWitnesses: [issueAuthWitness] }), bob, assetsBob);
 
       // Check asset balances
-      await expectTokenBalances(asset, alice, BigInt(initialAmount - assetsAlice), 0n);
-      await expectTokenBalances(asset, bob, BigInt(initialAmount - assetsBob), 0n);
-      await expectTokenBalances(asset, vault.address, BigInt(assetsAlice + assetsBob + yieldAmount), 0n);
-      await expectTokenBalances(asset, carl, 0n, 0n);
+      await expectTokenBalances(asset, alice, initialAmount - assetsAlice, 0);
+      await expectTokenBalances(asset, bob, initialAmount - assetsBob, 0);
+      await expectTokenBalances(asset, vault.address, assetsAlice + assetsBob + yieldAmount, 0);
+      await expectTokenBalances(asset, carl, 0, 0);
       // Check shares balances
-      await expectTokenBalances(vault, alice, 0n, BigInt(sharesAlice));
-      await expectTokenBalances(vault, bob, 0n, BigInt(sharesBob));
-      await expectTokenBalances(vault, carl, 0n, 0n);
+      await expectTokenBalances(vault, alice, 0, sharesAlice);
+      await expectTokenBalances(vault, bob, 0, sharesBob);
+      await expectTokenBalances(vault, carl, 0, 0);
       expect(await vault.methods.total_supply().simulate()).toBe(BigInt(sharesBob + sharesAlice));
 
       // Alice withdraws public assets by burning public shares
@@ -637,14 +637,14 @@ describe('Tokenized Vault', () => {
         .wait();
 
       // Check asset balances
-      await expectTokenBalances(asset, alice, BigInt(initialAmount + aliceEarnings), 0n);
-      await expectTokenBalances(asset, bob, BigInt(initialAmount), 0n);
-      await expectTokenBalances(asset, vault.address, BigInt(dust), 0n);
-      await expectTokenBalances(asset, carl, 0n, 0n);
+      await expectTokenBalances(asset, alice, initialAmount + aliceEarnings, 0);
+      await expectTokenBalances(asset, bob, initialAmount, 0);
+      await expectTokenBalances(asset, vault.address, dust, 0);
+      await expectTokenBalances(asset, carl, 0, 0);
       // Check shares balances
-      await expectTokenBalances(vault, alice, 0n, 0n);
-      await expectTokenBalances(vault, bob, 0n, 0n);
-      await expectTokenBalances(vault, carl, 0n, 0n);
+      await expectTokenBalances(vault, alice, 0, 0);
+      await expectTokenBalances(vault, bob, 0, 0);
+      await expectTokenBalances(vault, carl, 0, 0);
       expect(await vault.methods.total_supply().simulate()).toBe(0n);
     }, 300_000);
 
@@ -683,14 +683,14 @@ describe('Tokenized Vault', () => {
       await callVaultWithPrivateAuthWit(issueAction.with({ authWitnesses: [issueAuthWitness] }), bob, assetsBob);
 
       // Check asset balances
-      await expectTokenBalances(asset, alice, 0n, BigInt(initialAmount - assetsAlice));
-      await expectTokenBalances(asset, bob, 0n, BigInt(initialAmount - assetsBob));
-      await expectTokenBalances(asset, vault.address, BigInt(assetsAlice + assetsBob + yieldAmount), 0n);
-      await expectTokenBalances(asset, carl, 0n, 0n);
+      await expectTokenBalances(asset, alice, 0, initialAmount - assetsAlice);
+      await expectTokenBalances(asset, bob, 0, initialAmount - assetsBob);
+      await expectTokenBalances(asset, vault.address, assetsAlice + assetsBob + yieldAmount, 0);
+      await expectTokenBalances(asset, carl, 0, 0);
       // Check shares balances
-      await expectTokenBalances(vault, alice, 0n, BigInt(sharesAlice));
-      await expectTokenBalances(vault, bob, 0n, BigInt(sharesBob));
-      await expectTokenBalances(vault, carl, 0n, 0n);
+      await expectTokenBalances(vault, alice, 0, sharesAlice);
+      await expectTokenBalances(vault, bob, 0, sharesBob);
+      await expectTokenBalances(vault, carl, 0, 0);
       expect(await vault.methods.total_supply().simulate()).toBe(BigInt(sharesBob + sharesAlice));
 
       // TODO: vault cannot encrypt note due to lack of app tagging secret: Simulation error: No public key registered for address
@@ -717,14 +717,14 @@ describe('Tokenized Vault', () => {
       //   .wait();
 
       // // Check asset balances
-      // await expectTokenBalances(asset, alice, 0n, BigInt(initialAmount + aliceEarnings));
-      // await expectTokenBalances(asset, bob, 0n, BigInt(initialAmount));
-      // await expectTokenBalances(asset, vault.address, BigInt(dust), 0n);
-      // await expectTokenBalances(asset, carl, 0n, 0n);
+      // await expectTokenBalances(asset, alice, 0, initialAmount + aliceEarnings);
+      // await expectTokenBalances(asset, bob, 0, initialAmount);
+      // await expectTokenBalances(asset, vault.address, dust, 0);
+      // await expectTokenBalances(asset, carl, 0, 0);
       // // Check shares balances
-      // await expectTokenBalances(vault, alice, 0n, 0n);
-      // await expectTokenBalances(vault, bob, 0n, 0n);
-      // await expectTokenBalances(vault, carl, 0n, 0n);
+      // await expectTokenBalances(vault, alice, 0, 0);
+      // await expectTokenBalances(vault, bob, 0, 0);
+      // await expectTokenBalances(vault, carl, 0, 0);
       // expect(await vault.methods.total_supply().simulate()).toBe(0n);
     }, 300_000);
 
@@ -767,14 +767,14 @@ describe('Tokenized Vault', () => {
       );
 
       // Check asset balances
-      await expectTokenBalances(asset, alice, 0n, BigInt(initialAmount - assetsAlice));
-      await expectTokenBalances(asset, bob, BigInt(initialAmount - assetsBob), 0n);
-      await expectTokenBalances(asset, vault.address, BigInt(assetsAlice + assetsBob + yieldAmount), 0n);
-      await expectTokenBalances(asset, carl, 0n, 0n);
+      await expectTokenBalances(asset, alice, 0, initialAmount - assetsAlice);
+      await expectTokenBalances(asset, bob, initialAmount - assetsBob, 0);
+      await expectTokenBalances(asset, vault.address, assetsAlice + assetsBob + yieldAmount, 0);
+      await expectTokenBalances(asset, carl, 0, 0);
       // Check shares balances
-      await expectTokenBalances(vault, alice, 0n, BigInt(sharesAlice));
-      await expectTokenBalances(vault, bob, 0n, BigInt(sharesBob));
-      await expectTokenBalances(vault, carl, 0n, 0n);
+      await expectTokenBalances(vault, alice, 0, sharesAlice);
+      await expectTokenBalances(vault, bob, 0, sharesBob);
+      await expectTokenBalances(vault, carl, 0, 0);
       expect(await vault.methods.total_supply().simulate()).toBe(BigInt(sharesBob + sharesAlice));
 
       // TODO: vault cannot encrypt note due to lack of app tagging secret: Simulation error: No public key registered for address
@@ -801,14 +801,14 @@ describe('Tokenized Vault', () => {
       //   .wait();
 
       // // Check asset balances
-      // await expectTokenBalances(asset, alice, 0n, BigInt(initialAmount + aliceEarnings));
-      // await expectTokenBalances(asset, bob, BigInt(initialAmount), 0n);
-      // await expectTokenBalances(asset, vault.address, BigInt(dust), 0n);
-      // await expectTokenBalances(asset, carl, 0n, 0n);
+      // await expectTokenBalances(asset, alice, 0, initialAmount + aliceEarnings);
+      // await expectTokenBalances(asset, bob, initialAmount, 0);
+      // await expectTokenBalances(asset, vault.address, dust, 0);
+      // await expectTokenBalances(asset, carl, 0, 0);
       // // Check shares balances
-      // await expectTokenBalances(vault, alice, 0n, 0n);
-      // await expectTokenBalances(vault, bob, 0n, 0n);
-      // await expectTokenBalances(vault, carl, 0n, 0n);
+      // await expectTokenBalances(vault, alice, 0, 0);
+      // await expectTokenBalances(vault, bob, 0, 0);
+      // await expectTokenBalances(vault, carl, 0, 0);
       // expect(await vault.methods.total_supply().simulate()).toBe(0n);
     }, 300_000);
   });

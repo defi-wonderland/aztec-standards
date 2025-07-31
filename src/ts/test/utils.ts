@@ -48,15 +48,24 @@ export const expectUintNote = (note: UniqueNote, amount: bigint, owner: AztecAdd
 export const expectTokenBalances = async (
   token: TokenContract,
   address: AztecAddress | { getAddress: () => AztecAddress },
-  publicBalance: bigint,
-  privateBalance: bigint,
+  publicBalance: bigint | number | Fr,
+  privateBalance: bigint | number | Fr,
   caller?: AccountWallet,
 ) => {
   const aztecAddress = address instanceof AztecAddress ? address : address.getAddress();
   logger.info('checking balances for', aztecAddress.toString());
   const t = caller ? token.withWallet(caller) : token;
-  expect(await t.methods.balance_of_public(aztecAddress).simulate()).toBe(publicBalance);
-  expect(await t.methods.balance_of_private(aztecAddress).simulate()).toBe(privateBalance);
+
+  // Helper to cast to bigint if not already
+  const toBigInt = (val: bigint | number | Fr) => {
+    if (typeof val === 'bigint') return val;
+    if (typeof val === 'number') return BigInt(val);
+    if (val instanceof Fr) return val.toBigInt();
+    throw new Error('Unsupported type for balance');
+  };
+
+  expect(await t.methods.balance_of_public(aztecAddress).simulate()).toBe(toBigInt(publicBalance));
+  expect(await t.methods.balance_of_private(aztecAddress).simulate()).toBe(toBigInt(privateBalance));
 };
 
 export const AMOUNT = 1000n;
