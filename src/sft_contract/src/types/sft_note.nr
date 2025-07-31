@@ -44,15 +44,12 @@ impl NoteHash for SFTNote {
     fn compute_note_hash(self, storage_slot: Field) -> Field {
         // Similar to NFTNote, we use poseidon for partial note compatibility
         // We must compute the same note hash as would be produced by a partial note
-        
+
         // First we create the partial note from a commitment to the private content
-        let private_content = SFTPartialNotePrivateContent { 
-            owner: self.owner, 
-            randomness: self.randomness 
-        };
-        let partial_note = PartialSFTNote { 
-            commitment: private_content.compute_partial_commitment(storage_slot) 
-        };
+        let private_content =
+            SFTPartialNotePrivateContent { owner: self.owner, randomness: self.randomness };
+        let partial_note =
+            PartialSFTNote { commitment: private_content.compute_partial_commitment(storage_slot) };
 
         // Then compute the completion note hash. In a real partial note this step would be performed in public.
         partial_note.compute_complete_note_hash(self.token_id, self.item_id)
@@ -124,7 +121,8 @@ impl SFTNote {
             public_log_tag: commitment,
         };
 
-        let encrypted_log = note::compute_partial_note_log(private_log_content, storage_slot, recipient, sender);
+        let encrypted_log =
+            note::compute_partial_note_log(private_log_content, storage_slot, recipient, sender);
         let length = encrypted_log.len();
         context.emit_private_log(encrypted_log, length);
 
@@ -183,7 +181,13 @@ impl PartialSFTNote {
     /// @param completer The address completing the note
     /// @param token_id The token ID to complete with
     /// @param item_id The unique item ID to complete with
-    pub fn complete(self, context: &mut PublicContext, completer: AztecAddress, token_id: Field, item_id: Field) {
+    pub fn complete(
+        self,
+        context: &mut PublicContext,
+        completer: AztecAddress,
+        token_id: Field,
+        item_id: Field,
+    ) {
         assert(token_id != 0, "Cannot complete a PartialSFTNote with a token_id of 0");
 
         let validity_commitment = self.compute_validity_commitment(completer);
@@ -209,8 +213,8 @@ impl PartialSFTNote {
 
     fn compute_complete_note_hash(self, token_id: Field, item_id: Field) -> Field {
         poseidon2_hash_with_separator(
-            [self.commitment, token_id, item_id], 
-            GENERATOR_INDEX__NOTE_HASH
+            [self.commitment, token_id, item_id],
+            GENERATOR_INDEX__NOTE_HASH,
         )
     }
 }
