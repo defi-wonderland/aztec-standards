@@ -2,7 +2,8 @@
 members = [
 "src/token_contract",
 "src/dripper",
-"src/nft_contract"
+"src/nft_contract",
+"src/sft_contract"
 ]
 
 [benchmark]
