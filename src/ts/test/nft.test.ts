@@ -324,10 +324,10 @@ describe('NFT - Single PXE', () => {
     await assertOwnsPrivateNFT(nft, tokenId, alice.getAddress());
   }, 300_000);
 
-  // --- Transfer tests: private to commitment ---
+  // --- Transfer tests: private to payment request ---
 
-  // TODO: This is failing because the commitment is not stored or accessible
-  it.skip('transfers NFT from private to commitment and completes transfer', async () => {
+  // TODO: This is failing because the payment request is not stored or accessible
+  it.skip('transfers NFT from private to payment request and completes transfer', async () => {
     const tokenId = 1n;
 
     // First mint NFT privately to alice
@@ -336,23 +336,23 @@ describe('NFT - Single PXE', () => {
     // Verify alice owns the NFT privately
     await assertOwnsPrivateNFT(nft, tokenId, alice.getAddress());
 
-    // Bob initializes a transfer commitment for receiving the NFT
+    // Bob initializes a transfer payment request for receiving the NFT
     await nft
       .withWallet(bob)
-      .methods.initialize_transfer_commitment(bob.getAddress(), bob.getAddress(), bob.getAddress())
+      .methods.initialize_payment_request(bob.getAddress(), bob.getAddress(), bob.getAddress())
       .send()
       .wait();
 
-    // Get the commitment value through simulation
-    const commitment = await nft
+    // Get the payment request value through simulation
+    const payment_request = await nft
       .withWallet(bob)
-      .methods.initialize_transfer_commitment(alice.getAddress(), bob.getAddress(), bob.getAddress())
+      .methods.initialize_payment_request(alice.getAddress(), bob.getAddress(), bob.getAddress())
       .simulate();
 
-    // Alice transfers NFT to the commitment
+    // Alice transfers NFT to the payment request
     await nft
       .withWallet(alice)
-      .methods.transfer_private_to_commitment(alice.getAddress(), tokenId, commitment, 0n)
+      .methods.transfer_private_to_payment_request(alice.getAddress(), tokenId, payment_request, 0n)
       .send()
       .wait();
 
@@ -363,23 +363,23 @@ describe('NFT - Single PXE', () => {
     await assertOwnsPrivateNFT(nft, tokenId, bob.getAddress());
   }, 300_000);
 
-  it('fails to transfer to invalid commitment', async () => {
+  it('fails to transfer to invalid payment request', async () => {
     const tokenId = 1n;
 
     // First mint NFT privately to alice
     await nft.withWallet(alice).methods.mint_to_private(alice.getAddress(), tokenId).send().wait();
 
-    // Create an invalid commitment (using wrong sender)
-    const invalidCommitment = await nft
+    // Create an invalid payment request (using wrong sender)
+    const invalidPaymentRequest = await nft
       .withWallet(bob)
-      .methods.initialize_transfer_commitment(carl.getAddress(), bob.getAddress(), bob.getAddress())
+      .methods.initialize_payment_request(carl.getAddress(), bob.getAddress(), bob.getAddress())
       .simulate();
 
-    // Alice attempts to transfer to invalid commitment
+    // Alice attempts to transfer to invalid payment request
     await expect(
       nft
         .withWallet(alice)
-        .methods.transfer_private_to_commitment(alice.getAddress(), tokenId, invalidCommitment, 0n)
+        .methods.transfer_private_to_payment_request(alice.getAddress(), tokenId, invalidPaymentRequest, 0n)
         .send()
         .wait(),
     ).rejects.toThrow(/^Transaction 0x[0-9a-f]+ was app_logic_reverted\. Reason: $/);
@@ -460,9 +460,9 @@ describe('NFT - Single PXE', () => {
     await assertOwnsPublicNFT(nft, tokenId, bob.getAddress());
   }, 300_000);
 
-  // --- Transfer tests: private to public with commitment ---
+  // --- Transfer tests: private to public with payment request ---
 
-  it('transfers NFT from private to public with commitment', async () => {
+  it('transfers NFT from private to public with payment request', async () => {
     const tokenId = 1n;
 
     // First mint NFT privately to alice
@@ -471,10 +471,10 @@ describe('NFT - Single PXE', () => {
     // Verify alice owns the NFT privately
     await assertOwnsPrivateNFT(nft, tokenId, alice.getAddress());
 
-    // Transfer NFT from alice to bob with commitment
+    // Transfer NFT from alice to bob with payment request
     await nft
       .withWallet(alice)
-      .methods.transfer_private_to_public_with_commitment(alice.getAddress(), bob.getAddress(), tokenId, 0n)
+      .methods.transfer_private_to_public_with_payment_request(alice.getAddress(), bob.getAddress(), tokenId, 0n)
       .send()
       .wait();
 
@@ -485,7 +485,7 @@ describe('NFT - Single PXE', () => {
     await assertOwnsPublicNFT(nft, tokenId, bob.getAddress());
   }, 300_000);
 
-  it('fails to transfer private NFT to public with commitment when not owner', async () => {
+  it('fails to transfer private NFT to public with payment request when not owner', async () => {
     const tokenId = 1n;
 
     // First mint NFT privately to alice
@@ -495,7 +495,7 @@ describe('NFT - Single PXE', () => {
     await expect(
       nft
         .withWallet(carl)
-        .methods.transfer_private_to_public_with_commitment(carl.getAddress(), bob.getAddress(), tokenId, 0n)
+        .methods.transfer_private_to_public_with_payment_request(carl.getAddress(), bob.getAddress(), tokenId, 0n)
         .send()
         .wait(),
     ).rejects.toThrow(/nft not found/);
@@ -504,7 +504,7 @@ describe('NFT - Single PXE', () => {
     await assertOwnsPrivateNFT(nft, tokenId, alice.getAddress());
   }, 300_000);
 
-  it('transfers NFT from private to public with commitment and authorization', async () => {
+  it('transfers NFT from private to public with payment request and authorization', async () => {
     const tokenId = 1n;
 
     // First mint NFT privately to alice
@@ -513,7 +513,7 @@ describe('NFT - Single PXE', () => {
     // Create transfer call interface with non-zero nonce
     const transferCallInterface = nft
       .withWallet(bob)
-      .methods.transfer_private_to_public_with_commitment(alice.getAddress(), bob.getAddress(), tokenId, 1n);
+      .methods.transfer_private_to_public_with_payment_request(alice.getAddress(), bob.getAddress(), tokenId, 1n);
 
     // Add authorization witness from alice to bob
     const intent: IntentAction = {
