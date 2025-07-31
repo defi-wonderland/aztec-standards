@@ -20,7 +20,10 @@ unconstrained fn nft_transfer_private_to_payment_request_success() {
     env.advance_block_by(1);
 
     // Verify payment request is stored
-    assert(utils::get_commitment_stored(nft_contract_address, payment_request), "Payment request not stored");
+    assert(
+        utils::get_commitment_stored(nft_contract_address, payment_request),
+        "Payment request not stored",
+    );
 
     // Transfer NFT to payment request
     env.impersonate(owner);
@@ -57,7 +60,10 @@ unconstrained fn nft_transfer_private_to_payment_request_authorized_success() {
     env.advance_block_by(1);
 
     // Verify payment request is stored
-    assert(utils::get_commitment_stored(nft_contract_address, payment_request), "Payment request not stored");
+    assert(
+        utils::get_commitment_stored(nft_contract_address, payment_request),
+        "Payment request not stored",
+    );
 
     // Create transfer call interface with non-zero nonce
     let transfer_call_interface = NFT::at(nft_contract_address).transfer_private_to_payment_request(

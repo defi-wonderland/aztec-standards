@@ -230,7 +230,11 @@ pub contract Token {
         );
 
         Token::at(context.this_address())
-            .complete_payment_request_internal(PartialUintNote { commitment: payment_request }, from, amount)
+            .complete_payment_request_internal(
+                PartialUintNote { commitment: payment_request },
+                from,
+                amount,
+            )
             .enqueue(&mut context);
     }
 

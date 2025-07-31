@@ -87,7 +87,10 @@ unconstrained fn nft_transfer_private_to_public_with_payment_request_and_finaliz
     // Verify intermediate state (public ownership and payment request)
     utils::assert_private_nft_nullified(nft_contract_address, owner, token_id);
     utils::assert_owns_public_nft(env, nft_contract_address, recipient, token_id);
-    assert(utils::get_commitment_stored(nft_contract_address, payment_request), "Payment request not stored");
+    assert(
+        utils::get_commitment_stored(nft_contract_address, payment_request),
+        "Payment request not stored",
+    );
 }
 
 #[test(should_fail_with = "nft not found in private to public")]

@@ -86,9 +86,9 @@ unconstrained fn mint_to_private_failure_total_supply_overflow() {
         .initialize_payment_request(minter, recipient, minter)
         .call(&mut env.private());
 
-    Token::at(token_contract_address).mint_to_payment_request(another_payment_request, mint_amount).call(
-        &mut env.public(),
-    );
+    Token::at(token_contract_address)
+        .mint_to_payment_request(another_payment_request, mint_amount)
+        .call(&mut env.public());
 }
 
 #[test(should_fail_with = "Invalid partial note or completer 'context.nullifier_exists(validity_commitment, context.this_address())'")]

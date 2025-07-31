@@ -15,7 +15,8 @@ unconstrained fn initialize_payment_request() {
         .call(&mut env.private());
     env.advance_block_by(1);
 
-    let validity_commitment = PartialUintNote { commitment: payment_request }.compute_validity_commitment(owner);
+    let validity_commitment =
+        PartialUintNote { commitment: payment_request }.compute_validity_commitment(owner);
     assert(
         env.public().nullifier_exists(validity_commitment, token_contract_address),
         "validity nullifier should exist",
@@ -38,7 +39,8 @@ unconstrained fn initialize_payment_request_and_complete_with_incorrect_complete
     env.advance_block_by(1);
 
     // Using an arbitrary completer should result in a non-existing nullifier
-    let validity_commitment = PartialUintNote { commitment: payment_request }.compute_validity_commitment(recipient);
+    let validity_commitment =
+        PartialUintNote { commitment: payment_request }.compute_validity_commitment(recipient);
     assert(
         !env.public().nullifier_exists(validity_commitment, token_contract_address),
         "validity nullifier should not exist",
@@ -46,7 +48,7 @@ unconstrained fn initialize_payment_request_and_complete_with_incorrect_complete
 
     // Minting to a payment request uses msg.sender as completer, which is the minter, and not the random completer
     env.impersonate(minter);
-    let _ = Token::at(token_contract_address).mint_to_payment_request(payment_request, 1 as u128).call(
-        &mut env.public(),
-    );
+    let _ = Token::at(token_contract_address)
+        .mint_to_payment_request(payment_request, 1 as u128)
+        .call(&mut env.public());
 }

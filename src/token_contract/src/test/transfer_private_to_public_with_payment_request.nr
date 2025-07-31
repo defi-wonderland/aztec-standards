@@ -36,7 +36,8 @@ unconstrained fn transfer_private_to_public_with_payment_request_emits_validity_
     env.advance_block_by(1);
 
     // The caller is the completer of the partial note.
-    let validity_commitment = PartialUintNote { commitment: payment_request }.compute_validity_commitment(owner);
+    let validity_commitment =
+        PartialUintNote { commitment: payment_request }.compute_validity_commitment(owner);
     assert(
         env.public().nullifier_exists(validity_commitment, token_contract_address),
         "validity nullifier should exist",
@@ -54,7 +55,9 @@ unconstrained fn transfer_private_to_public_with_payment_request_on_behalf_of_ot
     // Transfer tokens
     let transfer_amount = mint_amount;
 
-    let transfer_private_to_public_payment_request_call_interface = Token::at(token_contract_address)
+    let transfer_private_to_public_payment_request_call_interface = Token::at(
+        token_contract_address,
+    )
         .transfer_private_to_public_with_payment_request(owner, recipient, transfer_amount, 0);
 
     authwit_cheatcodes::add_private_authwit_from_call_interface(

@@ -115,13 +115,8 @@ pub contract NFT {
             .update_public_token_owner_from_zero_internal(to, token_id)
             .enqueue(&mut context);
         let completer = context.msg_sender();
-        let payment_request = _initialize_payment_request(
-            &mut context,
-            storage.private_nfts,
-            from,
-            to,
-            completer,
-        );
+        let payment_request =
+            _initialize_payment_request(&mut context, storage.private_nfts, from, to, completer);
         payment_request.commitment()
     }
 
@@ -214,13 +209,8 @@ pub contract NFT {
         to: AztecAddress,
         completer: AztecAddress,
     ) -> Field {
-        let payment_request = _initialize_payment_request(
-            &mut context,
-            storage.private_nfts,
-            from,
-            to,
-            completer,
-        );
+        let payment_request =
+            _initialize_payment_request(&mut context, storage.private_nfts, from, to, completer);
         payment_request.commitment()
     }
 
@@ -508,9 +498,9 @@ pub contract NFT {
             from,
             completer,
         );
-        NFT::at(context.this_address()).store_commitment_in_storage_internal(payment_request).enqueue(
-            context,
-        );
+        NFT::at(context.this_address())
+            .store_commitment_in_storage_internal(payment_request)
+            .enqueue(context);
         payment_request
     }
 
