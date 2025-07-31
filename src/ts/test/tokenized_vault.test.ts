@@ -267,9 +267,9 @@ describe('Tokenized Vault', () => {
       // TODO: call preview max withdraw function
       // Cannot withdraw 14 due to rounding.
       const maxWithdraw = assetsAlice + aliceEarnings;
-      await vault
-        .withWallet(alice)
-        .methods.withdraw_private_to_public_exact(alice.getAddress(), alice.getAddress(), maxWithdraw, sharesAlice, 0)
+      vault = vault.withWallet(alice);
+      await vault.methods
+        .withdraw_private_to_public_exact(alice.getAddress(), alice.getAddress(), maxWithdraw, sharesAlice, 0)
         .send()
         .wait();
 
