@@ -50,7 +50,7 @@ export default class NFTContractBenchmark extends Benchmark {
       nftContract.withWallet(alice).methods.transfer_public_to_public(owner, owner, 2, 0),
 
       // NOTE: don't have enough private NFT's to burn_private
-      // nftContract.withWallet(alice).methods.transfer_private_to_public_with_commitment(owner, owner, 1, 0),
+      // nftContract.withWallet(alice).methods.transfer_private_to_public_with_payment_request(owner, owner, 1, 0),
 
       // Burn methods
       nftContract.withWallet(alice).methods.burn_private(owner, 1, 0),

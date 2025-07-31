@@ -55,7 +55,7 @@ export default class TokenContractBenchmark extends Benchmark {
       tokenContract.withWallet(alice).methods.transfer_private_to_public(owner, bob.getAddress(), amt(10), 0),
       tokenContract
         .withWallet(alice)
-        .methods.transfer_private_to_public_with_commitment(owner, bob.getAddress(), amt(10), 0),
+        .methods.transfer_private_to_public_with_payment_request(owner, bob.getAddress(), amt(10), 0),
       tokenContract.withWallet(alice).methods.transfer_private_to_private(owner, bob.getAddress(), amt(10), 0),
       tokenContract.withWallet(alice).methods.transfer_public_to_private(owner, bob.getAddress(), amt(10), 0),
       tokenContract.withWallet(alice).methods.transfer_public_to_public(owner, bob.getAddress(), amt(10), 0),
