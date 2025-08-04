@@ -6,5 +6,5 @@ members = [
 ]
 
 [benchmark]
-token = "benchmarks/token_contract.benchmark.ts"
-nft = "benchmarks/nft_contract.benchmark.ts"
+token = "src/benchmarks/token_contract.benchmark.ts"
+nft = "src/benchmarks/nft_contract.benchmark.ts"
