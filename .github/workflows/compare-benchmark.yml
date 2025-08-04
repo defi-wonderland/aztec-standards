@@ -12,7 +12,7 @@ permissions:
   pull-requests: write
 
 env:
-  BENCH_DIR: ./benchmarks
+  BENCH_DIR: ./src/benchmarks
 
 jobs:
   benchmark:
