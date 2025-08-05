@@ -28,6 +28,8 @@ pub contract SFT {
     };
     // compression library
     use compressed_string::FieldCompressedString;
+    // contract instance deployer
+    use contract_instance_deployer::ContractInstanceDeployer;
     // sft note struct
     use crate::types::sft_note::{PartialSFTNote, SFTNote};
 
@@ -51,10 +53,6 @@ pub contract SFT {
         upgrade_authority: PublicImmutable<AztecAddress, Context>,
     }
 
-    /** ==========================================================
-     * ===================== INITIALIZERS ========================
-     * ======================================================== */
-
     /// @notice Initializes the SFT contract with a minter
     /// @param name The name of the SFT collection
     /// @param symbol The symbol of the SFT collection
@@ -75,16 +73,61 @@ pub contract SFT {
     }
 
     /** ==========================================================
+     * ========================= PRIVATE =========================
+     * ======================================================== */
+
+
+    /** ==========================================================
      * ========================= PUBLIC ==========================
      * ======================================================== */
 
-    /// @notice Creates a new token type with a total supply of 0
-    /// @param token_id The ID of the new token type
+    /// @notice Transfers an item from one public address to another public address  
+    /// @param from The address of the sender
+    /// @param to The address of the recipient
+    /// @param token_id The ID of the token type
+    /// @param item_id The ID of the specific item to transfer
+    /// @param _nonce The nonce used for authwitness
     #[public]
-    fn create_token_type(token_id: Field) {
-        _validate_minter(context.msg_sender(), storage.minter.read());
-        assert(!storage.token_type_exists.at(token_id).read(), "token type already exists");
-        storage.token_type_exists.at(token_id).write(true);
+    fn transfer_public_to_public(
+        from: AztecAddress,
+        to: AztecAddress,
+        token_id: Field,
+        item_id: Field,
+        _nonce: Field,
+    ) {
+        _validate_from_public(&mut context, from);
+        _validate_public_token_owner(storage.public_sfts, from, token_id, item_id);
+
+        _remove_public_item_id(storage.public_sfts, from, token_id, item_id);
+        _update_public_item_ids(storage.public_sfts, to, token_id, item_id);
+    }
+
+    /// @notice Transfers an item from public address to a commitment
+    /// @param from The address of the sender
+    /// @param token_id The ID of the token type
+    /// @param item_id The ID of the specific item to transfer
+    /// @param commitment The commitment to transfer to
+    /// @param _nonce The nonce used for authwitness
+    #[public]
+    fn transfer_public_to_commitment(
+        from: AztecAddress,
+        token_id: Field,
+        item_id: Field,
+        commitment: Field,
+        _nonce: Field,
+    ) {
+        _validate_from_public(&mut context, from);
+        _validate_public_token_owner(storage.public_sfts, from, token_id, item_id);
+
+        _remove_public_item_id(storage.public_sfts, from, token_id, item_id);
+        let completer = context.msg_sender();
+        _transfer_token_to_commitment(
+            &mut context,
+            PartialSFTNote { commitment },
+            token_id,
+            item_id,
+            completer,
+        );
     }
 
     /// @notice Stores a commitment in storage
@@ -93,6 +136,15 @@ pub contract SFT {
     #[internal]
     fn store_commitment_in_storage_internal(commitment: PartialSFTNote) {
         _store_commitment_in_storage(&mut context, commitment);
+    }
+
+    /// @notice Creates a new token type with a total supply of 0
+    /// @param token_id The ID of the new token type
+    #[public]
+    fn create_token_type(token_id: Field) {
+        _validate_minter(context.msg_sender(), storage.minter.read());
+        assert(!storage.token_type_exists.at(token_id).read(), "token type already exists");
+        storage.token_type_exists.at(token_id).write(true);
     }
 
     /// @notice Increases the total supply of a token type
@@ -279,6 +331,26 @@ pub contract SFT {
         _validate_public_token_owner(storage.public_sfts, from, token_id, item_id);
         _decrease_total_supply(storage.total_supply, token_id);
         _remove_public_item_id(storage.public_sfts, from, token_id, item_id);
+    }
+
+    /** ==========================================================
+     * ===================  UPGRADEABLE  =========================
+     * ======================================================== */
+
+    /// @notice Upgrades the contract to a new contract class id
+    /// @dev The upgrade authority must be set
+    /// @dev The upgrade will only be effective after the upgrade delay has passed
+    /// @param new_contract_class_id The new contract class id
+    #[public]
+    fn upgrade_contract(new_contract_class_id: Field) {
+        let upgrade_authority = storage.upgrade_authority.read();
+
+        assert(!upgrade_authority.eq(AztecAddress::zero()), "upgrade authority not set");
+        assert(context.msg_sender().eq(upgrade_authority), "caller is not upgrade authority");
+
+        ContractInstanceDeployer::at(DEPLOYER_CONTRACT_ADDRESS)
+            .update(ContractClassId::from_field(new_contract_class_id))
+            .call(&mut context);
     }
 
     /** ==========================================================
