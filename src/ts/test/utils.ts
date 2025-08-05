@@ -10,39 +10,55 @@ import {
   waitForPXE,
   Wallet,
 } from '@aztec/aztec.js';
-import { getPXEServiceConfig } from '@aztec/pxe/config';
+import { getPXEServiceConfig, type PXEServiceConfig } from '@aztec/pxe/config';
 import { createPXEService } from '@aztec/pxe/server';
 import { createStore } from '@aztec/kv-store/lmdb';
+import { type L1ContractAddresses } from '@aztec/ethereum/l1-contract-addresses';
 import { TokenContract, TokenContractArtifact } from '../../artifacts/Token.js';
 import { NFTContractArtifact } from '../../artifacts/NFT.js';
 
 export const logger = createLogger('aztec:aztec-standards');
 
 const { NODE_URL = 'http://localhost:8080' } = process.env;
-const node = createAztecNodeClient(NODE_URL);
-const l1Contracts = await node.getL1ContractAddresses();
-const config = getPXEServiceConfig();
-const fullConfig = { ...config, l1Contracts };
-fullConfig.proverEnabled = false;
+
+let l1Contracts: L1ContractAddresses;
+let fullConfig: PXEServiceConfig & { l1Contracts: L1ContractAddresses };
+
+const initializeConfig = async () => {
+  if (!l1Contracts) {
+    const node = createAztecNodeClient(NODE_URL);
+    l1Contracts = await node.getL1ContractAddresses();
+    const config = getPXEServiceConfig();
+    fullConfig = {
+      ...config,
+      l1Contracts,
+      proverEnabled: false,
+    };
+  }
+  return fullConfig;
+};
 
 export const setupPXE = async () => {
+  const config = await initializeConfig();
+  const node = createAztecNodeClient(NODE_URL);
   const store = await createStore('pxe', {
     dataDirectory: 'store',
     dataStoreMapSizeKB: 1e6,
   });
-  const pxe = await createPXEService(node, fullConfig, { store });
+  const pxe = await createPXEService(node, config, { store });
   await waitForPXE(pxe);
   return { pxe, store };
 };
 
 // --- Token Utils ---
 
-export const expectUintNote = (note: UniqueNote, amount: bigint, owner: AztecAddress) => {
+export const expectUintNote = (expect: any, note: UniqueNote, amount: bigint, owner: AztecAddress) => {
   expect(note.note.items[0]).toEqual(new Fr(owner.toBigInt()));
   expect(note.note.items[2]).toEqual(new Fr(amount));
 };
 
 export const expectTokenBalances = async (
+  expect: any,
   token: TokenContract,
   address: AztecAddress,
   publicBalance: bigint,
