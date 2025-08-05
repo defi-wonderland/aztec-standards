@@ -76,12 +76,180 @@ pub contract SFT {
      * ========================= PRIVATE =========================
      * ======================================================== */
 
+    /// @notice Transfers an item from private ownership to public ownership
+    /// @dev Removes the SFTNote from private storage and enqueues a public call to add to public storage
+    /// @param from The address of the sender
+    /// @param to The address of the recipient
+    /// @param token_id The ID of the token type
+    /// @param item_id The ID of the specific item to transfer
+    /// @param _nonce The nonce used for authwitness
+    #[private]
+    fn transfer_private_to_public(
+        from: AztecAddress,
+        to: AztecAddress,
+        token_id: Field,
+        item_id: Field,
+        _nonce: Field,
+    ) {
+        _validate_from_private(&mut context, from);
 
+        _remove_private_token_owner(storage.private_sfts.at(token_id).at(from), item_id);
+        SFT::at(context.this_address())
+            .update_public_item_ids_internal(to, token_id, item_id)
+            .enqueue(&mut context);
+    }
+
+    /// @notice Transfers an item from private to public ownership and returns a commitment
+    /// @dev Removes the SFTNote from private storage, enqueues public call, and returns a commitment for privacy entrance
+    /// @param from The address of the sender
+    /// @param to The address of the recipient
+    /// @param token_id The ID of the token type
+    /// @param item_id The ID of the specific item to transfer
+    /// @param _nonce The nonce used for authwitness
+    /// @return commitment The partial SFT note utilized for the transfer commitment (privacy entrance)
+    #[private]
+    fn transfer_private_to_public_with_commitment(
+        from: AztecAddress,
+        to: AztecAddress,
+        token_id: Field,
+        item_id: Field,
+        _nonce: Field,
+    ) -> Field {
+        _validate_from_private(&mut context, from);
+
+        _remove_private_token_owner(storage.private_sfts.at(token_id).at(from), item_id);
+        SFT::at(context.this_address())
+            .update_public_item_ids_internal(to, token_id, item_id)
+            .enqueue(&mut context);
+
+        let completer = context.msg_sender();
+        let commitment = _initialize_transfer_commitment(
+            &mut context,
+            storage.private_sfts,
+            token_id,
+            from,
+            to,
+            completer,
+        );
+        commitment.commitment()
+    }
+
+    /// @notice Transfers an item from one private owner to another private owner
+    /// @dev Removes the SFTNote from sender's private storage and creates a new SFTNote for recipient
+    /// @param from The address of the sender
+    /// @param to The address of the recipient
+    /// @param token_id The ID of the token type
+    /// @param item_id The ID of the specific item to transfer
+    /// @param _nonce The nonce used for authwitness
+    #[private]
+    fn transfer_private_to_private(
+        from: AztecAddress,
+        to: AztecAddress,
+        token_id: Field,
+        item_id: Field,
+        _nonce: Field,
+    ) {
+        _validate_from_private(&mut context, from);
+
+        _remove_private_token_owner(storage.private_sfts.at(token_id).at(from), item_id);
+        _update_private_token_owner(
+            &mut context,
+            storage.private_sfts.at(token_id).at(to),
+            from,
+            to,
+            token_id,
+            item_id,
+        );
+    }
+
+    /// @notice Transfers an item from private ownership to an existing commitment
+    /// @dev Removes the SFTNote from private storage and enqueues a public call to complete the commitment
+    /// @param from The address of the sender
+    /// @param token_id The ID of the token type
+    /// @param item_id The ID of the specific item to transfer
+    /// @param commitment The existing commitment to complete
+    /// @param _nonce The nonce used for authwitness
+    #[private]
+    fn transfer_private_to_commitment(
+        from: AztecAddress,
+        token_id: Field,
+        item_id: Field,
+        commitment: Field,
+        _nonce: Field,
+    ) {
+        _validate_from_private(&mut context, from);
+
+        _remove_private_token_owner(storage.private_sfts.at(token_id).at(from), item_id);
+        let completer = from;
+        SFT::at(context.this_address())
+            .transfer_token_to_commitment_internal(
+                PartialSFTNote { commitment },
+                token_id,
+                item_id,
+                completer,
+            )
+            .enqueue(&mut context);
+    }
+
+    /// @notice Transfers an item from public ownership to private ownership
+    /// @dev Enqueues a public call to remove from public storage and creates a new private SFTNote for recipient
+    /// @param from The address of the sender
+    /// @param to The address of the recipient
+    /// @param token_id The ID of the token type
+    /// @param item_id The ID of the specific item to transfer
+    /// @param _nonce The nonce used for authwitness
+    #[private]
+    fn transfer_public_to_private(
+        from: AztecAddress,
+        to: AztecAddress,
+        token_id: Field,
+        item_id: Field,
+        _nonce: Field,
+    ) {
+        _validate_from_private(&mut context, from);
+
+        SFT::at(context.this_address())
+            .remove_public_item_id_internal(from, token_id, item_id)
+            .enqueue(&mut context);
+        _update_private_token_owner(
+            &mut context,
+            storage.private_sfts.at(token_id).at(to),
+            from,
+            to,
+            token_id,
+            item_id,
+        );
+    }
+
+    /// @notice Initializes a transfer commitment to be used for transfers
+    /// @dev Returns a partial sft note that can be used to execute transfers
+    /// @param from The address of the sender
+    /// @param to The address of the recipient
+    /// @param completer The address of the completer
+    /// @return commitment The partial sft note utilized for the transfer commitment (privacy entrance)
+    #[private]
+    fn initialize_transfer_commitment(
+        token_id: Field,
+        from: AztecAddress,
+        to: AztecAddress,
+        completer: AztecAddress,
+    ) {
+        let commitment = _initialize_transfer_commitment(
+            &mut context,
+            storage.private_sfts,
+            token_id,
+            from,
+            to,
+            completer,
+        );
+        commitment.commitment()
+    }
+    
     /** ==========================================================
      * ========================= PUBLIC ==========================
      * ======================================================== */
 
-    /// @notice Transfers an item from one public address to another public address  
+    /// @notice Transfers an item from one public address to another public address
     /// @param from The address of the sender
     /// @param to The address of the recipient
     /// @param token_id The ID of the token type
@@ -161,6 +329,42 @@ pub contract SFT {
     #[internal]
     fn decrease_total_supply_internal(token_id: Field) {
         _decrease_total_supply(storage.total_supply, token_id);
+    }
+
+    /// @notice Adds an item to a user's public collection
+    /// @param to The address of the recipient
+    /// @param token_id The ID of the token type
+    /// @param item_id The ID of the item to add
+    #[public]
+    #[internal]
+    fn update_public_item_ids_internal(to: AztecAddress, token_id: Field, item_id: Field) {
+        _update_public_item_ids(storage.public_sfts, to, token_id, item_id);
+    }
+
+    /// @notice Completes a commitment with token and item details
+    /// @param commitment The partial note representing the commitment
+    /// @param token_id The ID of the token type
+    /// @param item_id The ID of the item
+    /// @param completer The address authorized to complete this commitment
+    #[public]
+    #[internal]
+    fn transfer_token_to_commitment_internal(
+        commitment: PartialSFTNote,
+        token_id: Field,
+        item_id: Field,
+        completer: AztecAddress,
+    ) {
+        _transfer_token_to_commitment(&mut context, commitment, token_id, item_id, completer);
+    }
+
+    /// @notice Removes an item from a user's public collection
+    /// @param from The address of the owner
+    /// @param token_id The ID of the token type
+    /// @param item_id The ID of the item to remove
+    #[public]
+    #[internal]
+    fn remove_public_item_id_internal(from: AztecAddress, token_id: Field, item_id: Field) {
+        _remove_public_item_id(storage.public_sfts, from, token_id, item_id);
     }
 
     /** ==========================================================
@@ -367,7 +571,7 @@ pub contract SFT {
 
     /// @notice Initializes a transfer commitment
     /// @param context The context of the private call
-    /// @param private_sft_set The private owner
+    /// @param private_sfts The private owner
     /// @param token_id The ID of the token type
     /// @param from The address of the sender
     /// @param to The address of the recipient
@@ -376,7 +580,7 @@ pub contract SFT {
     #[contract_library_method]
     fn _initialize_transfer_commitment(
         context: &mut PrivateContext,
-        private_sft_set: Map<Field, Map<AztecAddress, PrivateSet<SFTNote, &mut PrivateContext>, &mut PrivateContext>, &mut PrivateContext>,
+        private_sfts: Map<Field, Map<AztecAddress, PrivateSet<SFTNote, &mut PrivateContext>, &mut PrivateContext>, &mut PrivateContext>,
         token_id: Field,
         from: AztecAddress,
         to: AztecAddress,
@@ -384,7 +588,7 @@ pub contract SFT {
     ) -> PartialSFTNote {
         let commitment = SFTNote::partial(
             to,
-            private_sft_set.at(token_id).at(to).storage_slot,
+            private_sfts.at(token_id).at(to).storage_slot,
             context,
             to,
             from,
