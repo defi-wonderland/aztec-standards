@@ -1,11 +1,13 @@
-name: Canary Release
+name: Production Release
 
-on: workflow_dispatch
+on:
+  release:
+    types: [published]
 
 jobs:
-  export:
-    name: Generate Canary Release
-    environment: Development
+  release:
+    name: Release
+    environment: Production
     runs-on: ubuntu-latest
 
     env:
@@ -42,11 +44,11 @@ jobs:
         run: |
           VERSION=${AZTEC_VERSION} aztec-up
       
-      # Install dependencies AND the current canary version of the package we're releasing now.
+      # Install dependencies AND the current latest version of the package we're releasing now.
       - name: Install dependencies
         run: |
           yarn --frozen-lockfile
-          yarn add @defi-wonderland/aztec-standards@canary
+          yarn add @defi-wonderland/aztec-standards@latest
 
       - name: Compile
         run: yarn compile
@@ -59,10 +61,7 @@ jobs:
           mkdir -p dist/
           yarn tsc artifacts/*.ts --outDir dist/ --skipLibCheck --target es2020 --module nodenext --moduleResolution nodenext --resolveJsonModule --declaration
 
-      - name: Update version
-        run: yarn version --new-version "0.0.0-${GITHUB_SHA::8}" --no-git-tag-version
-
-      # TODO: We do several things here:
+            # TODO: We do several things here:
       # 1. Create current and historical directories
       # 2. Copy historical versions from existing package to /historical
       # 3. Move this version's artifacts and circuits to historical/ as well.
@@ -72,7 +71,7 @@ jobs:
       # 7. Trim info from package.json
       - name: Prepare files for release
         run: |
-          VERSION="0.0.0-${GITHUB_SHA::8}"
+          VERSION=$(node -p "require('./package.json').version")
           mkdir -p export/${{ env.PROJECT_NAME }}/current/artifacts
           mkdir -p export/${{ env.PROJECT_NAME }}/historical
           
@@ -112,7 +111,8 @@ jobs:
           cp README.md export/${{ env.PROJECT_NAME }}/
           cp LICENSE export/${{ env.PROJECT_NAME }}/
           cat package.json | jq 'del(.scripts, .jest, ."lint-staged", .packageManager, .devDependencies, .dependencies, .engines, .resolutions)' > export/${{ env.PROJECT_NAME }}/package.json
+
       - name: Publish to NPM
-        run: cd export/${{ env.PROJECT_NAME }} && npm publish --access public --tag canary
+        run: cd export/${{ env.PROJECT_NAME }} && npm publish --access public --tag latest
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
