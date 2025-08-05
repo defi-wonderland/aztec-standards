@@ -25,7 +25,7 @@ pub contract SFT {
     // compression library
     use compressed_string::FieldCompressedString;
     // sft note struct
-    use crate::types::sft_note::{SFTNote, PartialSFTNote};
+    use crate::types::sft_note::{PartialSFTNote, SFTNote};
 
     /// Storage layout for Semi-Fungible Token (SFT) contract
     /// @param name The name of the SFT collection
@@ -71,7 +71,7 @@ pub contract SFT {
     /** ==========================================================
      * ========================= PUBLIC ==========================
      * ======================================================== */
-     
+
     /// @notice Creates a new token type with a total supply of 0
     /// @param token_id The ID of the new token type
     #[public]
@@ -146,10 +146,15 @@ pub contract SFT {
     /// @param page_index The offset to start counting from (for pagination)
     /// @return The number of items of `token_id` owned privately by `owner`
     #[utility]
-    pub unconstrained fn balance_of_private_by_token_id(owner: AztecAddress, token_id: Field, page_index: u32) -> u128 {
+    pub unconstrained fn balance_of_private_by_token_id(
+        owner: AztecAddress,
+        token_id: Field,
+        page_index: u32,
+    ) -> u128 {
         let offset = page_index * MAX_NOTES_PER_PAGE;
         let mut options = NoteViewerOptions::new();
-        let sfts = storage.private_sfts.at(token_id).at(owner).view_notes(options.set_offset(offset));
+        let sfts =
+            storage.private_sfts.at(token_id).at(owner).view_notes(options.set_offset(offset));
         sfts.len() as u128
     }
 
@@ -167,8 +172,9 @@ pub contract SFT {
     ) -> pub ([Field; MAX_NOTES_PER_PAGE], bool) {
         let offset = page_index * MAX_NOTES_PER_PAGE;
         let mut options = NoteViewerOptions::new();
-        let sfts = storage.private_sfts.at(token_id).at(owner).view_notes(options.set_offset(offset));
-        
+        let sfts =
+            storage.private_sfts.at(token_id).at(owner).view_notes(options.set_offset(offset));
+
         let mut owned_item_ids = [0; MAX_NOTES_PER_PAGE];
         for i in 0..options.limit {
             if i < sfts.len() {
@@ -224,7 +230,11 @@ pub contract SFT {
         item_id: Field,
     ) {
         let new_note = SFTNote::new(token_id, item_id, to);
-        private_sft_set.at(token_id).at(to).insert(new_note).emit(encode_and_encrypt_note(context, to, from));
+        private_sft_set.at(token_id).at(to).insert(new_note).emit(encode_and_encrypt_note(
+            context,
+            to,
+            from,
+        ));
     }
 
     #[contract_library_method]
@@ -297,11 +307,11 @@ pub contract SFT {
 
     #[contract_library_method]
     fn _validate_public_token_owner(
-        public_item_ids: Map<Field, Map<AztecAddress, PublicMutable<[Field; 32], &mut PublicContext>, &mut PublicContext>, &mut PublicContext>, 
-        from: AztecAddress, 
+        public_item_ids: Map<Field, Map<AztecAddress, PublicMutable<[Field; 32], &mut PublicContext>, &mut PublicContext>, &mut PublicContext>,
+        from: AztecAddress,
         token_id: Field,
         item_id: Field,
-      ) {
+    ) {
         let item_ids = public_item_ids.at(token_id).at(from).read();
         let mut owner_of_item_id = false;
         for i in 0..32 {
