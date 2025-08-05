@@ -34,7 +34,6 @@ unconstrained fn mint_to_public_failures() {
     // Overflow recipient
 
     // We have to do this in 2 steps because we have to pass in a valid u128
-    // TODO: is there something like type(u128).max?
     let max_u128 = utils::max_u128();
     Token::at(token_contract_address).mint_to_public(recipient, max_u128).call(&mut env.public());
 
