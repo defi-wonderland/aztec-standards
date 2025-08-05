@@ -226,15 +226,11 @@ pub contract SFT {
         assert((item_id != 0) & (token_id != 0), "zero ID not supported");
         _validate_minter(context.msg_sender(), storage.minter.read());
 
-        storage.private_sfts.at(token_id).at(to).insert(SFTNote::new(token_id, item_id, to)).emit(encode_and_encrypt_note(
-            &mut context,
-            to,
-            to,
-        ));
-
-        SFT::at(context.this_address()).create_token_type(token_id).enqueue(
-            &mut context,
+        storage.private_sfts.at(token_id).at(to).insert(SFTNote::new(token_id, item_id, to)).emit(
+            encode_and_encrypt_note(&mut context, to, to),
         );
+
+        SFT::at(context.this_address()).create_token_type(token_id).enqueue(&mut context);
         SFT::at(context.this_address()).increase_total_supply_internal(token_id).enqueue(
             &mut context,
         );
@@ -263,7 +259,7 @@ pub contract SFT {
     /// @param token_id The ID of the token type
     /// @param item_id The ID of the item to burn
     /// @param _nonce The nonce of the burn
-     #[private]
+    #[private]
     fn burn_private(from: AztecAddress, token_id: Field, item_id: Field, _nonce: Field) {
         _validate_from_private(&mut context, from);
         _remove_private_token_owner(storage.private_sfts.at(token_id).at(from), item_id);
@@ -345,11 +341,7 @@ pub contract SFT {
         item_id: Field,
     ) {
         let new_note = SFTNote::new(token_id, item_id, to);
-        private_sft_set.insert(new_note).emit(encode_and_encrypt_note(
-            context,
-            to,
-            from,
-        ));
+        private_sft_set.insert(new_note).emit(encode_and_encrypt_note(context, to, from));
     }
 
     /// @notice Removes the private token owner
@@ -371,10 +363,10 @@ pub contract SFT {
     /// @param token_id The ID of the token type
     #[contract_library_method]
     fn _increase_total_supply(
-      total_supply: Map<Field, PublicMutable<u128, &mut PublicContext>, &mut PublicContext>,
-      token_id: Field,
+        total_supply: Map<Field, PublicMutable<u128, &mut PublicContext>, &mut PublicContext>,
+        token_id: Field,
     ) {
-      total_supply.at(token_id).write(total_supply.at(token_id).read() + 1);
+        total_supply.at(token_id).write(total_supply.at(token_id).read() + 1);
     }
 
     /// @notice Decreases the total supply of a token type
@@ -382,10 +374,10 @@ pub contract SFT {
     /// @param token_id The ID of the token type
     #[contract_library_method]
     fn _decrease_total_supply(
-      total_supply: Map<Field, PublicMutable<u128, &mut PublicContext>, &mut PublicContext>,
-      token_id: Field,
+        total_supply: Map<Field, PublicMutable<u128, &mut PublicContext>, &mut PublicContext>,
+        token_id: Field,
     ) {
-      total_supply.at(token_id).write(total_supply.at(token_id).read() - 1);
+        total_supply.at(token_id).write(total_supply.at(token_id).read() - 1);
     }
 
     /// @notice Inserts a specific item ID into a user's public collection for a specific token type
