@@ -31,16 +31,16 @@ pub contract SFT {
     /// @param name The name of the SFT collection
     /// @param symbol The symbol of the SFT collection
     /// @param minter The account permissioned to mint new tokens
-    /// @param private_sfts Private SFT ownership using nested mapping (address -> token_id -> PrivateSet<SFTNote>)
-    /// @param public_balances Public SFT balances using nested mapping (address -> token_id -> amount)
+    /// @param private_sfts Private SFT ownership using nested mapping (token_id -> address -> PrivateSet<SFTNote>)
+    /// @param public_balances Public SFT item IDs using nested mapping (token_id -> address -> array of item_ids)
     /// @param total_supply Total supply of each token type
     #[storage]
     struct Storage<Context> {
         name: PublicImmutable<FieldCompressedString, Context>,
         symbol: PublicImmutable<FieldCompressedString, Context>,
         minter: PublicImmutable<AztecAddress, Context>,
-        private_sfts: Map<AztecAddress, Map<Field, PrivateSet<SFTNote, Context>, Context>, Context>,
-        public_balances: Map<AztecAddress, Map<Field, PublicMutable<u128, Context>, Context>, Context>,
+        private_sfts: Map<Field, Map<AztecAddress, PrivateSet<SFTNote, Context>, Context>, Context>,
+        public_balances: Map<Field, Map<AztecAddress, PublicMutable<[Field; 32], Context>, Context>, Context>, // 32 is max number of items per token type
         total_supply: Map<Field, PublicMutable<u128, Context>, Context>,
         upgrade_authority: PublicImmutable<AztecAddress, Context>,
     }
@@ -92,14 +92,39 @@ pub contract SFT {
      * ====================== VIEW FUNCTIONS =====================
      * ======================================================== */
 
+    /// @return the name of the SFT collection
+    #[public]
+    #[view]
+    fn public_get_name() -> FieldCompressedString {
+        storage.name.read()
+    }
+
+    /// @return the symbol of the SFT collection
+    #[public]
+    #[view]
+    fn public_get_symbol() -> FieldCompressedString {
+        storage.symbol.read()
+    }
+
     /// @notice Returns the public balance of `owner` for `token_id`
     /// @param owner The address of the owner
     /// @param token_id The ID of the token type
     /// @return The balance of the public balance of `owner` for `token_id`
     #[public]
     #[view]
-    fn balance_of_public(owner: AztecAddress, token_id: Field) -> u128 {
-        storage.public_balances.at(owner).at(token_id).read()
+    fn public_balance_of(owner: AztecAddress, token_id: Field) -> u128 {
+        let item_ids = storage.public_balances.at(token_id).at(owner).read();
+        item_ids.len() as u128
+    }
+
+    /// @notice Returns the item IDs owned by `owner` for `token_id`
+    /// @param owner The address of the owner
+    /// @param token_id The ID of the token type
+    /// @return The item IDs owned by `owner` for `token_id`
+    #[public]
+    #[view]
+    fn public_item_ids(owner: AztecAddress, token_id: Field) -> [Field; 32] {
+        storage.public_balances.at(token_id).at(owner).read()
     }
 
     /// @notice Returns the total supply of `token_id`
@@ -109,20 +134,6 @@ pub contract SFT {
     #[view]
     fn total_supply(token_id: Field) -> u128 {
         storage.total_supply.at(token_id).read()
-    }
-
-    /// @return the name of the SFT collection
-    #[public]
-    #[view]
-    fn name() -> FieldCompressedString {
-        storage.name.read()
-    }
-
-    /// @return the symbol of the SFT collection
-    #[public]
-    #[view]
-    fn symbol() -> FieldCompressedString {
-        storage.symbol.read()
     }
 
     /** ==========================================================
@@ -138,7 +149,7 @@ pub contract SFT {
     pub unconstrained fn balance_of_private_by_token_id(owner: AztecAddress, token_id: Field, page_index: u32) -> u128 {
         let offset = page_index * MAX_NOTES_PER_PAGE;
         let mut options = NoteViewerOptions::new();
-        let sfts = storage.private_sfts.at(owner).at(token_id).view_notes(options.set_offset(offset));
+        let sfts = storage.private_sfts.at(token_id).at(owner).view_notes(options.set_offset(offset));
         sfts.len() as u128
     }
 
@@ -156,7 +167,7 @@ pub contract SFT {
     ) -> pub ([Field; MAX_NOTES_PER_PAGE], bool) {
         let offset = page_index * MAX_NOTES_PER_PAGE;
         let mut options = NoteViewerOptions::new();
-        let sfts = storage.private_sfts.at(owner).at(token_id).view_notes(options.set_offset(offset));
+        let sfts = storage.private_sfts.at(token_id).at(owner).view_notes(options.set_offset(offset));
         
         let mut owned_item_ids = [0; MAX_NOTES_PER_PAGE];
         for i in 0..options.limit {
@@ -183,14 +194,15 @@ pub contract SFT {
     #[contract_library_method]
     fn _initialize_transfer_commitment(
         context: &mut PrivateContext,
-        private_sfts: Map<AztecAddress, PrivateSet<SFTNote, &mut PrivateContext>, &mut PrivateContext>,
+        private_sft_set: Map<Field, Map<AztecAddress, PrivateSet<SFTNote, &mut PrivateContext>, &mut PrivateContext>, &mut PrivateContext>,
+        token_id: Field,
         from: AztecAddress,
         to: AztecAddress,
         completer: AztecAddress,
     ) -> PartialSFTNote {
         let commitment = SFTNote::partial(
             to,
-            private_sfts.at(to).storage_slot,
+            private_sft_set.at(token_id).at(to).storage_slot,
             context,
             to,
             from,
@@ -205,35 +217,70 @@ pub contract SFT {
     #[contract_library_method]
     fn _update_private_token_owner(
         context: &mut PrivateContext,
-        private_sft_set: PrivateSet<SFTNote, &mut PrivateContext>,
+        private_sft_set: Map<Field, Map<AztecAddress, PrivateSet<SFTNote, &mut PrivateContext>, &mut PrivateContext>, &mut PrivateContext>,
         from: AztecAddress,
         to: AztecAddress,
         token_id: Field,
         item_id: Field,
     ) {
         let new_note = SFTNote::new(token_id, item_id, to);
-        private_sft_set.insert(new_note).emit(encode_and_encrypt_note(context, to, from));
+        private_sft_set.at(token_id).at(to).insert(new_note).emit(encode_and_encrypt_note(context, to, from));
     }
 
     #[contract_library_method]
     fn _remove_private_token_owner(
-        private_sft_set: PrivateSet<SFTNote, &mut PrivateContext>,
+        private_sft_set: Map<Field, Map<AztecAddress, PrivateSet<SFTNote, &mut PrivateContext>, &mut PrivateContext>, &mut PrivateContext>,
+        from: AztecAddress,
+        token_id: Field,
         item_id: Field,
     ) {
-        let notes = private_sft_set.pop_notes(NoteGetterOptions::new()
+        let notes = private_sft_set.at(token_id).at(from).pop_notes(NoteGetterOptions::new()
             .select(SFTNote::properties().item_id, Comparator.EQ, item_id)
             .set_limit(1));
         assert(notes.len() == 1, "sft not found in private to public");
     }
 
     #[contract_library_method]
-    fn _update_public_token_balance(
-        public_balances: Map<AztecAddress, Map<Field, PublicMutable<u128, &mut PublicContext>, &mut PublicContext>, &mut PublicContext>,
+    fn _update_public_item_ids(
+        public_item_ids: Map<Field, Map<AztecAddress, PublicMutable<[Field; 32], &mut PublicContext>, &mut PublicContext>, &mut PublicContext>,
         to: AztecAddress,
         token_id: Field,
-        amount: u128,
+        item_id: Field,
     ) {
-        public_balances.at(to).at(token_id).write(amount);
+        let mut item_ids = public_item_ids.at(token_id).at(to).read();
+        let mut found_empty = false;
+        for i in 0..32 {
+            if (item_ids[i] == 0) & (!found_empty) {
+                item_ids[i] = item_id;
+                found_empty = true;
+            }
+        }
+        assert(found_empty, "no empty slots in item_ids array");
+        public_item_ids.at(token_id).at(to).write(item_ids);
+    }
+
+    /// @notice Removes a specific item ID from a user's public collection
+    /// @param public_item_ids The storage pointer to the public item IDs
+    /// @param from The address of the owner
+    /// @param token_id The ID of the token type
+    /// @param item_id The specific item ID to remove
+    #[contract_library_method]
+    fn _remove_public_item_id(
+        public_item_ids: Map<Field, Map<AztecAddress, PublicMutable<[Field; 32], &mut PublicContext>, &mut PublicContext>, &mut PublicContext>,
+        from: AztecAddress,
+        token_id: Field,
+        item_id: Field,
+    ) {
+        let mut item_ids = public_item_ids.at(token_id).at(from).read();
+        let mut found_item = false;
+        for i in 0..32 {
+            if (item_ids[i] == item_id) & (!found_item) {
+                item_ids[i] = 0;
+                found_item = true;
+            }
+        }
+        assert(found_item, "item not found in public collection");
+        public_item_ids.at(token_id).at(from).write(item_ids);
     }
 
     #[contract_library_method]
@@ -250,12 +297,19 @@ pub contract SFT {
 
     #[contract_library_method]
     fn _validate_public_token_owner(
-        public_balances: Map<AztecAddress, Map<Field, PublicMutable<u128, &mut PublicContext>, &mut PublicContext>, &mut PublicContext>, 
+        public_item_ids: Map<Field, Map<AztecAddress, PublicMutable<[Field; 32], &mut PublicContext>, &mut PublicContext>, &mut PublicContext>, 
         from: AztecAddress, 
-        token_id: Field
+        token_id: Field,
+        item_id: Field,
       ) {
-        let balance = public_balances.at(from).at(token_id).read();
-        assert(balance > 0, "caller owns no tokens of this type");
+        let item_ids = public_item_ids.at(token_id).at(from).read();
+        let mut owner_of_item_id = false;
+        for i in 0..32 {
+            if item_ids[i] != 0 {
+                owner_of_item_id = true;
+            }
+        }
+        assert(owner_of_item_id, "caller owns no tokens of this type");
     }
 
     /// @notice Validates that the caller is an authorized minter
