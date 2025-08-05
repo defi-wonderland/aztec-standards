@@ -49,7 +49,6 @@ unconstrained fn mint_to_private_failure_balance_overflow() {
         .initialize_payment_request(minter, recipient, minter)
         .call(&mut env.private());
 
-    // TODO: is there something like type(u128).max?
     let max_u128 = utils::max_u128();
     Token::at(token_contract_address).mint_to_payment_request(payment_request, max_u128).call(
         &mut env.public(),
