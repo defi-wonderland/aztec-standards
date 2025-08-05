@@ -2,12 +2,12 @@ use crate::{test::utils::{self, mint_amount}, Token};
 use aztec::oracle::random::random;
 use std::test::OracleMock;
 
-/// Internal orchestration means that the calls to `initialize_transfer_commitment`
-/// and `transfer_public_to_commitment` are done by the TOKEN contract itself.
-/// In this test's case this is done by the `Token::transfer_public_to_commitment(...)` function called
-/// in `utils::setup_mint_and_transfer_public_to_commitment`.
+/// Internal orchestration means that the calls to `initialize_payment_request`
+/// and `transfer_public_to_payment_request` are done by the TOKEN contract itself.
+/// In this test's case this is done by the `Token::transfer_public_to_payment_request(...)` function called
+/// in `utils::setup_mint_and_transfer_public_to_payment_request`.
 #[test]
-unconstrained fn transfer_public_to_commitment_internal_orchestration() {
+unconstrained fn transfer_public_to_payment_request_internal_orchestration() {
     // The transfer to private is done in `utils::setup_and_mint_to_private_without_minter` and for this reason
     // in this test we just call it and check the outcome.
     // Setup without account contracts. We are not using authwits here, so dummy accounts are enough
@@ -21,7 +21,7 @@ unconstrained fn transfer_public_to_commitment_internal_orchestration() {
 /// External orchestration means that the calls to prepare and finalize are not done by the Token contract. This flow
 /// will typically be used by a DEX.
 #[test]
-unconstrained fn transfer_public_to_commitment_external_orchestration() {
+unconstrained fn transfer_public_to_payment_request_external_orchestration() {
     // Setup without account contracts. We are not using authwits here, so dummy accounts are enough
     let (env, token_contract_address, owner, recipient) =
         utils::setup_and_mint_to_public_without_minter(false);
@@ -32,13 +32,13 @@ unconstrained fn transfer_public_to_commitment_external_orchestration() {
     let _ = OracleMock::mock("getRandomField").returns(note_randomness);
 
     // We prepare the transfer
-    let commitment = Token::at(token_contract_address)
-        .initialize_transfer_commitment(owner, recipient, owner)
+    let payment_request = Token::at(token_contract_address)
+        .initialize_payment_request(owner, recipient, owner)
         .call(&mut env.private());
 
     // Finalize the transfer of the tokens (message sender owns the tokens in public)
     Token::at(token_contract_address)
-        .transfer_public_to_commitment(owner, commitment, mint_amount, 0)
+        .transfer_public_to_payment_request(owner, payment_request, mint_amount, 0)
         .call(&mut env.public());
 
     env.advance_block_by(1);
@@ -48,36 +48,36 @@ unconstrained fn transfer_public_to_commitment_external_orchestration() {
 }
 
 #[test(should_fail_with = "Invalid partial note or completer 'context.nullifier_exists(validity_commitment, context.this_address())'")]
-unconstrained fn transfer_public_to_commitment_transfer_not_initialized() {
+unconstrained fn transfer_public_to_payment_request_transfer_not_initialized() {
     // Setup without account contracts. We are not using authwits here, so dummy accounts are enough
     let (env, token_contract_address, owner, _) =
         utils::setup_and_mint_to_public_without_minter(false);
 
-    // Transfer was not prepared, so we can use a random value for the commitment
-    let commitment = random();
+    // Transfer was not prepared, so we can use a random value for the payment request
+    let payment_request = random();
 
     // Try finalizing the transfer without preparing it first
     Token::at(token_contract_address)
-        .transfer_public_to_commitment(owner, commitment, mint_amount, 0)
+        .transfer_public_to_payment_request(owner, payment_request, mint_amount, 0)
         .call(&mut env.public());
 }
 
 #[test(should_fail_with = "attempt to subtract with overflow 'public_balances.at(from).read() - amount'")]
-unconstrained fn transfer_public_to_commitment_failure_not_an_owner() {
+unconstrained fn transfer_public_to_payment_request_failure_not_an_owner() {
     // Setup without account contracts. We are not using authwits here, so dummy accounts are enough
     let (env, token_contract_address, owner, not_owner) =
         utils::setup_and_mint_to_public_without_minter(false);
 
-    // (For this specific test we could set a random value for the commitment and not do the call to `prepare...`
+    // (For this specific test we could set a random value for the payment request and not do the call to `prepare...`
     // as the token balance check is before we use the value but that would made the test less robust against changes
     // in the contract.)
-    let commitment = Token::at(token_contract_address)
-        .initialize_transfer_commitment(owner, not_owner, owner)
+    let payment_request = Token::at(token_contract_address)
+        .initialize_payment_request(owner, not_owner, owner)
         .call(&mut env.private());
 
     // Try transferring someone else's token balance
     env.impersonate(not_owner);
     Token::at(token_contract_address)
-        .transfer_public_to_commitment(not_owner, commitment, mint_amount, 0)
+        .transfer_public_to_payment_request(not_owner, payment_request, mint_amount, 0)
         .call(&mut env.public());
 }

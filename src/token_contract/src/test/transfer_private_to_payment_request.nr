@@ -3,23 +3,23 @@ use crate::Token;
 use aztec::test::helpers::authwit as authwit_cheatcodes;
 
 #[test]
-unconstrained fn transfer_private_to_commitment() {
+unconstrained fn transfer_private_to_payment_request() {
     let (env, token_contract_address, owner, recipient) =
         utils::setup_and_mint_to_private_without_minter(false);
 
     utils::check_private_balance(token_contract_address, owner, mint_amount);
     utils::check_private_balance(token_contract_address, recipient, 0 as u128);
 
-    // Prepare commitment
+    // Prepare payment request
     env.impersonate(owner);
-    let commitment = Token::at(token_contract_address)
-        .initialize_transfer_commitment(owner, recipient, owner)
+    let payment_request = Token::at(token_contract_address)
+        .initialize_payment_request(owner, recipient, owner)
         .call(&mut env.private());
 
     // Transfer tokens
     let transfer_amount = mint_amount;
     Token::at(token_contract_address)
-        .transfer_private_to_commitment(owner, commitment, transfer_amount, 0)
+        .transfer_private_to_payment_request(owner, payment_request, transfer_amount, 0)
         .call(&mut env.private());
     env.advance_block_by(1);
 
@@ -29,7 +29,7 @@ unconstrained fn transfer_private_to_commitment() {
 }
 
 #[test]
-unconstrained fn transfer_private_to_commitment_on_behalf_of_other() {
+unconstrained fn transfer_private_to_payment_request_on_behalf_of_other() {
     let (env, token_contract_address, owner, recipient) =
         utils::setup_and_mint_to_private_without_minter(true);
 
@@ -38,25 +38,25 @@ unconstrained fn transfer_private_to_commitment_on_behalf_of_other() {
 
     let transfer_amount = mint_amount;
 
-    // Prepare commitment
+    // Prepare payment request
     env.impersonate(owner);
-    let commitment = Token::at(token_contract_address)
-        .initialize_transfer_commitment(owner, recipient, owner)
+    let payment_request = Token::at(token_contract_address)
+        .initialize_payment_request(owner, recipient, owner)
         .call(&mut env.private());
     env.advance_block_by(1);
 
-    let transfer_to_commitment_call_interface = Token::at(token_contract_address)
-        .transfer_private_to_commitment(owner, commitment, transfer_amount, 0);
+    let transfer_to_payment_request_call_interface = Token::at(token_contract_address)
+        .transfer_private_to_payment_request(owner, payment_request, transfer_amount, 0);
 
     authwit_cheatcodes::add_private_authwit_from_call_interface(
         owner,
         recipient,
-        transfer_to_commitment_call_interface,
+        transfer_to_payment_request_call_interface,
     );
 
     // Transfer tokens
     env.impersonate(recipient);
-    transfer_to_commitment_call_interface.call(&mut env.private());
+    transfer_to_payment_request_call_interface.call(&mut env.private());
     env.advance_block_by(1);
 
     // Check balances
