@@ -3,7 +3,7 @@ use aztec::macros::aztec;
 #[aztec]
 pub contract Dripper {
     use aztec::macros::functions::{initializer, private, public};
-    use aztec::prelude::AztecAddress;
+    use aztec::protocol_types::address::AztecAddress;
     use token::Token;
 
     #[public]

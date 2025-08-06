@@ -10,11 +10,10 @@ unconstrained fn nft_transfer_public_to_public_success() {
         utils::setup_and_mint_to_public(false, token_id);
 
     // Transfer NFT from owner to recipient
-    env.impersonate(owner);
-    NFT::at(nft_contract_address).transfer_public_to_public(owner, recipient, token_id, 0).call(
-        &mut env.public(),
+    env.call_public(
+        owner,
+        NFT::at(nft_contract_address).transfer_public_to_public(owner, recipient, token_id, 0),
     );
-    env.advance_block_by(1);
 
     // Verify recipient now owns the NFT
     utils::assert_owns_public_nft(env, nft_contract_address, recipient, token_id);
@@ -27,11 +26,10 @@ unconstrained fn nft_transfer_public_to_public_self_success() {
     let (env, nft_contract_address, owner, _, _) = utils::setup_and_mint_to_public(false, token_id);
 
     // Transfer NFT from owner to self
-    env.impersonate(owner);
-    NFT::at(nft_contract_address).transfer_public_to_public(owner, owner, token_id, 0).call(
-        &mut env.public(),
+    env.call_public(
+        owner,
+        NFT::at(nft_contract_address).transfer_public_to_public(owner, owner, token_id, 0),
     );
-    env.advance_block_by(1);
 
     // Verify owner still owns the NFT
     utils::assert_owns_public_nft(env, nft_contract_address, owner, token_id);
@@ -50,20 +48,19 @@ unconstrained fn nft_transfer_public_to_public_authorized_success() {
 
     // Add authorization witness from owner to recipient
     authwit_cheatcodes::add_public_authwit_from_call_interface(
+        env,
         owner,
         recipient,
         transfer_call_interface,
     );
 
     // Impersonate recipient to perform the authorized transfer
-    env.impersonate(recipient);
-    transfer_call_interface.call(&mut env.public());
-    env.advance_block_by(1);
+    env.call_public(recipient, transfer_call_interface);
 
     // Verify recipient now owns the NFT
     utils::assert_owns_public_nft(env, nft_contract_address, recipient, token_id);
     // Verify the NFT is no longer owned by the previous owner
-    let cur_owner = NFT::at(nft_contract_address).public_owner_of(token_id).view(&mut env.public());
+    let cur_owner = env.view_public(NFT::at(nft_contract_address).public_owner_of(token_id));
     assert(owner != cur_owner, "incorrect NFT owner");
 }
 
@@ -74,10 +71,15 @@ unconstrained fn nft_transfer_public_to_public_non_existent_fail() {
     let non_existent_token_id = 12345;
 
     // Attempt to transfer a non-existent NFT
-    env.impersonate(owner);
-    NFT::at(nft_contract_address)
-        .transfer_public_to_public(owner, recipient, non_existent_token_id, 0)
-        .call(&mut env.public());
+    env.call_public(
+        owner,
+        NFT::at(nft_contract_address).transfer_public_to_public(
+            owner,
+            recipient,
+            non_existent_token_id,
+            0,
+        ),
+    );
 }
 
 #[test(should_fail_with = "unauthorized")]
@@ -94,10 +96,8 @@ unconstrained fn nft_transfer_public_to_public_unauthorized_fail() {
     // Impersonate recipient but DON'T add authorization witness
     // This test verifies that without an authorization witness (authwit),
     // the recipient cannot transfer the NFT on behalf of the owner
-    env.impersonate(recipient);
-
     // Should fail because recipient has no authorization witness from owner
-    transfer_call_interface.call(&mut env.public());
+    env.call_public(recipient, transfer_call_interface);
 }
 
 #[test(should_fail_with = "unauthorized")]
@@ -114,14 +114,13 @@ unconstrained fn nft_transfer_public_to_public_wrong_authwit_fail() {
     // Add authorization witness but to the OWNER instead of the recipient
     // This simulates giving authorization to the wrong address
     authwit_cheatcodes::add_public_authwit_from_call_interface(
+        env,
         owner,
         owner, // Wrong address - should be recipient
         transfer_call_interface,
     );
 
     // Impersonate recipient
-    env.impersonate(recipient);
-
     // Should fail because the authorization witness was given to the wrong address
-    transfer_call_interface.call(&mut env.public());
+    env.call_public(recipient, transfer_call_interface);
 }
