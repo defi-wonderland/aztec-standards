@@ -27,12 +27,12 @@ export async function deployTokenWithInitialSupply(deployer: Wallet, options: an
 }
 
 const setupTestSuite = async () => {
-  const { pxe } = await setupPXE();
+  const { pxe, store } = await setupPXE();
   const managers = await getInitialTestAccountsManagers(pxe);
   const wallets = await Promise.all(managers.map((acc) => acc.register()));
   const [deployer] = wallets;
 
-  return { pxe, deployer, wallets };
+  return { pxe, store, deployer, wallets };
 };
 
 describe('Token - Single PXE', () => {
@@ -49,7 +49,7 @@ describe('Token - Single PXE', () => {
   let token: TokenContract;
 
   beforeAll(async () => {
-    ({ pxe, deployer, wallets } = await setupTestSuite());
+    ({ pxe, store, deployer, wallets } = await setupTestSuite());
 
     [alice, bob, carl] = wallets;
   });
@@ -58,9 +58,9 @@ describe('Token - Single PXE', () => {
     token = (await deployTokenWithMinter(alice, {})) as TokenContract;
   });
 
-  // afterAll(async () => {
-  //   await store.delete();
-  // });
+  afterAll(async () => {
+    await store.delete();
+  });
 
   it('deploys the contract with minter', async () => {
     const salt = Fr.random();

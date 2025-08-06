@@ -63,12 +63,12 @@ async function assertPrivateNFTNullified(
 }
 
 const setupTestSuite = async () => {
-  const { pxe } = await setupPXE();
+  const { pxe, store } = await setupPXE();
   const managers = await getInitialTestAccountsManagers(pxe);
   const wallets = await Promise.all(managers.map((acc) => acc.register()));
   const [deployer] = wallets;
 
-  return { pxe, deployer, wallets };
+  return { pxe, store, deployer, wallets };
 };
 
 describe('NFT - Single PXE', () => {
@@ -84,7 +84,7 @@ describe('NFT - Single PXE', () => {
   let nft: NFTContract;
 
   beforeAll(async () => {
-    ({ pxe, deployer, wallets } = await setupTestSuite());
+    ({ pxe, store, deployer, wallets } = await setupTestSuite());
 
     [alice, bob, carl] = wallets;
 
@@ -98,9 +98,9 @@ describe('NFT - Single PXE', () => {
     nft = (await deployNFTWithMinter(alice)) as NFTContract;
   });
 
-  // afterAll(async () => {
-  //   await store.delete();
-  // });
+  afterAll(async () => {
+    await store.delete();
+  });
 
   it('deploys the contract with minter', async () => {
     const salt = Fr.random();
