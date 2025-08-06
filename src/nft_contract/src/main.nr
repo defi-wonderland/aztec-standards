@@ -10,27 +10,32 @@ pub contract NFT {
         authwit::auth::{
             assert_current_call_valid_authwit, assert_current_call_valid_authwit_public,
         },
-        context::PrivateContext,
+        context::{PrivateContext, PublicContext},
         macros::{
             functions::{initializer, internal, private, public, utility, view},
             storage::storage,
         },
         messages::logs::note::encode_and_encrypt_note,
-        note::{constants::MAX_NOTES_PER_PAGE, note_interface::NoteProperties},
-        prelude::{
-            AztecAddress, Map, NoteGetterOptions, NoteViewerOptions, PrivateSet, PublicContext,
-            PublicImmutable, PublicMutable,
+        note::{
+            constants::MAX_NOTES_PER_PAGE, note_getter_options::NoteGetterOptions,
+            note_interface::NoteProperties, note_viewer_options::NoteViewerOptions,
         },
         protocol_types::{
-            constants::DEPLOYER_CONTRACT_ADDRESS, contract_class_id::ContractClassId,
-            traits::FromField,
+            address::AztecAddress,
+            constants::CONTRACT_INSTANCE_REGISTRY_CONTRACT_ADDRESS,
+            contract_class_id::ContractClassId,
+            traits::{FromField, ToField},
+        },
+        state_vars::{
+            Map, private_set::PrivateSet, public_immutable::PublicImmutable,
+            public_mutable::PublicMutable,
         },
         utils::comparison::Comparator,
     };
     // compression library
     use compressed_string::FieldCompressedString;
-    // contract instance deployer
-    use contract_instance_deployer::ContractInstanceDeployer;
+    // contract instance registry
+    use contract_instance_registry::ContractInstanceRegistry;
     // nft note structs
     use crate::types::nft_note::{NFTNote, PartialNFTNote};
 
@@ -168,11 +173,7 @@ pub contract NFT {
         _remove_private_token_owner(storage.private_nfts.at(from), token_id);
         let completer = from;
         NFT::at(context.this_address())
-            .transfer_token_to_commitment_internal(
-                PartialNFTNote { commitment },
-                token_id,
-                completer,
-            )
+            .transfer_token_to_commitment_internal(commitment.to_field(), token_id, completer)
             .enqueue(&mut context);
     }
 
@@ -265,12 +266,7 @@ pub contract NFT {
 
         _update_public_token_owner(storage.public_owners, AztecAddress::zero(), token_id);
         let completer = context.msg_sender();
-        _transfer_token_to_commitment(
-            &mut context,
-            PartialNFTNote { commitment },
-            token_id,
-            completer,
-        );
+        _transfer_token_to_commitment(&mut context, commitment.to_field(), token_id, completer);
     }
 
     /// @notice Stores a commitment in storage
@@ -288,7 +284,7 @@ pub contract NFT {
     #[public]
     #[internal]
     fn transfer_token_to_commitment_internal(
-        commitment: PartialNFTNote,
+        commitment: Field,
         token_id: Field,
         completer: AztecAddress,
     ) {
@@ -378,7 +374,7 @@ pub contract NFT {
         let mut owned_nft_ids = [0; MAX_NOTES_PER_PAGE];
         for i in 0..options.limit {
             if i < nfts.len() {
-                owned_nft_ids[i] = nfts.get_unchecked(i).token_id;
+                owned_nft_ids[i] = nfts.get_unchecked(i).get_token_id();
             }
         }
         let page_limit_reached = nfts.len() == options.limit;
@@ -401,7 +397,6 @@ pub contract NFT {
         NFT::at(context.this_address()).set_nft_exists_internal(token_id, true).enqueue(&mut context);
         storage.private_nfts.at(to).insert(NFTNote::new(token_id, to)).emit(encode_and_encrypt_note(
             &mut context,
-            to,
             to,
         ));
     }
@@ -468,7 +463,7 @@ pub contract NFT {
         assert(!upgrade_authority.eq(AztecAddress::zero()), "upgrade authority not set");
         assert(context.msg_sender().eq(upgrade_authority), "caller is not upgrade authority");
 
-        ContractInstanceDeployer::at(DEPLOYER_CONTRACT_ADDRESS)
+        ContractInstanceRegistry::at(CONTRACT_INSTANCE_REGISTRY_CONTRACT_ADDRESS)
             .update(ContractClassId::from_field(new_contract_class_id))
             .call(&mut context);
     }
@@ -500,14 +495,8 @@ pub contract NFT {
         to: AztecAddress,
         completer: AztecAddress,
     ) -> PartialNFTNote {
-        let commitment = NFTNote::partial(
-            to,
-            private_nfts.at(to).storage_slot,
-            context,
-            to,
-            from,
-            completer,
-        );
+        let commitment =
+            NFTNote::partial(to, private_nfts.at(to).storage_slot, context, to, completer);
         NFT::at(context.this_address()).store_commitment_in_storage_internal(commitment).enqueue(
             context,
         );
@@ -529,7 +518,7 @@ pub contract NFT {
         token_id: Field,
     ) {
         let new_note = NFTNote::new(token_id, to);
-        private_nft_set.insert(new_note).emit(encode_and_encrypt_note(context, to, from));
+        private_nft_set.insert(new_note).emit(encode_and_encrypt_note(context, to));
     }
 
     /// @notice Removes the private token owner
@@ -568,7 +557,7 @@ pub contract NFT {
     #[contract_library_method]
     fn _transfer_token_to_commitment(
         context: &mut PublicContext,
-        commitment: PartialNFTNote,
+        commitment: Field,
         token_id: Field,
         completer: AztecAddress,
     ) {
@@ -576,8 +565,8 @@ pub contract NFT {
         // slot, and it is internally consistent). We *could* clear the storage since each commitment should only be
         // used once, but since the AVM offers no gas refunds for doing so this would just make the transaction be more
         // expensive.
-        assert(context.storage_read(commitment.commitment()), "invalid commitment");
-        commitment.complete(context, completer, token_id);
+        assert(context.storage_read(commitment), "invalid commitment");
+        PartialNFTNote::new(commitment).complete(context, completer, token_id);
     }
 
     /// @notice Validates that the caller is the owner of a token
@@ -612,7 +601,7 @@ pub contract NFT {
     #[contract_library_method]
     fn _validate_from_private(context: &mut PrivateContext, from: AztecAddress) {
         if (!from.eq(context.msg_sender())) {
-            assert_current_call_valid_authwit(context, from);
+            assert_current_call_valid_authwit::<0>(context, from);
         }
     }
 
