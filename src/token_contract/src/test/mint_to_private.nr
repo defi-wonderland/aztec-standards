@@ -17,35 +17,7 @@ unconstrained fn mint_to_private_success() {
     assert(total_supply == mint_amount);
 }
 
-#[test]
-unconstrained fn mint_to_private_failures() {
-    // Setup without account contracts. We are not using authwits here, so dummy accounts are enough
-    let (mut env, token_contract_address, owner, recipient, minter) =
-        utils::setup_with_minter(false);
-
-    // As non-minter
-    let mint_amount: u128 = 10_000;
-    let mint_to_private_call_interface =
-        Token::at(token_contract_address).mint_to_private(owner, owner, mint_amount);
-    // env.assert_private_call_fails(mint_to_private_call_interface);
-}
-
-// #[test]
-// unconstrained fn mint_to_private_failures() {
-//     // Setup without account contracts. We are not using authwits here, so dummy accounts are enough
-//     let (mut env, token_contract_address, owner, recipient, minter) =
-//         utils::setup_with_minter(false);
-
-//     // As non-minter
-//     let mint_amount: u128 = 10_000;
-//     let mint_to_private_call_interface =
-//         Token::at(token_contract_address).mint_to_private(owner, owner, mint_amount);
-//     // env.assert_private_call_fails(mint_to_private_call_interface);
-// }
-
-    // utils::check_private_balance(env, token_contract_address, owner, 0 as u128);
-
-#[test]
+#[test(should_fail_with = "Assertion failed: caller is not minter")]
 unconstrained fn mint_to_private_failure_as_non_minter() {
     // Setup without account contracts. We are not using authwits here, so dummy accounts are enough
     let (mut env, token_contract_address, owner, recipient, minter) =
@@ -58,7 +30,7 @@ unconstrained fn mint_to_private_failure_as_non_minter() {
     env.call_private(recipient, mint_to_private_call_interface);
 }
 
-#[test]
+#[test(should_fail_with = "Contract execution has reverted: Assertion failed: attempt to add with overflow 'total_supply.read() + amount'")]
 unconstrained fn mint_to_private_failure_recipient_balance_overflow() {
     let (mut env, token_contract_address, owner, recipient, minter) =
         utils::setup_with_minter(false);
@@ -70,30 +42,21 @@ unconstrained fn mint_to_private_failure_recipient_balance_overflow() {
     // Recipient's balance overflows
     env.call_private(
         minter,
-        Token::at(token_contract_address).mint_to_private(owner, owner, 1 as u128)
+        Token::at(token_contract_address).mint_to_private(owner, owner, 1 as u128),
     );
-   
-    // utils::check_private_balance(env, token_contract_address, owner, 0);
-    // utils::check_total_supply(env, token_contract_address, max_u128);
 }
-#[test]
+#[test(should_fail_with = "Contract execution has reverted: Assertion failed: attempt to add with overflow 'total_supply.read() + amount'")]
 unconstrained fn mint_to_private_failure_total_supply_overflow() {
     // Setup without account contracts. We are not using authwits here, so dummy accounts are enough
     let (mut env, token_contract_address, owner, recipient, minter) =
         utils::setup_with_minter(false);
-    
-    env.call_private(minter, Token::at(token_contract_address).mint_to_private(owner, owner, utils::max_u128()));
-    env.call_private(minter, Token::at(token_contract_address).mint_to_private(owner, owner, 1 as u128));
+
+    env.call_private(
+        minter,
+        Token::at(token_contract_address).mint_to_private(recipient, recipient, utils::max_u128()),
+    );
+    env.call_private(
+        minter,
+        Token::at(token_contract_address).mint_to_private(owner, owner, 1 as u128),
+    );
 }
-
-// #[test]
-// unconstrained fn mint_to_private_failures() {
-
-//     // Overflow total supply
-//     let mint_to_private_call_interface =
-//         Token::at(token_contract_address).mint_to_private(owner, owner, mint_amount);
-//     // env.assert_private_call_fails(mint_to_private_call_interface);
-
-//     env.call_private(minter, Token::at(token_contract_address).mint_to_private(owner, owner, 1 as u128));
-
-// }

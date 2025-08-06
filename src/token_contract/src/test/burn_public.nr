@@ -10,7 +10,12 @@ unconstrained fn burn_public_success() {
 
     // Burn less than balance
     env.call_public(owner, Token::at(token_contract_address).burn_public(owner, burn_amount, 0));
-    utils::check_public_balance(env, token_contract_address, owner, mint_amount - burn_amount);
+    utils::check_public_balance(
+        env,
+        token_contract_address,
+        owner,
+        mint_amount - burn_amount,
+    );
 }
 
 #[test]
@@ -19,7 +24,7 @@ unconstrained fn burn_public_decrease_total_supply() {
         utils::setup_and_mint_to_public_without_minter(false);
     let burn_amount = mint_amount / 10 as u128;
 
-    utils::check_total_supply(env,token_contract_address, mint_amount);
+    utils::check_total_supply(env, token_contract_address, mint_amount);
 
     // Burn less than balance
     env.call_public(owner, Token::at(token_contract_address).burn_public(owner, burn_amount, 0));
