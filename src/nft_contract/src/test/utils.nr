@@ -1,34 +1,31 @@
 use crate::NFT;
 use aztec::{
     oracle::{execution::{get_block_number, get_contract_address}, storage::storage_read},
-    prelude::AztecAddress,
-    protocol_types::storage::map::derive_storage_slot_in_map,
-    test::helpers::{cheatcodes, test_environment::TestEnvironment},
+    protocol_types::{address::AztecAddress, storage::map::derive_storage_slot_in_map},
+    test::helpers::{test_environment::TestEnvironment, txe_oracles as cheatcodes},
 };
 
 pub unconstrained fn setup_with_minter(
     with_account_contracts: bool,
-) -> (&mut TestEnvironment, AztecAddress, AztecAddress, AztecAddress, AztecAddress) {
+) -> (TestEnvironment, AztecAddress, AztecAddress, AztecAddress, AztecAddress) {
     // Setup env, generate keys
     let mut env = TestEnvironment::new();
     let (owner, minter, recipient) = if with_account_contracts {
-        let owner = env.create_account_contract(1);
-        let minter = env.create_account_contract(2);
-        let recipient = env.create_account_contract(3);
-        env.advance_block_by(1); // Ensure contracts are deployed before proceeding
-        (owner, minter, recipient)
+        let owner = env.create_contract_account();
+        let minter = env.create_contract_account();
+        let recipient = env.create_contract_account();
+                (owner, minter, recipient)
     } else {
         // For simple tests without authorization, use regular accounts
-        let owner = env.create_account(1);
-        let minter = env.create_account(2);
-        let recipient = env.create_account(3);
+        let owner = env.create_light_account();
+        let minter = env.create_light_account();
+        let recipient = env.create_light_account();
         (owner, minter, recipient)
     };
 
     let nft_contract_address = deploy_nft_with_minter(&mut env, owner, minter);
-    env.advance_block_by(1); // Ensure NFT contract is deployed before returning
 
-    (&mut env, nft_contract_address, owner, minter, recipient)
+    (env, nft_contract_address, owner, minter, recipient)
 }
 
 pub unconstrained fn deploy_nft_with_minter(
@@ -36,9 +33,6 @@ pub unconstrained fn deploy_nft_with_minter(
     owner: AztecAddress,
     minter: AztecAddress,
 ) -> AztecAddress {
-    // Start the test in the account contract address
-    env.impersonate(owner);
-
     // Deploy token contract
     let initializer_call_interface = NFT::interface().constructor_with_minter(
         "TestNFT000000000000000000000000",
@@ -46,26 +40,21 @@ pub unconstrained fn deploy_nft_with_minter(
         minter,
         AztecAddress::zero(),
     );
-    let nft_contract = env.deploy("./@nft_contract", "NFT").with_public_void_initializer(
-        owner,
-        initializer_call_interface,
-    );
-    env.advance_block_by(1);
+    let nft_contract_address =
+        env.deploy("@nft_contract/NFT").with_public_initializer(minter, initializer_call_interface);
 
-    nft_contract.to_address()
+    nft_contract_address
 }
 
 /// @dev Setup and mint to owner in public
 pub unconstrained fn setup_and_mint_to_public(
     with_account_contracts: bool,
     token_id: Field,
-) -> (&mut TestEnvironment, AztecAddress, AztecAddress, AztecAddress, AztecAddress) {
+) -> (TestEnvironment, AztecAddress, AztecAddress, AztecAddress, AztecAddress) {
     let (env, nft_contract_address, owner, minter, recipient) =
         setup_with_minter(with_account_contracts);
 
-    env.impersonate(minter);
-    NFT::at(nft_contract_address).mint_to_public(owner, token_id).call(&mut env.public());
-    env.advance_block_by(1);
+    env.call_public(minter, NFT::at(nft_contract_address).mint_to_public(owner, token_id));
 
     (env, nft_contract_address, owner, minter, recipient)
 }
@@ -73,13 +62,11 @@ pub unconstrained fn setup_and_mint_to_public(
 pub unconstrained fn setup_and_mint_to_private(
     with_account_contracts: bool,
     token_id: Field,
-) -> (&mut TestEnvironment, AztecAddress, AztecAddress, AztecAddress, AztecAddress) {
+) -> (TestEnvironment, AztecAddress, AztecAddress, AztecAddress, AztecAddress) {
     let (env, nft_contract_address, owner, minter, recipient) =
         setup_with_minter(with_account_contracts);
 
-    env.impersonate(minter);
-    NFT::at(nft_contract_address).mint_to_private(owner, token_id).call(&mut env.private());
-    env.advance_block_by(1);
+    env.call_private(minter, NFT::at(nft_contract_address).mint_to_private(owner, token_id));
 
     (env, nft_contract_address, owner, minter, recipient)
 }
@@ -109,13 +96,12 @@ pub unconstrained fn assert_nft_does_not_exist(
 }
 
 pub unconstrained fn assert_owns_public_nft(
-    env: &mut TestEnvironment,
+    env: TestEnvironment,
     nft_contract_address: AztecAddress,
     owner: AztecAddress,
     token_id: Field,
 ) {
-    let obtained_owner =
-        NFT::at(nft_contract_address).public_owner_of(token_id).view(&mut env.public());
+    let obtained_owner = env.view_public(NFT::at(nft_contract_address).public_owner_of(token_id));
     assert(owner == obtained_owner, "incorrect NFT owner");
 }
 

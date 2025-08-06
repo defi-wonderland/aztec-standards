@@ -2,8 +2,8 @@ use crate::NFT;
 use crate::test::utils;
 use aztec::{
     oracle::{execution::get_block_number, storage::storage_read},
-    prelude::AztecAddress,
-    test::helpers::cheatcodes,
+    protocol_types::address::AztecAddress,
+    test::helpers::txe_oracles as cheatcodes,
 };
 
 #[test]
