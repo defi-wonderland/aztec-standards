@@ -26,13 +26,13 @@ const fullConfig = { ...config, l1Contracts };
 fullConfig.proverEnabled = false;
 
 export const setupPXE = async () => {
-  const store = await createStore('pxe', {
-    dataDirectory: 'store',
-    dataStoreMapSizeKB: 1e6,
-  });
-  const pxe = await createPXEService(node, fullConfig, { store });
+  // const store = await createStore('pxe', {
+  //   dataDirectory: 'store',
+  //   dataStoreMapSizeKB: 1e6,
+  // });
+  const pxe = await createPXEService(node, fullConfig);
   await waitForPXE(pxe);
-  return { pxe, store };
+  return { pxe };
 };
 
 // --- Token Utils ---
