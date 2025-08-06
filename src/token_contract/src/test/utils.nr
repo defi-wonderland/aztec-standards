@@ -189,87 +189,59 @@ pub unconstrained fn transfer_in_private(
 }
 
 pub unconstrained fn check_public_balance(
+    env: TestEnvironment,
     token_contract_address: AztecAddress,
     address: AztecAddress,
     address_amount: u128,
 ) {
-    let amount: u128 = get_public_balance(token_contract_address, address);
+    let amount: u128 = get_public_balance(env, token_contract_address, address);
     assert(amount == address_amount, "Public balance is not correct");
 }
 
 pub unconstrained fn get_public_balance(
+    env: TestEnvironment,
     token_contract_address: AztecAddress,
     address: AztecAddress,
 ) -> u128 {
-    let current_contract_address = get_contract_address();
-    set_contract_address(token_contract_address);
-    let block_number = get_block_number();
-
-    let balances_slot = Token::storage_layout().public_balances.slot;
-    let address_slot = derive_storage_slot_in_map(balances_slot, address);
-    let amount: u128 = storage_read(token_contract_address, address_slot, block_number);
-    set_contract_address(current_contract_address);
+    let amount = env.view_public(Token::at(token_contract_address).balance_of_public(address));
     amount
 }
 
 pub unconstrained fn check_total_supply(
+    env: TestEnvironment,
     token_contract_address: AztecAddress,
     expected_total_supply: u128,
 ) {
-    let total_supply: u128 = get_total_supply(token_contract_address);
+    let total_supply: u128 = get_total_supply(env, token_contract_address);
     assert(total_supply == expected_total_supply, "Total supply is not correct");
 }
 
-pub unconstrained fn get_total_supply(token_contract_address: AztecAddress) -> u128 {
-    let current_contract_address = get_contract_address();
-    set_contract_address(token_contract_address);
-    let block_number = get_block_number();
-
-    let total_supply_slot = Token::storage_layout().total_supply.slot;
-    let total_supply: u128 = storage_read(token_contract_address, total_supply_slot, block_number);
-    set_contract_address(current_contract_address);
+pub unconstrained fn get_total_supply(
+    env: TestEnvironment,
+    token_contract_address: AztecAddress,
+) -> u128 {
+    let total_supply = env.view_public(Token::at(token_contract_address).total_supply());
     total_supply
 }
 
 pub unconstrained fn check_private_balance(
+    env: TestEnvironment,
     token_contract_address: AztecAddress,
     address: AztecAddress,
     address_amount: u128,
 ) {
-    let balance_of_private = get_private_balance(token_contract_address, address);
+    let balance_of_private = get_private_balance(env, token_contract_address, address);
     assert(balance_of_private == address_amount, "Private balance is not correct");
 }
 
 pub unconstrained fn get_private_balance(
+    env: TestEnvironment,
     token_contract_address: AztecAddress,
     address: AztecAddress,
 ) -> u128 {
-    let current_contract_address = get_contract_address();
-    set_contract_address(token_contract_address);
-    // Direct call to unconstrained
-    let amt = Token::balance_of_private(address);
-    set_contract_address(current_contract_address);
+    let amt = env.simulate_utility(Token::at(token_contract_address).balance_of_private(address));
     amt
 }
-
-// TODO: I think we don't need this anymore.
-// This is used if we need to add a token note manually, in the case where the note is not emitted in logs.
-// pub unconstrained fn add_token_note(
-//     env: &mut TestEnvironment,
-//     token_contract_address: AztecAddress,
-//     owner: AztecAddress,
-//     amount: u128,
-//     note_randomness: Field,
-// ) {
-//     let balances_owner_slot =
-//         derive_storage_slot_in_map(Token::storage_layout().private_balances.slot, owner);
-
-//     env.add_note(
-//         UintNote { value: amount, owner: owner, randomness: note_randomness },
-//         balances_owner_slot,
-//         token_contract_address,
-//     );
-// }
 
 pub unconstrained fn get_private_balance_notes(
     token_contract_address: AztecAddress,

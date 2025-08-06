@@ -17,7 +17,7 @@ unconstrained fn nft_transfer_private_to_commitment_success() {
         owner,
         NFT::at(nft_contract_address).initialize_transfer_commitment(owner, recipient, owner),
     );
-    
+
     // Verify commitment is stored
     assert(utils::get_commitment_stored(nft_contract_address, commitment), "Commitment not stored");
 
@@ -26,7 +26,7 @@ unconstrained fn nft_transfer_private_to_commitment_success() {
         owner,
         NFT::at(nft_contract_address).transfer_private_to_commitment(owner, token_id, commitment, 0),
     );
-    
+
     // Verify NFT is removed from owner and in commitment
     utils::assert_private_nft_nullified(nft_contract_address, owner, token_id);
     // NFT should be in recipient's private set

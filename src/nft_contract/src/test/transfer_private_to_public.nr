@@ -50,7 +50,7 @@ unconstrained fn nft_transfer_private_to_public_authorized_success() {
 
     // Impersonate recipient to perform the authorized transfer
     let _ = env.call_private(recipient, transfer_call_interface);
-    
+
     // Verify the NFT is now owned publicly by recipient
     utils::assert_owns_public_nft(env, nft_contract_address, recipient, token_id);
     utils::assert_private_nft_nullified(nft_contract_address, recipient, token_id);

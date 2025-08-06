@@ -17,7 +17,7 @@ unconstrained fn nft_transfer_private_to_private_success() {
         owner,
         NFT::at(nft_contract_address).transfer_private_to_private(owner, recipient, token_id, 0),
     );
-    
+
     // Verify ownership transfer
     utils::assert_private_nft_nullified(nft_contract_address, owner, token_id);
     utils::assert_owns_private_nft(nft_contract_address, recipient, token_id);
@@ -38,7 +38,7 @@ unconstrained fn nft_transfer_private_to_private_self_success() {
         owner,
         NFT::at(nft_contract_address).transfer_private_to_private(owner, owner, token_id, 0),
     );
-    
+
     // Verify owner still owns the NFT
     utils::assert_owns_private_nft(nft_contract_address, owner, token_id);
 }
@@ -66,7 +66,7 @@ unconstrained fn nft_transfer_private_to_private_authorized_success() {
 
     // Impersonate recipient to perform the authorized transfer
     env.call_private(recipient, transfer_call_interface);
-    
+
     // Verify ownership transfer
     utils::assert_private_nft_nullified(nft_contract_address, owner, token_id);
     utils::assert_owns_private_nft(nft_contract_address, recipient, token_id);

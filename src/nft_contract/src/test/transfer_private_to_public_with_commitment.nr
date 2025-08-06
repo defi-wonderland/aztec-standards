@@ -89,7 +89,7 @@ unconstrained fn nft_transfer_private_to_public_with_commitment_and_finalize_suc
             0,
         ),
     );
-    
+
     // Verify intermediate state (public ownership and commitment)
     utils::assert_private_nft_nullified(nft_contract_address, owner, token_id);
     utils::assert_owns_public_nft(env, nft_contract_address, recipient, token_id);

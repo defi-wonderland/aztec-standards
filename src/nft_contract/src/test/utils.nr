@@ -14,7 +14,7 @@ pub unconstrained fn setup_with_minter(
         let owner = env.create_contract_account();
         let minter = env.create_contract_account();
         let recipient = env.create_contract_account();
-                (owner, minter, recipient)
+        (owner, minter, recipient)
     } else {
         // For simple tests without authorization, use regular accounts
         let owner = env.create_light_account();
