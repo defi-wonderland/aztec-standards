@@ -10,24 +10,26 @@ pub contract Token {
         authwit::auth::{
             assert_current_call_valid_authwit, assert_current_call_valid_authwit_public,
         },
-        context::PrivateContext,
+        context::{PrivateContext, PublicContext},
         macros::{
             functions::{initializer, internal, private, public, utility, view},
             storage::storage,
         },
         messages::logs::note::encode_and_encrypt_note,
-        prelude::{AztecAddress, Map, PublicContext, PublicImmutable, PublicMutable},
         protocol_types::{
-            constants::DEPLOYER_CONTRACT_ADDRESS, contract_class_id::ContractClassId,
-            traits::FromField,
+            address::AztecAddress,
+            constants::CONTRACT_INSTANCE_REGISTRY_CONTRACT_ADDRESS,
+            contract_class_id::ContractClassId,
+            traits::{FromField, ToField},
         },
+        state_vars::{Map, public_immutable::PublicImmutable, public_mutable::PublicMutable},
     };
     // note library
     use uint_note::uint_note::{PartialUintNote, UintNote};
     // compression library
     use compressed_string::FieldCompressedString;
-    // contract instance deployer
-    use contract_instance_deployer::ContractInstanceDeployer;
+    // contract instance registry
+    use contract_instance_registry::ContractInstanceRegistry;
     // private balance library
     use crate::types::balance_set::BalanceSet;
 
@@ -176,7 +178,7 @@ pub contract Token {
             to,
             completer,
         );
-        commitment.commitment
+        commitment.to_field()
     }
 
     /// @notice Transfer tokens from private balance to another private balance
@@ -230,7 +232,11 @@ pub contract Token {
         );
 
         Token::at(context.this_address())
-            .increase_commitment_balance_internal(PartialUintNote { commitment }, from, amount)
+            .increase_commitment_balance_internal(
+                PartialUintNote::from_field(commitment),
+                from,
+                amount,
+            )
             .enqueue(&mut context);
     }
 
@@ -275,7 +281,7 @@ pub contract Token {
             to,
             completer,
         );
-        commitment.commitment
+        commitment.to_field()
     }
 
     /// @notice Recursively subtracts balance from commitment
@@ -340,7 +346,7 @@ pub contract Token {
         let completer = context.msg_sender();
         _increase_commitment_balance(
             &mut context,
-            PartialUintNote { commitment },
+            PartialUintNote::from_field(commitment),
             completer,
             amount,
         );
@@ -475,7 +481,7 @@ pub contract Token {
         _increase_total_supply(storage.total_supply, amount);
         _increase_commitment_balance(
             &mut context,
-            PartialUintNote { commitment },
+            PartialUintNote::from_field(commitment),
             completer,
             amount,
         );
@@ -559,7 +565,6 @@ pub contract Token {
         private_balances.at(account).add(account, change).emit(encode_and_encrypt_note(
             context,
             account,
-            account,
         ));
     }
 
@@ -576,7 +581,7 @@ pub contract Token {
         amount: u128,
     ) {
         // Increases `amount` to the private balance of `to`, and emits a private balance note to `to` from `from`
-        private_balances.at(to).add(to, amount).emit(encode_and_encrypt_note(context, to, from));
+        private_balances.at(to).add(to, amount).emit(encode_and_encrypt_note(context, to));
     }
 
     /// @notice Updates the given storage pointer `public_balances` to increase the public balance of `to` by `amount`
@@ -696,7 +701,6 @@ pub contract Token {
             private_balances.at(to).set.storage_slot,
             context,
             to,
-            from,
             completer,
         );
 
@@ -718,7 +722,7 @@ pub contract Token {
         assert(!upgrade_authority.eq(AztecAddress::zero()), "upgrade authority not set");
         assert(context.msg_sender().eq(upgrade_authority), "caller is not upgrade authority");
 
-        ContractInstanceDeployer::at(DEPLOYER_CONTRACT_ADDRESS)
+        ContractInstanceRegistry::at(CONTRACT_INSTANCE_REGISTRY_CONTRACT_ADDRESS)
             .update(ContractClassId::from_field(new_contract_class_id))
             .call(&mut context);
     }
@@ -733,7 +737,7 @@ pub contract Token {
     #[contract_library_method]
     fn _validate_from_private(context: &mut PrivateContext, from: AztecAddress) {
         if (!from.eq(context.msg_sender())) {
-            assert_current_call_valid_authwit(context, from);
+            assert_current_call_valid_authwit::<2>(context, from);
         }
     }
 
