@@ -10,9 +10,15 @@ unconstrained fn transfer_private_to_public_on_behalf_of_self() {
         utils::setup_and_mint_to_private_without_minter(false);
 
     let transfer_private_to_public_amount = mint_amount / (10 as u128);
-    Token::at(token_contract_address)
-        .transfer_private_to_public(owner, owner, transfer_private_to_public_amount, 0)
-        .call(&mut env.private());
+    env.call_private(
+        owner,
+        Token::at(token_contract_address).transfer_private_to_public(
+            owner,
+            owner,
+            transfer_private_to_public_amount,
+            0,
+        ),
+    );
     utils::check_private_balance(
         token_contract_address,
         owner,
@@ -38,10 +44,8 @@ unconstrained fn transfer_private_to_public_on_behalf_of_other() {
         recipient,
         transfer_private_to_public_call_interface,
     );
-    // Impersonate recipient
-    env.impersonate(recipient);
     // transfer_private_to_public tokens
-    transfer_private_to_public_call_interface.call(&mut env.private());
+    env.call_private(recipient, transfer_private_to_public_call_interface);
     utils::check_private_balance(
         token_contract_address,
         owner,
@@ -62,19 +66,16 @@ unconstrained fn transfer_private_to_public_multiple_notes_recursively() {
     let notes_amount = 1000 as u128;
     let notes_count = 12;
     let total_amount = notes_amount * notes_count;
-    env.impersonate(minter);
     for _ in 0..notes_count {
-        utils::mint_to_private(env, token_contract_address, owner, notes_amount);
+        utils::mint_to_private(env, token_contract_address, owner, notes_amount, minter);
     }
 
     // Transfer tokens
     // Transfer will require 11 notes with change, which requires 2 recursive calls: 2 + 8 + 1
-    env.impersonate(owner);
     let transfer_amount = total_amount - notes_amount - (1 as u128);
     let transfer_private_from_call_interface = Token::at(token_contract_address)
         .transfer_private_to_public(owner, recipient, transfer_amount, 0);
-    transfer_private_from_call_interface.call(&mut env.private());
-    env.advance_block_by(1);
+    env.call_private(owner, transfer_private_from_call_interface);
 
     // NOTE: Removing this check makes the test fail.
     let owner_balance = utils::get_private_balance(token_contract_address, owner);
@@ -109,9 +110,15 @@ unconstrained fn transfer_private_to_public_failure_more_than_balance() {
         utils::setup_and_mint_to_private_without_minter(false);
 
     let transfer_private_to_public_amount = mint_amount + (1 as u128);
-    Token::at(token_contract_address)
-        .transfer_private_to_public(owner, owner, transfer_private_to_public_amount, 0)
-        .call(&mut env.private());
+    env.call_private(
+        owner,
+        Token::at(token_contract_address).transfer_private_to_public(
+            owner,
+            owner,
+            transfer_private_to_public_amount,
+            0,
+        ),
+    );
 }
 
 #[test(should_fail_with = "Balance too low")]
@@ -127,10 +134,8 @@ unconstrained fn transfer_private_to_public_failure_on_behalf_of_other_more_than
         recipient,
         transfer_private_to_public_call_interface,
     );
-    // Impersonate recipient
-    env.impersonate(recipient);
     // transfer_private_to_public tokens
-    transfer_private_to_public_call_interface.call(&mut env.private());
+    env.call_private(recipient, transfer_private_to_public_call_interface);
 }
 
 #[test(should_fail_with = "Unknown auth witness for message hash")]
@@ -146,10 +151,8 @@ unconstrained fn transfer_private_to_public_failure_on_behalf_of_other_invalid_d
         owner,
         transfer_private_to_public_call_interface,
     );
-    // Impersonate recipient
-    env.impersonate(recipient);
     // transfer_private_to_public tokens
-    transfer_private_to_public_call_interface.call(&mut env.private());
+    env.call_private(recipient, transfer_private_to_public_call_interface);
 }
 
 #[test(should_fail_with = "Unknown auth witness for message hash")]
@@ -160,8 +163,6 @@ unconstrained fn transfer_private_to_public_failure_on_behalf_of_other_no_approv
     let transfer_private_to_public_amount = mint_amount + (1 as u128);
     let transfer_private_to_public_call_interface = Token::at(token_contract_address)
         .transfer_private_to_public(owner, recipient, transfer_private_to_public_amount, 0);
-    // Impersonate recipient
-    env.impersonate(recipient);
     // transfer_private_to_public tokens
-    transfer_private_to_public_call_interface.call(&mut env.private());
+    env.call_private(recipient, transfer_private_to_public_call_interface);
 }

@@ -17,10 +17,8 @@ unconstrained fn transfer_private_on_behalf_of_other() {
         recipient,
         transfer_private_from_call_interface,
     );
-    // Impersonate recipient to perform the call
-    env.impersonate(recipient);
-    // Transfer tokens
-    transfer_private_from_call_interface.call(&mut env.private());
+    // Transfer tokens using new API
+    env.call_private(recipient, transfer_private_from_call_interface);
     // Check balances
     utils::check_private_balance(token_contract_address, owner, mint_amount - transfer_amount);
     utils::check_private_balance(token_contract_address, recipient, transfer_amount);
@@ -35,20 +33,17 @@ unconstrained fn transfer_private_multiple_notes_recursively() {
     let notes_count: u128 = 12;
     let total_amount = notes_amount * notes_count;
 
-    env.impersonate(minter);
     for _ in 0..notes_count {
-        utils::mint_to_private(env, token_contract_address, owner, notes_amount);
+        utils::mint_to_private(env, token_contract_address, owner, notes_amount, minter);
     }
 
     // Transfer tokens
     // Transfer will require 11 notes with change, which requires 2 recursive calls: 2 + 8 + 1
-    env.impersonate(owner);
     // transfer amount is 10999 of the 12000 total
     let transfer_amount = total_amount - notes_amount - (1 as u128);
     let transfer_private_from_call_interface = Token::at(token_contract_address)
         .transfer_private_to_private(owner, recipient, transfer_amount, 0);
-    transfer_private_from_call_interface.call(&mut env.private());
-    env.advance_block_by(1);
+    env.call_private(owner, transfer_private_from_call_interface);
 
     // NOTE: Removing this check makes the test fail.
     let recipient_balance = utils::get_private_balance(token_contract_address, recipient);
@@ -93,10 +88,8 @@ unconstrained fn transfer_private_failure_on_behalf_of_more_than_balance() {
         recipient,
         transfer_private_from_call_interface,
     );
-    // Impersonate recipient to perform the call
-    env.impersonate(recipient);
-    // Transfer tokens
-    transfer_private_from_call_interface.call(&mut env.private());
+    // Transfer tokens using new API
+    env.call_private(recipient, transfer_private_from_call_interface);
 }
 
 // Unknown auth witness for message hash 0x055a9af747d60526794cfa8d3cf0b506831f34a202f85f6576ac67c429962b01
@@ -109,10 +102,8 @@ unconstrained fn transfer_private_failure_on_behalf_of_other_without_approval() 
     let transfer_amount = (1000 as u128);
     let transfer_private_from_call_interface = Token::at(token_contract_address)
         .transfer_private_to_private(owner, recipient, transfer_amount, 1);
-    // Impersonate recipient to perform the call
-    env.impersonate(recipient);
-    // Transfer tokens
-    transfer_private_from_call_interface.call(&mut env.private());
+    // Transfer tokens using new API
+    env.call_private(recipient, transfer_private_from_call_interface);
 }
 
 #[test(should_fail_with = "Unknown auth witness for message hash")]
@@ -129,8 +120,6 @@ unconstrained fn transfer_private_failure_on_behalf_of_other_wrong_caller() {
         owner,
         transfer_private_from_call_interface,
     );
-    // Impersonate recipient to perform the call
-    env.impersonate(recipient);
-    // Transfer tokens
-    transfer_private_from_call_interface.call(&mut env.private());
+    // Transfer tokens using new API
+    env.call_private(recipient, transfer_private_from_call_interface);
 }

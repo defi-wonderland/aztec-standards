@@ -12,11 +12,15 @@ unconstrained fn transfer_public_to_private_success() {
     let nonce = 0;
     let transfer_amount = mint_amount / 2;
 
-    env.impersonate(sender);
-    Token::at(token_contract_address)
-        .transfer_public_to_private(sender, recipient, transfer_amount, nonce)
-        .call(&mut env.private());
-    env.advance_block_by(1);
+    env.call_private(
+        sender,
+        Token::at(token_contract_address).transfer_public_to_private(
+            sender,
+            recipient,
+            transfer_amount,
+            nonce,
+        ),
+    );
 
     // sender public balance decreases
     utils::check_public_balance(token_contract_address, sender, transfer_amount);
@@ -35,10 +39,15 @@ unconstrained fn transfer_public_to_private_not_enough_balance() {
     let nonce = 0;
     let transfer_amount = mint_amount * 2;
 
-    env.impersonate(sender);
-    Token::at(token_contract_address)
-        .transfer_public_to_private(sender, recipient, transfer_amount, nonce)
-        .call(&mut env.private());
+    env.call_private(
+        sender,
+        Token::at(token_contract_address).transfer_public_to_private(
+            sender,
+            recipient,
+            transfer_amount,
+            nonce,
+        ),
+    );
 }
 
 #[test]
@@ -48,7 +57,6 @@ unconstrained fn transfer_public_to_private_authwitness_success() {
 
     let transfer_amount = mint_amount / 2;
 
-    env.impersonate(sender);
     let transfer_public_to_private_call_interface = Token::at(token_contract_address)
         .transfer_public_to_private(sender, recipient, transfer_amount, 0);
     authwit_cheatcodes::add_private_authwit_from_call_interface(
@@ -57,9 +65,7 @@ unconstrained fn transfer_public_to_private_authwitness_success() {
         transfer_public_to_private_call_interface,
     );
 
-    env.impersonate(recipient);
-    transfer_public_to_private_call_interface.call(&mut env.private());
-    env.advance_block_by(1);
+    env.call_private(recipient, transfer_public_to_private_call_interface);
 
     // Check balances changes as expected
     utils::check_private_balance(token_contract_address, recipient, transfer_amount);
@@ -73,12 +79,10 @@ unconstrained fn transfer_public_to_private_authwitness_unauthorized() {
 
     let transfer_amount = mint_amount / 2;
 
-    env.impersonate(sender);
     let transfer_public_to_private_call_interface = Token::at(token_contract_address)
         .transfer_public_to_private(sender, recipient, transfer_amount, 0);
 
     // no authwit added
 
-    env.impersonate(recipient);
-    transfer_public_to_private_call_interface.call(&mut env.private());
+    env.call_private(recipient, transfer_public_to_private_call_interface);
 }

@@ -11,17 +11,23 @@ unconstrained fn transfer_private_to_commitment() {
     utils::check_private_balance(token_contract_address, recipient, 0 as u128);
 
     // Prepare commitment
-    env.impersonate(owner);
-    let commitment = Token::at(token_contract_address)
-        .initialize_transfer_commitment(owner, recipient, owner)
-        .call(&mut env.private());
+    let commitment = env.call_private(
+        owner,
+        Token::at(token_contract_address).initialize_transfer_commitment(owner, recipient, owner),
+    );
 
     // Transfer tokens
     let transfer_amount = mint_amount;
-    Token::at(token_contract_address)
-        .transfer_private_to_commitment(owner, commitment, transfer_amount, 0)
-        .call(&mut env.private());
-    env.advance_block_by(1);
+    env.call_private(
+        owner,
+        Token::at(token_contract_address).transfer_private_to_commitment(
+            owner,
+            commitment,
+            transfer_amount,
+            0,
+        ),
+    );
+    env.mine_block();
 
     // Check balances
     utils::check_private_balance(token_contract_address, owner, 0 as u128);
@@ -39,11 +45,11 @@ unconstrained fn transfer_private_to_commitment_on_behalf_of_other() {
     let transfer_amount = mint_amount;
 
     // Prepare commitment
-    env.impersonate(owner);
-    let commitment = Token::at(token_contract_address)
-        .initialize_transfer_commitment(owner, recipient, owner)
-        .call(&mut env.private());
-    env.advance_block_by(1);
+    let commitment = env.call_private(
+        owner,
+        Token::at(token_contract_address).initialize_transfer_commitment(owner, recipient, owner),
+    );
+    env.mine_block();
 
     let transfer_to_commitment_call_interface = Token::at(token_contract_address)
         .transfer_private_to_commitment(owner, commitment, transfer_amount, 0);
@@ -55,9 +61,8 @@ unconstrained fn transfer_private_to_commitment_on_behalf_of_other() {
     );
 
     // Transfer tokens
-    env.impersonate(recipient);
-    transfer_to_commitment_call_interface.call(&mut env.private());
-    env.advance_block_by(1);
+    env.call_private(recipient, transfer_to_commitment_call_interface);
+    env.mine_block();
 
     // Check balances
     utils::check_private_balance(token_contract_address, owner, 0 as u128);

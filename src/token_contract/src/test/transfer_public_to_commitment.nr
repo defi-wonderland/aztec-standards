@@ -32,16 +32,24 @@ unconstrained fn transfer_public_to_commitment_external_orchestration() {
     let _ = OracleMock::mock("getRandomField").returns(note_randomness);
 
     // We prepare the transfer
-    let commitment = Token::at(token_contract_address)
-        .initialize_transfer_commitment(owner, recipient, owner)
-        .call(&mut env.private());
+    let commitment_result = env.call_private(
+        owner,
+        Token::at(token_contract_address).initialize_transfer_commitment(owner, recipient, owner),
+    );
+    let commitment = commitment_result;
 
     // Finalize the transfer of the tokens (message sender owns the tokens in public)
-    Token::at(token_contract_address)
-        .transfer_public_to_commitment(owner, commitment, mint_amount, 0)
-        .call(&mut env.public());
+    env.call_public(
+        owner,
+        Token::at(token_contract_address).transfer_public_to_commitment(
+            owner,
+            commitment,
+            mint_amount,
+            0,
+        ),
+    );
 
-    env.advance_block_by(1);
+    env.mine_block();
 
     // Recipient's private balance should be equal to the amount
     utils::check_private_balance(token_contract_address, recipient, mint_amount);
@@ -57,9 +65,15 @@ unconstrained fn transfer_public_to_commitment_transfer_not_initialized() {
     let commitment = random();
 
     // Try finalizing the transfer without preparing it first
-    Token::at(token_contract_address)
-        .transfer_public_to_commitment(owner, commitment, mint_amount, 0)
-        .call(&mut env.public());
+    env.call_public(
+        owner,
+        Token::at(token_contract_address).transfer_public_to_commitment(
+            owner,
+            commitment,
+            mint_amount,
+            0,
+        ),
+    );
 }
 
 #[test(should_fail_with = "attempt to subtract with overflow 'public_balances.at(from).read() - amount'")]
@@ -71,13 +85,20 @@ unconstrained fn transfer_public_to_commitment_failure_not_an_owner() {
     // (For this specific test we could set a random value for the commitment and not do the call to `prepare...`
     // as the token balance check is before we use the value but that would made the test less robust against changes
     // in the contract.)
-    let commitment = Token::at(token_contract_address)
-        .initialize_transfer_commitment(owner, not_owner, owner)
-        .call(&mut env.private());
+    let commitment_result = env.call_private(
+        owner,
+        Token::at(token_contract_address).initialize_transfer_commitment(owner, not_owner, owner),
+    );
+    let commitment = commitment_result;
 
     // Try transferring someone else's token balance
-    env.impersonate(not_owner);
-    Token::at(token_contract_address)
-        .transfer_public_to_commitment(not_owner, commitment, mint_amount, 0)
-        .call(&mut env.public());
+    env.call_public(
+        not_owner,
+        Token::at(token_contract_address).transfer_public_to_commitment(
+            not_owner,
+            commitment,
+            mint_amount,
+            0,
+        ),
+    );
 }

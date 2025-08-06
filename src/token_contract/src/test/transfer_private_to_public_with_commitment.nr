@@ -1,5 +1,6 @@
 use crate::test::utils::{self, mint_amount};
 use crate::Token;
+use aztec::protocol_types::traits::FromField;
 use aztec::test::helpers::authwit as authwit_cheatcodes;
 use uint_note::uint_note::PartialUintNote;
 
@@ -13,11 +14,15 @@ unconstrained fn transfer_private_to_public_with_commitment() {
 
     // Transfer tokens
     let transfer_amount = mint_amount;
-    env.impersonate(owner);
-    let _ = Token::at(token_contract_address)
-        .transfer_private_to_public_with_commitment(owner, recipient, transfer_amount, 0)
-        .call(&mut env.private());
-    env.advance_block_by(1);
+    let _ = env.call_private(
+        owner,
+        Token::at(token_contract_address).transfer_private_to_public_with_commitment(
+            owner,
+            recipient,
+            transfer_amount,
+            0,
+        ),
+    );
 
     // Check balances
     utils::check_private_balance(token_contract_address, owner, 0 as u128);
@@ -29,16 +34,23 @@ unconstrained fn transfer_private_to_public_with_commitment_emits_validity_nulli
     let (env, token_contract_address, owner, recipient) =
         utils::setup_and_mint_to_private_without_minter(false);
 
-    env.impersonate(owner);
-    let commitment = Token::at(token_contract_address)
-        .transfer_private_to_public_with_commitment(owner, recipient, mint_amount, 0)
-        .call(&mut env.private());
-    env.advance_block_by(1);
+    let commitment = env.call_private(
+        owner,
+        Token::at(token_contract_address).transfer_private_to_public_with_commitment(
+            owner,
+            recipient,
+            mint_amount,
+            0,
+        ),
+    );
 
     // The caller is the completer of the partial note.
-    let validity_commitment = PartialUintNote { commitment }.compute_validity_commitment(owner);
+    let validity_commitment =
+        PartialUintNote::from_field(commitment).compute_validity_commitment(owner);
     assert(
-        env.public().nullifier_exists(validity_commitment, token_contract_address),
+        env.public_context(|context| {
+            context.nullifier_exists(validity_commitment, token_contract_address)
+        }),
         "validity nullifier should exist",
     );
 }
@@ -64,9 +76,7 @@ unconstrained fn transfer_private_to_public_with_commitment_on_behalf_of_other()
     );
 
     // Transfer tokens
-    env.impersonate(recipient);
-    let _ = transfer_private_to_public_commitment_call_interface.call(&mut env.private());
-    env.advance_block_by(1);
+    let _ = env.call_private(recipient, transfer_private_to_public_commitment_call_interface);
 
     // Check balances
     utils::check_private_balance(token_contract_address, owner, 0 as u128);
@@ -84,29 +94,29 @@ unconstrained fn transfer_private_to_public_with_commitment_and_finalize() {
     // Transfer tokens
     let transfer_amount = mint_amount;
 
-    env.impersonate(owner);
-    let commitment = Token::at(token_contract_address)
-        .transfer_private_to_public_with_commitment(owner, recipient, transfer_amount, 0)
-        .call(&mut env.private());
-
-    // The partial note won't be available unless we advance one block
-    env.advance_block_by(1);
+    let commitment = env.call_private(
+        owner,
+        Token::at(token_contract_address).transfer_private_to_public_with_commitment(
+            owner,
+            recipient,
+            transfer_amount,
+            0,
+        ),
+    );
 
     // Before finalize the recipient should have the tokens in public balance
     utils::check_public_balance(token_contract_address, recipient, transfer_amount);
 
-    env.impersonate(recipient);
     let action = Token::at(token_contract_address).transfer_public_to_commitment(
         recipient,
         commitment,
         transfer_amount,
         0,
     );
-    authwit_cheatcodes::add_public_authwit_from_call_interface(recipient, owner, action);
-    env.impersonate(owner);
-    let _ = action.call(&mut env.public());
+    authwit_cheatcodes::add_public_authwit_from_call_interface(env, recipient, owner, action);
+    let _ = env.call_public(owner, action);
 
-    env.advance_block_by(1);
+    env.mine_block();
 
     // Check balances
     utils::check_private_balance(token_contract_address, owner, 0 as u128);
@@ -125,19 +135,29 @@ unconstrained fn transfer_private_to_public_with_commitment_and_finalize_with_in
     // Transfer tokens
     let transfer_amount = mint_amount;
 
-    env.impersonate(owner);
     // we ignore the returned commitment
-    let _ = Token::at(token_contract_address)
-        .transfer_private_to_public_with_commitment(owner, recipient, transfer_amount, 0)
-        .call(&mut env.private());
+    let _ = env.call_private(
+        owner,
+        Token::at(token_contract_address).transfer_private_to_public_with_commitment(
+            owner,
+            recipient,
+            transfer_amount,
+            0,
+        ),
+    );
 
     let invalid_commitment = 0xdeadbeef;
 
     // finalize transfer to an invalid commitment
-    env.impersonate(recipient);
-    Token::at(token_contract_address)
-        .transfer_public_to_commitment(recipient, invalid_commitment, transfer_amount, 0)
-        .call(&mut env.public());
+    env.call_public(
+        recipient,
+        Token::at(token_contract_address).transfer_public_to_commitment(
+            recipient,
+            invalid_commitment,
+            transfer_amount,
+            0,
+        ),
+    );
 
     // you can finalize but the recipient will not have tokens
     utils::check_public_balance(token_contract_address, owner, 0 as u128);
@@ -157,18 +177,28 @@ unconstrained fn transfer_private_to_public_with_commitment_and_finalize_with_co
     // Transfer tokens
     let transfer_amount = mint_amount;
 
-    env.impersonate(owner);
     // we ignore the returned commitment
-    let _ = Token::at(token_contract_address)
-        .transfer_private_to_public_with_commitment(owner, recipient, transfer_amount, 0)
-        .call(&mut env.private());
+    let _ = env.call_private(
+        owner,
+        Token::at(token_contract_address).transfer_private_to_public_with_commitment(
+            owner,
+            recipient,
+            transfer_amount,
+            0,
+        ),
+    );
 
     let invalid_commitment = 0;
     // Transfer tokens
-    env.impersonate(recipient);
-    Token::at(token_contract_address)
-        .transfer_public_to_commitment(recipient, invalid_commitment, transfer_amount, 0)
-        .call(&mut env.public());
+    env.call_public(
+        recipient,
+        Token::at(token_contract_address).transfer_public_to_commitment(
+            recipient,
+            invalid_commitment,
+            transfer_amount,
+            0,
+        ),
+    );
 
     // check that both owner and recipient have no tokens
     utils::check_public_balance(token_contract_address, owner, 0 as u128);
