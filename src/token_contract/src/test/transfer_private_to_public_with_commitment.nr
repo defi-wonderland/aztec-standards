@@ -6,11 +6,11 @@ use uint_note::uint_note::PartialUintNote;
 
 #[test]
 unconstrained fn transfer_private_to_public_with_commitment() {
-    let (env, token_contract_address, owner, recipient) =
+    let (mut env, token_contract_address, owner, recipient) =
         utils::setup_and_mint_to_private_without_minter(false);
 
-    utils::check_private_balance(token_contract_address, owner, mint_amount);
-    utils::check_private_balance(token_contract_address, recipient, 0 as u128);
+    utils::check_private_balance(env, token_contract_address, owner, mint_amount);
+    utils::check_private_balance(env, token_contract_address, recipient, 0 as u128);
 
     // Transfer tokens
     let transfer_amount = mint_amount;
@@ -25,13 +25,13 @@ unconstrained fn transfer_private_to_public_with_commitment() {
     );
 
     // Check balances
-    utils::check_private_balance(token_contract_address, owner, 0 as u128);
-    utils::check_public_balance(token_contract_address, recipient, transfer_amount);
+    utils::check_private_balance(env, token_contract_address, owner, 0 as u128);
+    utils::check_public_balance(env, token_contract_address, recipient, transfer_amount);
 }
 
 #[test]
 unconstrained fn transfer_private_to_public_with_commitment_emits_validity_nullifier() {
-    let (env, token_contract_address, owner, recipient) =
+    let (mut env, token_contract_address, owner, recipient) =
         utils::setup_and_mint_to_private_without_minter(false);
 
     let commitment = env.call_private(
@@ -57,11 +57,11 @@ unconstrained fn transfer_private_to_public_with_commitment_emits_validity_nulli
 
 #[test]
 unconstrained fn transfer_private_to_public_with_commitment_on_behalf_of_other() {
-    let (env, token_contract_address, owner, recipient) =
+    let (mut env, token_contract_address, owner, recipient) =
         utils::setup_and_mint_to_private_without_minter(true);
 
-    utils::check_private_balance(token_contract_address, owner, mint_amount);
-    utils::check_private_balance(token_contract_address, recipient, 0 as u128);
+    utils::check_private_balance(env, token_contract_address, owner, mint_amount);
+    utils::check_private_balance(env, token_contract_address, recipient, 0 as u128);
 
     // Transfer tokens
     let transfer_amount = mint_amount;
@@ -79,17 +79,17 @@ unconstrained fn transfer_private_to_public_with_commitment_on_behalf_of_other()
     let _ = env.call_private(recipient, transfer_private_to_public_commitment_call_interface);
 
     // Check balances
-    utils::check_private_balance(token_contract_address, owner, 0 as u128);
-    utils::check_public_balance(token_contract_address, recipient, transfer_amount);
+    utils::check_private_balance(env, token_contract_address, owner, 0 as u128);
+    utils::check_public_balance(env, token_contract_address, recipient, transfer_amount);
 }
 
 #[test]
 unconstrained fn transfer_private_to_public_with_commitment_and_finalize() {
-    let (env, token_contract_address, owner, recipient) =
+    let (mut env, token_contract_address, owner, recipient) =
         utils::setup_and_mint_to_private_without_minter(false);
 
-    utils::check_private_balance(token_contract_address, owner, mint_amount);
-    utils::check_private_balance(token_contract_address, recipient, 0 as u128);
+    utils::check_private_balance(env, token_contract_address, owner, mint_amount);
+    utils::check_private_balance(env, token_contract_address, recipient, 0 as u128);
 
     // Transfer tokens
     let transfer_amount = mint_amount;
@@ -105,7 +105,7 @@ unconstrained fn transfer_private_to_public_with_commitment_and_finalize() {
     );
 
     // Before finalize the recipient should have the tokens in public balance
-    utils::check_public_balance(token_contract_address, recipient, transfer_amount);
+    utils::check_public_balance(env, token_contract_address, recipient, transfer_amount);
 
     let action = Token::at(token_contract_address).transfer_public_to_commitment(
         recipient,
@@ -116,21 +116,19 @@ unconstrained fn transfer_private_to_public_with_commitment_and_finalize() {
     authwit_cheatcodes::add_public_authwit_from_call_interface(env, recipient, owner, action);
     let _ = env.call_public(owner, action);
 
-    env.mine_block();
-
     // Check balances
-    utils::check_private_balance(token_contract_address, owner, 0 as u128);
-    utils::check_public_balance(token_contract_address, recipient, 0 as u128);
-    utils::check_private_balance(token_contract_address, recipient, transfer_amount);
+    utils::check_private_balance(env, token_contract_address, owner, 0 as u128);
+    utils::check_public_balance(env, token_contract_address, recipient, 0 as u128);
+    utils::check_private_balance(env, token_contract_address, recipient, transfer_amount);
 }
 
 #[test(should_fail_with = "Invalid partial note or completer")]
 unconstrained fn transfer_private_to_public_with_commitment_and_finalize_with_invalid_commitment() {
-    let (env, token_contract_address, owner, recipient) =
+    let (mut env, token_contract_address, owner, recipient) =
         utils::setup_and_mint_to_private_without_minter(false);
 
-    utils::check_private_balance(token_contract_address, owner, mint_amount);
-    utils::check_private_balance(token_contract_address, recipient, 0 as u128);
+    utils::check_private_balance(env, token_contract_address, owner, mint_amount);
+    utils::check_private_balance(env, token_contract_address, recipient, 0 as u128);
 
     // Transfer tokens
     let transfer_amount = mint_amount;
@@ -160,19 +158,19 @@ unconstrained fn transfer_private_to_public_with_commitment_and_finalize_with_in
     );
 
     // you can finalize but the recipient will not have tokens
-    utils::check_public_balance(token_contract_address, owner, 0 as u128);
-    utils::check_private_balance(token_contract_address, owner, 0 as u128);
-    utils::check_public_balance(token_contract_address, recipient, 0 as u128);
-    utils::check_private_balance(token_contract_address, recipient, 0 as u128);
+    utils::check_public_balance(env, token_contract_address, owner, 0 as u128);
+    utils::check_private_balance(env, token_contract_address, owner, 0 as u128);
+    utils::check_public_balance(env, token_contract_address, recipient, 0 as u128);
+    utils::check_private_balance(env, token_contract_address, recipient, 0 as u128);
 }
 
 #[test(should_fail_with = "Invalid partial note or completer")]
 unconstrained fn transfer_private_to_public_with_commitment_and_finalize_with_commitment_zero() {
-    let (env, token_contract_address, owner, recipient) =
+    let (mut env, token_contract_address, owner, recipient) =
         utils::setup_and_mint_to_private_without_minter(false);
 
-    utils::check_private_balance(token_contract_address, owner, mint_amount);
-    utils::check_private_balance(token_contract_address, recipient, 0 as u128);
+    utils::check_private_balance(env, token_contract_address, owner, mint_amount);
+    utils::check_private_balance(env, token_contract_address, recipient, 0 as u128);
 
     // Transfer tokens
     let transfer_amount = mint_amount;
@@ -201,8 +199,8 @@ unconstrained fn transfer_private_to_public_with_commitment_and_finalize_with_co
     );
 
     // check that both owner and recipient have no tokens
-    utils::check_public_balance(token_contract_address, owner, 0 as u128);
-    utils::check_private_balance(token_contract_address, owner, 0 as u128);
-    utils::check_public_balance(token_contract_address, recipient, 0 as u128);
-    utils::check_private_balance(token_contract_address, recipient, 0 as u128);
+    utils::check_public_balance(env, token_contract_address, owner, 0 as u128);
+    utils::check_private_balance(env, token_contract_address, owner, 0 as u128);
+    utils::check_public_balance(env, token_contract_address, recipient, 0 as u128);
+    utils::check_private_balance(env, token_contract_address, recipient, 0 as u128);
 }

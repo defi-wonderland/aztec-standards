@@ -6,7 +6,7 @@ use uint_note::uint_note::UintNote;
 #[test]
 unconstrained fn transfer_private_on_behalf_of_other() {
     // Setup with account contracts. Slower since we actually deploy them, but needed for authwits.
-    let (env, token_contract_address, owner, recipient) =
+    let (mut env, token_contract_address, owner, recipient) =
         utils::setup_and_mint_to_private_without_minter(true);
     // Add authwit
     let transfer_amount = (1000 as u128);
@@ -20,14 +20,20 @@ unconstrained fn transfer_private_on_behalf_of_other() {
     // Transfer tokens using new API
     env.call_private(recipient, transfer_private_from_call_interface);
     // Check balances
-    utils::check_private_balance(token_contract_address, owner, mint_amount - transfer_amount);
-    utils::check_private_balance(token_contract_address, recipient, transfer_amount);
+    utils::check_private_balance(
+        env,
+        token_contract_address,
+        owner,
+        mint_amount - transfer_amount,
+    );
+    utils::check_private_balance(env, token_contract_address, recipient, transfer_amount);
 }
 
 #[test]
 unconstrained fn transfer_private_multiple_notes_recursively() {
     // Setup with account contracts. Slower since we actually deploy them, but needed for authwits.
-    let (env, token_contract_address, owner, recipient, minter) = utils::setup_with_minter(true);
+    let (mut env, token_contract_address, owner, recipient, minter) =
+        utils::setup_with_minter(true);
 
     let notes_amount: u128 = 1000;
     let notes_count: u128 = 12;
@@ -46,7 +52,7 @@ unconstrained fn transfer_private_multiple_notes_recursively() {
     env.call_private(owner, transfer_private_from_call_interface);
 
     // NOTE: Removing this check makes the test fail.
-    let recipient_balance = utils::get_private_balance(token_contract_address, recipient);
+    let recipient_balance = utils::get_private_balance(env, token_contract_address, recipient);
     assert(recipient_balance == transfer_amount, "Incorrect recipient balance");
 
     // Check that the notes still owned by the owner are correct
@@ -67,17 +73,18 @@ unconstrained fn transfer_private_multiple_notes_recursively() {
 
     // Check balances
     utils::check_private_balance(
+        env,
         token_contract_address,
         owner,
         total_amount - transfer_amount,
     );
-    utils::check_private_balance(token_contract_address, recipient, transfer_amount);
+    utils::check_private_balance(env, token_contract_address, recipient, transfer_amount);
 }
 
 #[test(should_fail_with = "Balance too low")]
 unconstrained fn transfer_private_failure_on_behalf_of_more_than_balance() {
     // Setup with account contracts. Slower since we actually deploy them, but needed for authwits.
-    let (env, token_contract_address, owner, recipient) =
+    let (mut env, token_contract_address, owner, recipient) =
         utils::setup_and_mint_to_private_without_minter(true);
     // Add authwit
     let transfer_amount = mint_amount + (1 as u128);
@@ -96,7 +103,7 @@ unconstrained fn transfer_private_failure_on_behalf_of_more_than_balance() {
 #[test(should_fail_with = "Unknown auth witness for message hash ")]
 unconstrained fn transfer_private_failure_on_behalf_of_other_without_approval() {
     // Setup with account contracts. Slower since we actually deploy them, but needed for authwits.
-    let (env, token_contract_address, owner, recipient) =
+    let (mut env, token_contract_address, owner, recipient) =
         utils::setup_and_mint_to_private_without_minter(true);
     // Add authwit
     let transfer_amount = (1000 as u128);
@@ -109,7 +116,7 @@ unconstrained fn transfer_private_failure_on_behalf_of_other_without_approval() 
 #[test(should_fail_with = "Unknown auth witness for message hash")]
 unconstrained fn transfer_private_failure_on_behalf_of_other_wrong_caller() {
     // Setup with account contracts. Slower since we actually deploy them, but needed for authwits.
-    let (env, token_contract_address, owner, recipient) =
+    let (mut env, token_contract_address, owner, recipient) =
         utils::setup_and_mint_to_private_without_minter(true);
     // Add authwit
     let transfer_amount: u128 = 1000;

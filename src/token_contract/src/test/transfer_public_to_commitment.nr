@@ -11,11 +11,11 @@ unconstrained fn transfer_public_to_commitment_internal_orchestration() {
     // The transfer to private is done in `utils::setup_and_mint_to_private_without_minter` and for this reason
     // in this test we just call it and check the outcome.
     // Setup without account contracts. We are not using authwits here, so dummy accounts are enough
-    let (_, token_contract_address, user, _) =
+    let (mut env, token_contract_address, user, _) =
         utils::setup_and_mint_to_private_without_minter(false);
 
     // User's private balance should be equal to the amount
-    utils::check_private_balance(token_contract_address, user, mint_amount);
+    utils::check_private_balance(env, token_contract_address, user, mint_amount);
 }
 
 /// External orchestration means that the calls to prepare and finalize are not done by the Token contract. This flow
@@ -23,7 +23,7 @@ unconstrained fn transfer_public_to_commitment_internal_orchestration() {
 #[test]
 unconstrained fn transfer_public_to_commitment_external_orchestration() {
     // Setup without account contracts. We are not using authwits here, so dummy accounts are enough
-    let (env, token_contract_address, owner, recipient) =
+    let (mut env, token_contract_address, owner, recipient) =
         utils::setup_and_mint_to_public_without_minter(false);
 
     let note_randomness = random();
@@ -49,16 +49,14 @@ unconstrained fn transfer_public_to_commitment_external_orchestration() {
         ),
     );
 
-    env.mine_block();
-
     // Recipient's private balance should be equal to the amount
-    utils::check_private_balance(token_contract_address, recipient, mint_amount);
+    utils::check_private_balance(env, token_contract_address, recipient, mint_amount);
 }
 
 #[test(should_fail_with = "Invalid partial note or completer 'context.nullifier_exists(validity_commitment, context.this_address())'")]
 unconstrained fn transfer_public_to_commitment_transfer_not_initialized() {
     // Setup without account contracts. We are not using authwits here, so dummy accounts are enough
-    let (env, token_contract_address, owner, _) =
+    let (mut env, token_contract_address, owner, _) =
         utils::setup_and_mint_to_public_without_minter(false);
 
     // Transfer was not prepared, so we can use a random value for the commitment
@@ -79,7 +77,7 @@ unconstrained fn transfer_public_to_commitment_transfer_not_initialized() {
 #[test(should_fail_with = "attempt to subtract with overflow 'public_balances.at(from).read() - amount'")]
 unconstrained fn transfer_public_to_commitment_failure_not_an_owner() {
     // Setup without account contracts. We are not using authwits here, so dummy accounts are enough
-    let (env, token_contract_address, owner, not_owner) =
+    let (mut env, token_contract_address, owner, not_owner) =
         utils::setup_and_mint_to_public_without_minter(false);
 
     // (For this specific test we could set a random value for the commitment and not do the call to `prepare...`
