@@ -22,9 +22,10 @@ pub contract SFT {
         },
         protocol_types::{
             constants::DEPLOYER_CONTRACT_ADDRESS, contract_class_id::ContractClassId,
-            traits::FromField,
+            traits::{FromField, ToField},
         },
         utils::comparison::Comparator,
+        capsules::CapsuleArray,
     };
     // compression library
     use compressed_string::FieldCompressedString;
@@ -38,7 +39,7 @@ pub contract SFT {
     /// @param symbol The symbol of the SFT collection
     /// @param minter The account permissioned to mint new tokens
     /// @param private_sfts Private SFT ownership using nested mapping (token_id -> address -> PrivateSet<SFTNote>)
-    /// @param public_sfts Public SFT item IDs using nested mapping (token_id -> address -> array of item_ids)
+    /// @dev get_ Public SFT item IDs now managed via CapsuleArray (not stored in struct)
     /// @param token_type_exists Whether a token type exists
     /// @param total_supply Total supply of each token type
     #[storage]
@@ -47,7 +48,6 @@ pub contract SFT {
         symbol: PublicImmutable<FieldCompressedString, Context>,
         minter: PublicImmutable<AztecAddress, Context>,
         private_sfts: Map<Field, Map<AztecAddress, PrivateSet<SFTNote, Context>, Context>, Context>,
-        public_sfts: Map<Field, Map<AztecAddress, PublicMutable<[Field; 32], Context>, Context>, Context>, // 32 is max number of items per token type
         total_supply: Map<Field, PublicMutable<u128, Context>, Context>,
         token_type_exists: Map<Field, PublicMutable<bool, Context>, Context>,
         upgrade_authority: PublicImmutable<AztecAddress, Context>,
@@ -264,10 +264,10 @@ pub contract SFT {
         _nonce: Field,
     ) {
         _validate_from_public(&mut context, from);
-        _validate_public_token_owner(storage.public_sfts, from, token_id, item_id);
+        _validate_public_token_owner(&mut context, from, token_id, item_id);
 
-        _remove_public_item_id(storage.public_sfts, from, token_id, item_id);
-        _update_public_item_ids(storage.public_sfts, to, token_id, item_id);
+        _remove_public_item_id(&mut context, from, token_id, item_id);
+        _update_public_item_ids(&mut context, to, token_id, item_id);
     }
 
     /// @notice Transfers an item from public address to a commitment
@@ -285,9 +285,9 @@ pub contract SFT {
         _nonce: Field,
     ) {
         _validate_from_public(&mut context, from);
-        _validate_public_token_owner(storage.public_sfts, from, token_id, item_id);
+        _validate_public_token_owner(&mut context, from, token_id, item_id);
 
-        _remove_public_item_id(storage.public_sfts, from, token_id, item_id);
+        _remove_public_item_id(&mut context, from, token_id, item_id);
         let completer = context.msg_sender();
         _transfer_token_to_commitment(
             &mut context,
@@ -338,7 +338,7 @@ pub contract SFT {
     #[public]
     #[internal]
     fn update_public_item_ids_internal(to: AztecAddress, token_id: Field, item_id: Field) {
-        _update_public_item_ids(storage.public_sfts, to, token_id, item_id);
+        _update_public_item_ids(&mut context, to, token_id, item_id);
     }
 
     /// @notice Completes a commitment with token and item details
@@ -364,7 +364,17 @@ pub contract SFT {
     #[public]
     #[internal]
     fn remove_public_item_id_internal(from: AztecAddress, token_id: Field, item_id: Field) {
-        _remove_public_item_id(storage.public_sfts, from, token_id, item_id);
+        _remove_public_item_id(&mut context, from, token_id, item_id);
+    }
+
+    /// @notice Gets the capsule array for a user's public collection
+    /// @param owner The address of the owner
+    /// @param token_id The ID of the token type
+    /// @return The capsule array for the user's public collection
+    #[public]
+    #[internal]
+    fn get_public_sfts_capsule_internal(owner: AztecAddress, token_id: Field) -> Field {
+        _get_public_sfts_capsule(owner, token_id)
     }
 
     /** ==========================================================
@@ -398,18 +408,10 @@ pub contract SFT {
     /// @return The balance of the public balance of `owner` for `token_id`
     #[public]
     #[view]
-    fn public_balance_of(owner: AztecAddress, token_id: Field) -> u128 {
-        let item_ids = storage.public_sfts.at(token_id).at(owner).read();
-        item_ids.len() as u128
-    }
-
-    /// @param owner The address of the owner
-    /// @param token_id The ID of the token type
-    /// @return The item IDs owned by `owner` for `token_id`
-    #[public]
-    #[view]
-    fn public_sfts(owner: AztecAddress, token_id: Field) -> [Field; 32] {
-        storage.public_sfts.at(token_id).at(owner).read()
+    fn balance_of_public_by_token_id(owner: AztecAddress, token_id: Field) -> u128 {
+        let slot = _get_public_sfts_capsule(owner, token_id);
+        let capsule_array: CapsuleArray<Field> = CapsuleArray::at(context.this_address(), slot);
+        capsule_array.len() as u128
     }
 
     /// @param token_id The ID of the token type
@@ -469,6 +471,34 @@ pub contract SFT {
         (owned_item_ids, page_limit_reached)
     }
 
+    /// @param owner The address of the owner
+    /// @param token_id The ID of the token type
+    /// @param page_index The page index for pagination (0 for first page)
+    /// @return The item IDs owned by `owner` for `token_id` and a flag indicating if more items exist
+    #[utility]
+    pub unconstrained fn get_public_sfts_by_token_id(owner: AztecAddress, token_id: Field, page_index: u32) -> pub ([Field; MAX_NOTES_PER_PAGE], bool) {
+        let slot = _get_public_sfts_capsule(owner, token_id);
+        let capsule_array: CapsuleArray<Field> = CapsuleArray::at(context.this_address(), slot);
+        let total_length = capsule_array.len();
+        let offset = page_index * MAX_NOTES_PER_PAGE;
+        let mut result: [Field; MAX_NOTES_PER_PAGE] = [0; MAX_NOTES_PER_PAGE];
+        
+        let page_size = MAX_NOTES_PER_PAGE;
+        let items_to_copy = if (offset + page_size > total_length) {
+            if (offset >= total_length) { 0 } else { total_length - offset }
+        } else {
+            page_size
+        };
+        
+        // Copy items from CapsuleArray to fixed array for this page
+        for i in 0..items_to_copy {
+            result[i] = capsule_array.get(offset + i);
+        }
+        
+        let has_more = offset + page_size < total_length;
+        (result, has_more)
+    }
+
     /** ==========================================================
     * ======================= MINTABLE ==========================
     * ======================================================== */
@@ -479,7 +509,8 @@ pub contract SFT {
     /// @param item_id The ID of the item to mint
     #[private]
     fn mint_to_private(to: AztecAddress, token_id: Field, item_id: Field) {
-        assert((item_id != 0) & (token_id != 0), "zero ID not supported");
+        assert(token_id != 0, "zero token ID not supported");
+        assert(item_id != 0, "zero item ID not supported");
         _validate_minter(context.msg_sender(), storage.minter.read());
 
         storage.private_sfts.at(token_id).at(to).insert(SFTNote::new(token_id, item_id, to)).emit(
@@ -503,7 +534,7 @@ pub contract SFT {
         _validate_minter(context.msg_sender(), storage.minter.read());
         _increase_total_supply(storage.total_supply, token_id);
 
-        _update_public_item_ids(storage.public_sfts, to, token_id, item_id);
+        _update_public_item_ids(&mut context, to, token_id, item_id);
     }
 
     /** ==========================================================
@@ -532,9 +563,9 @@ pub contract SFT {
     #[public]
     fn burn_public(from: AztecAddress, token_id: Field, item_id: Field, _nonce: Field) {
         _validate_from_public(&mut context, from);
-        _validate_public_token_owner(storage.public_sfts, from, token_id, item_id);
+        _validate_public_token_owner(&mut context, from, token_id, item_id);
         _decrease_total_supply(storage.total_supply, token_id);
-        _remove_public_item_id(storage.public_sfts, from, token_id, item_id);
+        _remove_public_item_id(&mut context, from, token_id, item_id);
     }
 
     /** ==========================================================
@@ -656,52 +687,64 @@ pub contract SFT {
         total_supply.at(token_id).write(total_supply.at(token_id).read() - 1);
     }
 
+    /// @notice Generates a unique slot for a user's public SFT collection for a specific token type
+    /// @param owner The address of the user
+    /// @param token_id The ID of the token type
+    /// @return The unique slot for the user's token collection
+    #[contract_library_method]
+    fn _get_public_sfts_capsule(owner: AztecAddress, token_id: Field) -> Field {
+        std::hash::pedersen_hash([owner.to_field(), token_id])
+    }
+
     /// @notice Inserts a specific item ID into a user's public collection for a specific token type
-    /// @param public_sfts The storage pointer to the public item IDs
+    /// @param context The public context for accessing contract address
     /// @param to The address of the recipient
     /// @param token_id The ID of the token type
     /// @param item_id The specific item ID to add
     #[contract_library_method]
     fn _update_public_item_ids(
-        public_sfts: Map<Field, Map<AztecAddress, PublicMutable<[Field; 32], &mut PublicContext>, &mut PublicContext>, &mut PublicContext>,
+        context: &mut PublicContext,
         to: AztecAddress,
         token_id: Field,
         item_id: Field,
     ) {
-        let mut item_ids = public_sfts.at(token_id).at(to).read();
-        let mut found_empty = false;
-        for i in 0..32 {
-            if (item_ids[i] == 0) & (!found_empty) {
-                item_ids[i] = item_id;
-                found_empty = true;
-            }
+        let slot = _get_public_sfts_capsule(to, token_id);
+        unsafe {
+            let mut capsule_array: CapsuleArray<Field> = CapsuleArray::at(context.this_address(), slot);
+            capsule_array.push(item_id);
         }
-        assert(found_empty, "no empty slots in item_ids array");
-        public_sfts.at(token_id).at(to).write(item_ids);
     }
 
     /// @notice Removes a specific item ID from a user's public collection
-    /// @param public_sfts The storage pointer to the public item IDs
+    /// @param context The public context for accessing contract address
     /// @param from The address of the owner
     /// @param token_id The ID of the token type
     /// @param item_id The specific item ID to remove
     #[contract_library_method]
     fn _remove_public_item_id(
-        public_sfts: Map<Field, Map<AztecAddress, PublicMutable<[Field; 32], &mut PublicContext>, &mut PublicContext>, &mut PublicContext>,
+        context: &mut PublicContext,
         from: AztecAddress,
         token_id: Field,
         item_id: Field,
     ) {
-        let mut item_ids = public_sfts.at(token_id).at(from).read();
-        let mut found_item = false;
-        for i in 0..32 {
-            if (item_ids[i] == item_id) & (!found_item) {
-                item_ids[i] = 0;
-                found_item = true;
+        let slot = _get_public_sfts_capsule(from, token_id);
+        unsafe {
+            let mut capsule_array: CapsuleArray<Field> = CapsuleArray::at(context.this_address(), slot);
+            let length = capsule_array.len();
+            let mut found_item = false;
+            let mut item_index = 0;
+            
+            for i in 0..length {
+                if (!found_item) {
+                    if (capsule_array.get(i) == item_id) {
+                        item_index = i;
+                        found_item = true;
+                    }
+                }
             }
+            assert(found_item, "item not found in public collection");
+            capsule_array.remove(item_index);
         }
-        assert(found_item, "item not found in public collection");
-        public_sfts.at(token_id).at(from).write(item_ids);
     }
 
     /// @notice Transfers a token to a commitment
@@ -724,25 +767,30 @@ pub contract SFT {
     }
 
     /// @notice Validates that the caller is the owner of a token
-    /// @param public_sfts The public item IDs map
+    /// @param context The public context for accessing contract address
     /// @param from The address of the sender
     /// @param token_id The id of the token to validate
     /// @param item_id The id of the item to validate
     #[contract_library_method]
     fn _validate_public_token_owner(
-        public_sfts: Map<Field, Map<AztecAddress, PublicMutable<[Field; 32], &mut PublicContext>, &mut PublicContext>, &mut PublicContext>,
+        context: &mut PublicContext,
         from: AztecAddress,
         token_id: Field,
         item_id: Field,
     ) {
-        let item_ids = public_sfts.at(token_id).at(from).read();
-        let mut owner_of_item_id = false;
-        for i in 0..32 {
-            if item_ids[i] != 0 {
-                owner_of_item_id = true;
+        unsafe {
+            let slot = _get_public_sfts_capsule(from, token_id);
+            let capsule_array: CapsuleArray<Field> = CapsuleArray::at(context.this_address(), slot);
+            let length = capsule_array.len();
+            let mut owner_of_item_id = false;
+            
+            for i in 0..length {
+                if capsule_array.get(i) == item_id {
+                    owner_of_item_id = true;
+                }
             }
+        assert(owner_of_item_id, "caller does not own item id");
         }
-        assert(owner_of_item_id, "caller owns no tokens of this type");
     }
 
     /// @notice Validates that the caller is an authorized minter
