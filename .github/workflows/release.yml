@@ -1,14 +1,22 @@
 name: Production Release
 
 on:
-  release:
-    types: [published]
+  workflow_dispatch:
+    branches:
+      - main
+    inputs:
+      version:
+        description: 'Version to release (e.g., 1.0.0, 1.0.0-beta.1)'
+        required: true
+        type: string
 
 jobs:
   release:
     name: Release
     environment: Production
     runs-on: ubuntu-latest
+    permissions:
+      contents: write  # Required to create and push tags
 
     env:
       PROJECT_NAME: '@defi-wonderland/aztec-standards'
@@ -43,6 +51,10 @@ jobs:
       - name: Set Aztec version
         run: |
           VERSION=${AZTEC_VERSION} aztec-up
+
+      - name: Update package version
+        run: |
+          npm version ${{ github.event.inputs.version }} --no-git-tag-version --allow-same-version
       
       # Install dependencies AND the current latest version of the package we're releasing now.
       - name: Install dependencies
@@ -71,7 +83,7 @@ jobs:
       # 7. Trim info from package.json
       - name: Prepare files for release
         run: |
-          VERSION=$(node -p "require('./package.json').version")
+          VERSION=${{ github.event.inputs.version }}
           mkdir -p export/${{ env.PROJECT_NAME }}/current/artifacts
           mkdir -p export/${{ env.PROJECT_NAME }}/historical
           
@@ -116,3 +128,12 @@ jobs:
         run: cd export/${{ env.PROJECT_NAME }} && npm publish --access public --tag latest
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Create GitHub Release Tag
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git tag -a v${{ github.event.inputs.version }} -m "Release v${{ github.event.inputs.version }}"
+          git push origin v${{ github.event.inputs.version }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
