@@ -41,6 +41,7 @@ pub contract SFT {
     /// @param public_sfts Public SFT item IDs using nested mapping (token_id -> address -> array of item_ids)
     /// @param token_type_exists Whether a token type exists
     /// @param total_supply Total supply of each token type
+    /// @param upgrade_authority The address of the upgrade authority
     #[storage]
     struct Storage<Context> {
         name: PublicImmutable<FieldCompressedString, Context>,
@@ -57,7 +58,7 @@ pub contract SFT {
     /// @param name The name of the SFT collection
     /// @param symbol The symbol of the SFT collection
     /// @param minter The address of the minter (zero address to disable minting)
-    /// @param upgrade_authority The address of the upgrade authority (zero address if not upgradeable)
+    /// @param upgrade_authority The address of the upgrade authority
     #[public]
     #[initializer]
     fn constructor_with_minter(
@@ -233,7 +234,7 @@ pub contract SFT {
         from: AztecAddress,
         to: AztecAddress,
         completer: AztecAddress,
-    ) {
+    ) -> Field {
         let commitment = _initialize_transfer_commitment(
             &mut context,
             storage.private_sfts,
@@ -479,7 +480,8 @@ pub contract SFT {
     /// @param item_id The ID of the item to mint
     #[private]
     fn mint_to_private(to: AztecAddress, token_id: Field, item_id: Field) {
-        assert((item_id != 0) & (token_id != 0), "zero ID not supported");
+        assert(token_id != 0, "zero token ID not supported");
+        assert(item_id != 0, "zero item ID not supported");
         _validate_minter(context.msg_sender(), storage.minter.read());
 
         storage.private_sfts.at(token_id).at(to).insert(SFTNote::new(token_id, item_id, to)).emit(
@@ -719,7 +721,7 @@ pub contract SFT {
         item_id: Field,
         completer: AztecAddress,
     ) {
-        assert(context.storage_read(commitment.commitment()), "invalid commitment");
+        assert(context.nullifier_exists(commitment.commitment(), context.this_address()), "invalid commitment");
         commitment.complete(context, completer, token_id, item_id);
     }
 
