@@ -43,6 +43,7 @@ pub contract SFT {
     /// @dev get_ Public SFT item IDs now managed via CapsuleArray (not stored in struct)
     /// @param token_type_exists Whether a token type exists
     /// @param total_supply Total supply of each token type
+    /// @param upgrade_authority The address of the upgrade authority
     #[storage]
     struct Storage<Context> {
         name: PublicImmutable<FieldCompressedString, Context>,
@@ -58,7 +59,7 @@ pub contract SFT {
     /// @param name The name of the SFT collection
     /// @param symbol The symbol of the SFT collection
     /// @param minter The address of the minter (zero address to disable minting)
-    /// @param upgrade_authority The address of the upgrade authority (zero address if not upgradeable)
+    /// @param upgrade_authority The address of the upgrade authority
     #[public]
     #[initializer]
     fn constructor_with_minter(
@@ -234,7 +235,7 @@ pub contract SFT {
         from: AztecAddress,
         to: AztecAddress,
         completer: AztecAddress,
-    ) {
+    ) -> Field {
         let commitment = _initialize_transfer_commitment(
             &mut context,
             storage.private_sfts,
@@ -773,7 +774,10 @@ pub contract SFT {
         item_id: Field,
         completer: AztecAddress,
     ) {
-        assert(context.storage_read(commitment.commitment()), "invalid commitment");
+        assert(
+            context.nullifier_exists(commitment.commitment(), context.this_address()),
+            "invalid commitment",
+        );
         commitment.complete(context, completer, token_id, item_id);
     }
 
