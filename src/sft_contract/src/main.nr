@@ -9,6 +9,7 @@ pub contract SFT {
         authwit::auth::{
             assert_current_call_valid_authwit, assert_current_call_valid_authwit_public,
         },
+        capsules::CapsuleArray,
         context::PrivateContext,
         macros::{
             functions::{initializer, internal, private, public, utility, view},
@@ -21,11 +22,11 @@ pub contract SFT {
             PublicImmutable, PublicMutable,
         },
         protocol_types::{
-            constants::DEPLOYER_CONTRACT_ADDRESS, contract_class_id::ContractClassId,
+            constants::DEPLOYER_CONTRACT_ADDRESS,
+            contract_class_id::ContractClassId,
             traits::{FromField, ToField},
         },
         utils::comparison::Comparator,
-        capsules::CapsuleArray,
     };
     // compression library
     use compressed_string::FieldCompressedString;
@@ -476,25 +477,33 @@ pub contract SFT {
     /// @param page_index The page index for pagination (0 for first page)
     /// @return The item IDs owned by `owner` for `token_id` and a flag indicating if more items exist
     #[utility]
-    pub unconstrained fn get_public_sfts_by_token_id(owner: AztecAddress, token_id: Field, page_index: u32) -> pub ([Field; MAX_NOTES_PER_PAGE], bool) {
+    pub unconstrained fn get_public_sfts_by_token_id(
+        owner: AztecAddress,
+        token_id: Field,
+        page_index: u32,
+    ) -> pub ([Field; MAX_NOTES_PER_PAGE], bool) {
         let slot = _get_public_sfts_capsule(owner, token_id);
         let capsule_array: CapsuleArray<Field> = CapsuleArray::at(context.this_address(), slot);
         let total_length = capsule_array.len();
         let offset = page_index * MAX_NOTES_PER_PAGE;
         let mut result: [Field; MAX_NOTES_PER_PAGE] = [0; MAX_NOTES_PER_PAGE];
-        
+
         let page_size = MAX_NOTES_PER_PAGE;
         let items_to_copy = if (offset + page_size > total_length) {
-            if (offset >= total_length) { 0 } else { total_length - offset }
+            if (offset >= total_length) {
+                0
+            } else {
+                total_length - offset
+            }
         } else {
             page_size
         };
-        
+
         // Copy items from CapsuleArray to fixed array for this page
         for i in 0..items_to_copy {
             result[i] = capsule_array.get(offset + i);
         }
-        
+
         let has_more = offset + page_size < total_length;
         (result, has_more)
     }
@@ -710,7 +719,8 @@ pub contract SFT {
     ) {
         let slot = _get_public_sfts_capsule(to, token_id);
         unsafe {
-            let mut capsule_array: CapsuleArray<Field> = CapsuleArray::at(context.this_address(), slot);
+            let mut capsule_array: CapsuleArray<Field> =
+                CapsuleArray::at(context.this_address(), slot);
             capsule_array.push(item_id);
         }
     }
@@ -729,11 +739,12 @@ pub contract SFT {
     ) {
         let slot = _get_public_sfts_capsule(from, token_id);
         unsafe {
-            let mut capsule_array: CapsuleArray<Field> = CapsuleArray::at(context.this_address(), slot);
+            let mut capsule_array: CapsuleArray<Field> =
+                CapsuleArray::at(context.this_address(), slot);
             let length = capsule_array.len();
             let mut found_item = false;
             let mut item_index = 0;
-            
+
             for i in 0..length {
                 if (!found_item) {
                     if (capsule_array.get(i) == item_id) {
@@ -783,13 +794,13 @@ pub contract SFT {
             let capsule_array: CapsuleArray<Field> = CapsuleArray::at(context.this_address(), slot);
             let length = capsule_array.len();
             let mut owner_of_item_id = false;
-            
+
             for i in 0..length {
                 if capsule_array.get(i) == item_id {
                     owner_of_item_id = true;
                 }
             }
-        assert(owner_of_item_id, "caller does not own item id");
+            assert(owner_of_item_id, "caller does not own item id");
         }
     }
 
