@@ -721,7 +721,10 @@ pub contract SFT {
         item_id: Field,
         completer: AztecAddress,
     ) {
-        assert(context.nullifier_exists(commitment.commitment(), context.this_address()), "invalid commitment");
+        assert(
+            context.nullifier_exists(commitment.commitment(), context.this_address()),
+            "invalid commitment",
+        );
         commitment.complete(context, completer, token_id, item_id);
     }
 
