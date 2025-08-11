@@ -27,6 +27,7 @@ jobs:
       - name: Install Node
         uses: actions/setup-node@v4
         with:
+          node-version: '20'
           registry-url: "https://registry.npmjs.org"
           cache: "yarn"
 
@@ -62,10 +63,7 @@ jobs:
 
       - name: Set Aztec version
         run: |
-          VERSION=${AZTEC_VERSION} aztec-up
-
-      
-      # Install dependencies AND the current latest version of the package we're releasing now.
+          VERSION=${{ steps.aztec-version.outputs.AZTEC_VERSION }} aztec-up
       - name: Install dependencies
         run: |
           yarn --frozen-lockfile
@@ -141,10 +139,13 @@ jobs:
 
       - name: Create GitHub Release Tag (adds 'v' prefix to input)
         run: |
-          git config --global user.name "github-actions[bot]"
-          git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          echo "Tagging release as v${{ github.event.inputs.version }}"
-          git tag -a v${{ github.event.inputs.version }} -m "Release v${{ github.event.inputs.version }}"
-          git push origin v${{ github.event.inputs.version }}
+          TAG_NAME="v${{ github.event.inputs.version }}"
+          # Check if tag already exists
+          if git ls-remote --tags origin | grep -q "refs/tags/${TAG_NAME}$"; then
+            echo "::error::Tag ${TAG_NAME} already exists. Please use a different version."
+            exit 1
+          fi
+          git tag "${TAG_NAME}"
+          git push origin "${TAG_NAME}"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
