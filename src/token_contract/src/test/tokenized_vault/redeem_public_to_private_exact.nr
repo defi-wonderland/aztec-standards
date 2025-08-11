@@ -224,25 +224,19 @@ unconstrained fn redeem_public_to_private_exact_on_behalf_of_wrong_caller() {
     let redeem_public_to_private_exact_call_interface = Token::at(vault_address)
         .redeem_public_to_private_exact(deposit_recipient, recipient, shares_to_burn, min_assets, 0)
         ;
-        authwit_cheatcodes::add_private_authwit_from_call_interface(
-            deposit_recipient,
-            owner,
-            redeem_public_to_private_exact_call_interface,
-        );
+    authwit_cheatcodes::add_private_authwit_from_call_interface(
+        deposit_recipient,
+        owner,
+        redeem_public_to_private_exact_call_interface,
+    );
 
-        // Withdraw
-        env.impersonate(recipient);
-        Token::at(vault_address)
-            .redeem_public_to_private_exact(
-                deposit_recipient,
-                recipient,
-                shares_to_burn,
-                min_assets,
-                0,
-            )
-            .call(&mut env.private());
-        env.advance_block_by(1);
-    }
+    // Withdraw
+    env.impersonate(recipient);
+    Token::at(vault_address)
+        .redeem_public_to_private_exact(deposit_recipient, recipient, shares_to_burn, min_assets, 0)
+        .call(&mut env.private());
+    env.advance_block_by(1);
+}
 
 // TODO(#15666 & #15118): this test fails because the ivsk is currently needed for emitting a note, but the vault contract doesn't have one.
 // #[test]
@@ -269,34 +263,28 @@ unconstrained fn redeem_public_to_private_exact_on_behalf_of_other_success() {
     let redeem_public_to_private_exact_call_interface = Token::at(vault_address)
         .redeem_public_to_private_exact(deposit_recipient, recipient, shares_to_burn, min_assets, 0)
         ;
-        authwit_cheatcodes::add_private_authwit_from_call_interface(
-            deposit_recipient,
-            recipient,
-            redeem_public_to_private_exact_call_interface,
-        );
+    authwit_cheatcodes::add_private_authwit_from_call_interface(
+        deposit_recipient,
+        recipient,
+        redeem_public_to_private_exact_call_interface,
+    );
 
-        // Withdraw
-        env.impersonate(recipient);
-        Token::at(vault_address)
-            .redeem_public_to_private_exact(
-                deposit_recipient,
-                recipient,
-                shares_to_burn,
-                min_assets,
-                0,
-            )
-            .call(&mut env.private());
-        env.advance_block_by(1);
+    // Withdraw
+    env.impersonate(recipient);
+    Token::at(vault_address)
+        .redeem_public_to_private_exact(deposit_recipient, recipient, shares_to_burn, min_assets, 0)
+        .call(&mut env.private());
+    env.advance_block_by(1);
 
-        // All shares are burnt
-        utils::check_public_balance(vault_address, deposit_recipient, 0);
-        utils::check_public_balance(vault_address, recipient, 0);
+    // All shares are burnt
+    utils::check_public_balance(vault_address, deposit_recipient, 0);
+    utils::check_public_balance(vault_address, recipient, 0);
 
-        // Check the total supply got updated
-        let total_supply = Token::at(vault_address).total_supply().view(&mut env.public());
-        assert(total_supply == 0, "Incorrect shares total supply");
+    // Check the total supply got updated
+    let total_supply = Token::at(vault_address).total_supply().view(&mut env.public());
+    assert(total_supply == 0, "Incorrect shares total supply");
 
-        // Check asset balances
-        utils::check_private_balance(asset_address, recipient, min_assets);
-        utils::check_public_balance(asset_address, vault_address, 0);
-    }
+    // Check asset balances
+    utils::check_private_balance(asset_address, recipient, min_assets);
+    utils::check_public_balance(asset_address, vault_address, 0);
+}
