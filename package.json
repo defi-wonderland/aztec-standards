@@ -12,7 +12,6 @@
     "postinstall": "husky",
     "clean": "rm -rf ./artifacts ./target",
     "codegen": "aztec codegen target --outdir artifacts --force",
-    "build:artifacts": "npx tsc artifacts/*.ts --module esnext --target es2020 --moduleResolution node --allowSyntheticDefaultImports --resolveJsonModule --skipLibCheck",
     "compile": "aztec-nargo compile",
     "start:pxe": "docker compose -p sandbox -f ~/.aztec/docker-compose.sandbox.yml -f docker-compose.override.yml up",
     "test": "yarn test:nr && yarn test:js",
@@ -20,7 +19,7 @@
     "test:nr": "aztec test",
     "lint:prettier": "prettier '**/*.{js,ts}' --write",
     "bench": "NODE_NO_WARNINGS=1 aztec-benchmark --suffix _base",
-    "ccc": "yarn clean && yarn compile && yarn codegen && yarn build:artifacts"
+    "ccc": "yarn clean && yarn compile && yarn codegen"
   },
   "lint-staged": {
     "*.ts": "prettier --write -u"

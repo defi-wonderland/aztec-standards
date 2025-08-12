@@ -80,7 +80,7 @@ jobs:
         run: script -e -c "${AZTEC_NARGO:-aztec-nargo} compile"
 
       - name: Codegen wrappers (BASE)
-        run: script -e -c "aztec codegen target --outdir src/artifacts --force"
+        run: script -e -c "aztec codegen target --outdir artifacts --force"
 
       - name: Benchmark (BASE)
         run: |
@@ -149,7 +149,7 @@ jobs:
         run: script -e -c "${AZTEC_NARGO:-aztec-nargo} compile"
 
       - name: Codegen wrappers (PR)
-        run: script -e -c "aztec codegen target --outdir src/artifacts --force"
+        run: script -e -c "aztec codegen target --outdir artifacts --force"
 
       # ──────────────────────────────────────────────────────────────
       # 3️⃣  DIFF &  COMMENT
