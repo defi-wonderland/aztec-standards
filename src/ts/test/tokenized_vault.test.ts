@@ -9,7 +9,7 @@ import {
 import { PXE } from '@aztec/stdlib/interfaces/client';
 import { getInitialTestAccountsManagers } from '@aztec/accounts/testing';
 import { AztecLmdbStore } from '@aztec/kv-store/lmdb';
-import { TokenContract } from '../../artifacts/Token.js';
+import { TokenContract } from '../../../artifacts/Token.js';
 
 const setupTestSuite = async () => {
   const { pxe, store } = await setupPXE();

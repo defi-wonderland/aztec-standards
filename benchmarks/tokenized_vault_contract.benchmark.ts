@@ -12,7 +12,7 @@ import { getInitialTestAccountsManagers } from '@aztec/accounts/testing';
 // Import the new Benchmark base class and context
 import { Benchmark, BenchmarkContext } from '@defi-wonderland/aztec-benchmark';
 
-import { TokenContract } from '../src/artifacts/Token.js';
+import { TokenContract } from '../artifacts/Token.js';
 import { deployVaultAndAssetWithMinter, setPrivateAuthWit, setPublicAuthWit, setupPXE } from '../src/ts/test/utils.js';
 
 // Extend the BenchmarkContext from the new package
