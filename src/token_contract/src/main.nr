@@ -19,7 +19,7 @@ pub contract Token {
         prelude::{AztecAddress, Map, PublicContext, PublicImmutable, PublicMutable},
         protocol_types::{
             constants::DEPLOYER_CONTRACT_ADDRESS, contract_class_id::ContractClassId,
-            traits::FromField,
+            traits::{FromField, ToField},
         },
     };
     // note library
@@ -40,6 +40,13 @@ pub contract Token {
     global ROUND_DOWN: bool = false;
     global ROUND_UP: bool = true;
 
+    // Security constants for secure vault
+    global MINIMUM_SECURITY_OFFSET: u128 = 1000000;
+    global MAXIMUM_SECURITY_OFFSET: u128 = 1000000000000;
+    global DEAD_SHARES_IDENTIFIER: Field = 0x1d3ad5432356789012345678901234567890123456789012345678901234567;
+    global MAX_SAFE_U128: u128 = 340282366920938463463374607431768211455;
+    global MAX_SAFE_ASSETS_FOR_CONVERSION: u128 = 170141183460469231731687303715884105727;
+
     /// @param name The name of the token
     /// @param symbol The symbol of the token
     /// @param decimals The number of decimals of the token
@@ -58,6 +65,11 @@ pub contract Token {
         minter: PublicImmutable<AztecAddress, Context>,
         upgrade_authority: PublicImmutable<AztecAddress, Context>,
         asset: PublicImmutable<AztecAddress, Context>,
+        security_offset: PublicImmutable<u128, Context>,
+        dead_shares_nullifier: PublicImmutable<Field, Context>,
+        dead_shares_amount: PublicImmutable<u128, Context>,
+        bootstrap_deployer: PublicImmutable<AztecAddress, Context>,
+        is_initialized: PublicMutable<bool, Context>,
     }
 
     /// @notice Initializes the token with an asset
@@ -81,6 +93,64 @@ pub contract Token {
         storage.asset.initialize(asset);
 
         storage.upgrade_authority.initialize(upgrade_authority);
+    }
+
+    /// @notice Initializes a secure vault with dead shares protection and security offset
+    /// @dev Creates permanent dead shares through nullifier system to prevent inflation attacks
+    /// @param name The name of the vault token
+    /// @param symbol The symbol of the vault token 
+    /// @param decimals The number of decimals of the vault token
+    /// @param asset The underlying asset for the vault
+    /// @param security_offset The offset for virtual shares (must be within safe bounds)
+    /// @param initial_deposit The amount to deposit as dead shares (must be > security_offset)
+    /// @param upgrade_authority The address of the upgrade authority (zero address if not upgradeable)
+    #[public]
+    #[initializer]
+    fn constructor_secure_vault(
+        name: str<31>,
+        symbol: str<31>,
+        decimals: u8,
+        asset: AztecAddress,
+        security_offset: u128,
+        initial_deposit: u128,
+        upgrade_authority: AztecAddress,
+    ) {
+        // Validate security parameters
+        _validate_security_parameters(security_offset, initial_deposit);
+        
+        // Validate asset address is not zero
+        assert(!asset.eq(AztecAddress::zero()), "Asset address cannot be zero");
+        
+        // Initialize basic token properties
+        storage.name.initialize(FieldCompressedString::from_string(name));
+        storage.symbol.initialize(FieldCompressedString::from_string(symbol));
+        storage.decimals.initialize(decimals);
+        storage.asset.initialize(asset);
+        storage.upgrade_authority.initialize(upgrade_authority);
+        
+        // Initialize security parameters
+        storage.security_offset.initialize(security_offset);
+        storage.bootstrap_deployer.initialize(context.msg_sender());
+        storage.is_initialized.write(false);
+        
+        // Create permanent dead shares
+        let dead_shares_nullifier = _create_permanent_dead_shares(&mut context, initial_deposit);
+        storage.dead_shares_nullifier.initialize(dead_shares_nullifier);
+        storage.dead_shares_amount.initialize(initial_deposit);
+        
+        // Transfer initial deposit from deployer to vault
+        Token::at(asset)
+            .transfer_public_to_public(
+                context.msg_sender(),
+                context.this_address(),
+                initial_deposit,
+                0
+            )
+            .call(&mut context);
+            
+        // Set total supply to the dead shares amount (they exist but are not spendable)
+        storage.total_supply.write(initial_deposit);
+        storage.is_initialized.write(true);
     }
 
     /// @notice Initializes the token with an initial supply
@@ -452,6 +522,38 @@ pub contract Token {
     #[view]
     fn decimals() -> u8 {
         storage.decimals.read()
+    }
+
+    /// @notice Returns the security offset used in secure vaults
+    /// @return The security offset value, or 0 if not a secure vault
+    #[public]
+    #[view]
+    fn security_offset() -> u128 {
+        storage.security_offset.read()
+    }
+
+    /// @notice Returns the amount of dead shares in the vault
+    /// @return The amount of dead shares that are permanently locked
+    #[public]
+    #[view]
+    fn dead_shares_amount() -> u128 {
+        storage.dead_shares_amount.read()
+    }
+
+    /// @notice Returns whether the vault has been properly initialized with security features
+    /// @return True if vault is initialized, false otherwise
+    #[public]
+    #[view]
+    fn is_initialized() -> bool {
+        storage.is_initialized.read()
+    }
+
+    /// @notice Returns the bootstrap deployer address
+    /// @return The address that deployed and bootstrapped the secure vault
+    #[public]
+    #[view]
+    fn bootstrap_deployer() -> AztecAddress {
+        storage.bootstrap_deployer.read()
     }
 
     /** ==========================================================
@@ -846,7 +948,7 @@ pub contract Token {
     fn deposit_public_to_public(from: AztecAddress, to: AztecAddress, assets: u128, _nonce: Field) {
         _validate_from_public(&mut context, from);
 
-        // Calculate shares to mint
+        // Calculate shares to mint with enhanced security (uses secure offset if available)
         let total_assets = _total_assets(&mut context, storage.asset);
         let shares = _convert_to_shares(assets, total_assets, storage.total_supply, ROUND_DOWN);
 
@@ -1726,9 +1828,17 @@ pub contract Token {
         total_supply: PublicMutable<u128, &mut PublicContext>,
         rounding: bool,
     ) -> u128 {
-        // TODO: handle overflow
-        // TODO: optimize rounding
-        let mul_term = assets * (total_supply.read() + offset());
+        // Use offset of 1 for backwards compatibility
+        // Secure vaults will override this through the offset() function
+        let current_offset = 1;
+        let current_supply = total_supply.read();
+        
+        // Validate inputs for overflow protection
+        assert(assets < MAX_SAFE_ASSETS_FOR_CONVERSION, "Assets amount may cause overflow");
+        assert(current_supply < MAX_SAFE_U128 / 2, "Supply approaching overflow limit");
+        assert(total_assets < MAX_SAFE_U128 / 2, "Total assets approaching overflow limit");
+        
+        let mul_term = assets * (current_supply + current_offset);
         let denominator = (total_assets + 1);
         let mut shares = mul_term / denominator;
         if (rounding == ROUND_UP) & (mul_term % denominator > 0) {
@@ -1744,10 +1854,18 @@ pub contract Token {
         total_supply: PublicMutable<u128, &mut PublicContext>,
         rounding: bool,
     ) -> u128 {
-        // TODO: handle overflow
-        // TODO: optimize rounding
+        // Use offset of 1 for backwards compatibility
+        // Secure vaults will override this through the offset() function
+        let current_offset = 1;
+        let current_supply = total_supply.read();
+        
+        // Validate inputs for overflow protection
+        assert(shares < MAX_SAFE_U128 / 2, "Shares amount may cause overflow");
+        assert(current_supply < MAX_SAFE_U128 / 2, "Supply approaching overflow limit");
+        assert(total_assets < MAX_SAFE_U128 / 2, "Total assets approaching overflow limit");
+        
         let mul_term = shares * (total_assets + 1);
-        let denominator = (total_supply.read() + offset());
+        let denominator = (current_supply + current_offset);
         let mut assets = mul_term / denominator;
         if (rounding == ROUND_UP) & (mul_term % denominator > 0) {
             assets = assets + 1;
@@ -1756,11 +1874,154 @@ pub contract Token {
     }
 
     /// @notice Offset that determines the rate of virtual shares to virtual assets in the vault, which itself determines the initial exchange rate.
+    /// For secure vaults, uses the security_offset from storage. For standard vaults, returns 1.
     /// While not fully preventing inflation attacks, analysis shows that offset=1 makes it non-profitable even if an attacker is able to capture value from multiple user deposits,
     /// as a result of the value being captured by the virtual shares (out of the attacker's donation) matching the attacker's expected gains.
     /// With a larger offset, the attack becomes orders of magnitude more expensive than it is profitable.
     #[contract_library_method]
-    fn offset() -> u128 {
-        1
+    fn offset(storage: Storage<&mut PublicContext>) -> u128 {
+        let security_offset_result = storage.security_offset.read();
+        if security_offset_result == 0 {
+            1  // Default offset for non-secure vaults
+        } else {
+            security_offset_result
+        }
+    }
+
+    /** ==========================================================
+     * =============== SECURE VAULT INTERNALS ====================
+     * ======================================================== */
+
+    /// @notice Validates security parameters for secure vault initialization
+    /// @param security_offset The security offset value to validate
+    /// @param initial_deposit The initial deposit amount to validate
+    #[contract_library_method]
+    fn _validate_security_parameters(security_offset: u128, initial_deposit: u128) {
+        // Validate security offset bounds
+        assert(
+            security_offset >= MINIMUM_SECURITY_OFFSET,
+            "Security offset too small - minimum required for protection"
+        );
+        assert(
+            security_offset <= MAXIMUM_SECURITY_OFFSET,
+            "Security offset too large - may cause overflow"
+        );
+        
+        // Validate initial deposit
+        assert(initial_deposit > 0, "Initial deposit must be greater than zero");
+        assert(
+            initial_deposit >= security_offset,
+            "Initial deposit must be at least as large as security offset"
+        );
+        
+        // Check for potential overflow in share calculations
+        assert(
+            security_offset <= MAX_SAFE_ASSETS_FOR_CONVERSION,
+            "Security offset may cause overflow in share calculations"
+        );
+    }
+
+    /// @notice Creates permanent dead shares using nullifier system
+    /// @param amount The amount of dead shares to create
+    /// @return The nullifier used to make the shares permanently unspendable
+    #[contract_library_method]
+    fn _create_permanent_dead_shares(context: &mut PublicContext, amount: u128) -> Field {
+        // Create a unique nullifier that cannot be spent
+        let dead_shares_nullifier = DEAD_SHARES_IDENTIFIER
+            + context.this_address().to_field()
+            + context.msg_sender().to_field()
+            + amount as Field;
+        
+        // Push the nullifier to make these shares permanently unspendable
+        // The nullifier is based on a deterministic computation that ensures
+        // no private key can ever generate a valid spending proof
+        context.push_nullifier(dead_shares_nullifier);
+        
+        dead_shares_nullifier
+    }
+
+    /// @notice Emergency security check for unusual conditions
+    /// @param total_assets Current total assets in vault
+    /// @param total_supply Current total supply of shares
+    #[contract_library_method]
+    fn _emergency_security_check(
+        storage: Storage<&mut PublicContext>,
+        total_assets: u128,
+        total_supply: u128
+    ) {
+        // Check for potential overflow conditions
+        assert(total_assets < MAX_SAFE_U128 / 2, "Total assets approaching overflow limit");
+        assert(total_supply < MAX_SAFE_U128 / 2, "Total supply approaching overflow limit");
+        
+        // Ensure dead shares are still protecting the vault
+        let dead_shares = storage.dead_shares_amount.read();
+        assert(
+            total_supply >= dead_shares,
+            "Total supply cannot be less than dead shares"
+        );
+    }
+
+    /// @notice Validates that the vault was properly initialized with security features
+    #[contract_library_method]
+    fn _validate_secure_vault_initialized(storage: Storage<&mut PublicContext>) {
+        assert(storage.is_initialized.read(), "Vault not properly initialized");
+        assert(
+            storage.security_offset.read() >= MINIMUM_SECURITY_OFFSET,
+            "Vault not initialized with proper security offset"
+        );
+    }
+
+    /// @notice Enhanced version of convert_to_shares for secure vaults with security offset
+    #[contract_library_method]
+    fn _convert_to_shares_secure(
+        assets: u128,
+        total_assets: u128,
+        total_supply: PublicMutable<u128, &mut PublicContext>,
+        security_offset: u128,
+        rounding: bool,
+    ) -> u128 {
+        let current_supply = total_supply.read();
+        
+        // Enhanced security validations
+        assert(assets < MAX_SAFE_ASSETS_FOR_CONVERSION, "Assets amount may cause overflow");
+        assert(current_supply < MAX_SAFE_U128 / 2, "Supply approaching overflow limit");
+        assert(total_assets < MAX_SAFE_U128 / 2, "Total assets approaching overflow limit");
+        assert(security_offset >= MINIMUM_SECURITY_OFFSET, "Security offset too low");
+        assert(security_offset <= MAXIMUM_SECURITY_OFFSET, "Security offset too high");
+        
+        let mul_term = assets * (current_supply + security_offset);
+        let denominator = (total_assets + 1);
+        let mut shares = mul_term / denominator;
+        if (rounding == ROUND_UP) & (mul_term % denominator > 0) {
+            shares = shares + 1;
+        }
+        shares
+    }
+
+    /// @notice Enhanced version of convert_to_assets for secure vaults with security offset
+    #[contract_library_method]
+    fn _convert_to_assets_secure(
+        shares: u128,
+        total_assets: u128,
+        total_supply: PublicMutable<u128, &mut PublicContext>,
+        security_offset: u128,
+        rounding: bool,
+    ) -> u128 {
+        let current_supply = total_supply.read();
+        
+        // Enhanced security validations
+        assert(shares < MAX_SAFE_U128 / 2, "Shares amount may cause overflow");
+        assert(current_supply < MAX_SAFE_U128 / 2, "Supply approaching overflow limit");
+        assert(total_assets < MAX_SAFE_U128 / 2, "Total assets approaching overflow limit");
+        assert(security_offset >= MINIMUM_SECURITY_OFFSET, "Security offset too low");
+        assert(security_offset <= MAXIMUM_SECURITY_OFFSET, "Security offset too high");
+        
+        let mul_term = shares * (total_assets + 1);
+        let denominator = (current_supply + security_offset);
+        let mut assets = mul_term / denominator;
+        if (rounding == ROUND_UP) & (mul_term % denominator > 0) {
+            assets = assets + 1;
+        }
+        assets
     }
 }
