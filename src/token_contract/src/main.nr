@@ -988,7 +988,7 @@ pub contract Token {
         // Reverts if min_shares is greater than allowed
         Token::at(context.this_address())
             .settle_deposit_to_private_with_commitment_internal(
-                partial_note.commitment,
+                partial_note.to_field(),
                 assets,
                 min_shares,
             )
@@ -1036,7 +1036,7 @@ pub contract Token {
         // Reverts if min_shares is greater than allowed
         Token::at(context.this_address())
             .settle_deposit_to_private_with_commitment_internal(
-                partial_note.commitment,
+                partial_note.to_field(),
                 assets,
                 min_shares,
             )
@@ -1329,7 +1329,7 @@ pub contract Token {
         // Any excess amount of shares is sent back to the sender via commitment
         // Reverts if the amount of shares required is greater than max_shares
         Token::at(context.this_address())
-            .settle_withdrawal_with_commitment_internal(partial_note.commitment, assets, max_shares)
+            .settle_withdrawal_with_commitment_internal(partial_note.to_field(), assets, max_shares)
             .enqueue(&mut context);
 
         // Transfer the assets to the sender
@@ -1381,7 +1381,7 @@ pub contract Token {
         // Any excess amount of shares is sent back to the sender via commitment
         // Reverts if the amount of shares required is greater than max_shares
         Token::at(context.this_address())
-            .settle_withdrawal_with_commitment_internal(partial_note.commitment, assets, max_shares)
+            .settle_withdrawal_with_commitment_internal(partial_note.to_field(), assets, max_shares)
             .enqueue(&mut context);
 
         // Transfer the assets to the recipient in private
@@ -1596,7 +1596,7 @@ pub contract Token {
         if surplus > 0 {
             _increase_commitment_balance(
                 &mut context,
-                PartialUintNote { commitment },
+                PartialUintNote::from_field(commitment),
                 context.this_address(),
                 surplus,
             );
@@ -1623,7 +1623,7 @@ pub contract Token {
         if outstanding_shares > 0 {
             _increase_commitment_balance(
                 &mut context,
-                PartialUintNote { commitment },
+                PartialUintNote::from_field(commitment),
                 context.this_address(),
                 outstanding_shares,
             );
