@@ -264,33 +264,39 @@ unconstrained fn redeem_private_to_private_exact_on_behalf_of_other_success() {
 
     // Authorize someone to call redeem_private_to_private_exact
     let shares_to_burn: u128 = deposit_amount;
+    let token = Token::at(vault_address);
     let min_assets: u128 = deposit_amount;
-    let redeem_private_to_private_exact_call_interface = Token::at(vault_address)
+    let redeem_private_to_private_exact_call_interface = token.redeem_private_to_private_exact(
+        deposit_recipient,
+        recipient,
+        shares_to_burn,
+        min_assets,
+        0,
+    );
+
+    authwit_cheatcodes::add_private_authwit_from_call_interface(
+        deposit_recipient,
+        recipient,
+        redeem_private_to_private_exact_call_interface,
+    );
+
+    // Withdraw
+    env.impersonate(recipient);
+    Token::at(vault_address)
         .redeem_private_to_private_exact(deposit_recipient, recipient, shares_to_burn, min_assets, 0
-            );
+            )
+        .call(&mut env.private());
+    env.advance_block_by(1);
 
-authwit_cheatcodes::add_private_authwit_from_call_interface(
-    deposit_recipient,
-    recipient,
-    redeem_private_to_private_exact_call_interface,
-);
+    // All shares are burnt
+    utils::check_public_balance(vault_address, deposit_recipient, 0);
+    utils::check_public_balance(vault_address, recipient, 0);
 
-// Withdraw
-env.impersonate(recipient);
-Token::at(vault_address)
-    .redeem_private_to_private_exact(deposit_recipient, recipient, shares_to_burn, min_assets, 0)
-    .call(&mut env.private());
-env.advance_block_by(1);
+    // Check the total supply got updated
+    let total_supply = Token::at(vault_address).total_supply().view(&mut env.public());
+    assert(total_supply == 0, "Incorrect shares total supply");
 
-// All shares are burnt
-utils::check_public_balance(vault_address, deposit_recipient, 0);
-utils::check_public_balance(vault_address, recipient, 0);
-
-// Check the total supply got updated
-let total_supply = Token::at(vault_address).total_supply().view(&mut env.public());
-assert(total_supply == 0, "Incorrect shares total supply");
-
-// Check asset balances
-utils::check_private_balance(asset_address, recipient, min_assets);
-utils::check_public_balance(asset_address, vault_address, 0);
+    // Check asset balances
+    utils::check_private_balance(asset_address, recipient, min_assets);
+    utils::check_public_balance(asset_address, vault_address, 0);
 }
