@@ -1,4 +1,5 @@
 mod types;
+mod test;
 
 use aztec::macros::aztec;
 
@@ -38,7 +39,7 @@ pub contract SFT {
     /// @param symbol The symbol of the SFT collection
     /// @param minter The account permissioned to mint new tokens
     /// @param private_sfts Private SFT ownership using nested mapping (token_id -> address -> PrivateSet<SFTNote>)
-    /// @param public_sfts Public SFT item IDs using nested mapping (token_id -> address -> array of item_ids)
+    /// @param public_sfts Public SFT balances using nested mapping (token_id -> address -> u128 balance)
     /// @param token_type_exists Whether a token type exists
     /// @param total_supply Total supply of each token type
     /// @param upgrade_authority The address of the upgrade authority
@@ -48,7 +49,7 @@ pub contract SFT {
         symbol: PublicImmutable<FieldCompressedString, Context>,
         minter: PublicImmutable<AztecAddress, Context>,
         private_sfts: Map<Field, Map<AztecAddress, PrivateSet<SFTNote, Context>, Context>, Context>,
-        public_sfts: Map<Field, Map<AztecAddress, PublicMutable<[Field; 32], Context>, Context>, Context>, // 32 is max number of items per token type
+        public_sfts: Map<Field, Map<AztecAddress, PublicMutable<u128, Context>, Context>, Context>,
         total_supply: Map<Field, PublicMutable<u128, Context>, Context>,
         token_type_exists: Map<Field, PublicMutable<bool, Context>, Context>,
         upgrade_authority: PublicImmutable<AztecAddress, Context>,
@@ -77,35 +78,32 @@ pub contract SFT {
      * ========================= PRIVATE =========================
      * ======================================================== */
 
-    /// @notice Transfers an item from private ownership to public ownership
-    /// @dev Removes the SFTNote from private storage and enqueues a public call to add to public storage
+    /// @notice Transfers a token from private ownership to public ownership
+    /// @dev Removes one SFTNote from private storage and enqueues a public call to add to public storage
     /// @param from The address of the sender
     /// @param to The address of the recipient
     /// @param token_id The ID of the token type
-    /// @param item_id The ID of the specific item to transfer
     /// @param _nonce The nonce used for authwitness
     #[private]
     fn transfer_private_to_public(
         from: AztecAddress,
         to: AztecAddress,
         token_id: Field,
-        item_id: Field,
         _nonce: Field,
     ) {
         _validate_from_private(&mut context, from);
 
-        _remove_private_token_owner(storage.private_sfts.at(token_id).at(from), item_id);
+        _remove_private_token(storage.private_sfts.at(token_id).at(from), token_id);
         SFT::at(context.this_address())
-            .update_public_item_ids_internal(to, token_id, item_id)
+            .increment_public_balance_internal(to, token_id)
             .enqueue(&mut context);
     }
 
-    /// @notice Transfers an item from private to public ownership and returns a commitment
-    /// @dev Removes the SFTNote from private storage, enqueues public call, and returns a commitment for privacy entrance
+    /// @notice Transfers a token from private to public ownership and returns a commitment
+    /// @dev Removes one SFTNote from private storage, enqueues public call, and returns a commitment for privacy entrance
     /// @param from The address of the sender
     /// @param to The address of the recipient
     /// @param token_id The ID of the token type
-    /// @param item_id The ID of the specific item to transfer
     /// @param _nonce The nonce used for authwitness
     /// @return commitment The partial SFT note utilized for the transfer commitment (privacy entrance)
     #[private]
@@ -113,14 +111,13 @@ pub contract SFT {
         from: AztecAddress,
         to: AztecAddress,
         token_id: Field,
-        item_id: Field,
         _nonce: Field,
     ) -> Field {
         _validate_from_private(&mut context, from);
 
-        _remove_private_token_owner(storage.private_sfts.at(token_id).at(from), item_id);
+        _remove_private_token(storage.private_sfts.at(token_id).at(from), token_id);
         SFT::at(context.this_address())
-            .update_public_item_ids_internal(to, token_id, item_id)
+            .increment_public_balance_internal(to, token_id)
             .enqueue(&mut context);
 
         let completer = context.msg_sender();
@@ -135,90 +132,80 @@ pub contract SFT {
         commitment.commitment()
     }
 
-    /// @notice Transfers an item from one private owner to another private owner
-    /// @dev Removes the SFTNote from sender's private storage and creates a new SFTNote for recipient
+    /// @notice Transfers a token from one private owner to another private owner
+    /// @dev Removes one SFTNote from sender's private storage and creates a new SFTNote for recipient
     /// @param from The address of the sender
     /// @param to The address of the recipient
     /// @param token_id The ID of the token type
-    /// @param item_id The ID of the specific item to transfer
     /// @param _nonce The nonce used for authwitness
     #[private]
     fn transfer_private_to_private(
         from: AztecAddress,
         to: AztecAddress,
         token_id: Field,
-        item_id: Field,
         _nonce: Field,
     ) {
         _validate_from_private(&mut context, from);
-
-        _remove_private_token_owner(storage.private_sfts.at(token_id).at(from), item_id);
-        _update_private_token_owner(
+        _remove_private_token(storage.private_sfts.at(token_id).at(from), token_id);
+        _add_private_token(
             &mut context,
             storage.private_sfts.at(token_id).at(to),
             from,
             to,
             token_id,
-            item_id,
         );
     }
 
-    /// @notice Transfers an item from private ownership to an existing commitment
-    /// @dev Removes the SFTNote from private storage and enqueues a public call to complete the commitment
+    /// @notice Transfers a token from private ownership to an existing commitment
+    /// @dev Removes one SFTNote from private storage and enqueues a public call to complete the commitment
     /// @param from The address of the sender
     /// @param token_id The ID of the token type
-    /// @param item_id The ID of the specific item to transfer
     /// @param commitment The existing commitment to complete
     /// @param _nonce The nonce used for authwitness
     #[private]
     fn transfer_private_to_commitment(
         from: AztecAddress,
         token_id: Field,
-        item_id: Field,
         commitment: Field,
         _nonce: Field,
     ) {
         _validate_from_private(&mut context, from);
 
-        _remove_private_token_owner(storage.private_sfts.at(token_id).at(from), item_id);
+        _remove_private_token(storage.private_sfts.at(token_id).at(from), token_id);
         let completer = from;
         SFT::at(context.this_address())
             .transfer_token_to_commitment_internal(
                 PartialSFTNote { commitment },
                 token_id,
-                item_id,
                 completer,
             )
             .enqueue(&mut context);
     }
 
-    /// @notice Transfers an item from public ownership to private ownership
+    /// @notice Transfers a token from public ownership to private ownership
     /// @dev Enqueues a public call to remove from public storage and creates a new private SFTNote for recipient
     /// @param from The address of the sender
     /// @param to The address of the recipient
     /// @param token_id The ID of the token type
-    /// @param item_id The ID of the specific item to transfer
     /// @param _nonce The nonce used for authwitness
     #[private]
     fn transfer_public_to_private(
         from: AztecAddress,
         to: AztecAddress,
         token_id: Field,
-        item_id: Field,
         _nonce: Field,
     ) {
         _validate_from_private(&mut context, from);
 
         SFT::at(context.this_address())
-            .remove_public_item_id_internal(from, token_id, item_id)
+            .decrement_public_balance_internal(from, token_id)
             .enqueue(&mut context);
-        _update_private_token_owner(
+        _add_private_token(
             &mut context,
             storage.private_sfts.at(token_id).at(to),
             from,
             to,
             token_id,
-            item_id,
         );
     }
 
@@ -250,51 +237,46 @@ pub contract SFT {
      * ========================= PUBLIC ==========================
      * ======================================================== */
 
-    /// @notice Transfers an item from one public address to another public address
+    /// @notice Transfers a token from one public address to another public address
     /// @param from The address of the sender
     /// @param to The address of the recipient
     /// @param token_id The ID of the token type
-    /// @param item_id The ID of the specific item to transfer
     /// @param _nonce The nonce used for authwitness
     #[public]
     fn transfer_public_to_public(
         from: AztecAddress,
         to: AztecAddress,
         token_id: Field,
-        item_id: Field,
         _nonce: Field,
     ) {
         _validate_from_public(&mut context, from);
-        _validate_public_token_owner(storage.public_sfts, from, token_id, item_id);
+        _validate_public_balance(storage.public_sfts, from, token_id);
 
-        _remove_public_item_id(storage.public_sfts, from, token_id, item_id);
-        _update_public_item_ids(storage.public_sfts, to, token_id, item_id);
+        _decrement_public_balance(storage.public_sfts, from, token_id);
+        _increment_public_balance(storage.public_sfts, to, token_id);
     }
 
-    /// @notice Transfers an item from public address to a commitment
+    /// @notice Transfers a token from public address to a commitment
     /// @param from The address of the sender
     /// @param token_id The ID of the token type
-    /// @param item_id The ID of the specific item to transfer
     /// @param commitment The commitment to transfer to
     /// @param _nonce The nonce used for authwitness
     #[public]
     fn transfer_public_to_commitment(
         from: AztecAddress,
         token_id: Field,
-        item_id: Field,
         commitment: Field,
         _nonce: Field,
     ) {
         _validate_from_public(&mut context, from);
-        _validate_public_token_owner(storage.public_sfts, from, token_id, item_id);
+        _validate_public_balance(storage.public_sfts, from, token_id);
 
-        _remove_public_item_id(storage.public_sfts, from, token_id, item_id);
+        _decrement_public_balance(storage.public_sfts, from, token_id);
         let completer = context.msg_sender();
         _transfer_token_to_commitment(
             &mut context,
             PartialSFTNote { commitment },
             token_id,
-            item_id,
             completer,
         );
     }
@@ -313,59 +295,63 @@ pub contract SFT {
     fn create_token_type(token_id: Field) {
         _validate_minter(context.msg_sender(), storage.minter.read());
         assert(!storage.token_type_exists.at(token_id).read(), "token type already exists");
-        storage.token_type_exists.at(token_id).write(true);
+        _create_token_type_internal(storage.token_type_exists, token_id);
+    }
+
+    /// @notice Internal function to create a token type without minter validation
+    /// @param token_id The ID of the new token type
+    #[public]
+    #[internal]
+    fn create_token_type_internal(token_id: Field) {
+        _create_token_type_internal(storage.token_type_exists, token_id);
     }
 
     /// @notice Increases the total supply of a token type
     /// @param token_id The ID of the token type
     #[public]
     #[internal]
-    fn increase_total_supply_internal(token_id: Field) {
-        _increase_total_supply(storage.total_supply, token_id);
+    fn increment_total_supply_internal(token_id: Field) {
+        _increment_total_supply(storage.total_supply, token_id);
     }
 
     /// @notice Decreases the total supply of a token type
     /// @param token_id The ID of the token type
     #[public]
     #[internal]
-    fn decrease_total_supply_internal(token_id: Field) {
-        _decrease_total_supply(storage.total_supply, token_id);
+    fn decrement_total_supply_internal(token_id: Field) {
+        _decrement_total_supply(storage.total_supply, token_id);
     }
 
-    /// @notice Adds an item to a user's public collection
+    /// @notice Increases a user's public balance
     /// @param to The address of the recipient
     /// @param token_id The ID of the token type
-    /// @param item_id The ID of the item to add
     #[public]
     #[internal]
-    fn update_public_item_ids_internal(to: AztecAddress, token_id: Field, item_id: Field) {
-        _update_public_item_ids(storage.public_sfts, to, token_id, item_id);
+    fn increment_public_balance_internal(to: AztecAddress, token_id: Field) {
+        _increment_public_balance(storage.public_sfts, to, token_id);
     }
 
-    /// @notice Completes a commitment with token and item details
+    /// @notice Completes a commitment with token details
     /// @param commitment The partial note representing the commitment
     /// @param token_id The ID of the token type
-    /// @param item_id The ID of the item
     /// @param completer The address authorized to complete this commitment
     #[public]
     #[internal]
     fn transfer_token_to_commitment_internal(
         commitment: PartialSFTNote,
         token_id: Field,
-        item_id: Field,
         completer: AztecAddress,
     ) {
-        _transfer_token_to_commitment(&mut context, commitment, token_id, item_id, completer);
+        _transfer_token_to_commitment(&mut context, commitment, token_id, completer);
     }
 
-    /// @notice Removes an item from a user's public collection
+    /// @notice Decreases a user's public balance
     /// @param from The address of the owner
     /// @param token_id The ID of the token type
-    /// @param item_id The ID of the item to remove
     #[public]
     #[internal]
-    fn remove_public_item_id_internal(from: AztecAddress, token_id: Field, item_id: Field) {
-        _remove_public_item_id(storage.public_sfts, from, token_id, item_id);
+    fn decrement_public_balance_internal(from: AztecAddress, token_id: Field) {
+        _decrement_public_balance(storage.public_sfts, from, token_id);
     }
 
     /** ==========================================================
@@ -399,17 +385,7 @@ pub contract SFT {
     /// @return The balance of the public balance of `owner` for `token_id`
     #[public]
     #[view]
-    fn public_balance_of(owner: AztecAddress, token_id: Field) -> u128 {
-        let item_ids = storage.public_sfts.at(token_id).at(owner).read();
-        item_ids.len() as u128
-    }
-
-    /// @param owner The address of the owner
-    /// @param token_id The ID of the token type
-    /// @return The item IDs owned by `owner` for `token_id`
-    #[public]
-    #[view]
-    fn public_sfts(owner: AztecAddress, token_id: Field) -> [Field; 32] {
+    fn balance_of_public_by_token_id(owner: AztecAddress, token_id: Field) -> u128 {
         storage.public_sfts.at(token_id).at(owner).read()
     }
 
@@ -443,33 +419,6 @@ pub contract SFT {
         sfts.len() as u128
     }
 
-    /// @notice Returns an array of item IDs owned by `owner` for `token_id` starting from a specific offset
-    /// @param owner The address of the owner
-    /// @param token_id The ID of the token type
-    /// @param page_index The offset to start counting from (for pagination)
-    /// @return The number of items of `token_id` owned privately by `owner`
-    /// @return A flag indicating whether a page limit was reached
-    #[utility]
-    pub unconstrained fn get_private_sfts_by_token_id(
-        owner: AztecAddress,
-        token_id: Field,
-        page_index: u32,
-    ) -> pub ([Field; MAX_NOTES_PER_PAGE], bool) {
-        let offset = page_index * MAX_NOTES_PER_PAGE;
-        let mut options = NoteViewerOptions::new();
-        let sfts =
-            storage.private_sfts.at(token_id).at(owner).view_notes(options.set_offset(offset));
-
-        let mut owned_item_ids = [0; MAX_NOTES_PER_PAGE];
-        for i in 0..options.limit {
-            if i < sfts.len() {
-                owned_item_ids[i] = sfts.get_unchecked(i).item_id;
-            }
-        }
-        let page_limit_reached = sfts.len() == options.limit;
-        (owned_item_ids, page_limit_reached)
-    }
-
     /** ==========================================================
     * ======================= MINTABLE ==========================
     * ======================================================== */
@@ -477,19 +426,17 @@ pub contract SFT {
     /// @notice Mints a new token to the private collection
     /// @param to The address of the recipient
     /// @param token_id The ID of the token type
-    /// @param item_id The ID of the item to mint
     #[private]
-    fn mint_to_private(to: AztecAddress, token_id: Field, item_id: Field) {
+    fn mint_to_private(to: AztecAddress, token_id: Field) {
         assert(token_id != 0, "zero token ID not supported");
-        assert(item_id != 0, "zero item ID not supported");
         _validate_minter(context.msg_sender(), storage.minter.read());
 
-        storage.private_sfts.at(token_id).at(to).insert(SFTNote::new(token_id, item_id, to)).emit(
+        storage.private_sfts.at(token_id).at(to).insert(SFTNote::new(token_id, to)).emit(
             encode_and_encrypt_note(&mut context, to, to),
         );
 
-        SFT::at(context.this_address()).create_token_type(token_id).enqueue(&mut context);
-        SFT::at(context.this_address()).increase_total_supply_internal(token_id).enqueue(
+        SFT::at(context.this_address()).create_token_type_internal(token_id).enqueue(&mut context);
+        SFT::at(context.this_address()).increment_total_supply_internal(token_id).enqueue(
             &mut context,
         );
     }
@@ -497,15 +444,13 @@ pub contract SFT {
     /// @notice Mints a new token to the public collection
     /// @param to The address of the recipient
     /// @param token_id The ID of the token type
-    /// @param item_id The ID of the item to mint
     #[public]
-    fn mint_to_public(to: AztecAddress, token_id: Field, item_id: Field) {
+    fn mint_to_public(to: AztecAddress, token_id: Field) {
         assert(storage.token_type_exists.at(token_id).read(), "token type does not exist");
-        assert(item_id != 0, "zero ID not supported");
         _validate_minter(context.msg_sender(), storage.minter.read());
-        _increase_total_supply(storage.total_supply, token_id);
+        _increment_total_supply(storage.total_supply, token_id);
 
-        _update_public_item_ids(storage.public_sfts, to, token_id, item_id);
+        _increment_public_balance(storage.public_sfts, to, token_id);
     }
 
     /** ==========================================================
@@ -515,14 +460,13 @@ pub contract SFT {
     /// @notice Burns a token from the private collection
     /// @param from The address of the owner
     /// @param token_id The ID of the token type
-    /// @param item_id The ID of the item to burn
     /// @param _nonce The nonce of the burn
     #[private]
-    fn burn_private(from: AztecAddress, token_id: Field, item_id: Field, _nonce: Field) {
+    fn burn_private(from: AztecAddress, token_id: Field, _nonce: Field) {
         _validate_from_private(&mut context, from);
-        _remove_private_token_owner(storage.private_sfts.at(token_id).at(from), item_id);
+        _remove_private_token(storage.private_sfts.at(token_id).at(from), token_id);
 
-        SFT::at(context.this_address()).decrease_total_supply_internal(token_id).enqueue(
+        SFT::at(context.this_address()).decrement_total_supply_internal(token_id).enqueue(
             &mut context,
         );
     }
@@ -530,13 +474,12 @@ pub contract SFT {
     /// @notice Burns a token from the public collection
     /// @param from The address of the owner
     /// @param token_id The ID of the token type
-    /// @param item_id The ID of the item to burn
     #[public]
-    fn burn_public(from: AztecAddress, token_id: Field, item_id: Field, _nonce: Field) {
+    fn burn_public(from: AztecAddress, token_id: Field, _nonce: Field) {
         _validate_from_public(&mut context, from);
-        _validate_public_token_owner(storage.public_sfts, from, token_id, item_id);
-        _decrease_total_supply(storage.total_supply, token_id);
-        _remove_public_item_id(storage.public_sfts, from, token_id, item_id);
+        _validate_public_balance(storage.public_sfts, from, token_id);
+        _decrement_total_supply(storage.total_supply, token_id);
+        _decrement_public_balance(storage.public_sfts, from, token_id);
     }
 
     /** ==========================================================
@@ -562,6 +505,17 @@ pub contract SFT {
     /** ==========================================================
      * ================= TOKEN LIBRARIES =========================
      * ======================================================== */
+
+    /// @notice Internal helper to create a token type without minter validation
+    /// @param token_type_exists The storage pointer to the token type existence map
+    /// @param token_id The ID of the new token type
+    #[contract_library_method]
+    fn _create_token_type_internal(
+        token_type_exists: Map<Field, PublicMutable<bool, &mut PublicContext>, &mut PublicContext>,
+        token_id: Field,
+    ) {
+        token_type_exists.at(token_id).write(true);
+    }
 
     /// @notice Stores a commitment in storage
     /// @param context The context of the public call
@@ -602,45 +556,43 @@ pub contract SFT {
         commitment
     }
 
-    /// @notice Updates the private token owner
+    /// @notice Adds a private token to the recipient
     /// @param context The context of the private call
-    /// @param private_sft_set The private owner
+    /// @param private_sft_set The private set to add to
     /// @param from The address of the sender
     /// @param to The address of the recipient
     /// @param token_id The ID of the token type
-    /// @param item_id The ID of the item to add
     #[contract_library_method]
-    fn _update_private_token_owner(
+    fn _add_private_token(
         context: &mut PrivateContext,
         private_sft_set: PrivateSet<SFTNote, &mut PrivateContext>,
         from: AztecAddress,
         to: AztecAddress,
         token_id: Field,
-        item_id: Field,
     ) {
-        let new_note = SFTNote::new(token_id, item_id, to);
+        let new_note = SFTNote::new(token_id, to);
         private_sft_set.insert(new_note).emit(encode_and_encrypt_note(context, to, from));
     }
 
-    /// @notice Removes the private token owner
-    /// @param private_sft_set The private owner
-    /// @param item_id The ID of the item to remove
+    /// @notice Removes a private token
+    /// @param private_sft_set The private set to remove from
+    /// @param token_id The ID of the token type
     #[contract_library_method]
-    fn _remove_private_token_owner(
+    fn _remove_private_token(
         private_sft_set: PrivateSet<SFTNote, &mut PrivateContext>,
-        item_id: Field,
+        token_id: Field,
     ) {
         let notes = private_sft_set.pop_notes(NoteGetterOptions::new()
-            .select(SFTNote::properties().item_id, Comparator.EQ, item_id)
+            .select(SFTNote::properties().token_id, Comparator.EQ, token_id)
             .set_limit(1));
-        assert(notes.len() == 1, "sft not found in private to public");
+        assert(notes.len() == 1, "sft not found in private");
     }
 
     /// @notice Increases the total supply of a token type
     /// @param total_supply The storage pointer to the total supply
     /// @param token_id The ID of the token type
     #[contract_library_method]
-    fn _increase_total_supply(
+    fn _increment_total_supply(
         total_supply: Map<Field, PublicMutable<u128, &mut PublicContext>, &mut PublicContext>,
         token_id: Field,
     ) {
@@ -651,59 +603,40 @@ pub contract SFT {
     /// @param total_supply The storage pointer to the total supply
     /// @param token_id The ID of the token type
     #[contract_library_method]
-    fn _decrease_total_supply(
+    fn _decrement_total_supply(
         total_supply: Map<Field, PublicMutable<u128, &mut PublicContext>, &mut PublicContext>,
         token_id: Field,
     ) {
         total_supply.at(token_id).write(total_supply.at(token_id).read() - 1);
     }
 
-    /// @notice Inserts a specific item ID into a user's public collection for a specific token type
-    /// @param public_sfts The storage pointer to the public item IDs
+    /// @notice Increases a user's public balance for a specific token type
+    /// @param public_sfts The storage pointer to the public balances
     /// @param to The address of the recipient
     /// @param token_id The ID of the token type
-    /// @param item_id The specific item ID to add
     #[contract_library_method]
-    fn _update_public_item_ids(
-        public_sfts: Map<Field, Map<AztecAddress, PublicMutable<[Field; 32], &mut PublicContext>, &mut PublicContext>, &mut PublicContext>,
+    fn _increment_public_balance(
+        public_sfts: Map<Field, Map<AztecAddress, PublicMutable<u128, &mut PublicContext>, &mut PublicContext>, &mut PublicContext>,
         to: AztecAddress,
         token_id: Field,
-        item_id: Field,
     ) {
-        let mut item_ids = public_sfts.at(token_id).at(to).read();
-        let mut found_empty = false;
-        for i in 0..32 {
-            if (item_ids[i] == 0) & (!found_empty) {
-                item_ids[i] = item_id;
-                found_empty = true;
-            }
-        }
-        assert(found_empty, "no empty slots in item_ids array");
-        public_sfts.at(token_id).at(to).write(item_ids);
+        let current_balance = public_sfts.at(token_id).at(to).read();
+        public_sfts.at(token_id).at(to).write(current_balance + 1);
     }
 
-    /// @notice Removes a specific item ID from a user's public collection
-    /// @param public_sfts The storage pointer to the public item IDs
+    /// @notice Decreases a user's public balance for a specific token type
+    /// @param public_sfts The storage pointer to the public balances
     /// @param from The address of the owner
     /// @param token_id The ID of the token type
-    /// @param item_id The specific item ID to remove
     #[contract_library_method]
-    fn _remove_public_item_id(
-        public_sfts: Map<Field, Map<AztecAddress, PublicMutable<[Field; 32], &mut PublicContext>, &mut PublicContext>, &mut PublicContext>,
+    fn _decrement_public_balance(
+        public_sfts: Map<Field, Map<AztecAddress, PublicMutable<u128, &mut PublicContext>, &mut PublicContext>, &mut PublicContext>,
         from: AztecAddress,
         token_id: Field,
-        item_id: Field,
     ) {
-        let mut item_ids = public_sfts.at(token_id).at(from).read();
-        let mut found_item = false;
-        for i in 0..32 {
-            if (item_ids[i] == item_id) & (!found_item) {
-                item_ids[i] = 0;
-                found_item = true;
-            }
-        }
-        assert(found_item, "item not found in public collection");
-        public_sfts.at(token_id).at(from).write(item_ids);
+        let current_balance = public_sfts.at(token_id).at(from).read();
+        assert(current_balance > 0, "insufficient public balance");
+        public_sfts.at(token_id).at(from).write(current_balance - 1);
     }
 
     /// @notice Transfers a token to a commitment
@@ -711,43 +644,35 @@ pub contract SFT {
     /// @param context The context of the public call
     /// @param commitment The commitment to complete
     /// @param token_id The id of the token to transfer
-    /// @param item_id The id of the item to transfer
     /// @param completer The address that is authorized to complete this commitment
     #[contract_library_method]
     fn _transfer_token_to_commitment(
         context: &mut PublicContext,
         commitment: PartialSFTNote,
         token_id: Field,
-        item_id: Field,
         completer: AztecAddress,
     ) {
-        assert(
-            context.nullifier_exists(commitment.commitment(), context.this_address()),
-            "invalid commitment",
-        );
-        commitment.complete(context, completer, token_id, item_id);
+        // assert(
+        //     context.nullifier_exists(commitment.commitment(), context.this_address()),
+        //     "invalid commitment",
+        // );
+        // TODO: should we use nullifier_exists check?
+        assert(context.storage_read(commitment.commitment()), "invalid commitment");
+        commitment.complete(context, completer, token_id);
     }
 
-    /// @notice Validates that the caller is the owner of a token
-    /// @param public_sfts The public item IDs map
+    /// @notice Validates that the caller has a positive balance of a token
+    /// @param public_sfts The public balances map
     /// @param from The address of the sender
     /// @param token_id The id of the token to validate
-    /// @param item_id The id of the item to validate
     #[contract_library_method]
-    fn _validate_public_token_owner(
-        public_sfts: Map<Field, Map<AztecAddress, PublicMutable<[Field; 32], &mut PublicContext>, &mut PublicContext>, &mut PublicContext>,
+    fn _validate_public_balance(
+        public_sfts: Map<Field, Map<AztecAddress, PublicMutable<u128, &mut PublicContext>, &mut PublicContext>, &mut PublicContext>,
         from: AztecAddress,
         token_id: Field,
-        item_id: Field,
     ) {
-        let item_ids = public_sfts.at(token_id).at(from).read();
-        let mut owner_of_item_id = false;
-        for i in 0..32 {
-            if item_ids[i] != 0 {
-                owner_of_item_id = true;
-            }
-        }
-        assert(owner_of_item_id, "caller owns no tokens of this type");
+        let balance = public_sfts.at(token_id).at(from).read();
+        assert(balance > 0, "caller owns no tokens of this type");
     }
 
     /// @notice Validates that the caller is an authorized minter

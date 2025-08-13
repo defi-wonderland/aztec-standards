@@ -18,26 +18,24 @@ use aztec::{
 };
 
 // SFTNote supports partial notes for privacy-preserving completion in public contexts.
-// Each SFTNote represents exactly 1 item with both token_id (type) and item_id (unique instance).
-// Items are whole, indivisible units that cannot be fractionalized.
+// Each SFTNote represents a token.
+// SFTNote is equivalent to NFTNote structure.
 
-/// A private note representing a single item of a specific token type owned by an account.
+/// A private note representing a token id associated to an account.
 #[custom_note]
 #[derive(Eq, Serialize)]
 pub struct SFTNote {
     // The ordering of these fields is important given that it must:
     //   a) match that of SFTPartialNotePrivateContent, and
-    //   b) have the public fields at the end
+    //   b) have the public field at the end
     // Correct ordering is checked by the tests in this module.
 
     /// The owner of the note, i.e. the account whose nullifier secret key is required to compute the nullifier.
     owner: AztecAddress,
     /// Random value, protects against note hash preimage attacks.
     randomness: Field,
-    /// The ID of the token type represented by this note.
+    /// The ID of the token represented by this note.
     token_id: Field,
-    /// The unique item ID within the token type. Each SFTNote represents exactly 1 item.
-    item_id: Field,
 }
 
 impl NoteHash for SFTNote {
@@ -52,7 +50,7 @@ impl NoteHash for SFTNote {
             PartialSFTNote { commitment: private_content.compute_partial_commitment(storage_slot) };
 
         // Then compute the completion note hash. In a real partial note this step would be performed in public.
-        partial_note.compute_complete_note_hash(self.token_id, self.item_id)
+        partial_note.compute_complete_note_hash(self.token_id)
     }
 
     fn compute_nullifier(
@@ -81,25 +79,20 @@ impl NoteHash for SFTNote {
 }
 
 impl SFTNote {
-    /// Creates a new SFTNote with the specified token_id, item_id, and owner.
-    /// @param token_id The ID of the token type
-    /// @param item_id The unique item ID within the token type
-    /// @param owner The owner of the tokens
-    pub fn new(token_id: Field, item_id: Field, owner: AztecAddress) -> Self {
-        // Safety: randomness is used to prevent note hash preimage attacks
+    /// Creates a new SFTNote with the specified token_id and owner.
+    /// @param token_id The ID of the token
+    /// @param owner The owner of the token
+    pub fn new(token_id: Field, owner: AztecAddress) -> Self {
+        // Safety: randomness is used to prevent note hash preimage attacks and ensure note uniqueness
         let randomness = unsafe { random() };
-        Self { token_id, item_id, owner, randomness }
+        Self { token_id, owner, randomness }
     }
 
     pub fn get_token_id(self) -> Field {
         self.token_id
     }
 
-    pub fn get_item_id(self) -> Field {
-        self.item_id
-    }
-
-    /// Creates a partial note that will hide the owner and storage slot but not the token_id and item_id.
+    /// Creates a partial note that will hide the owner and storage slot but not the token_id.
     /// This enables privacy-preserving transfers where token details are completed in public.
     pub fn partial(
         owner: AztecAddress,
@@ -165,7 +158,7 @@ impl NoteType for PrivateSFTPartialNotePrivateLogContent {
 }
 
 /// A partial instance of a SFTNote. This represents a commitment to owner/randomness/storage_slot,
-/// but token_id and item_id fields are set later in public.
+/// but token_id field is set later in public.
 #[derive(Packable, Serialize, Deserialize)]
 pub struct PartialSFTNote {
     commitment: Field,
@@ -180,13 +173,11 @@ impl PartialSFTNote {
     /// @param context The public context for completion
     /// @param completer The address completing the note
     /// @param token_id The token ID to complete with
-    /// @param item_id The unique item ID to complete with
     pub fn complete(
         self,
         context: &mut PublicContext,
         completer: AztecAddress,
         token_id: Field,
-        item_id: Field,
     ) {
         assert(token_id != 0, "Cannot complete a PartialSFTNote with a token_id of 0");
 
@@ -196,8 +187,8 @@ impl PartialSFTNote {
             "Invalid partial note or completer",
         );
 
-        context.emit_public_log(self.compute_note_completion_log(token_id, item_id));
-        context.push_note_hash(self.compute_complete_note_hash(token_id, item_id));
+        context.emit_public_log(self.compute_note_completion_log(token_id));
+        context.push_note_hash(self.compute_complete_note_hash(token_id));
     }
 
     pub fn compute_validity_commitment(self, completer: AztecAddress) -> Field {
@@ -207,13 +198,13 @@ impl PartialSFTNote {
         )
     }
 
-    fn compute_note_completion_log(self, token_id: Field, item_id: Field) -> [Field; 3] {
-        [self.commitment, token_id, item_id]
+    fn compute_note_completion_log(self, token_id: Field) -> [Field; 2] {
+        [self.commitment, token_id]
     }
 
-    fn compute_complete_note_hash(self, token_id: Field, item_id: Field) -> Field {
+    fn compute_complete_note_hash(self, token_id: Field) -> Field {
         poseidon2_hash_with_separator(
-            [self.commitment, token_id, item_id],
+            [self.commitment, token_id],
             GENERATOR_INDEX__NOTE_HASH,
         )
     }
