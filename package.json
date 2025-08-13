@@ -10,8 +10,8 @@
   "type": "module",
   "scripts": {
     "postinstall": "husky",
-    "clean": "rm -rf ./src/artifacts ./target",
-    "codegen": "aztec codegen target --outdir src/artifacts --force",
+    "clean": "rm -rf ./artifacts ./target",
+    "codegen": "aztec codegen target --outdir artifacts --force",
     "compile": "aztec-nargo compile",
     "start:pxe": "docker compose -p sandbox -f ~/.aztec/docker-compose.sandbox.yml -f docker-compose.override.yml up",
     "test": "yarn test:nr && yarn test:js",

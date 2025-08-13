@@ -16,8 +16,8 @@ import {
 import { getPXEServiceConfig } from '@aztec/pxe/config';
 import { createPXEService } from '@aztec/pxe/server';
 import { createStore } from '@aztec/kv-store/lmdb';
-import { TokenContract, TokenContractArtifact } from '../../artifacts/Token.js';
-import { NFTContractArtifact } from '../../artifacts/NFT.js';
+import { TokenContract, TokenContractArtifact } from '../../../artifacts/Token.js';
+import { NFTContractArtifact } from '../../../artifacts/NFT.js';
 
 export const logger = createLogger('aztec:aztec-standards');
 

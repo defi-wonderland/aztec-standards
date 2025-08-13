@@ -77,10 +77,10 @@ jobs:
         run: yarn --frozen-lockfile
 
       - name: Compile contracts (BASE)
-        run: script -e -c "${AZTEC_NARGO:-aztec-nargo} compile"
+        run: yarn compile
 
       - name: Codegen wrappers (BASE)
-        run: script -e -c "aztec codegen target --outdir src/artifacts --force"
+        run: yarn codegen
 
       - name: Benchmark (BASE)
         run: |
@@ -146,10 +146,10 @@ jobs:
         run: yarn --frozen-lockfile
 
       - name: Compile contracts (PR)
-        run: script -e -c "${AZTEC_NARGO:-aztec-nargo} compile"
+        run: yarn compile
 
       - name: Codegen wrappers (PR)
-        run: script -e -c "aztec codegen target --outdir src/artifacts --force"
+        run: yarn codegen
 
       # ──────────────────────────────────────────────────────────────
       # 3️⃣  DIFF &  COMMENT
