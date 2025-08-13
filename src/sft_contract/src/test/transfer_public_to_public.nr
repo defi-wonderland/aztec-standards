@@ -8,9 +8,9 @@ unconstrained fn sft_transfer_public_to_public_success() {
     utils::check_public_balance(env, sft_contract_address, owner, utils::token_id_1, 2);
 
     env.impersonate(owner);
-    SFT::at(sft_contract_address).transfer_public_to_public(owner, recipient, utils::token_id_1, 0).call(
-        &mut env.public(),
-    );
+    SFT::at(sft_contract_address)
+        .transfer_public_to_public(owner, recipient, utils::token_id_1, 0)
+        .call(&mut env.public());
     env.advance_block_by(1);
 
     utils::check_public_balance(env, sft_contract_address, owner, utils::token_id_1, 1);
@@ -23,9 +23,9 @@ unconstrained fn sft_transfer_public_to_public_self_success() {
     utils::check_public_balance(env, sft_contract_address, owner, utils::token_id_1, 2);
 
     env.impersonate(owner);
-    SFT::at(sft_contract_address).transfer_public_to_public(owner, owner, utils::token_id_1, 0).call(
-        &mut env.public(),
-    );
+    SFT::at(sft_contract_address)
+        .transfer_public_to_public(owner, owner, utils::token_id_1, 0)
+        .call(&mut env.public());
     env.advance_block_by(1);
 
     utils::check_public_balance(env, sft_contract_address, owner, utils::token_id_1, 2);
@@ -36,8 +36,12 @@ unconstrained fn sft_transfer_public_to_public_authorized_success() {
     let (env, sft_contract_address, owner, _, recipient) = utils::setup_and_mint_to_public(true);
     utils::check_public_balance(env, sft_contract_address, owner, utils::token_id_1, 2);
 
-    let transfer_call_interface =
-        SFT::at(sft_contract_address).transfer_public_to_public(owner, recipient, utils::token_id_1, 1);
+    let transfer_call_interface = SFT::at(sft_contract_address).transfer_public_to_public(
+        owner,
+        recipient,
+        utils::token_id_1,
+        1,
+    );
 
     authwit_cheatcodes::add_public_authwit_from_call_interface(
         owner,
@@ -68,8 +72,12 @@ unconstrained fn sft_transfer_public_to_public_non_existent_fail() {
 unconstrained fn sft_transfer_public_to_public_unauthorized_fail() {
     let (env, sft_contract_address, owner, _, recipient) = utils::setup_and_mint_to_public(true);
 
-    let transfer_call_interface =
-        SFT::at(sft_contract_address).transfer_public_to_public(owner, recipient, utils::token_id_1, 1);
+    let transfer_call_interface = SFT::at(sft_contract_address).transfer_public_to_public(
+        owner,
+        recipient,
+        utils::token_id_1,
+        1,
+    );
 
     env.impersonate(recipient);
     transfer_call_interface.call(&mut env.public());
@@ -79,8 +87,12 @@ unconstrained fn sft_transfer_public_to_public_unauthorized_fail() {
 unconstrained fn sft_transfer_public_to_public_wrong_authwit_fail() {
     let (env, sft_contract_address, owner, _, recipient) = utils::setup_and_mint_to_public(true);
 
-    let transfer_call_interface =
-        SFT::at(sft_contract_address).transfer_public_to_public(owner, recipient, utils::token_id_1, 1);
+    let transfer_call_interface = SFT::at(sft_contract_address).transfer_public_to_public(
+        owner,
+        recipient,
+        utils::token_id_1,
+        1,
+    );
 
     authwit_cheatcodes::add_public_authwit_from_call_interface(
         owner,

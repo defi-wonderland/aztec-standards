@@ -24,9 +24,9 @@ unconstrained fn sft_symbol_is_set() {
 #[test]
 unconstrained fn token_type_does_not_exist_initially() {
     let (env, sft_contract_address, _, _, _) = utils::setup_with_minter(false);
-    let exists = SFT::at(sft_contract_address)
-        .public_token_type_exists(utils::token_id_1)
-        .view(&mut env.public());
+    let exists = SFT::at(sft_contract_address).public_token_type_exists(utils::token_id_1).view(
+        &mut env.public(),
+    );
     assert(!exists, "token type should not exist initially");
 }
 

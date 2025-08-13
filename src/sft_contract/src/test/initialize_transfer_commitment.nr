@@ -42,7 +42,8 @@ unconstrained fn sft_initialize_transfer_commitment_self_success() {
 
 #[test]
 unconstrained fn sft_initialize_transfer_commitment_by_third_party_success() {
-    let (env, sft_contract_address, owner, minter, recipient) = utils::setup_and_mint_to_private(false);
+    let (env, sft_contract_address, owner, minter, recipient) =
+        utils::setup_and_mint_to_private(false);
 
     env.impersonate(minter);
     let commitment = SFT::at(sft_contract_address)

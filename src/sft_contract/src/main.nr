@@ -94,9 +94,9 @@ pub contract SFT {
         _validate_from_private(&mut context, from);
 
         _remove_private_token(storage.private_sfts.at(token_id).at(from), token_id);
-        SFT::at(context.this_address())
-            .increment_public_balance_internal(to, token_id)
-            .enqueue(&mut context);
+        SFT::at(context.this_address()).increment_public_balance_internal(to, token_id).enqueue(
+            &mut context,
+        );
     }
 
     /// @notice Transfers a token from private to public ownership and returns a commitment
@@ -116,9 +116,9 @@ pub contract SFT {
         _validate_from_private(&mut context, from);
 
         _remove_private_token(storage.private_sfts.at(token_id).at(from), token_id);
-        SFT::at(context.this_address())
-            .increment_public_balance_internal(to, token_id)
-            .enqueue(&mut context);
+        SFT::at(context.this_address()).increment_public_balance_internal(to, token_id).enqueue(
+            &mut context,
+        );
 
         let completer = context.msg_sender();
         let commitment = _initialize_transfer_commitment(
@@ -197,9 +197,9 @@ pub contract SFT {
     ) {
         _validate_from_private(&mut context, from);
 
-        SFT::at(context.this_address())
-            .decrement_public_balance_internal(from, token_id)
-            .enqueue(&mut context);
+        SFT::at(context.this_address()).decrement_public_balance_internal(from, token_id).enqueue(
+            &mut context,
+        );
         _add_private_token(
             &mut context,
             storage.private_sfts.at(token_id).at(to),

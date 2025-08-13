@@ -173,12 +173,7 @@ impl PartialSFTNote {
     /// @param context The public context for completion
     /// @param completer The address completing the note
     /// @param token_id The token ID to complete with
-    pub fn complete(
-        self,
-        context: &mut PublicContext,
-        completer: AztecAddress,
-        token_id: Field,
-    ) {
+    pub fn complete(self, context: &mut PublicContext, completer: AztecAddress, token_id: Field) {
         assert(token_id != 0, "Cannot complete a PartialSFTNote with a token_id of 0");
 
         let validity_commitment = self.compute_validity_commitment(completer);
@@ -203,9 +198,6 @@ impl PartialSFTNote {
     }
 
     fn compute_complete_note_hash(self, token_id: Field) -> Field {
-        poseidon2_hash_with_separator(
-            [self.commitment, token_id],
-            GENERATOR_INDEX__NOTE_HASH,
-        )
+        poseidon2_hash_with_separator([self.commitment, token_id], GENERATOR_INDEX__NOTE_HASH)
     }
 }

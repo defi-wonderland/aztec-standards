@@ -37,8 +37,12 @@ unconstrained fn sft_transfer_public_to_commitment_authorized_success() {
 
     assert(utils::get_commitment_stored(sft_contract_address, commitment), "Commitment not stored");
 
-    let transfer_call_interface = SFT::at(sft_contract_address)
-        .transfer_public_to_commitment(owner, utils::token_id_1, commitment, 1);
+    let transfer_call_interface = SFT::at(sft_contract_address).transfer_public_to_commitment(
+        owner,
+        utils::token_id_1,
+        commitment,
+        1,
+    );
 
     authwit_cheatcodes::add_public_authwit_from_call_interface(
         owner,
@@ -92,8 +96,12 @@ unconstrained fn sft_transfer_public_to_commitment_unauthorized_fail() {
         .call(&mut env.private());
     env.advance_block_by(1);
 
-    let transfer_call_interface = SFT::at(sft_contract_address)
-        .transfer_public_to_commitment(owner, utils::token_id_1, commitment, 1);
+    let transfer_call_interface = SFT::at(sft_contract_address).transfer_public_to_commitment(
+        owner,
+        utils::token_id_1,
+        commitment,
+        1,
+    );
 
     env.impersonate(recipient);
     transfer_call_interface.call(&mut env.public());

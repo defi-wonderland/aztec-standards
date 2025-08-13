@@ -6,7 +6,7 @@ use crate::test::utils;
 unconstrained fn mint_to_public_success() {
     let (env, sft_contract_address, owner, minter, _) = utils::setup_with_minter(false);
     utils::create_test_token_type(env, sft_contract_address, minter);
-    
+
     env.impersonate(minter);
     SFT::at(sft_contract_address).mint_to_public(owner, utils::token_id_1).call(&mut env.public());
     env.advance_block_by(1);
@@ -19,7 +19,7 @@ unconstrained fn mint_to_public_success() {
 unconstrained fn public_balance_increases_after_minting_success() {
     let (env, sft_contract_address, owner, minter, _) = utils::setup_with_minter(false);
     utils::create_test_token_type(env, sft_contract_address, minter);
-    
+
     env.impersonate(minter);
     SFT::at(sft_contract_address).mint_to_public(owner, utils::token_id_1).call(&mut env.public());
     SFT::at(sft_contract_address).mint_to_public(owner, utils::token_id_1).call(&mut env.public());
@@ -33,7 +33,7 @@ unconstrained fn public_balance_increases_after_minting_success() {
 unconstrained fn total_supply_increases_after_public_minting_success() {
     let (env, sft_contract_address, owner, minter, _) = utils::setup_with_minter(false);
     utils::create_test_token_type(env, sft_contract_address, minter);
-    
+
     env.impersonate(minter);
     SFT::at(sft_contract_address).mint_to_public(owner, utils::token_id_1).call(&mut env.public());
     SFT::at(sft_contract_address).mint_to_public(owner, utils::token_id_1).call(&mut env.public());
@@ -72,8 +72,12 @@ unconstrained fn mint_to_public_separate_owners_success() {
 
     env.impersonate(minter);
     SFT::at(sft_contract_address).mint_to_public(owner, utils::token_id_1).call(&mut env.public());
-    SFT::at(sft_contract_address).mint_to_public(recipient, utils::token_id_1).call(&mut env.public());
-    SFT::at(sft_contract_address).mint_to_public(recipient, utils::token_id_1).call(&mut env.public());
+    SFT::at(sft_contract_address).mint_to_public(recipient, utils::token_id_1).call(
+        &mut env.public(),
+    );
+    SFT::at(sft_contract_address).mint_to_public(recipient, utils::token_id_1).call(
+        &mut env.public(),
+    );
     env.advance_block_by(1);
 
     utils::check_public_balance(env, sft_contract_address, owner, utils::token_id_1, 1);

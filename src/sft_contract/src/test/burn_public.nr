@@ -54,8 +54,12 @@ unconstrained fn burn_public_separate_owners_success() {
 
     env.impersonate(minter);
     SFT::at(sft_contract_address).mint_to_public(owner, utils::token_id_1).call(&mut env.public());
-    SFT::at(sft_contract_address).mint_to_public(recipient, utils::token_id_1).call(&mut env.public());
-    SFT::at(sft_contract_address).mint_to_public(recipient, utils::token_id_1).call(&mut env.public());
+    SFT::at(sft_contract_address).mint_to_public(recipient, utils::token_id_1).call(
+        &mut env.public(),
+    );
+    SFT::at(sft_contract_address).mint_to_public(recipient, utils::token_id_1).call(
+        &mut env.public(),
+    );
     env.advance_block_by(1);
 
     env.impersonate(owner);
@@ -72,7 +76,7 @@ unconstrained fn burn_public_separate_owners_success() {
 unconstrained fn burn_public_not_owner_fail() {
     let (env, sft_contract_address, owner, minter, recipient) = utils::setup_with_minter(false);
     utils::create_test_token_type(env, sft_contract_address, minter);
-    
+
     env.impersonate(minter);
     SFT::at(sft_contract_address).mint_to_public(owner, utils::token_id_1).call(&mut env.public());
     env.advance_block_by(1);
@@ -86,7 +90,7 @@ unconstrained fn burn_public_not_owner_fail() {
 unconstrained fn burn_public_zero_token_id_fail() {
     let (env, sft_contract_address, owner, minter, _) = utils::setup_with_minter(false);
     utils::create_test_token_type(env, sft_contract_address, minter);
-    
+
     env.impersonate(minter);
     SFT::at(sft_contract_address).mint_to_public(owner, utils::token_id_1).call(&mut env.public());
     env.advance_block_by(1);
@@ -100,7 +104,7 @@ unconstrained fn burn_public_zero_token_id_fail() {
 unconstrained fn burn_public_nonexistent_item_fail() {
     let (env, sft_contract_address, owner, minter, _) = utils::setup_with_minter(false);
     utils::create_test_token_type(env, sft_contract_address, minter);
-    
+
     env.impersonate(owner);
     SFT::at(sft_contract_address).burn_public(owner, utils::token_id_1, 0).call(&mut env.public());
 }

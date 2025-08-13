@@ -1,9 +1,6 @@
 use crate::SFT;
 use aztec::{
-    oracle::{
-        execution::{get_block_number, get_contract_address},
-        storage::storage_read,
-    },
+    oracle::{execution::{get_block_number, get_contract_address}, storage::storage_read},
     prelude::AztecAddress,
     test::helpers::{cheatcodes, test_environment::TestEnvironment},
 };
@@ -124,9 +121,9 @@ pub unconstrained fn check_public_balance(
     token_id: Field,
     expected_balance: u128,
 ) {
-    let balance = SFT::at(sft_contract_address)
-        .balance_of_public_by_token_id(owner, token_id)
-        .view(&mut env.public());
+    let balance = SFT::at(sft_contract_address).balance_of_public_by_token_id(owner, token_id).view(
+        &mut env.public(),
+    );
     assert(balance == expected_balance, "Public balance mismatch");
 }
 
@@ -136,9 +133,7 @@ pub unconstrained fn check_total_supply(
     token_id: Field,
     expected_supply: u128,
 ) {
-    let supply = SFT::at(sft_contract_address)
-        .total_supply(token_id)
-        .view(&mut env.public());
+    let supply = SFT::at(sft_contract_address).total_supply(token_id).view(&mut env.public());
     assert(supply == expected_supply, "Total supply mismatch");
 }
 
@@ -148,9 +143,8 @@ pub unconstrained fn check_token_type_exists(
     token_id: Field,
     expected_exists: bool,
 ) {
-    let exists = SFT::at(sft_contract_address)
-        .public_token_type_exists(token_id)
-        .view(&mut env.public());
+    let exists =
+        SFT::at(sft_contract_address).public_token_type_exists(token_id).view(&mut env.public());
     assert(exists == expected_exists, "Token type existence mismatch");
 }
 

@@ -6,7 +6,7 @@ use crate::test::utils;
 unconstrained fn mint_to_private_success() {
     let (env, sft_contract_address, owner, minter, _) = utils::setup_with_minter(false);
     utils::create_test_token_type(env, sft_contract_address, minter);
-    
+
     env.impersonate(minter);
     SFT::at(sft_contract_address).mint_to_private(owner, utils::token_id_1).call(&mut env.private());
     env.advance_block_by(1);
@@ -19,7 +19,7 @@ unconstrained fn mint_to_private_success() {
 unconstrained fn private_balance_after_minting_success() {
     let (env, sft_contract_address, owner, minter, _) = utils::setup_with_minter(false);
     utils::create_test_token_type(env, sft_contract_address, minter);
-    
+
     env.impersonate(minter);
     SFT::at(sft_contract_address).mint_to_private(owner, utils::token_id_1).call(&mut env.private());
     SFT::at(sft_contract_address).mint_to_private(owner, utils::token_id_1).call(&mut env.private());
@@ -33,7 +33,7 @@ unconstrained fn private_balance_after_minting_success() {
 unconstrained fn total_supply_increases_after_private_minting_success() {
     let (env, sft_contract_address, owner, minter, _) = utils::setup_with_minter(false);
     utils::create_test_token_type(env, sft_contract_address, minter);
-    
+
     env.impersonate(minter);
     SFT::at(sft_contract_address).mint_to_private(owner, utils::token_id_1).call(&mut env.private());
     SFT::at(sft_contract_address).mint_to_private(owner, utils::token_id_1).call(&mut env.private());
@@ -86,8 +86,12 @@ unconstrained fn mint_to_private_separate_owners_success() {
 
     env.impersonate(minter);
     SFT::at(sft_contract_address).mint_to_private(owner, utils::token_id_1).call(&mut env.private());
-    SFT::at(sft_contract_address).mint_to_private(recipient, utils::token_id_1).call(&mut env.private());
-    SFT::at(sft_contract_address).mint_to_private(recipient, utils::token_id_1).call(&mut env.private());
+    SFT::at(sft_contract_address).mint_to_private(recipient, utils::token_id_1).call(
+        &mut env.private(),
+    );
+    SFT::at(sft_contract_address).mint_to_private(recipient, utils::token_id_1).call(
+        &mut env.private(),
+    );
     env.advance_block_by(1);
 
     utils::check_private_balance(sft_contract_address, owner, utils::token_id_1, 1);
@@ -109,7 +113,6 @@ unconstrained fn private_public_balances_independent_success() {
     utils::check_public_balance(env, sft_contract_address, owner, utils::token_id_1, 1);
     utils::check_total_supply(env, sft_contract_address, utils::token_id_1, 2);
 }
-
 
 /// Test minting fails without minter role
 #[test(should_fail_with = "caller is not minter")]
