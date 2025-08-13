@@ -4,7 +4,7 @@ use aztec::{oracle::random::random, test::helpers::authwit as authwit_cheatcodes
 
 #[test]
 unconstrained fn burn_private_on_behalf_of_self() {
-    let (mut env, token_contract_address, owner, _) =
+    let (env, token_contract_address, owner, _) =
         utils::setup_and_mint_to_private_without_minter(false);
     let burn_amount = mint_amount / 10;
 
