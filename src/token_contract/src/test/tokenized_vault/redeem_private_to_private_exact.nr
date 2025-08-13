@@ -42,7 +42,7 @@ unconstrained fn redeem_private_to_private_exact_success() {
     Token::at(vault_address)
         .redeem_private_to_private_exact(deposit_recipient, recipient, shares_to_burn, min_assets, 0
             )
-            .call(&mut env.private());
+        .call(&mut env.private());
     env.advance_block_by(1);
 
     // All shares are burnt
@@ -90,7 +90,7 @@ unconstrained fn redeem_private_to_private_exact_after_yield() {
     Token::at(vault_address)
         .redeem_private_to_private_exact(deposit_recipient, recipient, shares_to_burn, min_assets, 0
             )
-            .call(&mut env.private());
+        .call(&mut env.private());
     env.advance_block_by(1);
 
     // All shares are burnt
@@ -131,7 +131,7 @@ unconstrained fn redeem_private_to_private_exact_request_fewer_assets() {
     Token::at(vault_address)
         .redeem_private_to_private_exact(deposit_recipient, recipient, shares_to_burn, min_assets, 0
             )
-            .call(&mut env.private());
+        .call(&mut env.private());
     env.advance_block_by(1);
 
     // The deposit_recipient receives change, since he sent 1 share too many
@@ -174,7 +174,7 @@ unconstrained fn redeem_private_to_private_exact_request_too_many_assets() {
     Token::at(vault_address)
         .redeem_private_to_private_exact(deposit_recipient, recipient, shares_to_burn, min_assets, 0
             )
-            .call(&mut env.private());
+        .call(&mut env.private());
     env.advance_block_by(1);
 }
 
@@ -202,7 +202,7 @@ unconstrained fn redeem_private_to_private_exact_without_approval() {
     Token::at(vault_address)
         .redeem_private_to_private_exact(deposit_recipient, recipient, shares_to_burn, min_assets, 0
             )
-            .call(&mut env.private());
+        .call(&mut env.private());
     env.advance_block_by(1);
 }
 
@@ -229,19 +229,18 @@ unconstrained fn redeem_private_to_private_exact_on_behalf_of_wrong_caller() {
     let redeem_private_to_private_exact_call_interface = Token::at(vault_address)
         .redeem_private_to_private_exact(deposit_recipient, recipient, shares_to_burn, min_assets, 0
             );
-    authwit_cheatcodes::add_private_authwit_from_call_interface(
-        deposit_recipient,
-        owner,
-        redeem_private_to_private_exact_call_interface,
-    );
+authwit_cheatcodes::add_private_authwit_from_call_interface(
+    deposit_recipient,
+    owner,
+    redeem_private_to_private_exact_call_interface,
+);
 
-    // Withdraw
-    env.impersonate(recipient);
-    Token::at(vault_address)
-        .redeem_private_to_private_exact(deposit_recipient, recipient, shares_to_burn, min_assets, 0
-            )
-            .call(&mut env.private());
-    env.advance_block_by(1);
+// Withdraw
+env.impersonate(recipient);
+Token::at(vault_address)
+    .redeem_private_to_private_exact(deposit_recipient, recipient, shares_to_burn, min_assets, 0)
+    .call(&mut env.private());
+env.advance_block_by(1);
 }
 
 // TODO(#15666 & #15118): this test fails because the ivsk is currently needed for emitting a note, but the vault contract doesn't have one.
@@ -265,10 +264,16 @@ unconstrained fn redeem_private_to_private_exact_on_behalf_of_other_success() {
 
     // Authorize someone to call redeem_private_to_private_exact
     let shares_to_burn: u128 = deposit_amount;
+    let token = Token::at(vault_address);
     let min_assets: u128 = deposit_amount;
-    let redeem_private_to_private_exact_call_interface = Token::at(vault_address)
-        .redeem_private_to_private_exact(deposit_recipient, recipient, shares_to_burn, min_assets, 0
-            );
+    let redeem_private_to_private_exact_call_interface = token.redeem_private_to_private_exact(
+        deposit_recipient,
+        recipient,
+        shares_to_burn,
+        min_assets,
+        0,
+    );
+
     authwit_cheatcodes::add_private_authwit_from_call_interface(
         deposit_recipient,
         recipient,
@@ -280,7 +285,7 @@ unconstrained fn redeem_private_to_private_exact_on_behalf_of_other_success() {
     Token::at(vault_address)
         .redeem_private_to_private_exact(deposit_recipient, recipient, shares_to_burn, min_assets, 0
             )
-            .call(&mut env.private());
+        .call(&mut env.private());
     env.advance_block_by(1);
 
     // All shares are burnt
