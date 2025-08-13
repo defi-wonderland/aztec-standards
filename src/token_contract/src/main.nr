@@ -38,6 +38,10 @@ pub contract Token {
     // max notes transfer for recursive transfer call if initial max notes are exceeded
     global RECURSIVE_TRANSFER_CALL_MAX_NOTES: u32 = 8;
 
+    // Rounding direction that the vault uses to calculate shares and assets
+    global ROUND_DOWN: bool = false;
+    global ROUND_UP: bool = true;
+
     /// @param name The name of the token
     /// @param symbol The symbol of the token
     /// @param decimals The number of decimals of the token
@@ -55,6 +59,30 @@ pub contract Token {
         public_balances: Map<AztecAddress, PublicMutable<u128, Context>, Context>,
         minter: PublicImmutable<AztecAddress, Context>,
         upgrade_authority: PublicImmutable<AztecAddress, Context>,
+        asset: PublicImmutable<AztecAddress, Context>,
+    }
+
+    /// @notice Initializes the token with an asset
+    /// @dev Since this constructor doesn't set a minter address the mint functions will be disabled
+    /// @param name The name of the token
+    /// @param symbol The symbol of the token
+    /// @param decimals The number of decimals of the token
+    /// @param asset The underlying asset for the yield bearing token
+    #[public]
+    #[initializer]
+    fn constructor_with_asset(
+        name: str<31>,
+        symbol: str<31>,
+        decimals: u8,
+        asset: AztecAddress,
+        upgrade_authority: AztecAddress,
+    ) {
+        storage.name.initialize(FieldCompressedString::from_string(name));
+        storage.symbol.initialize(FieldCompressedString::from_string(symbol));
+        storage.decimals.initialize(decimals);
+        storage.asset.initialize(asset);
+
+        storage.upgrade_authority.initialize(upgrade_authority);
     }
 
     /// @notice Initializes the token with an initial supply
@@ -79,8 +107,12 @@ pub contract Token {
         storage.symbol.initialize(FieldCompressedString::from_string(symbol));
         storage.decimals.initialize(decimals);
 
-        _increase_public_balance(storage.public_balances, to, initial_supply);
-        _increase_total_supply(storage.total_supply, initial_supply);
+        _mint_to_public(
+            storage.public_balances,
+            storage.total_supply,
+            to,
+            initial_supply,
+        );
 
         storage.upgrade_authority.initialize(upgrade_authority);
     }
@@ -431,6 +463,7 @@ pub contract Token {
     /** ==========================================================
      * ===================== UNCONSTRAINED =======================
      * ======================================================== */
+
     #[utility]
     pub unconstrained fn balance_of_private(owner: AztecAddress) -> u128 {
         storage.private_balances.at(owner).balance_of()
@@ -449,12 +482,7 @@ pub contract Token {
     fn mint_to_private(from: AztecAddress, to: AztecAddress, amount: u128) {
         _validate_minter(context.msg_sender(), storage.minter.read());
 
-        _increase_private_balance(&mut context, storage.private_balances, from, to, amount);
-
-        // Enqueue call to increase total supply
-        Token::at(context.this_address()).increase_total_supply_internal(amount).enqueue(
-            &mut context,
-        );
+        _mint_to_private(&mut context, storage.private_balances, from, to, amount);
     }
 
     /// @notice Mints tokens to a public balance
@@ -465,8 +493,7 @@ pub contract Token {
     fn mint_to_public(to: AztecAddress, amount: u128) {
         _validate_minter(context.msg_sender(), storage.minter.read());
 
-        _increase_public_balance(storage.public_balances, to, amount);
-        _increase_total_supply(storage.total_supply, amount);
+        _mint_to_public(storage.public_balances, storage.total_supply, to, amount);
     }
 
     /// @notice Finalizes a mint to a commitment
@@ -493,6 +520,12 @@ pub contract Token {
         _increase_total_supply(storage.total_supply, amount);
     }
 
+    #[public]
+    #[internal]
+    fn mint_to_public_internal(to: AztecAddress, amount: u128) {
+        _mint_to_public(storage.public_balances, storage.total_supply, to, amount);
+    }
+
     /** ==========================================================
      * ======================= BURNABLE ==========================
      * ======================================================== */
@@ -506,17 +539,7 @@ pub contract Token {
     fn burn_private(from: AztecAddress, amount: u128, _nonce: Field) {
         _validate_from_private(&mut context, from);
 
-        _decrease_private_balance(
-            &mut context,
-            storage.private_balances,
-            from,
-            amount,
-            INITIAL_TRANSFER_CALL_MAX_NOTES,
-        );
-
-        Token::at(context.this_address()).decrease_total_supply_internal(amount).enqueue(
-            &mut context,
-        );
+        _burn_private(&mut context, storage.private_balances, from, amount);
     }
 
     /// @notice Burns tokens from a public balance
@@ -528,8 +551,7 @@ pub contract Token {
     fn burn_public(from: AztecAddress, amount: u128, _nonce: Field) {
         _validate_from_public(&mut context, from);
 
-        _decrease_public_balance(storage.public_balances, from, amount);
-        _decrease_total_supply(storage.total_supply, amount);
+        _burn_public(storage.public_balances, storage.total_supply, from, amount);
     }
 
     /// @notice Decreases the total supply by `amount`
@@ -538,6 +560,15 @@ pub contract Token {
     #[internal]
     fn decrease_total_supply_internal(amount: u128) {
         _decrease_total_supply(storage.total_supply, amount);
+    }
+
+    /// @notice Burns tokens from a public balance without validation
+    /// @param from The address from which to burn the tokens
+    /// @param amount The amount of tokens to burn
+    #[public]
+    #[internal]
+    fn burn_public_internal(from: AztecAddress, amount: u128) {
+        _burn_public(storage.public_balances, storage.total_supply, from, amount);
     }
 
     /** ==========================================================
@@ -707,6 +738,59 @@ pub contract Token {
         commitment
     }
 
+    #[contract_library_method]
+    fn _mint_to_public(
+        public_balances: Map<AztecAddress, PublicMutable<u128, &mut PublicContext>, &mut PublicContext>,
+        total_supply: PublicMutable<u128, &mut PublicContext>,
+        to: AztecAddress,
+        amount: u128,
+    ) {
+        _increase_public_balance(public_balances, to, amount);
+        _increase_total_supply(total_supply, amount);
+    }
+
+    #[contract_library_method]
+    fn _mint_to_private(
+        context: &mut PrivateContext,
+        private_balances: Map<AztecAddress, BalanceSet<&mut PrivateContext>, &mut PrivateContext>,
+        from: AztecAddress,
+        to: AztecAddress,
+        amount: u128,
+    ) {
+        _increase_private_balance(context, private_balances, from, to, amount);
+
+        Token::at(context.this_address()).increase_total_supply_internal(amount).enqueue(context);
+    }
+
+    #[contract_library_method]
+    fn _burn_public(
+        public_balances: Map<AztecAddress, PublicMutable<u128, &mut PublicContext>, &mut PublicContext>,
+        total_supply: PublicMutable<u128, &mut PublicContext>,
+        from: AztecAddress,
+        amount: u128,
+    ) {
+        _decrease_public_balance(public_balances, from, amount);
+        _decrease_total_supply(total_supply, amount);
+    }
+
+    #[contract_library_method]
+    fn _burn_private(
+        context: &mut PrivateContext,
+        private_balances: Map<AztecAddress, BalanceSet<&mut PrivateContext>, &mut PrivateContext>,
+        from: AztecAddress,
+        amount: u128,
+    ) {
+        _decrease_private_balance(
+            context,
+            private_balances,
+            from,
+            amount,
+            INITIAL_TRANSFER_CALL_MAX_NOTES,
+        );
+
+        Token::at(context.this_address()).decrease_total_supply_internal(amount).enqueue(context);
+    }
+
     /** ==========================================================
      * ===================  UPGRADEABLE  =========================
      * ======================================================== */
@@ -749,5 +833,938 @@ pub contract Token {
         if (!from.eq(context.msg_sender())) {
             assert_current_call_valid_authwit_public(context, from);
         }
+    }
+
+    /** ==========================================================
+     * ======================= VAULT =============================
+     * ======================================================== */
+
+    /* ====================== DEPOSIT ========================= */
+
+    /// @notice Deposits the underlying asset from a public balance and receives shares to a public balance
+    /// @param from The address of the sender
+    /// @param to The address of the recipient
+    /// @param assets The amount of assets to deposit
+    /// @param _nonce The nonce used for authwitness
+    #[public]
+    fn deposit_public_to_public(from: AztecAddress, to: AztecAddress, assets: u128, _nonce: Field) {
+        _validate_from_public(&mut context, from);
+
+        // Calculate shares to mint
+        let total_assets = _total_assets(&mut context, storage.asset);
+        let shares = _convert_to_shares(assets, total_assets, storage.total_supply, ROUND_DOWN);
+
+        // Take the assets from the sender
+        Token::at(storage.asset.read())
+            .transfer_public_to_public(from, context.this_address(), assets, _nonce)
+            .call(&mut context);
+
+        // Mint shares to the recipient
+        _mint_to_public(storage.public_balances, storage.total_supply, to, shares);
+    }
+
+    /// @notice Deposits the underlying asset from a public balance and receives shares to a private balance
+    /// @dev The shares are calculated based on the ratio (total_supply + offset) / (total_assets + 1) minus any acceptable slippage.
+    ///      The ratio can only decrease or remain the same as time goes by. Any asset surplus is kept by the contract as yield.
+    /// @param from The address of the sender
+    /// @param to The address of the recipient
+    /// @param assets The amount of assets to deposit
+    /// @param shares The amount of shares that should be minted to the recipient
+    /// @param _nonce The nonce used for authwitness
+    #[private]
+    fn deposit_public_to_private(
+        from: AztecAddress,
+        to: AztecAddress,
+        assets: u128,
+        shares: u128,
+        _nonce: Field,
+    ) {
+        _validate_from_private(&mut context, from);
+
+        // Validate in public that `assets` is sufficient for the requested shares
+        Token::at(context.this_address()).validate_deposit_rate_internal(assets, shares).enqueue(
+            &mut context,
+        );
+
+        // Mint shares in private
+        _mint_to_private(&mut context, storage.private_balances, from, to, shares);
+
+        // Take the assets from the sender
+        Token::at(storage.asset.read())
+            .transfer_public_to_public(from, context.this_address(), assets, _nonce)
+            .enqueue(&mut context);
+    }
+
+    /// @notice Deposits the underlying asset from a private balance and receives shares to a private balance
+    /// @dev The shares are calculated based on the ratio (total_supply + offset) / (total_assets + 1) minus any acceptable slippage.
+    ///      The ratio can only decrease or remain the same as time goes by. Any asset surplus is kept by the contract as yield.
+    /// @param from The address of the sender
+    /// @param to The address of the recipient
+    /// @param assets The amount of assets to deposit
+    /// @param shares The amount of shares that should be minted to the recipient
+    /// @param _nonce The nonce used for authwitness
+    #[private]
+    fn deposit_private_to_private(
+        from: AztecAddress,
+        to: AztecAddress,
+        assets: u128,
+        shares: u128,
+        _nonce: Field,
+    ) {
+        _validate_from_private(&mut context, from);
+
+        // Validate in public that `assets` is sufficient for the requested shares
+        Token::at(context.this_address()).validate_deposit_rate_internal(assets, shares).enqueue(
+            &mut context,
+        );
+
+        // Mint shares in private
+        _mint_to_private(&mut context, storage.private_balances, from, to, shares);
+
+        // Take the assets from the sender
+        Token::at(storage.asset.read())
+            .transfer_private_to_public(from, context.this_address(), assets, _nonce)
+            .call(&mut context);
+    }
+
+    /// @notice Deposits the underlying asset from a private balance and receives shares to a public balance
+    /// @param from The address of the sender
+    /// @param to The address of the recipient
+    /// @param assets The amount of assets to deposit
+    /// @param _nonce The nonce used for authwitness
+    #[private]
+    fn deposit_private_to_public(
+        from: AztecAddress,
+        to: AztecAddress,
+        assets: u128,
+        _nonce: Field,
+    ) {
+        _validate_from_private(&mut context, from);
+
+        // Calculate and mint shares to the recipient in public
+        Token::at(context.this_address()).issue_from_assets_internal(to, assets).enqueue(
+            &mut context,
+        );
+
+        // Take the assets from the sender
+        Token::at(storage.asset.read())
+            .transfer_private_to_public(from, context.this_address(), assets, _nonce)
+            .call(&mut context);
+    }
+
+    /// @notice Deposits the underlying asset from a public balance and receives shares to a private balance
+    /// @dev min_shares is the amount of shares that will be minted immediately in private.
+    ///      Any additional shares the recipient is entitled to, will be minted through a commitment once the call is executed publicly.
+    ///      This additional amount can only be known at public execution.
+    /// @param from The address of the sender
+    /// @param to The address of the recipient
+    /// @param assets The amount of assets to deposit
+    /// @param min_shares The amount of shares that should be minted to the recipient in private
+    /// @param _nonce The nonce used for authwitness
+    #[private]
+    fn deposit_public_to_private_exact(
+        from: AztecAddress,
+        to: AztecAddress,
+        assets: u128,
+        min_shares: u128,
+        _nonce: Field,
+    ) {
+        _validate_from_private(&mut context, from);
+
+        // Increase recipient's private balance with `min_shares`
+        _increase_private_balance(&mut context, storage.private_balances, from, to, min_shares);
+
+        // TODO (optimization): partial note logs and validity_commitment nullifier are not needed
+        // Initialize commitment that allows to mint outstanding shares to the recipient in public
+        let partial_note = _initialize_transfer_commitment(
+            &mut context,
+            storage.private_balances,
+            from,
+            to,
+            context.this_address(),
+        );
+
+        // Mint any outstanding shares without revealing the recipient and updates the shares total supply
+        // Reverts if min_shares is greater than allowed
+        Token::at(context.this_address())
+            .settle_deposit_to_private_with_commitment_internal(
+                partial_note.commitment,
+                assets,
+                min_shares,
+            )
+            .enqueue(&mut context);
+
+        // Take the assets from the sender
+        Token::at(storage.asset.read())
+            .transfer_public_to_public(from, context.this_address(), assets, _nonce)
+            .enqueue(&mut context);
+    }
+
+    /// @notice Deposits the underlying asset from a private balance and receives shares to a private balance
+    /// @dev min_shares is the amount of shares that will be minted immediately in private.
+    ///      Any additional shares the recipient is entitled to, will be minted through a commitment once the call is executed publicly.
+    ///      This additional amount can only be known at public execution.
+    /// @param from The address of the sender
+    /// @param to The address of the recipient
+    /// @param assets The amount of assets to deposit
+    /// @param min_shares The amount of shares that should be minted to the recipient in private
+    /// @param _nonce The nonce used for authwitness
+    #[private]
+    fn deposit_private_to_private_exact(
+        from: AztecAddress,
+        to: AztecAddress,
+        assets: u128,
+        min_shares: u128,
+        _nonce: Field,
+    ) {
+        _validate_from_private(&mut context, from);
+
+        // Increase recipient's private balance with `min_shares`
+        _increase_private_balance(&mut context, storage.private_balances, from, to, min_shares);
+
+        // TODO (optimization): partial note logs and validity_commitment nullifier are not needed
+        // Initialize commitment that allows to mint outstanding shares to the recipient in public
+        let partial_note = _initialize_transfer_commitment(
+            &mut context,
+            storage.private_balances,
+            from,
+            to,
+            context.this_address(),
+        );
+
+        // Mint any outstanding shares without revealing the recipient and updates the shares total supply
+        // Reverts if min_shares is greater than allowed
+        Token::at(context.this_address())
+            .settle_deposit_to_private_with_commitment_internal(
+                partial_note.commitment,
+                assets,
+                min_shares,
+            )
+            .enqueue(&mut context);
+
+        // Take the assets from the sender
+        Token::at(storage.asset.read())
+            .transfer_private_to_public(from, context.this_address(), assets, _nonce)
+            .call(&mut context);
+    }
+
+    /* ======================= ISSUE ========================== */
+
+    /// @notice Issues exactly the requested shares to a public balance and receives the underlying asset from a public balance
+    /// @dev max_assets is calculated based on the ratio (total_supply + offset) / (total_assets + 1) plus any acceptable slippage.
+    ///      The ratio can only decrease or remain the same as time goes by. Any excess assets the sender has transferred will be returned.
+    ///      This excess amount can only be known at public execution.
+    /// @param from The address of the sender
+    /// @param to The address of the recipient
+    /// @param shares The amount of shares to issue
+    /// @param max_assets The maximum amount of assets that should be deposited
+    /// @param _nonce The nonce used for authwitness
+    #[public]
+    fn issue_public_to_public(
+        from: AztecAddress,
+        to: AztecAddress,
+        shares: u128,
+        max_assets: u128,
+        _nonce: Field,
+    ) {
+        _validate_from_public(&mut context, from);
+
+        // Calculate assets required
+        let total_assets = _total_assets(&mut context, storage.asset);
+        let assets = _convert_to_assets(shares, total_assets, storage.total_supply, ROUND_UP);
+
+        // Take the assets from the sender
+        Token::at(storage.asset.read())
+            .transfer_public_to_public(from, context.this_address(), max_assets, _nonce)
+            .call(&mut context);
+
+        // Refund
+        let change = max_assets - assets; // Reverts with underflow if invalid
+        if change > 0 {
+            // Reimburse the sender with any excess assets sent
+            Token::at(storage.asset.read())
+                .transfer_public_to_public(context.this_address(), from, change, 0)
+                .call(&mut context);
+        }
+
+        // Mint shares to the recipient
+        _mint_to_public(storage.public_balances, storage.total_supply, to, shares);
+    }
+
+    /// @notice Issues exactly the requested shares to a private balance and receives the underlying asset from a public balance
+    /// @dev max_assets is calculated based on the ratio (total_supply + offset) / (total_assets + 1) plus any acceptable slippage.
+    ///      The ratio can only decrease or remain the same as time goes by.
+    /// @param from The address of the sender
+    /// @param to The address of the recipient
+    /// @param shares The amount of shares to issue
+    /// @param max_assets The maximum amount of assets that should be deposited
+    /// @param _nonce The nonce used for authwitness
+    #[private]
+    fn issue_public_to_private(
+        from: AztecAddress,
+        to: AztecAddress,
+        shares: u128,
+        max_assets: u128,
+        _nonce: Field,
+    ) {
+        _validate_from_private(&mut context, from);
+
+        // Take the assets from the sender
+        Token::at(storage.asset.read())
+            .transfer_public_to_public(from, context.this_address(), max_assets, _nonce)
+            .enqueue(&mut context);
+
+        // Validate the amount of assets transferred and send back any surplus
+        Token::at(context.this_address())
+            .settle_issuance_from_public_internal(from, shares, max_assets)
+            .enqueue(&mut context);
+
+        // Mint shares to the recipient
+        _mint_to_private(&mut context, storage.private_balances, from, to, shares);
+    }
+
+    /// @notice Issues exactly the requested shares to a public balance and receives the underlying asset from a private balance
+    /// @dev Any excess assets the sender has transferred in private, will be returned to the sender through a commitment once the call is executed publicly.
+    ///      This excess amount can only be known at public execution.
+    /// @param from The address of the sender
+    /// @param to The address of the recipient
+    /// @param shares The amount of shares to issue
+    /// @param max_assets The maximum amount of assets that should be deposited
+    /// @param _nonce The nonce used for authwitness
+    #[private]
+    fn issue_private_to_public_exact(
+        from: AztecAddress,
+        to: AztecAddress,
+        shares: u128,
+        max_assets: u128,
+        _nonce: Field,
+    ) {
+        _validate_from_private(&mut context, from);
+
+        // TODO (optimization): partial note logs and validity_commitment nullifier are not needed (?)
+        // Initialize commitment that allows to refund excess assets to the sender in public
+        let asset_commitment = Token::at(storage.asset.read())
+            .initialize_transfer_commitment(from, from, context.this_address())
+            .call(&mut context);
+
+        // Take max_assets from the sender
+        Token::at(storage.asset.read())
+            .transfer_private_to_public(from, context.this_address(), max_assets, _nonce)
+            .call(&mut context);
+
+        // Validate max_assets in public and refund any surplus to the sender with a commitment
+        Token::at(context.this_address())
+            .settle_issuance_from_private_with_commitment(asset_commitment, shares, max_assets)
+            .enqueue(&mut context);
+
+        // Mint shares to recipient in public
+        Token::at(context.this_address()).mint_to_public_internal(to, shares).enqueue(&mut context);
+    }
+
+    /// @notice Issues exactly the requested shares to a private balance and receives the underlying asset from a private balance
+    /// @dev Any excess assets the sender has transferred in private, will be returned to the sender through a commitment once the call is executed publicly.
+    ///      This excess amount can only be known at public execution.
+    ///      To optimize calls to this method, consider setting max_assets to an exact sum of notes, so that change is not returned twice (in private and later via commitment)
+    /// @param from The address of the sender
+    /// @param to The address of the recipient
+    /// @param shares The amount of shares to issue
+    /// @param max_assets The maximum amount of assets that should be deposited
+    /// @param _nonce The nonce used for authwitness
+    #[private]
+    fn issue_private_to_private_exact(
+        from: AztecAddress,
+        to: AztecAddress,
+        shares: u128,
+        max_assets: u128,
+        _nonce: Field,
+    ) {
+        _validate_from_private(&mut context, from);
+
+        // TODO (optimization): partial note logs and validity_commitment nullifier are not needed (?)
+        // Initialize commitment that allows to refund excess assets to the sender in public
+        let asset_commitment = Token::at(storage.asset.read())
+            .initialize_transfer_commitment(from, from, context.this_address())
+            .call(&mut context);
+
+        // Take max_assets from the sender
+        Token::at(storage.asset.read())
+            .transfer_private_to_public(from, context.this_address(), max_assets, _nonce)
+            .call(&mut context);
+
+        // Validate max_assets in public and refund any surplus to the sender with a commitment
+        Token::at(context.this_address())
+            .settle_issuance_from_private_with_commitment(asset_commitment, shares, max_assets)
+            .enqueue(&mut context);
+
+        // Mint shares to recipient in private
+        _mint_to_private(&mut context, storage.private_balances, from, to, shares);
+    }
+
+    /* ====================== WITHDRAW ======================== */
+
+    /// @notice Withdraws an amount of the underlying asset from a public balance to a public balance
+    /// @param from The address of the sender
+    /// @param to The address of the recipient
+    /// @param assets The amount of assets to withdraw
+    /// @param _nonce The nonce used for authwitness
+    #[public]
+    fn withdraw_public_to_public(
+        from: AztecAddress,
+        to: AztecAddress,
+        assets: u128,
+        _nonce: Field,
+    ) {
+        _validate_from_public(&mut context, from);
+
+        // Calculate shares to burn
+        let total_assets = _total_assets(&mut context, storage.asset);
+        let shares = _convert_to_shares(assets, total_assets, storage.total_supply, ROUND_UP);
+
+        // Transfer the assets to the recipient
+        Token::at(storage.asset.read())
+            .transfer_public_to_public(context.this_address(), to, assets, 0)
+            .call(&mut context);
+
+        // Burn the sender's shares
+        _burn_public(storage.public_balances, storage.total_supply, from, shares);
+    }
+
+    /// @notice Withdraws an amount of the underlying asset from a public balance to a private balance
+    /// @param from The address of the sender
+    /// @param to The address of the recipient
+    /// @param assets The amount of assets to withdraw
+    /// @param _nonce The nonce used for authwitness
+    #[private]
+    fn withdraw_public_to_private(
+        from: AztecAddress,
+        to: AztecAddress,
+        assets: u128,
+        _nonce: Field,
+    ) {
+        _validate_from_private(&mut context, from);
+
+        // Calculate and burn the sender's shares
+        Token::at(context.this_address()).redeem_from_assets_internal(from, assets).enqueue(
+            &mut context,
+        );
+
+        // Transfer the assets to the recipient in private
+        Token::at(storage.asset.read())
+            .transfer_public_to_private(context.this_address(), to, assets, 0)
+            .call(&mut context);
+    }
+
+    /// @notice Withdraws an amount of the underlying asset from a private balance to a private balance
+    /// @dev The shares are calculated with (total_supply + offset) / (total_assets + 1).
+    ///      The ratio can only decrease or remain the same as time goes by. Any outstanding asset is kept by the contract as yield.
+    /// @param from The address of the sender
+    /// @param to The address of the recipient
+    /// @param assets The amount of assets to withdraw
+    /// @param shares The amount of shares to burn
+    /// @param _nonce The nonce used for authwitness
+    #[private]
+    fn withdraw_private_to_private(
+        from: AztecAddress,
+        to: AztecAddress,
+        assets: u128,
+        shares: u128,
+        _nonce: Field,
+    ) {
+        _validate_from_private(&mut context, from);
+
+        // Validate that the shares-assets ratio is correct
+        Token::at(context.this_address()).validate_withdrawal_rate_internal(assets, shares).enqueue(
+            &mut context,
+        );
+
+        // Burn shares from the sender in private
+        _burn_private(&mut context, storage.private_balances, from, shares);
+
+        // Transfer the assets to the recipient in private
+        Token::at(storage.asset.read())
+            .transfer_public_to_private(context.this_address(), to, assets, 0)
+            .call(&mut context);
+    }
+
+    /// @notice Withdraws an amount of the underlying asset from a private balance to a public balance
+    /// @dev max_shares is the amount of shares that will be burnt immediately in private.
+    ///      Any excess shares the sender has transferred in private, will be returned to the sender through a commitment once the call is executed publicly.
+    ///      This excess amount can only be known at public execution.
+    ///      To optimize calls to this method, consider setting max_shares to an exact sum of notes, so that change is not returned twice (in private and later via commitment)
+    /// @param from The address of the sender
+    /// @param to The address of the recipient
+    /// @param assets The amount of underlying asset to withdraw
+    /// @param max_shares The maximum amount of shares to burn
+    /// @param _nonce The nonce used for authwitness
+    #[private]
+    fn withdraw_private_to_public_exact(
+        from: AztecAddress,
+        to: AztecAddress,
+        assets: u128,
+        max_shares: u128,
+        _nonce: Field,
+    ) {
+        _validate_from_private(&mut context, from);
+
+        // TODO (optimization): partial note logs and validity_commitment nullifier are not needed
+        // Initialize commitment that allows to refund excess shares to the sender in public
+        let partial_note = _initialize_transfer_commitment(
+            &mut context,
+            storage.private_balances,
+            from,
+            from,
+            context.this_address(),
+        );
+
+        // Burn shares from the sender in private
+        _decrease_private_balance(
+            &mut context,
+            storage.private_balances,
+            from,
+            max_shares,
+            INITIAL_TRANSFER_CALL_MAX_NOTES,
+        );
+
+        // Burn the correct amount of shares
+        // Any excess amount of shares is sent back to the sender via commitment
+        // Reverts if the amount of shares required is greater than max_shares
+        Token::at(context.this_address())
+            .settle_withdrawal_with_commitment_internal(partial_note.commitment, assets, max_shares)
+            .enqueue(&mut context);
+
+        // Transfer the assets to the sender
+        Token::at(storage.asset.read())
+            .transfer_public_to_public(context.this_address(), to, assets, 0)
+            .enqueue(&mut context);
+    }
+
+    /// @notice Withdraws an amount of the underlying asset from a private balance to a private balance
+    /// @dev max_shares is the amount of shares that will be burnt immediately in private.
+    ///      Any excess shares the sender has transferred in private, will be returned to the sender through a commitment once the call is executed publicly.
+    ///      This excess amount can only be known at public execution.
+    ///      To optimize calls to this method, consider setting max_shares to an exact sum of notes, so that change is not returned twice (in private and later via commitment)
+    /// @param from The address of the sender
+    /// @param to The address of the recipient
+    /// @param assets The amount of underlying asset to withdraw
+    /// @param max_shares The maximum amount of shares to burn
+    /// @param _nonce The nonce used for authwitness
+    #[private]
+    fn withdraw_private_to_private_exact(
+        from: AztecAddress,
+        to: AztecAddress,
+        assets: u128,
+        max_shares: u128,
+        _nonce: Field,
+    ) {
+        _validate_from_private(&mut context, from);
+
+        // TODO (optimization): partial note logs and validity_commitment nullifier are not needed
+        // Initialize commitment that allows to refund excess shares to the sender in public
+        let partial_note = _initialize_transfer_commitment(
+            &mut context,
+            storage.private_balances,
+            from,
+            from,
+            context.this_address(),
+        );
+
+        // Burn shares from the sender in private
+        _decrease_private_balance(
+            &mut context,
+            storage.private_balances,
+            from,
+            max_shares,
+            INITIAL_TRANSFER_CALL_MAX_NOTES,
+        );
+
+        // Burn the correct amount of shares
+        // Any excess amount of shares is sent back to the sender via commitment
+        // Reverts if the amount of shares required is greater than max_shares
+        Token::at(context.this_address())
+            .settle_withdrawal_with_commitment_internal(partial_note.commitment, assets, max_shares)
+            .enqueue(&mut context);
+
+        // Transfer the assets to the recipient in private
+        Token::at(storage.asset.read())
+            .transfer_public_to_private(context.this_address(), to, assets, 0)
+            .call(&mut context);
+    }
+
+    /* ======================= REDEEM ========================= */
+
+    /// @notice Redeems an amount of the shares from a public balance to a public balance
+    /// @param from The address of the sender
+    /// @param to The address of the recipient
+    /// @param shares The amount of shares to redeem
+    /// @param _nonce The nonce used for authwitness
+    #[public]
+    fn redeem_public_to_public(from: AztecAddress, to: AztecAddress, shares: u128, _nonce: Field) {
+        _validate_from_public(&mut context, from);
+
+        // Calculate assets to redeem
+        let total_assets = _total_assets(&mut context, storage.asset);
+        let assets = _convert_to_assets(shares, total_assets, storage.total_supply, ROUND_DOWN);
+
+        // Transfer the assets to the recipient
+        Token::at(storage.asset.read())
+            .transfer_public_to_public(context.this_address(), to, assets, 0)
+            .call(&mut context);
+
+        // Burn the sender's shares
+        _burn_public(storage.public_balances, storage.total_supply, from, shares);
+    }
+
+    /// @notice Redeems an amount of the shares from a private balance to a public balance
+    /// @param from The address of the sender
+    /// @param to The address of the recipient
+    /// @param shares The amount of shares to redeem
+    /// @param _nonce The nonce used for authwitness
+    #[private]
+    fn redeem_private_to_public(from: AztecAddress, to: AztecAddress, shares: u128, _nonce: Field) {
+        _validate_from_private(&mut context, from);
+
+        // Burn shares and redeem public assets
+        Token::at(context.this_address()).settle_redemption_to_public_internal(to, shares).enqueue(
+            &mut context,
+        );
+
+        // Burn shares from the sender in private
+        _burn_private(&mut context, storage.private_balances, from, shares);
+    }
+
+    /// @notice Redeems an amount of the shares from a private balance to a private balance
+    /// @dev min_assets is the amount of assets that will be transferred to the recipient immediately in private.
+    ///      Any outstanding assets the recipient is entitled to, will be sent through a commitment once the call is executed publicly.
+    ///      This excess amount can only be known at public execution.
+    /// @param from The address of the sender
+    /// @param to The address of the recipient
+    /// @param shares The amount of shares to burn
+    /// @param min_assets The minimum amount of assets to withdraw, immediately in private
+    /// @param _nonce The nonce used for authwitness
+    #[private]
+    fn redeem_private_to_private_exact(
+        from: AztecAddress,
+        to: AztecAddress,
+        shares: u128,
+        min_assets: u128,
+        _nonce: Field,
+    ) {
+        _validate_from_private(&mut context, from);
+
+        // TODO (optimization): partial note logs and validity_commitment nullifier are not needed (?)
+        // Initialize commitment that allows to transfer outstanding assets to the recipient in public
+        let asset_commitment = Token::at(storage.asset.read())
+            .initialize_transfer_commitment(from, to, context.this_address())
+            .call(&mut context);
+
+        // Transfers any outstanding assets without revealing the recipient
+        // Reverts if min_assets is greater than allowed
+        Token::at(context.this_address())
+            .settle_redemption_to_private_with_commitment(asset_commitment, shares, min_assets)
+            .enqueue(&mut context);
+
+        // Transfer min_assets to the recipient
+        Token::at(storage.asset.read())
+            .transfer_public_to_private(context.this_address(), to, min_assets, 0)
+            .call(&mut context);
+
+        // Burn shares from the sender in private
+        _burn_private(&mut context, storage.private_balances, from, shares);
+    }
+
+    /// @notice Redeems an amount of the shares from a public balance to a private balance
+    /// @dev min_assets is the amount of assets that will be transferred to the recipient immediately in private.
+    ///      Any outstanding assets the recipient is entitled to, will be sent through a commitment once the call is executed publicly.
+    ///      This excess amount can only be known at public execution.
+    /// @param from The address of the sender
+    /// @param to The address of the recipient
+    /// @param shares The amount of shares to redeem
+    /// @param min_assets The minimum amount of assets to withdraw, immediately in private
+    /// @param _nonce The nonce used for authwitness
+    #[private]
+    fn redeem_public_to_private_exact(
+        from: AztecAddress,
+        to: AztecAddress,
+        shares: u128,
+        min_assets: u128,
+        _nonce: Field,
+    ) {
+        _validate_from_private(&mut context, from);
+
+        // TODO (optimization): partial note logs and validity_commitment nullifier are not needed (?)
+        // Initialize commitment that allows to transfer outstanding assets to the recipient in public
+        let asset_commitment = Token::at(storage.asset.read())
+            .initialize_transfer_commitment(from, to, context.this_address())
+            .call(&mut context);
+
+        // Transfers any outstanding assets without revealing the recipient
+        // Reverts if min_assets is greater than allowed
+        Token::at(context.this_address())
+            .settle_redemption_to_private_with_commitment(asset_commitment, shares, min_assets)
+            .enqueue(&mut context);
+
+        // Transfer min_assets to the recipient
+        Token::at(storage.asset.read())
+            .transfer_public_to_private(context.this_address(), to, min_assets, 0)
+            .call(&mut context);
+
+        // Burn the shares being redeemed
+        Token::at(context.this_address()).burn_public_internal(from, shares).enqueue(&mut context);
+    }
+
+    /** ==========================================================
+     * ==================== VAULT INTERNALS ======================
+     * ======================================================== */
+
+    /// @notice Burns shares held in public for a given amount of assets
+    /// @param from The address of the sender
+    /// @param assets The amount of assets to burn shares for
+    #[public]
+    #[internal]
+    fn redeem_from_assets_internal(from: AztecAddress, assets: u128) {
+        let total_assets = _total_assets(&mut context, storage.asset);
+        let shares = _convert_to_shares(assets, total_assets, storage.total_supply, ROUND_UP);
+
+        _burn_public(storage.public_balances, storage.total_supply, from, shares);
+    }
+
+    /// @notice Validates that the requested shares amount is valid for the given assets
+    /// @param assets The amount of assets being withdrawn
+    /// @param shares The amount of shares being burned
+    #[public]
+    #[internal]
+    fn validate_withdrawal_rate_internal(assets: u128, shares: u128) {
+        let total_assets = _total_assets(&mut context, storage.asset);
+        let min_shares = _convert_to_shares(assets, total_assets, storage.total_supply, ROUND_UP);
+
+        assert(min_shares <= shares, "Insufficient shares burnt");
+    }
+
+    /// @notice Withdraws assets to a public balance for a given amount of shares
+    /// @param to The address of the recipient
+    /// @param shares The amount of shares being redeemed
+    #[public]
+    #[internal]
+    fn settle_redemption_to_public_internal(to: AztecAddress, shares: u128) {
+        let total_assets = _total_assets(&mut context, storage.asset);
+        let assets = _convert_to_assets(shares, total_assets, storage.total_supply, ROUND_DOWN);
+
+        Token::at(storage.asset.read())
+            .transfer_public_to_public(context.this_address(), to, assets, 0)
+            .call(&mut context);
+    }
+
+    /// @notice Mints shares to a public balance for a given amount of assets
+    /// @param to The address of the recipient
+    /// @param assets The amount of assets being deposited
+    #[public]
+    #[internal]
+    fn issue_from_assets_internal(to: AztecAddress, assets: u128) {
+        let total_assets = _total_assets(&mut context, storage.asset);
+        let shares = _convert_to_shares(assets, total_assets, storage.total_supply, ROUND_DOWN);
+
+        _mint_to_public(storage.public_balances, storage.total_supply, to, shares);
+    }
+
+    /// @notice Validates that the requested shares amount is valid for the deposited assets
+    /// @param assets The amount of assets being deposited
+    /// @param shares The amount of shares being issued
+    #[public]
+    #[internal]
+    fn validate_deposit_rate_internal(assets: u128, shares: u128) {
+        let total_assets = _total_assets(&mut context, storage.asset);
+        let max_shares = _convert_to_shares(assets, total_assets, storage.total_supply, ROUND_DOWN);
+
+        assert(shares <= max_shares, "Too many shares requested");
+    }
+
+    /// @notice Decreases shares total supply and refunds excess shares via commitment
+    /// @param commitment The partial note representing the commitment (privacy entrance)
+    /// @param assets The amount of assets being withdrawn
+    /// @param max_shares The maximum amount of shares that should be redeemed
+    #[public]
+    #[internal]
+    fn settle_withdrawal_with_commitment_internal(
+        commitment: Field,
+        assets: u128,
+        max_shares: u128,
+    ) {
+        let total_assets = _total_assets(&mut context, storage.asset);
+        let shares = _convert_to_shares(assets, total_assets, storage.total_supply, ROUND_UP);
+
+        let surplus = max_shares - shares; // Reverts with underflow if invalid
+        if surplus > 0 {
+            _increase_commitment_balance(
+                &mut context,
+                PartialUintNote { commitment },
+                context.this_address(),
+                surplus,
+            );
+        }
+
+        _decrease_total_supply(storage.total_supply, shares);
+    }
+
+    /// @notice Increases shares total supply and issues outstanding shares via commitment
+    /// @param commitment The partial note representing the commitment (privacy entrance)
+    /// @param assets The amount of assets being deposited
+    /// @param min_shares The minimum amount of shares that should be issued
+    #[public]
+    #[internal]
+    fn settle_deposit_to_private_with_commitment_internal(
+        commitment: Field,
+        assets: u128,
+        min_shares: u128,
+    ) {
+        let total_assets = _total_assets(&mut context, storage.asset);
+        let max_shares = _convert_to_shares(assets, total_assets, storage.total_supply, ROUND_DOWN);
+
+        let outstanding_shares = max_shares - min_shares; // Reverts with underflow if invalid
+        if outstanding_shares > 0 {
+            _increase_commitment_balance(
+                &mut context,
+                PartialUintNote { commitment },
+                context.this_address(),
+                outstanding_shares,
+            );
+        }
+
+        _increase_total_supply(storage.total_supply, max_shares);
+    }
+
+    /// @notice Refunds excess assets to the sender via commitment while validating the shares amount requested
+    /// @param asset_commitment The partial note representing the commitment (privacy entrance)
+    /// @param shares The amount of shares being issued
+    /// @param max_assets The maximum amount of assets that should be deposited
+    #[public]
+    #[internal]
+    fn settle_issuance_from_private_with_commitment(
+        asset_commitment: Field,
+        shares: u128,
+        max_assets: u128,
+    ) {
+        let total_assets = _total_assets(&mut context, storage.asset);
+        let assets = _convert_to_assets(
+            shares,
+            total_assets - max_assets,
+            storage.total_supply,
+            ROUND_UP,
+        );
+
+        let change = max_assets - assets; // Reverts with underflow if invalid
+        if change > 0 {
+            Token::at(storage.asset.read())
+                .transfer_public_to_commitment(context.this_address(), asset_commitment, change, 0)
+                .call(&mut context);
+        }
+    }
+
+    /// @notice Validates share redemption rate and withdraws any outstanding assets via commitment
+    /// @param asset_commitment The partial note representing the commitment (privacy entrance)
+    /// @param shares The amount of shares being redeemed
+    /// @param min_assets The minimum amount of assets that should be withdrawn
+    #[public]
+    #[internal]
+    fn settle_redemption_to_private_with_commitment(
+        asset_commitment: Field,
+        shares: u128,
+        min_assets: u128,
+    ) {
+        let total_assets = _total_assets(&mut context, storage.asset);
+        let assets = _convert_to_assets(shares, total_assets, storage.total_supply, ROUND_DOWN);
+
+        let outstanding_assets = assets - min_assets; // Reverts with underflow if invalid
+        if outstanding_assets > 0 {
+            Token::at(storage.asset.read())
+                .transfer_public_to_commitment(
+                    context.this_address(),
+                    asset_commitment,
+                    outstanding_assets,
+                    0,
+                )
+                .call(&mut context);
+        }
+    }
+
+    /// @notice Validates issuance rate and refunds excess assets being deposited from a public balance
+    /// @param from The address of the sender
+    /// @param shares The amount of shares being issued
+    /// @param max_assets The maximum amount of assets that should be deposited
+    #[public]
+    #[internal]
+    fn settle_issuance_from_public_internal(from: AztecAddress, shares: u128, max_assets: u128) {
+        let total_assets = _total_assets(&mut context, storage.asset);
+        let assets = _convert_to_assets(
+            shares,
+            total_assets - max_assets,
+            storage.total_supply,
+            ROUND_UP,
+        );
+
+        let change = max_assets - assets; // Reverts with underflow if invalid
+        if change > 0 {
+            Token::at(storage.asset.read())
+                .transfer_public_to_public(context.this_address(), from, change, 0)
+                .call(&mut context);
+        }
+    }
+
+    /** ==========================================================
+     * ================== VAULT LIBRARIES ========================
+     * ======================================================== */
+
+    #[contract_library_method]
+    unconstrained fn _total_assets(
+        context: &mut PublicContext,
+        asset: PublicImmutable<AztecAddress, &mut PublicContext>,
+    ) -> u128 {
+        let total_assets =
+            Token::at(asset.read()).balance_of_public(context.this_address()).view(context);
+        total_assets
+    }
+
+    #[contract_library_method]
+    fn _convert_to_shares(
+        assets: u128,
+        total_assets: u128,
+        total_supply: PublicMutable<u128, &mut PublicContext>,
+        rounding: bool,
+    ) -> u128 {
+        // TODO: handle overflow
+        // TODO: optimize rounding
+        let mul_term = assets * (total_supply.read() + offset());
+        let denominator = (total_assets + 1);
+        let mut shares = mul_term / denominator;
+        if (rounding == ROUND_UP) & (mul_term % denominator > 0) {
+            shares = shares + 1;
+        }
+        shares
+    }
+
+    #[contract_library_method]
+    fn _convert_to_assets(
+        shares: u128,
+        total_assets: u128,
+        total_supply: PublicMutable<u128, &mut PublicContext>,
+        rounding: bool,
+    ) -> u128 {
+        // TODO: handle overflow
+        // TODO: optimize rounding
+        let mul_term = shares * (total_assets + 1);
+        let denominator = (total_supply.read() + offset());
+        let mut assets = mul_term / denominator;
+        if (rounding == ROUND_UP) & (mul_term % denominator > 0) {
+            assets = assets + 1;
+        }
+        assets
+    }
+
+    /// @notice Offset that determines the rate of virtual shares to virtual assets in the vault, which itself determines the initial exchange rate.
+    /// While not fully preventing inflation attacks, analysis shows that offset=1 makes it non-profitable even if an attacker is able to capture value from multiple user deposits,
+    /// as a result of the value being captured by the virtual shares (out of the attacker's donation) matching the attacker's expected gains.
+    /// With a larger offset, the attack becomes orders of magnitude more expensive than it is profitable.
+    #[contract_library_method]
+    fn offset() -> u128 {
+        1
     }
 }

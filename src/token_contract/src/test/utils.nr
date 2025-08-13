@@ -12,6 +12,7 @@ use aztec::{
     protocol_types::{address::AztecAddress, storage::map::derive_storage_slot_in_map},
     test::helpers::{test_environment::TestEnvironment, txe_oracles::set_contract_address},
 };
+use aztec::test::helpers::authwit as authwit_cheatcodes;
 use std::ops::WrappingSub;
 use std::test::OracleMock;
 use uint_note::uint_note::UintNote;
@@ -61,6 +62,54 @@ pub unconstrained fn setup_with_minter(
     let token_contract_address = deploy_token_with_minter(&mut env, owner, minter);
 
     (env, token_contract_address, owner, recipient, minter)
+}
+
+pub unconstrained fn setup_with_asset(
+    with_account_contracts: bool,
+) -> (&mut TestEnvironment, AztecAddress, AztecAddress, AztecAddress, AztecAddress) {
+    // Setup env, generate keys
+    let mut env = TestEnvironment::new();
+    let (owner, recipient) = if with_account_contracts {
+        let owner = env.create_account_contract(1);
+        let recipient = env.create_account_contract(2);
+        (owner, recipient)
+    } else {
+        let owner = env.create_account(1);
+        let recipient = env.create_account(2);
+        (owner, recipient)
+    };
+
+    // Deploy asset token
+    env.impersonate(owner);
+    let asset_initializer_call_interface = Token::interface().constructor_with_minter(
+        "AssetToken000000000000000000000",
+        "ASSET00000000000000000000000000",
+        6, // TODO: Test 18 decimals once overflows are handled correctly in asset-share conversion
+        owner,
+        AztecAddress::zero(),
+    );
+    let asset_contract = env.deploy("./@token_contract", "Token").with_public_void_initializer(
+        owner,
+        asset_initializer_call_interface,
+    );
+    env.advance_block_by(1);
+
+    // Deploy token with asset
+    env.impersonate(owner);
+    let vault_initializer_call_interface = Token::interface().constructor_with_asset(
+        "Vault00000000000000000000000000",
+        "VAULT00000000000000000000000000",
+        18,
+        asset_contract.to_address(),
+        AztecAddress::zero(),
+    );
+    let vault_contract = env.deploy("./@token_contract", "Token").with_public_void_initializer(
+        owner,
+        vault_initializer_call_interface,
+    );
+    env.advance_block_by(1);
+
+    (&mut env, vault_contract.to_address(), owner, recipient, asset_contract.to_address())
 }
 
 pub unconstrained fn deploy_token_with_initial_supply(
@@ -273,6 +322,40 @@ pub unconstrained fn _commitment_storage_read(
     // restore current contract address
     set_contract_address(current_contract_address);
     value
+}
+
+/// @notice Sets private authwit for the `transfer_private_to_public` method. `caller` is also the recipient.
+pub unconstrained fn authorize_transfer_private_to_public(
+    token: AztecAddress,
+    caller: AztecAddress,
+    from: AztecAddress,
+    amount: u128,
+    nonce: Field,
+) {
+    let transfer_private_to_public_call_interface =
+        Token::at(token).transfer_private_to_public(from, caller, amount, nonce);
+    authwit_cheatcodes::add_private_authwit_from_call_interface(
+        from,
+        caller,
+        transfer_private_to_public_call_interface,
+    );
+}
+
+/// @notice Sets public authwit for the `transfer_private_to_public` method. `caller` is also the recipient.
+pub unconstrained fn authorize_transfer_public_to_public(
+    token: AztecAddress,
+    caller: AztecAddress,
+    from: AztecAddress,
+    amount: u128,
+    nonce: Field,
+) {
+    let transfer_public_to_public_call_interface =
+        Token::at(token).transfer_public_to_public(from, caller, amount, nonce);
+    authwit_cheatcodes::add_public_authwit_from_call_interface(
+        from,
+        caller,
+        transfer_public_to_public_call_interface,
+    );
 }
 
 /// @notice Returns the u128 maximum value
