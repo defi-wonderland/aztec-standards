@@ -1,0 +1,822 @@
+import {
+  AccountWallet,
+  Fr,
+  PXE,
+  TxStatus,
+  getContractInstanceFromDeployParams,
+  Contract,
+  ContractDeployer,
+  AccountWalletWithSecretKey,
+  IntentAction,
+  AztecAddress,
+  DeployOptions,
+} from '@aztec/aztec.js';
+import { setupPXE } from './utils.js';
+import { getInitialTestAccountsManagers } from '@aztec/accounts/testing';
+import { SFTContract, SFTContractArtifact } from '../../artifacts/SFT.js';
+import { AztecLmdbStore } from '@aztec/kv-store/lmdb';
+
+// Deploy SFT contract with a minter
+async function deploySFTWithMinter(deployer: AccountWallet, options?: DeployOptions) {
+  const contract = await Contract.deploy(
+    deployer,
+    SFTContractArtifact,
+    ['TestSFT', 'TSFT', deployer.getAddress(), deployer.getAddress()],
+    'constructor_with_minter',
+  )
+    .send(options)
+    .deployed();
+  return contract;
+}
+
+// Check if an address has a specific balance of a token type in public state
+async function assertPublicBalance(
+  sft: SFTContract,
+  tokenId: bigint,
+  owner: AztecAddress,
+  expectedBalance: bigint,
+  caller?: AccountWallet,
+) {
+  const s = caller ? sft.withWallet(caller) : sft;
+  const balance = await s.methods.balance_of_public_by_token_id(owner, tokenId).simulate();
+  expect(balance).toBe(expectedBalance);
+}
+
+// Check if an address has a specific balance of a token type in private state
+async function assertPrivateBalance(
+  sft: SFTContract,
+  tokenId: bigint,
+  owner: AztecAddress,
+  expectedBalance: bigint,
+  caller?: AccountWallet,
+) {
+  const s = caller ? sft.withWallet(caller) : sft;
+  const balance = await s.methods.balance_of_private_by_token_id(owner, tokenId, 0).simulate();
+  expect(balance).toBe(expectedBalance);
+}
+
+// Check if a token type exists
+async function assertTokenTypeExists(sft: SFTContract, tokenId: bigint, shouldExist: boolean, caller?: AccountWallet) {
+  const s = caller ? sft.withWallet(caller) : sft;
+  const exists = await s.methods.public_token_type_exists(tokenId).simulate();
+  expect(exists).toBe(shouldExist);
+}
+
+// Check total supply of a token type
+async function assertTotalSupply(sft: SFTContract, tokenId: bigint, expectedSupply: bigint, caller?: AccountWallet) {
+  const s = caller ? sft.withWallet(caller) : sft;
+  const supply = await s.methods.total_supply(tokenId).simulate();
+  expect(supply).toBe(expectedSupply);
+}
+
+const setupTestSuite = async () => {
+  const { pxe, store } = await setupPXE();
+  const managers = await getInitialTestAccountsManagers(pxe);
+  const wallets = await Promise.all(managers.map((acc) => acc.register()));
+  const [deployer] = wallets;
+
+  return { pxe, deployer, wallets, store };
+};
+
+function bigIntToAsciiString(bigInt: any): string {
+  // Convert the BigInt to hex string, remove '0x' prefix if present
+  let hexString = bigInt.toString(16);
+
+  // Split into pairs of characters (bytes)
+  const pairs = [];
+  for (let i = 0; i < hexString.length; i += 2) {
+    // If we have an odd number of characters, pad with 0
+    const pair = hexString.slice(i, i + 2).padStart(2, '0');
+    pairs.push(pair);
+  }
+
+  // Convert each byte to its ASCII character
+  let asciiString = '';
+  for (const pair of pairs) {
+    const charCode = parseInt(pair, 16);
+    // Only add printable ASCII characters
+    if (charCode >= 32 && charCode <= 126) {
+      asciiString += String.fromCharCode(charCode);
+    }
+  }
+  return asciiString;
+}
+
+describe('SFT - Single PXE', () => {
+  let pxe: PXE;
+  let store: AztecLmdbStore;
+  let wallets: AccountWalletWithSecretKey[];
+  let deployer: AccountWalletWithSecretKey;
+
+  let alice: AccountWalletWithSecretKey;
+  let bob: AccountWalletWithSecretKey;
+  let carl: AccountWalletWithSecretKey;
+
+  let sft: SFTContract;
+
+  beforeAll(async () => {
+    ({ pxe, deployer, wallets, store } = await setupTestSuite());
+
+    [alice, bob, carl] = wallets;
+
+    console.log({
+      alice: alice.getAddress(),
+      bob: bob.getAddress(),
+    });
+  });
+
+  beforeEach(async () => {
+    sft = (await deploySFTWithMinter(alice)) as SFTContract;
+  });
+
+  afterAll(async () => {
+    await store.delete();
+  });
+
+  it('deploys the contract with minter', async () => {
+    const salt = Fr.random();
+    const deployerWallet = alice; // using first account as deployer
+
+    const deploymentData = await getContractInstanceFromDeployParams(SFTContractArtifact, {
+      constructorArtifact: 'constructor_with_minter',
+      constructorArgs: ['TestSFT', 'TSFT', deployerWallet.getAddress(), deployerWallet.getAddress()],
+      salt,
+      deployer: deployerWallet.getAddress(),
+    });
+
+    const deployer = new ContractDeployer(SFTContractArtifact, deployerWallet, undefined, 'constructor_with_minter');
+
+    const tx = deployer
+      .deploy('TestSFT', 'TSFT', deployerWallet.getAddress(), deployerWallet.getAddress())
+      .send({ contractAddressSalt: salt });
+
+    const receipt = await tx.getReceipt();
+
+    expect(receipt).toEqual(
+      expect.objectContaining({
+        status: TxStatus.PENDING,
+        error: '',
+      }),
+    );
+
+    const receiptAfterMined = await tx.wait({ wallet: deployerWallet });
+
+    const contractMetadata = await pxe.getContractMetadata(deploymentData.address);
+    expect(contractMetadata).toBeDefined();
+    expect(contractMetadata.isContractPubliclyDeployed).toBeTruthy();
+    expect(receiptAfterMined).toEqual(
+      expect.objectContaining({
+        status: TxStatus.SUCCESS,
+      }),
+    );
+
+    expect(receiptAfterMined.contract.instance.address).toEqual(deploymentData.address);
+  }, 300_000);
+
+  // --- Token Type Creation Tests ---
+
+  it('creates a new token type', async () => {
+    const tokenId = 1n;
+
+    // Initially token type should not exist
+    await assertTokenTypeExists(sft, tokenId, false);
+
+    // Create token type
+    await sft.withWallet(alice).methods.create_token_type(tokenId).send().wait();
+
+    // Token type should now exist
+    await assertTokenTypeExists(sft, tokenId, true);
+
+    // Total supply should be 0
+    await assertTotalSupply(sft, tokenId, 0n);
+  }, 300_000);
+
+  it('fails to create token type when not minter', async () => {
+    const tokenId = 1n;
+
+    // Bob attempts to create token type when he's not the minter
+    await expect(sft.withWallet(bob).methods.create_token_type(tokenId).send().wait()).rejects.toThrow(
+      /caller is not minter/,
+    );
+
+    // Token type should not exist
+    await assertTokenTypeExists(sft, tokenId, false);
+  }, 300_000);
+
+  it('fails to create same token type twice', async () => {
+    const tokenId = 1n;
+
+    // First creation succeeds
+    await sft.withWallet(alice).methods.create_token_type(tokenId).send().wait();
+
+    // Second creation with same token ID should fail
+    await expect(sft.withWallet(alice).methods.create_token_type(tokenId).send().wait()).rejects.toThrow(
+      /token type already exists/,
+    );
+  }, 300_000);
+
+  // --- Mint Tests ---
+
+  it('mints SFT to public', async () => {
+    const tokenId = 1n;
+
+    // Create token type first
+    await sft.withWallet(alice).methods.create_token_type(tokenId).send().wait();
+
+    // Mint SFT to bob publicly
+    await sft.withWallet(alice).methods.mint_to_public(bob.getAddress(), tokenId).send().wait();
+
+    // Verify bob has 1 token publicly
+    await assertPublicBalance(sft, tokenId, bob.getAddress(), 1n);
+
+    // Verify total supply increased
+    await assertTotalSupply(sft, tokenId, 1n);
+  }, 300_000);
+
+  it('mints SFT to private', async () => {
+    const tokenId = 1n;
+
+    // Mint SFT to bob privately (this creates token type automatically)
+    await sft.withWallet(alice).methods.mint_to_private(bob.getAddress(), tokenId).send().wait();
+
+    // Verify bob has 1 token privately
+    await assertPrivateBalance(sft, tokenId, bob.getAddress(), 1n);
+
+    // Verify token type was created
+    await assertTokenTypeExists(sft, tokenId, true);
+
+    // Verify total supply increased
+    await assertTotalSupply(sft, tokenId, 1n);
+  }, 300_000);
+
+  it('fails to mint when caller is not minter', async () => {
+    const tokenId = 1n;
+
+    // Create token type first
+    await sft.withWallet(alice).methods.create_token_type(tokenId).send().wait();
+
+    // Bob attempts to mint when he's not the minter
+    await expect(sft.withWallet(bob).methods.mint_to_public(bob.getAddress(), tokenId).send().wait()).rejects.toThrow(
+      /caller is not minter/,
+    );
+
+    await expect(sft.withWallet(bob).methods.mint_to_private(bob.getAddress(), tokenId).send().wait()).rejects.toThrow(
+      /caller is not minter/,
+    );
+  }, 300_000);
+
+  it('fails to mint to public for non-existent token type', async () => {
+    const tokenId = 1n;
+
+    // Try to mint without creating token type first
+    await expect(sft.withWallet(alice).methods.mint_to_public(bob.getAddress(), tokenId).send().wait()).rejects.toThrow(
+      /token type does not exist/,
+    );
+  }, 300_000);
+
+  it('fails to mint with token ID zero', async () => {
+    const tokenId = 0n;
+
+    await expect(
+      sft.withWallet(alice).methods.mint_to_private(bob.getAddress(), tokenId).send().wait(),
+    ).rejects.toThrow(/zero token ID not supported/);
+  }, 300_000);
+
+  it('can mint multiple SFTs of same type to same owner', async () => {
+    const tokenId = 1n;
+
+    // Mint multiple tokens privately to bob
+    await sft.withWallet(alice).methods.mint_to_private(bob.getAddress(), tokenId).send().wait();
+    await sft.withWallet(alice).methods.mint_to_private(bob.getAddress(), tokenId).send().wait();
+    await sft.withWallet(alice).methods.mint_to_private(bob.getAddress(), tokenId).send().wait();
+
+    // Verify bob has 3 tokens privately
+    await assertPrivateBalance(sft, tokenId, bob.getAddress(), 3n);
+
+    // Verify total supply
+    await assertTotalSupply(sft, tokenId, 3n);
+  }, 300_000);
+
+  it('can mint different token types', async () => {
+    const tokenId1 = 1n;
+    const tokenId2 = 2n;
+
+    // Mint different token types to bob
+    await sft.withWallet(alice).methods.mint_to_private(bob.getAddress(), tokenId1).send().wait();
+    await sft.withWallet(alice).methods.mint_to_private(bob.getAddress(), tokenId2).send().wait();
+
+    // Verify bob has tokens of both types
+    await assertPrivateBalance(sft, tokenId1, bob.getAddress(), 1n);
+    await assertPrivateBalance(sft, tokenId2, bob.getAddress(), 1n);
+
+    // Verify both token types exist
+    await assertTokenTypeExists(sft, tokenId1, true);
+    await assertTokenTypeExists(sft, tokenId2, true);
+  }, 300_000);
+
+  // --- Burn Tests ---
+
+  it('burns SFT from public balance', async () => {
+    const tokenId = 1n;
+
+    // Create token type and mint publicly to bob
+    await sft.withWallet(alice).methods.create_token_type(tokenId).send().wait();
+    await sft.withWallet(alice).methods.mint_to_public(bob.getAddress(), tokenId).send().wait();
+
+    // Verify bob has 1 token publicly
+    await assertPublicBalance(sft, tokenId, bob.getAddress(), 1n);
+
+    // Bob burns his token
+    await sft.withWallet(bob).methods.burn_public(bob.getAddress(), tokenId, 0n).send().wait();
+
+    // Verify bob has 0 tokens
+    await assertPublicBalance(sft, tokenId, bob.getAddress(), 0n);
+
+    // Verify total supply decreased
+    await assertTotalSupply(sft, tokenId, 0n);
+  }, 300_000);
+
+  it('burns SFT from private balance', async () => {
+    const tokenId = 1n;
+
+    // Mint privately to bob
+    await sft.withWallet(alice).methods.mint_to_private(bob.getAddress(), tokenId).send().wait();
+
+    // Verify bob has 1 token privately
+    await assertPrivateBalance(sft, tokenId, bob.getAddress(), 1n);
+
+    // Bob burns his token
+    await sft.withWallet(bob).methods.burn_private(bob.getAddress(), tokenId, 0n).send().wait();
+
+    // Verify bob has 0 tokens
+    await assertPrivateBalance(sft, tokenId, bob.getAddress(), 0n);
+
+    // Verify total supply decreased
+    await assertTotalSupply(sft, tokenId, 0n);
+  }, 300_000);
+
+  it('fails to burn when caller has no tokens', async () => {
+    const tokenId = 1n;
+
+    // Create token type but don't mint to bob
+    await sft.withWallet(alice).methods.create_token_type(tokenId).send().wait();
+
+    // Bob attempts to burn when he has no tokens
+    await expect(sft.withWallet(bob).methods.burn_public(bob.getAddress(), tokenId, 0n).send().wait()).rejects.toThrow(
+      /insufficient public balance/,
+    );
+
+    await expect(sft.withWallet(bob).methods.burn_private(bob.getAddress(), tokenId, 0n).send().wait()).rejects.toThrow(
+      /sft not found in private/,
+    );
+  }, 300_000);
+
+  // --- Transfer Tests: Private to Private ---
+
+  it('transfers SFT from private to private', async () => {
+    const tokenId = 1n;
+
+    // Mint privately to alice
+    await sft.withWallet(alice).methods.mint_to_private(alice.getAddress(), tokenId).send().wait();
+
+    // Verify alice has 1 token privately
+    await assertPrivateBalance(sft, tokenId, alice.getAddress(), 1n);
+
+    // Transfer from alice to bob privately
+    await sft
+      .withWallet(alice)
+      .methods.transfer_private_to_private(alice.getAddress(), bob.getAddress(), tokenId, 0n)
+      .send()
+      .wait();
+
+    // Verify alice has 0 tokens
+    await assertPrivateBalance(sft, tokenId, alice.getAddress(), 0n);
+
+    // Verify bob has 1 token privately
+    await assertPrivateBalance(sft, tokenId, bob.getAddress(), 1n);
+
+    // Total supply should remain the same
+    await assertTotalSupply(sft, tokenId, 1n);
+  }, 300_000);
+
+  it('fails to transfer private SFT when not owner', async () => {
+    const tokenId = 1n;
+
+    // Mint privately to alice
+    await sft.withWallet(alice).methods.mint_to_private(alice.getAddress(), tokenId).send().wait();
+
+    // Carl attempts to transfer alice's token
+    await expect(
+      sft
+        .withWallet(carl)
+        .methods.transfer_private_to_private(carl.getAddress(), bob.getAddress(), tokenId, 0n)
+        .send()
+        .wait(),
+    ).rejects.toThrow(/sft not found in private/);
+
+    // Verify alice still has the token
+    await assertPrivateBalance(sft, tokenId, alice.getAddress(), 1n);
+  }, 300_000);
+
+  // --- Transfer Tests: Private to Public ---
+
+  it('transfers SFT from private to public', async () => {
+    const tokenId = 1n;
+
+    // Mint privately to alice
+    await sft.withWallet(alice).methods.mint_to_private(alice.getAddress(), tokenId).send().wait();
+
+    // Transfer from alice's private to bob's public
+    await sft
+      .withWallet(alice)
+      .methods.transfer_private_to_public(alice.getAddress(), bob.getAddress(), tokenId, 0n)
+      .send()
+      .wait();
+
+    // Verify alice has 0 tokens privately
+    await assertPrivateBalance(sft, tokenId, alice.getAddress(), 0n);
+
+    // Verify bob has 1 token publicly
+    await assertPublicBalance(sft, tokenId, bob.getAddress(), 1n);
+
+    // Total supply should remain the same
+    await assertTotalSupply(sft, tokenId, 1n);
+  }, 300_000);
+
+  it('transfers SFT from private to public with commitment', async () => {
+    const tokenId = 1n;
+
+    // Mint privately to alice
+    await sft.withWallet(alice).methods.mint_to_private(alice.getAddress(), tokenId).send().wait();
+
+    // Transfer from alice's private to bob's public with commitment
+    await sft
+      .withWallet(alice)
+      .methods.transfer_private_to_public_with_commitment(alice.getAddress(), bob.getAddress(), tokenId, 0n)
+      .send()
+      .wait();
+
+    // Verify alice has 0 tokens privately
+    await assertPrivateBalance(sft, tokenId, alice.getAddress(), 0n);
+
+    // Verify bob has 1 token publicly
+    await assertPublicBalance(sft, tokenId, bob.getAddress(), 1n);
+
+    // Total supply should remain the same
+    await assertTotalSupply(sft, tokenId, 1n);
+  }, 300_000);
+
+  // --- Transfer Tests: Public to Private ---
+
+  it('transfers SFT from public to private', async () => {
+    const tokenId = 1n;
+
+    // Create token type and mint publicly to alice
+    await sft.withWallet(alice).methods.create_token_type(tokenId).send().wait();
+    await sft.withWallet(alice).methods.mint_to_public(alice.getAddress(), tokenId).send().wait();
+
+    // Transfer from alice's public to bob's private
+    await sft
+      .withWallet(alice)
+      .methods.transfer_public_to_private(alice.getAddress(), bob.getAddress(), tokenId, 0n)
+      .send()
+      .wait();
+
+    // Verify alice has 0 tokens publicly
+    await assertPublicBalance(sft, tokenId, alice.getAddress(), 0n);
+
+    // Verify bob has 1 token privately
+    await assertPrivateBalance(sft, tokenId, bob.getAddress(), 1n);
+
+    // Total supply should remain the same
+    await assertTotalSupply(sft, tokenId, 1n);
+  }, 300_000);
+
+  // --- Transfer Tests: Public to Public ---
+
+  it('transfers SFT from public to public', async () => {
+    const tokenId = 1n;
+
+    // Create token type and mint publicly to alice
+    await sft.withWallet(alice).methods.create_token_type(tokenId).send().wait();
+    await sft.withWallet(alice).methods.mint_to_public(alice.getAddress(), tokenId).send().wait();
+
+    // Transfer from alice to bob publicly
+    await sft
+      .withWallet(alice)
+      .methods.transfer_public_to_public(alice.getAddress(), bob.getAddress(), tokenId, 0n)
+      .send()
+      .wait();
+
+    // Verify alice has 0 tokens publicly
+    await assertPublicBalance(sft, tokenId, alice.getAddress(), 0n);
+
+    // Verify bob has 1 token publicly
+    await assertPublicBalance(sft, tokenId, bob.getAddress(), 1n);
+
+    // Total supply should remain the same
+    await assertTotalSupply(sft, tokenId, 1n);
+  }, 300_000);
+
+  it('fails to transfer public SFT when not owner', async () => {
+    const tokenId = 1n;
+
+    // Create token type and mint publicly to alice
+    await sft.withWallet(alice).methods.create_token_type(tokenId).send().wait();
+    await sft.withWallet(alice).methods.mint_to_public(alice.getAddress(), tokenId).send().wait();
+
+    // Carl attempts to transfer alice's token
+    await expect(
+      sft
+        .withWallet(carl)
+        .methods.transfer_public_to_public(carl.getAddress(), bob.getAddress(), tokenId, 0n)
+        .send()
+        .wait(),
+    ).rejects.toThrow(/caller owns no tokens of this type/);
+
+    // Verify alice still has the token
+    await assertPublicBalance(sft, tokenId, alice.getAddress(), 1n);
+  }, 300_000);
+
+  // --- Commitment Tests ---
+
+  it('initializes and uses transfer commitment', async () => {
+    const tokenId = 1n;
+
+    // Initialize a transfer commitment
+    const commitment = await sft
+      .withWallet(alice)
+      .methods.initialize_transfer_commitment(tokenId, alice.getAddress(), bob.getAddress(), alice.getAddress())
+      .simulate();
+
+    expect(typeof commitment).toBe('bigint');
+    expect(commitment).not.toBe(0n);
+  }, 300_000);
+
+  it('transfers SFT from private to commitment', async () => {
+    const tokenId = 1n;
+
+    // Mint privately to alice
+    await sft.withWallet(alice).methods.mint_to_private(alice.getAddress(), tokenId).send().wait();
+
+    // Initialize a transfer commitment
+    const commitment = await sft
+      .withWallet(alice)
+      .methods.initialize_transfer_commitment(tokenId, alice.getAddress(), bob.getAddress(), alice.getAddress())
+      .simulate();
+
+    // Transfer from alice to the commitment
+    await sft
+      .withWallet(alice)
+      .methods.transfer_private_to_commitment(alice.getAddress(), tokenId, commitment, 0n)
+      .send()
+      .wait();
+
+    // Verify alice has 0 tokens privately
+    await assertPrivateBalance(sft, tokenId, alice.getAddress(), 0n);
+
+    // Verify bob has 1 token privately
+    await assertPrivateBalance(sft, tokenId, bob.getAddress(), 1n);
+  }, 300_000);
+
+  it('transfers SFT from public to commitment', async () => {
+    const tokenId = 1n;
+
+    // Create token type and mint publicly to alice
+    await sft.withWallet(alice).methods.create_token_type(tokenId).send().wait();
+    await sft.withWallet(alice).methods.mint_to_public(alice.getAddress(), tokenId).send().wait();
+
+    // Initialize a transfer commitment
+    const commitment = await sft
+      .withWallet(alice)
+      .methods.initialize_transfer_commitment(tokenId, alice.getAddress(), bob.getAddress(), alice.getAddress())
+      .simulate();
+
+    // Transfer from alice's public to the commitment
+    await sft
+      .withWallet(alice)
+      .methods.transfer_public_to_commitment(alice.getAddress(), tokenId, commitment, 0n)
+      .send()
+      .wait();
+
+    // Verify alice has 0 tokens publicly
+    await assertPublicBalance(sft, tokenId, alice.getAddress(), 0n);
+
+    // Verify bob has 1 token privately
+    await assertPrivateBalance(sft, tokenId, bob.getAddress(), 1n);
+  }, 300_000);
+
+  // --- View Function Tests ---
+
+  it('returns correct name and symbol', async () => {
+    const name = await sft.methods.public_get_name().simulate();
+    const symbol = await sft.methods.public_get_symbol().simulate();
+    const nameStr = bigIntToAsciiString(name.value);
+    const symbolStr = bigIntToAsciiString(symbol.value);
+
+    console.log('SFT Name:', nameStr);
+    console.log('SFT Symbol:', symbolStr);
+
+    expect(nameStr).toBe('TestSFT');
+    expect(symbolStr).toBe('TSFT');
+  }, 300_000);
+
+  it('returns correct token type existence', async () => {
+    const tokenId = 1n;
+
+    // Initially token type should not exist
+    await assertTokenTypeExists(sft, tokenId, false);
+
+    // Create token type
+    await sft.withWallet(alice).methods.create_token_type(tokenId).send().wait();
+
+    // Now token type should exist
+    await assertTokenTypeExists(sft, tokenId, true);
+  }, 300_000);
+
+  it('returns correct public balances', async () => {
+    const tokenId = 1n;
+
+    // Initially balance should be 0
+    await assertPublicBalance(sft, tokenId, bob.getAddress(), 0n);
+
+    // Create token type and mint to bob
+    await sft.withWallet(alice).methods.create_token_type(tokenId).send().wait();
+    await sft.withWallet(alice).methods.mint_to_public(bob.getAddress(), tokenId).send().wait();
+
+    // Balance should now be 1
+    await assertPublicBalance(sft, tokenId, bob.getAddress(), 1n);
+  }, 300_000);
+
+  it('returns correct private balances', async () => {
+    const tokenId = 1n;
+
+    // Initially balance should be 0
+    await assertPrivateBalance(sft, tokenId, bob.getAddress(), 0n);
+
+    // Mint privately to bob
+    await sft.withWallet(alice).methods.mint_to_private(bob.getAddress(), tokenId).send().wait();
+
+    // Balance should now be 1
+    await assertPrivateBalance(sft, tokenId, bob.getAddress(), 1n);
+  }, 300_000);
+
+  it('returns correct total supply', async () => {
+    const tokenId = 1n;
+
+    // Initially total supply should be 0
+    await assertTotalSupply(sft, tokenId, 0n);
+
+    // Mint some tokens
+    await sft.withWallet(alice).methods.mint_to_private(bob.getAddress(), tokenId).send().wait();
+    await assertTotalSupply(sft, tokenId, 1n);
+
+    await sft.withWallet(alice).methods.mint_to_private(bob.getAddress(), tokenId).send().wait();
+    await assertTotalSupply(sft, tokenId, 2n);
+
+    // Burn one token
+    await sft.withWallet(bob).methods.burn_private(bob.getAddress(), tokenId, 0n).send().wait();
+    await assertTotalSupply(sft, tokenId, 1n);
+  }, 300_000);
+
+  // --- Authorization Tests ---
+
+  it('transfers SFT with authorization', async () => {
+    const tokenId = 1n;
+
+    // Mint privately to alice
+    await sft.withWallet(alice).methods.mint_to_private(alice.getAddress(), tokenId).send().wait();
+
+    // Create transfer call interface with non-zero nonce
+    const transferCallInterface = sft
+      .withWallet(bob)
+      .methods.transfer_private_to_private(alice.getAddress(), bob.getAddress(), tokenId, 1n);
+
+    // Add authorization witness from alice to bob
+    const intent: IntentAction = {
+      caller: bob.getAddress(),
+      action: transferCallInterface,
+    };
+    const witness = await alice.createAuthWit(intent);
+
+    // Bob executes the transfer with alice's authorization
+    await transferCallInterface.send({ authWitnesses: [witness] }).wait();
+
+    // Verify alice has 0 tokens privately
+    await assertPrivateBalance(sft, tokenId, alice.getAddress(), 0n);
+
+    // Verify bob has 1 token privately
+    await assertPrivateBalance(sft, tokenId, bob.getAddress(), 1n);
+  }, 300_000);
+
+  it('burns SFT with authorization', async () => {
+    const tokenId = 1n;
+
+    // Mint privately to alice
+    await sft.withWallet(alice).methods.mint_to_private(alice.getAddress(), tokenId).send().wait();
+
+    // Create burn call interface with non-zero nonce
+    const burnCallInterface = sft.withWallet(bob).methods.burn_private(alice.getAddress(), tokenId, 1n);
+
+    // Add authorization witness from alice to bob
+    const intent: IntentAction = {
+      caller: bob.getAddress(),
+      action: burnCallInterface,
+    };
+    const witness = await alice.createAuthWit(intent);
+
+    // Bob executes the burn with alice's authorization
+    await burnCallInterface.send({ authWitnesses: [witness] }).wait();
+
+    // Verify alice has 0 tokens privately
+    await assertPrivateBalance(sft, tokenId, alice.getAddress(), 0n);
+
+    // Verify total supply decreased
+    await assertTotalSupply(sft, tokenId, 0n);
+  }, 300_000);
+
+  // --- Access Control Tests ---
+
+  it('enforces minter role for minting', async () => {
+    const tokenId = 1n;
+
+    // Deploy new contract with bob as minter
+    const sftWithBobMinter = (await deploySFTWithMinter(bob)) as SFTContract;
+
+    // Alice attempts to mint when she's not the minter
+    await expect(
+      sftWithBobMinter.withWallet(alice).methods.mint_to_private(alice.getAddress(), tokenId).send().wait(),
+    ).rejects.toThrow(/caller is not minter/);
+
+    // Bob can mint since he's the minter
+    await sftWithBobMinter.withWallet(bob).methods.mint_to_private(alice.getAddress(), tokenId).send().wait();
+    await assertPrivateBalance(sftWithBobMinter, tokenId, alice.getAddress(), 1n);
+  }, 300_000);
+
+  it('enforces minter role for token type creation', async () => {
+    const tokenId = 1n;
+
+    // Deploy new contract with bob as minter
+    const sftWithBobMinter = (await deploySFTWithMinter(bob)) as SFTContract;
+
+    // Alice attempts to create token type when she's not the minter
+    await expect(sftWithBobMinter.withWallet(alice).methods.create_token_type(tokenId).send().wait()).rejects.toThrow(
+      /caller is not minter/,
+    );
+
+    // Bob can create token type since he's the minter
+    await sftWithBobMinter.withWallet(bob).methods.create_token_type(tokenId).send().wait();
+    await assertTokenTypeExists(sftWithBobMinter, tokenId, true);
+  }, 300_000);
+
+  it('enforces ownership for transfers', async () => {
+    const tokenId = 1n;
+
+    // Mint to alice
+    await sft.withWallet(alice).methods.mint_to_private(alice.getAddress(), tokenId).send().wait();
+
+    // Bob attempts transfer without ownership or authorization
+    await expect(
+      sft
+        .withWallet(bob)
+        .methods.transfer_private_to_private(bob.getAddress(), carl.getAddress(), tokenId, 0n)
+        .send()
+        .wait(),
+    ).rejects.toThrow(/sft not found in private/);
+
+    // Alice can transfer since she's the owner
+    await sft
+      .withWallet(alice)
+      .methods.transfer_private_to_private(alice.getAddress(), bob.getAddress(), tokenId, 0n)
+      .send()
+      .wait();
+    await assertPrivateBalance(sft, tokenId, bob.getAddress(), 1n);
+  }, 300_000);
+
+  it('enforces authorization for transfers', async () => {
+    const tokenId = 1n;
+    const invalidNonce = 999n;
+
+    // Mint to alice
+    await sft.withWallet(alice).methods.mint_to_private(alice.getAddress(), tokenId).send().wait();
+
+    // Bob attempts transfer with invalid authorization
+    const transferCallInterface = sft
+      .withWallet(bob)
+      .methods.transfer_private_to_private(alice.getAddress(), bob.getAddress(), tokenId, invalidNonce);
+
+    const intent: IntentAction = {
+      caller: bob.getAddress(),
+      action: transferCallInterface,
+    };
+
+    // Create auth witness with wrong signer (carl instead of alice)
+    const witness = await carl.createAuthWit(intent);
+
+    // Transfer should fail with invalid authorization
+    await expect(transferCallInterface.send({ authWitnesses: [witness] }).wait()).rejects.toThrow();
+
+    // Alice still owns the token
+    await assertPrivateBalance(sft, tokenId, alice.getAddress(), 1n);
+  }, 300_000);
+});
