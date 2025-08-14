@@ -1,14 +1,21 @@
 name: Production Release
 
 on:
-  release:
-    types: [published]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version from package.json (e.g., 1.0.0 or 1.0.0-beta.1). Do NOT include the "v" prefix.'
+        required: true
+        type: string
 
 jobs:
   release:
     name: Release
     environment: Production
     runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    permissions:
+      contents: write  # Required to create and push tags
 
     env:
       PROJECT_NAME: '@defi-wonderland/aztec-standards'
@@ -20,8 +27,22 @@ jobs:
       - name: Install Node
         uses: actions/setup-node@v4
         with:
+          node-version: '20'
           registry-url: "https://registry.npmjs.org"
           cache: "yarn"
+
+      # TODO: Automate changing package.json version from the workflow input
+      #       (e.g., open a PR or push a signed commit) so manual edits are not required.
+      - name: Validate input version matches package.json
+        run: |
+          INPUT_VERSION="${{ github.event.inputs.version }}"
+          PKG_VERSION=$(node -p "require('./package.json').version")
+          echo "Input version: $INPUT_VERSION"
+          echo "package.json version: $PKG_VERSION"
+          if [ "$INPUT_VERSION" != "$PKG_VERSION" ]; then
+            echo "::error::Input version ($INPUT_VERSION) does not match package.json version ($PKG_VERSION). Update package.json or re-run with the matching version (no 'v' prefix)."
+            exit 1
+          fi
 
       - name: Set up Docker
         uses: docker/setup-buildx-action@v2
@@ -42,9 +63,7 @@ jobs:
 
       - name: Set Aztec version
         run: |
-          VERSION=${AZTEC_VERSION} aztec-up
-      
-      # Install dependencies AND the current latest version of the package we're releasing now.
+          VERSION=${{ steps.aztec-version.outputs.AZTEC_VERSION }} aztec-up
       - name: Install dependencies
         run: |
           yarn --frozen-lockfile
@@ -71,7 +90,7 @@ jobs:
       # 7. Trim info from package.json
       - name: Prepare files for release
         run: |
-          VERSION=$(node -p "require('./package.json').version")
+          VERSION=${{ github.event.inputs.version }}
           mkdir -p export/${{ env.PROJECT_NAME }}/current/artifacts
           mkdir -p export/${{ env.PROJECT_NAME }}/historical
           
@@ -110,9 +129,23 @@ jobs:
           cp -r export/${{ env.PROJECT_NAME }}/current export/${{ env.PROJECT_NAME }}/historical/$VERSION
           cp README.md export/${{ env.PROJECT_NAME }}/
           cp LICENSE export/${{ env.PROJECT_NAME }}/
-          cat package.json | jq 'del(.scripts, .jest, ."lint-staged", .packageManager, .devDependencies, .dependencies, .engines, .resolutions)' > export/${{ env.PROJECT_NAME }}/package.json
+          # Trim fields and set the version to the workflow input so the published package matches the requested version
+          cat package.json | jq --arg v "$VERSION" 'del(.scripts, .jest, ."lint-staged", .packageManager, .devDependencies, .dependencies, .engines, .resolutions) | .version=$v' > export/${{ env.PROJECT_NAME }}/package.json
 
       - name: Publish to NPM
         run: cd export/${{ env.PROJECT_NAME }} && npm publish --access public --tag latest
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Create GitHub Release Tag (adds 'v' prefix to input)
+        run: |
+          TAG_NAME="v${{ github.event.inputs.version }}"
+          # Check if tag already exists
+          if git ls-remote --tags origin | grep -q "refs/tags/${TAG_NAME}$"; then
+            echo "::error::Tag ${TAG_NAME} already exists. Please use a different version."
+            exit 1
+          fi
+          git tag "${TAG_NAME}"
+          git push origin "${TAG_NAME}"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

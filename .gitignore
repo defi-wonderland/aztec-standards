@@ -1,11 +1,12 @@
 node_modules
 target/
-src/artifacts/
+artifacts/
 log/
 .vscode
 .DS_Store
 codegenCache.json
 .env
+benchmarks/*.json
 store
 .cursor/*
 !.cursor/rules/

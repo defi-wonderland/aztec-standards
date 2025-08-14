@@ -7,6 +7,6 @@
     "^(\\.{1,2}/.*)\\.js$": "$1"
   },
   "testRegex": "./src/.*\\.test\\.ts$",
-  "rootDir": "./src",
+  "rootDir": "./",
   "testTimeout": 30000
 }
