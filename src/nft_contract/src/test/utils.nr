@@ -41,7 +41,7 @@ pub unconstrained fn deploy_nft_with_minter(
         AztecAddress::zero(),
     );
     let nft_contract_address =
-        env.deploy("@nft_contract/NFT").with_public_initializer(minter, initializer_call_interface);
+        env.deploy("@nft_contract/NFT").with_public_initializer(owner, initializer_call_interface);
 
     nft_contract_address
 }
@@ -106,24 +106,27 @@ pub unconstrained fn assert_owns_public_nft(
 }
 
 pub unconstrained fn assert_owns_private_nft(
+    env: TestEnvironment,
     nft_contract_address: AztecAddress,
     owner: AztecAddress,
     token_id: Field,
 ) {
-    let nft_found = owns_private_nft(nft_contract_address, owner, token_id);
+    let nft_found = owns_private_nft(env, nft_contract_address, owner, token_id);
     assert(nft_found, "NFT not found in private nfts");
 }
 
 pub unconstrained fn assert_private_nft_nullified(
+    env: TestEnvironment,
     nft_contract_address: AztecAddress,
     owner: AztecAddress,
     token_id: Field,
 ) {
-    let nft_found = owns_private_nft(nft_contract_address, owner, token_id);
+    let nft_found = owns_private_nft(env, nft_contract_address, owner, token_id);
     assert(!nft_found, "NFT found in private notes when it should have been nullified");
 }
 
 pub unconstrained fn owns_private_nft(
+    env: TestEnvironment,
     nft_contract_address: AztecAddress,
     owner: AztecAddress,
     token_id: Field,
@@ -131,7 +134,8 @@ pub unconstrained fn owns_private_nft(
     let current_contract_address = get_contract_address();
     cheatcodes::set_contract_address(nft_contract_address);
     // Direct call to unconstrained
-    let (private_nfts, _) = NFT::get_private_nfts(owner, 0);
+    let (private_nfts, _) =
+        env.simulate_utility(NFT::at(nft_contract_address).get_private_nfts(owner, 0));
 
     let mut nft_found = false;
     for obtained_token_id in private_nfts {

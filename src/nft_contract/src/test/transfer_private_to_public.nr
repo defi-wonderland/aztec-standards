@@ -10,7 +10,7 @@ unconstrained fn nft_transfer_private_to_public_self_success() {
         utils::setup_and_mint_to_private(false, token_id);
 
     // Verify initial ownership state
-    utils::assert_owns_private_nft(nft_contract_address, owner, token_id);
+    utils::assert_owns_private_nft(env, nft_contract_address, owner, token_id);
     utils::assert_owns_public_nft(env, nft_contract_address, AztecAddress::zero(), token_id);
 
     // Transfer NFT from private to public state (self-transfer)
@@ -23,7 +23,7 @@ unconstrained fn nft_transfer_private_to_public_self_success() {
     utils::assert_owns_public_nft(env, nft_contract_address, owner, token_id);
 
     // Verify the NFT is no longer owned privately
-    utils::assert_private_nft_nullified(nft_contract_address, owner, token_id);
+    utils::assert_private_nft_nullified(env, nft_contract_address, owner, token_id);
 }
 
 #[test]
@@ -34,7 +34,7 @@ unconstrained fn nft_transfer_private_to_public_authorized_success() {
         utils::setup_and_mint_to_private(true, token_id);
 
     // Verify initial ownership state
-    utils::assert_owns_private_nft(nft_contract_address, owner, token_id);
+    utils::assert_owns_private_nft(env, nft_contract_address, owner, token_id);
     utils::assert_owns_public_nft(env, nft_contract_address, AztecAddress::zero(), token_id);
 
     // Create the transfer call interface
@@ -53,10 +53,10 @@ unconstrained fn nft_transfer_private_to_public_authorized_success() {
 
     // Verify the NFT is now owned publicly by recipient
     utils::assert_owns_public_nft(env, nft_contract_address, recipient, token_id);
-    utils::assert_private_nft_nullified(nft_contract_address, recipient, token_id);
+    utils::assert_private_nft_nullified(env, nft_contract_address, recipient, token_id);
 
     // Verify the NFT is no longer owned privately by owner
-    utils::assert_private_nft_nullified(nft_contract_address, owner, token_id);
+    utils::assert_private_nft_nullified(env, nft_contract_address, owner, token_id);
 }
 
 #[test(should_fail_with = "Unknown auth witness for message hash")]

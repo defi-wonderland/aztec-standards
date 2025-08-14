@@ -10,7 +10,7 @@ unconstrained fn nft_transfer_private_to_commitment_success() {
         utils::setup_and_mint_to_private(false, token_id);
 
     // Verify initial ownership
-    utils::assert_owns_private_nft(nft_contract_address, owner, token_id);
+    utils::assert_owns_private_nft(env, nft_contract_address, owner, token_id);
 
     // Prepare commitment
     let commitment = env.call_private(
@@ -28,9 +28,9 @@ unconstrained fn nft_transfer_private_to_commitment_success() {
     );
 
     // Verify NFT is removed from owner and in commitment
-    utils::assert_private_nft_nullified(nft_contract_address, owner, token_id);
+    utils::assert_private_nft_nullified(env, nft_contract_address, owner, token_id);
     // NFT should be in recipient's private set
-    utils::assert_owns_private_nft(nft_contract_address, recipient, token_id);
+    utils::assert_owns_private_nft(env, nft_contract_address, recipient, token_id);
     assert(
         utils::get_commitment_stored(nft_contract_address, commitment),
         "Commitment not stored after transfer",
@@ -45,7 +45,7 @@ unconstrained fn nft_transfer_private_to_commitment_authorized_success() {
         utils::setup_and_mint_to_private(true, token_id);
 
     // Verify initial ownership
-    utils::assert_owns_private_nft(nft_contract_address, owner, token_id);
+    utils::assert_owns_private_nft(env, nft_contract_address, owner, token_id);
 
     // Prepare commitment
     let commitment = env.call_private(
@@ -75,9 +75,9 @@ unconstrained fn nft_transfer_private_to_commitment_authorized_success() {
     env.call_private(recipient, transfer_call_interface);
 
     // Verify NFT is removed from owner and in commitment
-    utils::assert_private_nft_nullified(nft_contract_address, owner, token_id);
+    utils::assert_private_nft_nullified(env, nft_contract_address, owner, token_id);
     // NFT should be in recipient's private set
-    utils::assert_owns_private_nft(nft_contract_address, recipient, token_id);
+    utils::assert_owns_private_nft(env, nft_contract_address, recipient, token_id);
     assert(
         utils::get_commitment_stored(nft_contract_address, commitment),
         "Commitment not stored after transfer",

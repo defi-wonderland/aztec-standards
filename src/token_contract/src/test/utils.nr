@@ -80,7 +80,6 @@ pub unconstrained fn setup_with_asset(
     };
 
     // Deploy asset token
-    // env.impersonate(owner);||||
     let asset_initializer_call_interface = Token::interface().constructor_with_minter(
         "AssetToken000000000000000000000",
         "ASSET00000000000000000000000000",

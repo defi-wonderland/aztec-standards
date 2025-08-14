@@ -10,14 +10,14 @@ unconstrained fn nft_burn_private_self_success() {
         utils::setup_and_mint_to_private(false, token_id);
 
     // Verify initial state
-    utils::assert_owns_private_nft(nft_contract_address, owner, token_id);
+    utils::assert_owns_private_nft(env, nft_contract_address, owner, token_id);
     utils::assert_nft_exists(nft_contract_address, token_id);
 
     // Burn the NFT
     env.call_private(owner, NFT::at(nft_contract_address).burn_private(owner, token_id, 0));
 
     // Verify NFT is burned (no longer in private notes and marked as non-existent)
-    utils::assert_private_nft_nullified(nft_contract_address, owner, token_id);
+    utils::assert_private_nft_nullified(env, nft_contract_address, owner, token_id);
     utils::assert_nft_does_not_exist(nft_contract_address, token_id);
 }
 
@@ -29,7 +29,7 @@ unconstrained fn nft_burn_private_authorized_success() {
         utils::setup_and_mint_to_private(true, token_id);
 
     // Verify initial state
-    utils::assert_owns_private_nft(nft_contract_address, owner, token_id);
+    utils::assert_owns_private_nft(env, nft_contract_address, owner, token_id);
     utils::assert_nft_exists(nft_contract_address, token_id);
 
     // Create burn call interface with non-zero nonce
@@ -46,7 +46,7 @@ unconstrained fn nft_burn_private_authorized_success() {
     env.call_private(recipient, burn_call_interface);
 
     // Verify NFT is burned
-    utils::assert_private_nft_nullified(nft_contract_address, owner, token_id);
+    utils::assert_private_nft_nullified(env, nft_contract_address, owner, token_id);
     utils::assert_nft_does_not_exist(nft_contract_address, token_id);
 }
 

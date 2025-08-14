@@ -9,7 +9,7 @@ unconstrained fn nft_mint_to_private_success() {
     let token_id = 10000;
     env.call_private(minter, NFT::at(nft_contract_address).mint_to_private(owner, token_id));
 
-    utils::assert_owns_private_nft(nft_contract_address, owner, token_id);
+    utils::assert_owns_private_nft(env, nft_contract_address, owner, token_id);
     // Verify no public owner exists
     utils::assert_owns_public_nft(env, nft_contract_address, AztecAddress::zero(), token_id);
 }
@@ -31,7 +31,7 @@ unconstrained fn nft_mint_to_private_fail_same_nft_twice() {
     env.call_private(minter, mint_call_interface);
 
     // Verify the NFT was minted correctly
-    utils::assert_owns_private_nft(nft_contract_address, owner, token_id);
+    utils::assert_owns_private_nft(env, nft_contract_address, owner, token_id);
     utils::assert_nft_exists(nft_contract_address, token_id);
 
     // Second call should fail

@@ -10,7 +10,7 @@ unconstrained fn nft_transfer_private_to_public_with_commitment_success() {
         utils::setup_and_mint_to_private(false, token_id);
 
     // Verify initial ownership
-    utils::assert_owns_private_nft(nft_contract_address, owner, token_id);
+    utils::assert_owns_private_nft(env, nft_contract_address, owner, token_id);
 
     // Transfer NFT with commitment
     let returned_commitment = env.call_private(
@@ -24,7 +24,7 @@ unconstrained fn nft_transfer_private_to_public_with_commitment_success() {
     );
 
     // Verify ownership transfer
-    utils::assert_private_nft_nullified(nft_contract_address, owner, token_id);
+    utils::assert_private_nft_nullified(env, nft_contract_address, owner, token_id);
     utils::assert_owns_public_nft(env, nft_contract_address, recipient, token_id);
 
     // Verify commitment is stored
@@ -42,7 +42,7 @@ unconstrained fn nft_transfer_private_to_public_with_commitment_authorized_succe
         utils::setup_and_mint_to_private(true, token_id);
 
     // Verify initial ownership
-    utils::assert_owns_private_nft(nft_contract_address, owner, token_id);
+    utils::assert_owns_private_nft(env, nft_contract_address, owner, token_id);
 
     // Create transfer call interface with non-zero nonce
     let transfer_call_interface = NFT::at(nft_contract_address)
@@ -59,7 +59,7 @@ unconstrained fn nft_transfer_private_to_public_with_commitment_authorized_succe
     let returned_commitment = env.call_private(recipient, transfer_call_interface);
 
     // Verify ownership transfer
-    utils::assert_private_nft_nullified(nft_contract_address, owner, token_id);
+    utils::assert_private_nft_nullified(env, nft_contract_address, owner, token_id);
     utils::assert_owns_public_nft(env, nft_contract_address, recipient, token_id);
 
     // Verify commitment is stored
@@ -77,7 +77,7 @@ unconstrained fn nft_transfer_private_to_public_with_commitment_and_finalize_suc
         utils::setup_and_mint_to_private(false, token_id);
 
     // Verify initial ownership
-    utils::assert_owns_private_nft(nft_contract_address, owner, token_id);
+    utils::assert_owns_private_nft(env, nft_contract_address, owner, token_id);
 
     // Transfer NFT with commitment
     let commitment = env.call_private(
@@ -91,7 +91,7 @@ unconstrained fn nft_transfer_private_to_public_with_commitment_and_finalize_suc
     );
 
     // Verify intermediate state (public ownership and commitment)
-    utils::assert_private_nft_nullified(nft_contract_address, owner, token_id);
+    utils::assert_private_nft_nullified(env, nft_contract_address, owner, token_id);
     utils::assert_owns_public_nft(env, nft_contract_address, recipient, token_id);
     assert(utils::get_commitment_stored(nft_contract_address, commitment), "Commitment not stored");
 }

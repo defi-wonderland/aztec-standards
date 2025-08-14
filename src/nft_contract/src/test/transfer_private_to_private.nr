@@ -10,7 +10,7 @@ unconstrained fn nft_transfer_private_to_private_success() {
         utils::setup_and_mint_to_private(false, token_id);
 
     // Verify initial ownership
-    utils::assert_owns_private_nft(nft_contract_address, owner, token_id);
+    utils::assert_owns_private_nft(env, nft_contract_address, owner, token_id);
 
     // Transfer NFT from owner to recipient
     env.call_private(
@@ -19,8 +19,8 @@ unconstrained fn nft_transfer_private_to_private_success() {
     );
 
     // Verify ownership transfer
-    utils::assert_private_nft_nullified(nft_contract_address, owner, token_id);
-    utils::assert_owns_private_nft(nft_contract_address, recipient, token_id);
+    utils::assert_private_nft_nullified(env, nft_contract_address, owner, token_id);
+    utils::assert_owns_private_nft(env, nft_contract_address, recipient, token_id);
 }
 
 #[test]
@@ -31,7 +31,7 @@ unconstrained fn nft_transfer_private_to_private_self_success() {
         utils::setup_and_mint_to_private(false, token_id);
 
     // Verify initial ownership
-    utils::assert_owns_private_nft(nft_contract_address, owner, token_id);
+    utils::assert_owns_private_nft(env, nft_contract_address, owner, token_id);
 
     // Transfer NFT from owner to self
     env.call_private(
@@ -40,7 +40,7 @@ unconstrained fn nft_transfer_private_to_private_self_success() {
     );
 
     // Verify owner still owns the NFT
-    utils::assert_owns_private_nft(nft_contract_address, owner, token_id);
+    utils::assert_owns_private_nft(env, nft_contract_address, owner, token_id);
 }
 
 #[test]
@@ -51,7 +51,7 @@ unconstrained fn nft_transfer_private_to_private_authorized_success() {
         utils::setup_and_mint_to_private(true, token_id);
 
     // Verify initial ownership
-    utils::assert_owns_private_nft(nft_contract_address, owner, token_id);
+    utils::assert_owns_private_nft(env, nft_contract_address, owner, token_id);
 
     // Create transfer call interface with non-zero nonce
     let transfer_call_interface =
@@ -68,8 +68,8 @@ unconstrained fn nft_transfer_private_to_private_authorized_success() {
     env.call_private(recipient, transfer_call_interface);
 
     // Verify ownership transfer
-    utils::assert_private_nft_nullified(nft_contract_address, owner, token_id);
-    utils::assert_owns_private_nft(nft_contract_address, recipient, token_id);
+    utils::assert_private_nft_nullified(env, nft_contract_address, owner, token_id);
+    utils::assert_owns_private_nft(env, nft_contract_address, recipient, token_id);
 }
 
 #[test(should_fail_with = "nft not found in private to public")]

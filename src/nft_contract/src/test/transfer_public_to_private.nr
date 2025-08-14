@@ -21,7 +21,7 @@ unconstrained fn nft_transfer_public_to_private_success() {
     // Verify the NFT is no longer owned publicly by owner
     utils::assert_owns_public_nft(env, nft_contract_address, AztecAddress::zero(), token_id);
     // Verify the NFT is now owned privately by recipient
-    utils::assert_owns_private_nft(nft_contract_address, recipient, token_id);
+    utils::assert_owns_private_nft(env, nft_contract_address, recipient, token_id);
 }
 
 #[test]
@@ -48,7 +48,7 @@ unconstrained fn nft_transfer_public_to_private_authorized_success() {
     // Verify the NFT is no longer owned publicly by owner
     utils::assert_owns_public_nft(env, nft_contract_address, AztecAddress::zero(), token_id);
     // Verify the NFT is now owned privately by recipient
-    utils::assert_owns_private_nft(nft_contract_address, recipient, token_id);
+    utils::assert_owns_private_nft(env, nft_contract_address, recipient, token_id);
 }
 
 #[test(should_fail_with = "caller is not owner")]
