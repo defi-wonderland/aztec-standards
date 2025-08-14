@@ -120,13 +120,8 @@ pub contract NFT {
             .update_public_token_owner_from_zero_internal(to, token_id)
             .enqueue(&mut context);
         let completer = context.msg_sender();
-        let commitment = _initialize_transfer_commitment(
-            &mut context,
-            storage.private_nfts,
-            from,
-            to,
-            completer,
-        );
+        let commitment =
+            _initialize_transfer_commitment(&mut context, storage.private_nfts, to, completer);
         commitment.commitment()
     }
 
@@ -146,13 +141,7 @@ pub contract NFT {
         _validate_from_private(&mut context, from);
 
         _remove_private_token_owner(storage.private_nfts.at(from), token_id);
-        _update_private_token_owner(
-            &mut context,
-            storage.private_nfts.at(to),
-            from,
-            to,
-            token_id,
-        );
+        _update_private_token_owner(&mut context, storage.private_nfts.at(to), to, token_id);
     }
 
     /// @notice Transfers token by id from private owner to the recipient commitment (recipient must create a commitment first)
@@ -195,13 +184,7 @@ pub contract NFT {
         NFT::at(context.this_address())
             .update_public_token_owner_internal(from, AztecAddress::zero(), token_id)
             .enqueue(&mut context);
-        _update_private_token_owner(
-            &mut context,
-            storage.private_nfts.at(to),
-            from,
-            to,
-            token_id,
-        );
+        _update_private_token_owner(&mut context, storage.private_nfts.at(to), to, token_id);
     }
 
     /// @notice Initializes a transfer commitment to be used for transfers
@@ -215,13 +198,8 @@ pub contract NFT {
         to: AztecAddress,
         completer: AztecAddress,
     ) -> Field {
-        let commitment = _initialize_transfer_commitment(
-            &mut context,
-            storage.private_nfts,
-            from,
-            to,
-            completer,
-        );
+        let commitment =
+            _initialize_transfer_commitment(&mut context, storage.private_nfts, to, completer);
         commitment.commitment()
     }
 
@@ -363,14 +341,13 @@ pub contract NFT {
     /// @return owned_nft_ids An array of token IDs owned by `owner`
     /// @return page_limit_reached A flag indicating whether a page limit was reached
     #[utility]
-    pub unconstrained fn get_private_nfts(
+    unconstrained fn get_private_nfts(
         owner: AztecAddress,
         page_index: u32,
     ) -> pub ([Field; MAX_NOTES_PER_PAGE], bool) {
         let offset = page_index * MAX_NOTES_PER_PAGE;
         let mut options = NoteViewerOptions::new();
         let nfts = storage.private_nfts.at(owner).view_notes(options.set_offset(offset));
-
         let mut owned_nft_ids = [0; MAX_NOTES_PER_PAGE];
         for i in 0..options.limit {
             if i < nfts.len() {
@@ -491,7 +468,6 @@ pub contract NFT {
     fn _initialize_transfer_commitment(
         context: &mut PrivateContext,
         private_nfts: Map<AztecAddress, PrivateSet<NFTNote, &mut PrivateContext>, &mut PrivateContext>,
-        from: AztecAddress,
         to: AztecAddress,
         completer: AztecAddress,
     ) -> PartialNFTNote {
@@ -513,7 +489,6 @@ pub contract NFT {
     fn _update_private_token_owner(
         context: &mut PrivateContext,
         private_nft_set: PrivateSet<NFTNote, &mut PrivateContext>,
-        from: AztecAddress,
         to: AztecAddress,
         token_id: Field,
     ) {
