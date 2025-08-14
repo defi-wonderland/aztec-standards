@@ -13,7 +13,7 @@ import {
 } from '@aztec/aztec.js';
 import { setupPXE } from './utils.js';
 import { getInitialTestAccountsManagers } from '@aztec/accounts/testing';
-import { SFTContract, SFTContractArtifact } from '../../artifacts/SFT.js';
+import { SFTContract, SFTContractArtifact } from '../../../artifacts/SFT.js';
 import { AztecLmdbStore } from '@aztec/kv-store/lmdb';
 
 // Deploy SFT contract with a minter
