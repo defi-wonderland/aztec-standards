@@ -10,8 +10,8 @@
   "type": "module",
   "scripts": {
     "postinstall": "husky",
-    "clean": "rm -rf ./src/artifacts ./target",
-    "codegen": "aztec codegen target --outdir src/artifacts --force",
+    "clean": "rm -rf ./artifacts ./target",
+    "codegen": "aztec codegen target --outdir artifacts --force",
     "compile": "aztec-nargo compile",
     "start:pxe": "docker compose -p sandbox -f ~/.aztec/docker-compose.sandbox.yml -f docker-compose.override.yml up",
     "test": "yarn test:nr && yarn test:js",
@@ -25,12 +25,12 @@
     "*.ts": "prettier --write -u"
   },
   "dependencies": {
-    "@aztec/accounts": "v1.1.2",
-    "@aztec/aztec.js": "v1.1.2",
-    "@aztec/noir-contracts.js": "v1.1.2",
-    "@aztec/protocol-contracts": "v1.1.2",
-    "@aztec/pxe": "v1.1.2",
-    "@aztec/stdlib": "v1.1.2",
+    "@aztec/accounts": "v1.2.1",
+    "@aztec/aztec.js": "v1.2.1",
+    "@aztec/noir-contracts.js": "v1.2.1",
+    "@aztec/protocol-contracts": "v1.2.1",
+    "@aztec/pxe": "v1.2.1",
+    "@aztec/stdlib": "v1.2.1",
     "@defi-wonderland/aztec-benchmark": "1.0.1",
     "@types/node": "22.5.1"
   },
@@ -50,7 +50,7 @@
     "testTimeout": 200000
   },
   "config": {
-    "aztecVersion": "1.1.2"
+    "aztecVersion": "1.2.1"
   },
   "packageManager": "yarn@1.22.22+sha512.a6b2f7906b721bba3d67d4aff083df04dad64c399707841b7acf00f6b133b7ac24255f2652fa22ae3534329dc6180534e98d17432037ff6fd140556e2bb3137e"
 }
