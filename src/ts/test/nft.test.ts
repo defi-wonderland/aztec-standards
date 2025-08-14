@@ -13,7 +13,7 @@ import {
 } from '@aztec/aztec.js';
 import { setupPXE } from './utils.js';
 import { getInitialTestAccountsManagers } from '@aztec/accounts/testing';
-import { NFTContract, NFTContractArtifact } from '../../artifacts/NFT.js';
+import { NFTContract, NFTContractArtifact } from '../../../artifacts/NFT.js';
 import { AztecLmdbStore } from '@aztec/kv-store/lmdb';
 
 // Deploy NFT contract with a minter

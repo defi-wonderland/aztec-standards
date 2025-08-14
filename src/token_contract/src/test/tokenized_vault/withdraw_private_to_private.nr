@@ -239,26 +239,31 @@ unconstrained fn withdraw_private_to_private_on_behalf_of_wrong_caller() {
 
     // Authorize someone to call withdraw_private_to_private
     let shares_to_burn: u128 = deposit_amount;
-    let withdraw_private_to_private_call_interface = Token::at(vault_address)
-        .withdraw_private_to_private(deposit_recipient, recipient, deposit_amount, shares_to_burn, 0
-            );
-authwit_cheatcodes::add_private_authwit_from_call_interface(
-    deposit_recipient,
-    owner,
-    withdraw_private_to_private_call_interface,
-);
-
-// Withdraw
-env.call_private(
-    recipient,
-    Token::at(vault_address).withdraw_private_to_private(
+    let token = Token::at(vault_address);
+    let withdraw_private_to_private_call_interface = token.withdraw_private_to_private(
         deposit_recipient,
         recipient,
         deposit_amount,
         shares_to_burn,
         0,
-    ),
-);
+    );
+    authwit_cheatcodes::add_private_authwit_from_call_interface(
+        deposit_recipient,
+        owner,
+        withdraw_private_to_private_call_interface,
+    );
+
+    // Withdraw
+    env.call_private(
+        recipient,
+        Token::at(vault_address).withdraw_private_to_private(
+            deposit_recipient,
+            recipient,
+            deposit_amount,
+            shares_to_burn,
+            0,
+        ),
+    );
 }
 
 // TODO(#15666 & #15118): this test fails because the ivsk is currently needed for emitting a note, but the vault contract doesn't have one.
@@ -282,36 +287,41 @@ unconstrained fn withdraw_private_to_private_on_behalf_of_other_success() {
 
     // Authorize someone to call withdraw_private_to_private
     let shares_to_burn: u128 = deposit_amount;
-    let withdraw_private_to_private_call_interface = Token::at(vault_address)
-        .withdraw_private_to_private(deposit_recipient, recipient, deposit_amount, shares_to_burn, 0
-            );
-authwit_cheatcodes::add_private_authwit_from_call_interface(
-    deposit_recipient,
-    recipient,
-    withdraw_private_to_private_call_interface,
-);
-
-// Withdraw
-env.call_private(
-    recipient,
-    Token::at(vault_address).withdraw_private_to_private(
+    let token = Token::at(vault_address);
+    let withdraw_private_to_private_call_interface = token.withdraw_private_to_private(
         deposit_recipient,
         recipient,
         deposit_amount,
         shares_to_burn,
         0,
-    ),
-);
+    );
+    authwit_cheatcodes::add_private_authwit_from_call_interface(
+        deposit_recipient,
+        recipient,
+        withdraw_private_to_private_call_interface,
+    );
 
-// All shares are burnt
-utils::check_public_balance(env, vault_address, deposit_recipient, 0);
-utils::check_public_balance(env, vault_address, recipient, 0);
+    // Withdraw
+    env.call_private(
+        recipient,
+        Token::at(vault_address).withdraw_private_to_private(
+            deposit_recipient,
+            recipient,
+            deposit_amount,
+            shares_to_burn,
+            0,
+        ),
+    );
 
-// Check the total supply got updated
-let total_supply = env.view_public(Token::at(vault_address).total_supply());
-assert(total_supply == 0, "Incorrect shares total supply");
+    // All shares are burnt
+    utils::check_public_balance(env, vault_address, deposit_recipient, 0);
+    utils::check_public_balance(env, vault_address, recipient, 0);
 
-// Check asset balances
-utils::check_private_balance(env, asset_address, recipient, deposit_amount);
-utils::check_public_balance(env, asset_address, vault_address, 0);
+    // Check the total supply got updated
+    let total_supply = env.view_public(Token::at(vault_address).total_supply());
+    assert(total_supply == 0, "Incorrect shares total supply");
+
+    // Check asset balances
+    utils::check_private_balance(env, asset_address, recipient, deposit_amount);
+    utils::check_public_balance(env, asset_address, vault_address, 0);
 }

@@ -12,7 +12,7 @@ import { AMOUNT, deployTokenWithMinter, expectTokenBalances, expectUintNote, set
 import { PXE } from '@aztec/stdlib/interfaces/client';
 import { AztecLmdbStore } from '@aztec/kv-store/lmdb';
 import { getInitialTestAccountsManagers } from '@aztec/accounts/testing';
-import { TokenContractArtifact, TokenContract } from '../../artifacts/Token.js';
+import { TokenContractArtifact, TokenContract } from '../../../artifacts/Token.js';
 
 export async function deployTokenWithInitialSupply(deployer: Wallet, options: any) {
   const contract = await Contract.deploy(
