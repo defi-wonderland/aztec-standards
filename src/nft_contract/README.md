@@ -52,17 +52,17 @@ fn transfer_private_to_public(
 ) { /* ... */ }
 ```
 
-### transfer_private_to_public_with_commitment
+### transfer_private_to_public_with_payment_request
 ```rust
-/// @notice Transfers token by id from private owner to a public owner with a commitment
-/// @dev Removes token from private owner, enqueues a public call to update the public owner, and returns a commitment
+/// @notice Transfers token by id from private owner to a public owner with a payment request
+/// @dev Removes token from private owner, enqueues a public call to update the public owner, and returns a payment request
 /// @param from The address of the sender
 /// @param to The address of the recipient
 /// @param token_id The id of the token to transfer
 /// @param _nonce The nonce used for authwit
-/// @return commitment The partial nft note utilized for the transfer commitment (privacy entrance)
+/// @return payment_request The partial nft note utilized for the transfer payment request (privacy entrance)
 #[private]
-fn transfer_private_to_public_with_commitment(
+fn transfer_private_to_public_with_payment_request(
     from: AztecAddress,
     to: AztecAddress,
     token_id: Field,
@@ -87,19 +87,19 @@ fn transfer_private_to_private(
 ) { /* ... */ }
 ```
 
-### transfer_private_to_commitment
+### transfer_private_to_payment_request
 ```rust
-/// @notice Transfers token by id from private owner to the recipient commitment (recipient must create a commitment first)
-/// @dev Removes token by id from private owner, and enqueues a public call to complete the commitment
+/// @notice Transfers token by id from private owner to the recipient payment request (recipient must create a payment request first)
+/// @dev Removes token by id from private owner, and enqueues a public call to complete the payment request
 /// @param from The address of the sender
 /// @param token_id The id of the token to transfer
-/// @param commitment The commitment to use for the transfer
+/// @param payment_request The payment request to use for the transfer
 /// @param _nonce The nonce used for authwit
 #[private]
-fn transfer_private_to_commitment(
+fn transfer_private_to_payment_request(
     from: AztecAddress,
     token_id: Field,
-    commitment: Field,
+    payment_request: Field,
     _nonce: Field,
 ) { /* ... */ }
 ```
@@ -121,15 +121,16 @@ fn transfer_public_to_private(
 ) { /* ... */ }
 ```
 
-### initialize_transfer_commitment
+### initialize_payment_request
 ```rust
-/// @notice Initializes a transfer commitment to be used for transfers
+/// @notice Initializes a payment request to be used for transfers
 /// @dev Returns a partial nft note that can be used to execute transfers
 /// @param from The address of the sender
 /// @param to The address of the recipient
-/// @return commitment The partial nft note utilized for the transfer commitment (privacy entrance)
+/// @param completer The address used to compute the validity commitment
+/// @return payment_request The partial nft note utilized for the transfer payment request (privacy entrance)
 #[private]
-fn initialize_transfer_commitment(from: AztecAddress, to: AztecAddress) -> Field { /* ... */ }
+fn initialize_payment_request(from: AztecAddress, to: AztecAddress, completer: AztecAddress) -> Field { /* ... */ }
 ```
 
 ### mint_to_private
@@ -172,19 +173,19 @@ fn transfer_public_to_public(
 ) { /* ... */ }
 ```
 
-### transfer_public_to_commitment
+### transfer_public_to_payment_request
 ```rust
-/// @notice Transfers a token to a commitment
-/// @dev Public call that asserts that the caller is the token owner, and updates the public owner, and completes the commitment
+/// @notice Transfers a token to a payment request
+/// @dev Public call that asserts that the caller is the token owner, and updates the public owner, and completes the payment request
 /// @param from The address of the sender
 /// @param token_id The id of the token to transfer
-/// @param commitment The commitment to use for the transfer
+/// @param payment_request The payment request to use for the transfer
 /// @param _nonce The nonce used for authwit
 #[public]
-fn transfer_public_to_commitment(
+fn transfer_public_to_payment_request(
     from: AztecAddress,
     token_id: Field,
-    commitment: Field,
+    payment_request: Field,
     _nonce: Field,
 ) { /* ... */ }
 ```

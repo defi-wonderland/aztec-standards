@@ -37,7 +37,6 @@ unconstrained fn mint_to_private_failures() {
 
     // Overflow recipient
 
-    // TODO: is there something like type(u128).max?
     let max_u128 = utils::max_u128();
     Token::at(token_contract_address).mint_to_private(recipient, recipient, max_u128).call(
         &mut env.private(),

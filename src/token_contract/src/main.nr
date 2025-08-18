@@ -170,16 +170,16 @@ pub contract Token {
         );
     }
 
-    /// @notice Transfer tokens from private balance to public balance and initializes a commitment
+    /// @notice Transfer tokens from private balance to public balance and initializes a payment_request
     /// @dev Spends notes, emits a new note (UintNote) with any remaining change, enqueues a public call, and returns a partial note.
     ///      The sender will be used as the completer for the initialized partial note.
     /// @param from The address of the sender
     /// @param to The address of the recipient
     /// @param amount The amount of tokens to transfer
     /// @param _nonce The nonce used for authwitness
-    /// @return commitment The partial note utilized for the transfer commitment (privacy entrance)
+    /// @return payment_request The partial note utilized for the transfer payment_request (privacy entrance)
     #[private]
-    fn transfer_private_to_public_with_commitment(
+    fn transfer_private_to_public_with_payment_request(
         from: AztecAddress,
         to: AztecAddress,
         amount: u128,
@@ -201,14 +201,14 @@ pub contract Token {
 
         // Only the sender will be able to complete the partial note
         let completer = context.msg_sender();
-        let commitment = _initialize_transfer_commitment(
+        let payment_request = _initialize_payment_request(
             &mut context,
             storage.private_balances,
             from,
             to,
             completer,
         );
-        commitment.commitment
+        payment_request.commitment
     }
 
     /// @notice Transfer tokens from private balance to another private balance
@@ -237,17 +237,17 @@ pub contract Token {
         _increase_private_balance(&mut context, storage.private_balances, from, to, amount);
     }
 
-    /// @notice Transfer tokens from private balance to the recipient's commitment (recipient must create a commitment first)
+    /// @notice Transfer tokens from private balance to the recipient's payment request (recipient must first create a payment request)
     /// @dev Spends notes, emits a new note (UintNote) with any remaining change, and enqueues a public call
     ///      `from` will also be the completer of the partial note
     /// @param from The address of the sender
-    /// @param commitment The partial note representing the commitment (privacy entrance that the recipient shares with the sender)
+    /// @param payment_request The partial note representing the payment request (privacy entrance that the recipient shares with the sender)
     /// @param amount The amount of tokens to transfer
     /// @param _nonce The nonce used for authwitness
     #[private]
-    fn transfer_private_to_commitment(
+    fn transfer_private_to_payment_request(
         from: AztecAddress,
-        commitment: Field,
+        payment_request: Field,
         amount: u128,
         _nonce: Field,
     ) {
@@ -262,7 +262,11 @@ pub contract Token {
         );
 
         Token::at(context.this_address())
-            .increase_commitment_balance_internal(PartialUintNote { commitment }, from, amount)
+            .complete_payment_request_internal(
+                PartialUintNote { commitment: payment_request },
+                from,
+                amount,
+            )
             .enqueue(&mut context);
     }
 
@@ -288,26 +292,26 @@ pub contract Token {
         _increase_private_balance(&mut context, storage.private_balances, from, to, amount);
     }
 
-    /// @notice Initializes a transfer commitment to be used for transfers/mints
+    /// @notice Initializes a transfer payment request to be used for transfers/mints
     /// @dev Returns a partial note that can be used to execute transfers/mints
     ///      `from` will also be the completer of the partial note.
     /// @param from The address of the sender
     /// @param to The address of the recipient
-    /// @return commitment The partial note initialized for the transfer/mint commitment
+    /// @return payment_request The partial note initialized for the transfer/mint payment request
     #[private]
-    fn initialize_transfer_commitment(
+    fn initialize_payment_request(
         from: AztecAddress,
         to: AztecAddress,
         completer: AztecAddress,
     ) -> Field {
-        let commitment = _initialize_transfer_commitment(
+        let payment_request = _initialize_payment_request(
             &mut context,
             storage.private_balances,
             from,
             to,
             completer,
         );
-        commitment.commitment
+        payment_request.commitment
     }
 
     /// @notice Recursively subtracts balance from commitment
@@ -350,18 +354,18 @@ pub contract Token {
         _increase_public_balance(storage.public_balances, to, amount);
     }
 
-    /// @notice Finalizes a transfer of token `amount` from public balance of `from` to a commitment of `to`
-    /// @dev The transfer must be prepared by calling `initialize_transfer_commitment` first and the resulting
-    /// `commitment` must be passed as an argument to this function.
+    /// @notice Finalizes a transfer of token `amount` from public balance of `from` to a payment request of `to`
+    /// @dev The transfer must be prepared by calling `initialize_payment_request` first and the resulting
+    /// `payment_request` must be passed as an argument to this function.
     /// @dev The sender will be used as the completer for the partial note.
     /// @param from The address of the sender
-    /// @param commitment The partial note representing the commitment (privacy entrance)
+    /// @param payment_request The partial note representing the payment request (privacy entrance)
     /// @param amount The amount of tokens to transfer
     /// @param _nonce The nonce used for authwitness
     #[public]
-    fn transfer_public_to_commitment(
+    fn transfer_public_to_payment_request(
         from: AztecAddress,
-        commitment: Field,
+        payment_request: Field,
         amount: u128,
         _nonce: Field,
     ) {
@@ -370,9 +374,9 @@ pub contract Token {
         _decrease_public_balance(storage.public_balances, from, amount);
 
         let completer = context.msg_sender();
-        _increase_commitment_balance(
+        _complete_payment_request(
             &mut context,
-            PartialUintNote { commitment },
+            PartialUintNote { commitment: payment_request },
             completer,
             amount,
         );
@@ -396,17 +400,17 @@ pub contract Token {
         _decrease_public_balance(storage.public_balances, from, amount);
     }
 
-    /// @notice Increases the balance of the commitment by `amount`
-    /// @param commitment The partial note representing the commitment (privacy entrance)
+    /// @notice Increases the balance of the payment request by `amount`
+    /// @param payment_request The partial note representing the payment request (privacy entrance)
     /// @param amount The amount of tokens to increase the balance by
     #[public]
     #[internal]
-    fn increase_commitment_balance_internal(
-        commitment: PartialUintNote,
+    fn complete_payment_request_internal(
+        payment_request: PartialUintNote,
         completer: AztecAddress,
         amount: u128,
     ) {
-        _increase_commitment_balance(&mut context, commitment, completer, amount);
+        _complete_payment_request(&mut context, payment_request, completer, amount);
     }
 
     /** ==========================================================
@@ -467,8 +471,8 @@ pub contract Token {
     * ======================= MINTABLE ==========================
     * ======================================================== */
 
-    /// @notice Mints tokens to a commitment
-    /// @dev Mints tokens to a commitment and enqueues a public call to increase the total supply
+    /// @notice Mints tokens to a private note
+    /// @dev Mints tokens to a private note and enqueues a public call to increase the total supply
     /// @param from The address of the sender
     /// @param to The address of the recipient
     /// @param amount The amount of tokens to mint
@@ -490,19 +494,19 @@ pub contract Token {
         _mint_to_public(storage.public_balances, storage.total_supply, to, amount);
     }
 
-    /// @notice Finalizes a mint to a commitment
-    /// @dev Finalizes a mint to a commitment and updates the total supply
-    /// @param commitment The partial note representing the mint commitment (privacy entrance)
+    /// @notice Finalizes a mint to a payment request
+    /// @dev Finalizes a mint to a payment request and updates the total supply
+    /// @param payment_request The partial note representing the mint payment request (privacy entrance)
     /// @param amount The amount of tokens to mint
     #[public]
-    fn mint_to_commitment(commitment: Field, amount: u128) {
+    fn mint_to_payment_request(payment_request: Field, amount: u128) {
         let sender = context.msg_sender();
         _validate_minter(sender, storage.minter.read());
         let completer = sender;
         _increase_total_supply(storage.total_supply, amount);
-        _increase_commitment_balance(
+        _complete_payment_request(
             &mut context,
-            PartialUintNote { commitment },
+            PartialUintNote { commitment: payment_request },
             completer,
             amount,
         );
@@ -524,8 +528,8 @@ pub contract Token {
      * ======================= BURNABLE ==========================
      * ======================================================== */
 
-    /// @notice Burns tokens from a commitment
-    /// @dev Burns tokens from a commitment and enqueues a public call to update the total supply
+    /// @notice Burns tokens from private note(s)
+    /// @dev Burns tokens from a private note(s) and enqueues a public call to update the total supply
     /// @param from The address of the sender
     /// @param amount The amount of tokens to burn
     /// @param _nonce The nonce used for authwitness
@@ -643,20 +647,20 @@ pub contract Token {
     }
 
     /// @notice Completes a partial note
-    /// @dev Completes a partial note and increases the balance of the commitment by `amount`
+    /// @dev Completes a partial note and increases the balance of the payment request by `amount`
     /// @param context The context of the public call
-    /// @param commitment The partial note representing the commitment (privacy entrance)
+    /// @param payment_request The partial note representing the payment request (privacy entrance)
     /// @param completer The address used to compute the validity commitment
-    /// @param amount The amount of tokens to increase the balance of the commitment by
+    /// @param amount The amount of tokens to send to the payment request
     #[contract_library_method]
-    fn _increase_commitment_balance(
+    fn _complete_payment_request(
         context: &mut PublicContext,
-        commitment: PartialUintNote,
+        payment_request: PartialUintNote,
         completer: AztecAddress,
         amount: u128,
     ) {
-        let validity_commitment = commitment.compute_validity_commitment(completer);
-        commitment.complete(context, completer, amount);
+        let validity_commitment = payment_request.compute_validity_commitment(completer);
+        payment_request.complete(context, completer, amount);
     }
 
     /// @notice Subtracts balance from commitment
@@ -707,7 +711,7 @@ pub contract Token {
         total_supply.write(new_supply);
     }
 
-    /// @notice Initializes a transfer commitment to be used for transfers/mints
+    /// @notice Initializes a payment request to be used for transfers/mints
     /// @param context The context of the private call
     /// @param private_balances The storage pointer to the private balances
     /// @param from The address of the sender
@@ -715,14 +719,14 @@ pub contract Token {
     /// @param completer The address used to compute the validity commitment
     /// @return The partial note that can be used to execute the transfer/mint
     #[contract_library_method]
-    fn _initialize_transfer_commitment(
+    fn _initialize_payment_request(
         context: &mut PrivateContext,
         private_balances: Map<AztecAddress, BalanceSet<&mut PrivateContext>, &mut PrivateContext>,
         from: AztecAddress,
         to: AztecAddress,
         completer: AztecAddress,
     ) -> PartialUintNote {
-        let commitment = UintNote::partial(
+        let payment_request = UintNote::partial(
             to,
             private_balances.at(to).set.storage_slot,
             context,
@@ -731,7 +735,7 @@ pub contract Token {
             completer,
         );
 
-        commitment
+        payment_request
     }
 
     #[contract_library_method]

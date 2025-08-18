@@ -359,15 +359,15 @@ describe('Token - Single PXE', () => {
 
     // alice prepares partial note for bob
     await token.methods
-      .initialize_transfer_commitment(bob.getAddress(), alice.getAddress(), bob.getAddress())
+      .initialize_payment_request(bob.getAddress(), alice.getAddress(), bob.getAddress())
       .send()
       .wait();
 
     // alice still has tokens in public
     expect(await token.methods.balance_of_public(alice.getAddress()).simulate()).toBe(AMOUNT);
 
-    // finalize partial note passing the commitment slot
-    // await token.methods.transfer_public_to_commitment(AMOUNT, latestEvent.hiding_point_slot).send().wait();
+    // finalize partial note passing the payment request slot
+    // await token.methods.transfer_public_to_payment_request(AMOUNT, latestEvent.hiding_point_slot).send().wait();
 
     // alice now has no tokens
     // expect(await token.methods.balance_of_public(alice.getAddress()).simulate()).toBe(0n);
