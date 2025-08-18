@@ -11,22 +11,10 @@ import {
   AztecAddress,
   DeployOptions,
 } from '@aztec/aztec.js';
-import { setupPXE } from './utils.js';
+import { deploySFTWithMinter, setupPXE } from './utils.js';
 import { getInitialTestAccountsManagers } from '@aztec/accounts/testing';
 import { SFTContract, SFTContractArtifact } from '../../../artifacts/SFT.js';
 import { AztecLmdbStore } from '@aztec/kv-store/lmdb';
-
-async function deploySFTWithMinter(deployer: AccountWallet, options?: DeployOptions) {
-  const contract = await Contract.deploy(
-    deployer,
-    SFTContractArtifact,
-    ['TestSFT', 'TSFT', deployer.getAddress(), deployer.getAddress()],
-    'constructor_with_minter',
-  )
-    .send(options)
-    .deployed();
-  return contract;
-}
 
 async function assertPublicBalance(
   sft: SFTContract,
