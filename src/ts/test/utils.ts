@@ -18,6 +18,7 @@ import { createPXEService } from '@aztec/pxe/server';
 import { createStore } from '@aztec/kv-store/lmdb';
 import { TokenContract, TokenContractArtifact } from '../../../artifacts/Token.js';
 import { NFTContractArtifact } from '../../../artifacts/NFT.js';
+import { SFTContractArtifact } from '../../../artifacts/SFT.js';
 
 export const logger = createLogger('aztec:aztec-standards');
 
@@ -110,6 +111,24 @@ export async function deployNFTWithMinter(deployer: AccountWallet, options?: Dep
     deployer,
     NFTContractArtifact,
     ['NFT', 'NFT', deployer.getAddress(), deployer.getAddress()],
+    'constructor_with_minter',
+  )
+    .send(options)
+    .deployed();
+  return contract;
+}
+
+/**
+ * Deploys the SFT contract with a specified minter.
+ * @param deployer - The wallet to deploy the contract with.
+ * @param options - Optional deployment options.
+ * @returns A deployed contract instance.
+ */
+export async function deploySFTWithMinter(deployer: AccountWallet, options?: DeployOptions) {
+  const contract = await Contract.deploy(
+    deployer,
+    SFTContractArtifact,
+    ['TestSFT', 'TSFT', deployer.getAddress(), deployer.getAddress()],
     'constructor_with_minter',
   )
     .send(options)

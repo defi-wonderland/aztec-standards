@@ -8,6 +8,7 @@ Aztec Standards is a comprehensive collection of reusable, standardized contract
 - [Dripper Contract](#dripper-contract)
 - [Token Contract](#token-contract)
 - [NFT Contract](#nft-contract)
+- [SFT Contract](#sft-contract)
 - [Future Contracts](#future-contracts)
 
 ## Dripper Contract
@@ -29,6 +30,12 @@ We published the [AIP-20 Aztec Token Standard](https://forum.aztec.network/t/req
 The `NFT` contract implements an ERC-721-like non-fungible token with Aztec-specific privacy extensions. It supports transfers and interactions through both private and public ownership, offering full coverage of Aztec's confidentiality features for unique digital assets.
 
 📖 **[View detailed NFT documentation](src/nft_contract/README.md)**
+
+## SFT Contract
+
+The `SFT` contract implements an ERC-1155-like semi-fungible token with Aztec-specific privacy extensions. It supports transfers and interactions through both private and public balances for multiple token types, offering full coverage of Aztec's confidentiality features for multi-token applications.
+
+📖 **[View detailed SFT documentation](src/sft_contract/README.md)**
 
 ## Future Contracts
 
