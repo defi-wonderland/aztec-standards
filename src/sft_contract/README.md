@@ -87,7 +87,7 @@ fn public_token_type_exists(token_id: Field) -> bool { /* ... */ }
 
 ## Utility Functions
 
-### balance_of_private_by_token_id
+### balance_of_private_set_per_page
 ```rust
 /// @notice Returns the private balance of `owner` for `token_id`
 /// @param owner The address of the owner
@@ -95,7 +95,7 @@ fn public_token_type_exists(token_id: Field) -> bool { /* ... */ }
 /// @param nonce The nonce used for authwit
 /// @return The private balance of `owner` for `token_id`
 #[utility]
-unconstrained fn balance_of_private_by_token_id(
+unconstrained fn balance_of_private_set_per_page(
     owner: AztecAddress,
     token_id: Field,
     nonce: Field,

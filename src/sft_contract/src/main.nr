@@ -211,6 +211,7 @@ pub contract SFT {
 
     /// @notice Initializes a transfer commitment to be used for transfers
     /// @dev Returns a partial sft note that can be used to execute transfers
+    /// @param token_id The ID of the token type
     /// @param from The address of the sender
     /// @param to The address of the recipient
     /// @param completer The address of the completer
@@ -281,14 +282,6 @@ pub contract SFT {
         );
     }
 
-    /// @notice Stores a commitment in storage
-    /// @param commitment The commitment to store
-    #[public]
-    #[internal]
-    fn store_commitment_in_storage_internal(commitment: PartialSFTNote) {
-        _store_commitment_in_storage(&mut context, commitment);
-    }
-
     /// @notice Creates a new token type with a total supply of 0
     /// @param token_id The ID of the new token type
     #[public]
@@ -296,6 +289,14 @@ pub contract SFT {
         _validate_minter(context.msg_sender(), storage.minter.read());
         assert(!storage.token_type_exists.at(token_id).read(), "token type already exists");
         _create_token_type_internal(storage.token_type_exists, token_id);
+    }
+
+    /// @notice Stores a commitment in storage
+    /// @param commitment The commitment to store
+    #[public]
+    #[internal]
+    fn store_commitment_in_storage_internal(commitment: PartialSFTNote) {
+        _store_commitment_in_storage(&mut context, commitment);
     }
 
     /// @notice Internal function to create a token type without minter validation
@@ -407,7 +408,7 @@ pub contract SFT {
     /// @param page_index The offset to start counting from (for pagination)
     /// @return The number of items of `token_id` owned privately by `owner`
     #[utility]
-    pub unconstrained fn balance_of_private_by_token_id(
+    pub unconstrained fn balance_of_private_set_per_page(
         owner: AztecAddress,
         token_id: Field,
         page_index: u32,
@@ -474,6 +475,7 @@ pub contract SFT {
     /// @notice Burns a token from the public collection
     /// @param from The address of the owner
     /// @param token_id The ID of the token type
+    /// @param _nonce The nonce of the burn
     #[public]
     fn burn_public(from: AztecAddress, token_id: Field, _nonce: Field) {
         _validate_from_public(&mut context, from);

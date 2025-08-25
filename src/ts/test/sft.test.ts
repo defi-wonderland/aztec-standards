@@ -36,7 +36,7 @@ async function assertPrivateBalance(
   caller?: AccountWallet,
 ) {
   const s = caller ? sft.withWallet(caller) : sft;
-  const balance = await s.methods.balance_of_private_by_token_id(owner, tokenId, 0).simulate();
+  const balance = await s.methods.balance_of_private_set_per_page(owner, tokenId, 0).simulate();
   expect(balance).toBe(expectedBalance);
 }
 
@@ -62,10 +62,17 @@ const setupTestSuite = async () => {
 };
 
 function bigIntToAsciiString(bigInt: any): string {
+  if (bigInt < 0n) {
+    throw new Error('Negative BigInt values are not supported');
+  }
   let hexString = bigInt.toString(16);
+  // Pad with leading zero if odd length
+  if (hexString.length % 2 !== 0) {
+    hexString = '0' + hexString;
+  }
   const pairs = [];
   for (let i = 0; i < hexString.length; i += 2) {
-    const pair = hexString.slice(i, i + 2).padStart(2, '0');
+    const pair = hexString.slice(i, i + 2);
     pairs.push(pair);
   }
   let asciiString = '';
@@ -73,6 +80,9 @@ function bigIntToAsciiString(bigInt: any): string {
     const charCode = parseInt(pair, 16);
     if (charCode >= 32 && charCode <= 126) {
       asciiString += String.fromCharCode(charCode);
+    } else if (charCode !== 0) {
+      // Handle non-printable characters
+      asciiString += `\\x${pair}`;
     }
   }
   return asciiString;

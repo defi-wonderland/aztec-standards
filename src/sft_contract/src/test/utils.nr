@@ -109,7 +109,7 @@ pub unconstrained fn check_private_balance(
     let current_contract_address = get_contract_address();
     cheatcodes::set_contract_address(sft_contract_address);
     // Direct call to utility function
-    let balance = SFT::balance_of_private_by_token_id(owner, token_id, 0);
+    let balance = SFT::balance_of_private_set_per_page(owner, token_id, 0);
     cheatcodes::set_contract_address(current_contract_address);
     assert(balance == expected_balance, "Private balance mismatch");
 }
