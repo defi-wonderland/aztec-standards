@@ -2,13 +2,16 @@ use aztec::macros::aztec;
 
 #[aztec]
 pub contract Escrow {
-    use aztec::macros::functions::{private, noinitcheck};
-    use aztec::prelude::AztecAddress;
+    use aztec::context::PrivateContext;
+    use aztec::macros::functions::{noinitcheck, private};
     use aztec::oracle::get_contract_instance::get_contract_instance;
-    use token::Token;
+    use aztec::prelude::AztecAddress;
+    use aztec::protocol_types::contract_instance::ContractInstance;
+    use aztec::protocol_types::traits::FromField;
     use nft::NFT;
+    use token::Token;
 
-    /// @notice Withdraws an amount from the escrow's private balance to the 
+    /// @notice Withdraws an amount from the escrow's private balance to the
     ///         recipient's private balance.
     /// @dev Can only be called by the corresponding Logic contract
     /// @param token The address of the token
@@ -20,10 +23,12 @@ pub contract Escrow {
         _assert_msg_sender(&mut context);
 
         let token_contract = Token::at(token);
-        token_contract.transfer_private_to_private(context.this_address(), recipient, amount, 0).call(&mut context);
+        token_contract
+            .transfer_private_to_private(context.this_address(), recipient, amount, 0)
+            .call(&mut context);
     }
-            
-    /// @notice Withdraws a token of a given ID from the escrow's private balance to 
+
+    /// @notice Withdraws a token of a given ID from the escrow's private balance to
     ///         the recipient's private balance
     /// @dev Can only be called by the corresponding Logic contract
     /// @param nft The address of the NFT contract
@@ -35,7 +40,9 @@ pub contract Escrow {
         _assert_msg_sender(&mut context);
 
         let nft_contract = NFT::at(nft);
-        nft_contract.transfer_private_to_private(context.this_address(), recipient, token_id, 0).call(&mut context);
+        nft_contract
+            .transfer_private_to_private(context.this_address(), recipient, token_id, 0)
+            .call(&mut context);
     }
 
     /// @notice Asserts that the caller is the one encoded into the contract instance salt
@@ -43,6 +50,6 @@ pub contract Escrow {
     fn _assert_msg_sender(context: &mut PrivateContext) {
         let msg_sender = context.msg_sender();
         let escrow_instance: ContractInstance = get_contract_instance(context.this_address());
-        assert(escrow_instance.salt as AztecAddress == msg_sender, "Not Authorized");
+        assert(AztecAddress::from_field(escrow_instance.salt) == msg_sender, "Not Authorized");
     }
 }
