@@ -1,4 +1,4 @@
-use crate::Token;
+use token::Token;
 use crate::Escrow;
 use aztec::{
     prelude::AztecAddress,
@@ -9,7 +9,6 @@ pub unconstrained fn deploy_escrow(escrow_secret: Field) -> (&mut TestEnvironmen
     let mut env = TestEnvironment::new();
 
     // Deploy escrow contract
-    let escrow_secret = 42069;
     let escrow_contract_account = cheatcodes::add_account(escrow_secret);
 
     let escrow_contract = env
