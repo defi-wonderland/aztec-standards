@@ -126,11 +126,11 @@ unconstrained fn test_multiple_clawback_creation() {
     let (env, logic_contract, escrow_contract, token_contract, owner, recipient, _, keys) =
         utils::setup_complete();
 
-    // Create additional accounts for testing
-    let recipient2 = env.create_account_contract(10);
-    let recipient3 = env.create_account_contract(11);
-    let owner2 = env.create_account_contract(12);
-    let owner3 = env.create_account_contract(13);
+    // Create additional accounts for testing using higher account IDs to avoid collisions
+    let recipient2 = env.create_account_contract(10000);
+    let recipient3 = env.create_account_contract(11000);
+    let owner2 = env.create_account_contract(12000);
+    let owner3 = env.create_account_contract(13000);
 
     let recipients = [recipient, recipient2, recipient3];
     let owners = [owner, owner2, owner3];
@@ -164,12 +164,16 @@ unconstrained fn test_clawback_parameters() {
     let near_future = utils::FUTURE_TIMESTAMP - 1000;
     let far_future = utils::FUTURE_TIMESTAMP + 10000;
 
+    // Create unique keys for each test to prevent nullifier collisions
+    let keys1 = [keys[0] + 1, keys[1] + 1, keys[2] + 1, keys[3] + 1];
+    let keys2 = [keys[0] + 2, keys[1] + 2, keys[2] + 2, keys[3] + 2];
+
     // Create clawback with small amount
     utils::create_test_clawback(
         env,
         logic_contract,
         escrow_contract,
-        keys,
+        keys1,
         recipient,
         owner,
         token_contract,
@@ -177,15 +181,15 @@ unconstrained fn test_clawback_parameters() {
         near_future,
     );
 
-    // Create another escrow for large amount test
-    let escrow_contract2 = env.create_account_contract(300);
+    // Create another escrow for large amount test with unique ID
+    let escrow_contract2 = env.create_account_contract(30000);
     env.advance_block_by(1);
 
     utils::create_test_clawback(
         env,
         logic_contract,
         escrow_contract2,
-        keys,
+        keys2,
         recipient,
         owner,
         token_contract,
@@ -200,18 +204,22 @@ unconstrained fn test_edge_case_addresses() {
     let (env, logic_contract, _, token_contract, owner, recipient, _, keys) =
         utils::setup_complete();
 
-    // Test with different escrow addresses
-    let edge_escrow1 = env.create_account_contract(400);
-    let edge_escrow2 = env.create_account_contract(401);
+    // Test with different escrow addresses using unique IDs
+    let edge_escrow1 = env.create_account_contract(40000);
+    let edge_escrow2 = env.create_account_contract(40001);
 
     env.advance_block_by(1);
+
+    // Create unique keys for each escrow to prevent nullifier collisions
+    let keys1 = [keys[0] + 10, keys[1] + 10, keys[2] + 10, keys[3] + 10];
+    let keys2 = [keys[0] + 11, keys[1] + 11, keys[2] + 11, keys[3] + 11];
 
     // Create clawbacks with edge case addresses
     utils::create_test_clawback(
         env,
         logic_contract,
         edge_escrow1,
-        keys,
+        keys1,
         recipient,
         owner,
         token_contract,
@@ -223,7 +231,7 @@ unconstrained fn test_edge_case_addresses() {
         env,
         logic_contract,
         edge_escrow2,
-        keys,
+        keys2,
         recipient,
         owner,
         token_contract,

@@ -1,6 +1,9 @@
 use dep::nft_contract::NFT;
 use dep::token_contract::Token;
-use aztec::{prelude::AztecAddress, test::helpers::{cheatcodes, test_environment::TestEnvironment}};
+use aztec::{
+    prelude::AztecAddress, protocol_types::traits::ToField,
+    test::helpers::{cheatcodes, test_environment::TestEnvironment},
+};
 
 pub global TEST_AMOUNT: u128 = 1000;
 pub global TEST_TOKEN_ID: Field = 42;
@@ -12,9 +15,9 @@ AztecAddress, // recipient
 AztecAddress // minter
 ) {
     let mut env = TestEnvironment::new();
-    let owner = env.create_account_contract(1);
-    let recipient = env.create_account_contract(2);
-    let minter = env.create_account_contract(3);
+    let owner = env.create_account_contract(10001);
+    let recipient = env.create_account_contract(10002);
+    let minter = env.create_account_contract(10003);
 
     // Deploy token contract with minter
     env.impersonate(owner);
@@ -48,9 +51,9 @@ AztecAddress, // recipient
 AztecAddress // minter
 ) {
     let mut env = TestEnvironment::new();
-    let owner = env.create_account_contract(1);
-    let recipient = env.create_account_contract(2);
-    let minter = env.create_account_contract(3);
+    let owner = env.create_account_contract(20001);
+    let recipient = env.create_account_contract(20002);
+    let minter = env.create_account_contract(20003);
 
     // Deploy NFT contract with minter
     env.impersonate(owner);
@@ -79,18 +82,43 @@ pub unconstrained fn deploy_escrow_with_logic(
     logic_contract: AztecAddress,
 ) -> AztecAddress {
     env.impersonate(deployer);
+    deploy_escrow_with_logic_and_index(env, deployer, logic_contract, 0)
+}
 
-    // For testing, we'll simulate the escrow deployment by creating an account
+/// Deploys an escrow contract with a specific index for uniqueness
+pub unconstrained fn deploy_escrow_with_logic_and_index(
+    env: &mut TestEnvironment,
+    deployer: AztecAddress,
+    logic_contract: AztecAddress,
+    index: u32,
+) -> AztecAddress {
+    env.impersonate(deployer);
+
+    // For testing, we'll simulate the escrow deployment by creating unique accounts
     // In a real scenario, this would be deployed with the proper salt mechanism
-    let escrow_contract = env.create_account_contract(99);
+    let base_id = 30000;
+    let logic_part = (logic_contract.to_field() as u32) % 1000;
+    let deployer_part = (deployer.to_field() as u32) % 100;
+    let escrow_id = base_id + logic_part + deployer_part + index;
+    
+    let escrow_contract = env.create_account_contract(escrow_id as Field);
     env.advance_block_by(1);
 
     escrow_contract
 }
 
-/// Creates a mock logic contract for testing
+/// Creates a mock logic contract for testing with unique address based on a seed
+pub unconstrained fn create_mock_logic_contract_with_seed(
+    env: &mut TestEnvironment,
+    seed: Field,
+) -> AztecAddress {
+    let unique_id = 50000 + seed * 100;
+    env.create_account_contract(unique_id)
+}
+
+/// Creates a mock logic contract for testing with default seed
 pub unconstrained fn create_mock_logic_contract(env: &mut TestEnvironment) -> AztecAddress {
-    env.create_account_contract(100) // Use high number to distinguish from test accounts
+    create_mock_logic_contract_with_seed(env, 0)
 }
 
 /// Transfers tokens to escrow contract for testing withdrawals
