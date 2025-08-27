@@ -21,8 +21,7 @@ pub contract Escrow {
     fn withdraw(token: AztecAddress, amount: u128, recipient: AztecAddress) {
         _assert_msg_sender(&mut context);
 
-        let token_contract = Token::at(token);
-        token_contract
+        Token::at(token)
             .transfer_private_to_private(context.this_address(), recipient, amount, 0)
             .call(&mut context);
     }
@@ -37,8 +36,7 @@ pub contract Escrow {
     fn withdraw_nft(nft: AztecAddress, token_id: Field, recipient: AztecAddress) {
         _assert_msg_sender(&mut context);
 
-        let nft_contract = NFT::at(nft);
-        nft_contract
+        NFT::at(nft)
             .transfer_private_to_private(context.this_address(), recipient, token_id, 0)
             .call(&mut context);
     }
