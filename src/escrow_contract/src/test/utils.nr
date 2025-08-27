@@ -1,20 +1,15 @@
-use dep::token_contract::Token;
 use dep::nft_contract::NFT;
-use aztec::{
-    prelude::AztecAddress,
-    test::helpers::{test_environment::TestEnvironment, cheatcodes},
-};
+use dep::token_contract::Token;
+use aztec::{prelude::AztecAddress, test::helpers::{cheatcodes, test_environment::TestEnvironment}};
 
 pub global TEST_AMOUNT: u128 = 1000;
 pub global TEST_TOKEN_ID: Field = 42;
 
 /// Sets up test environment with token contract and accounts
-pub unconstrained fn setup_with_token() -> (
-    &mut TestEnvironment,
-    AztecAddress, // token_contract
-    AztecAddress, // owner
-    AztecAddress, // recipient
-    AztecAddress, // minter
+pub unconstrained fn setup_with_token() -> (&mut TestEnvironment, AztecAddress, // token_contract
+AztecAddress, // owner
+AztecAddress, // recipient
+AztecAddress // minter
 ) {
     let mut env = TestEnvironment::new();
     let owner = env.create_account_contract(1);
@@ -30,14 +25,16 @@ pub unconstrained fn setup_with_token() -> (
         minter,
         AztecAddress::zero(),
     );
-    let token_contract = env.deploy("./@token_contract", "Token")
-        .with_public_void_initializer(owner, token_initializer);
+    let token_contract = env.deploy("./@token_contract", "Token").with_public_void_initializer(
+        owner,
+        token_initializer,
+    );
     env.advance_block_by(1);
 
     // Mint tokens to owner for testing
     env.impersonate(minter);
     Token::at(token_contract.to_address()).mint_to_private(owner, owner, TEST_AMOUNT * 10).call(
-        &mut env.private()
+        &mut env.private(),
     );
     env.advance_block_by(1);
 
@@ -45,12 +42,10 @@ pub unconstrained fn setup_with_token() -> (
 }
 
 /// Sets up test environment with NFT contract and accounts
-pub unconstrained fn setup_with_nft() -> (
-    &mut TestEnvironment,
-    AztecAddress, // nft_contract
-    AztecAddress, // owner
-    AztecAddress, // recipient
-    AztecAddress, // minter
+pub unconstrained fn setup_with_nft() -> (&mut TestEnvironment, AztecAddress, // nft_contract
+AztecAddress, // owner
+AztecAddress, // recipient
+AztecAddress // minter
 ) {
     let mut env = TestEnvironment::new();
     let owner = env.create_account_contract(1);
@@ -65,15 +60,13 @@ pub unconstrained fn setup_with_nft() -> (
         minter,
         AztecAddress::zero(),
     );
-    let nft_contract = env.deploy("./@nft_contract", "NFT")
-        .with_public_void_initializer(owner, nft_initializer);
+    let nft_contract =
+        env.deploy("./@nft_contract", "NFT").with_public_void_initializer(owner, nft_initializer);
     env.advance_block_by(1);
 
     // Mint NFT to owner for testing
     env.impersonate(minter);
-    NFT::at(nft_contract.to_address()).mint_to_private(owner, TEST_TOKEN_ID).call(
-        &mut env.private()
-    );
+    NFT::at(nft_contract.to_address()).mint_to_private(owner, TEST_TOKEN_ID).call(&mut env.private());
     env.advance_block_by(1);
 
     (&mut env, nft_contract.to_address(), owner, recipient, minter)
@@ -86,12 +79,12 @@ pub unconstrained fn deploy_escrow_with_logic(
     logic_contract: AztecAddress,
 ) -> AztecAddress {
     env.impersonate(deployer);
-    
+
     // For testing, we'll simulate the escrow deployment by creating an account
     // In a real scenario, this would be deployed with the proper salt mechanism
     let escrow_contract = env.create_account_contract(99);
     env.advance_block_by(1);
-    
+
     escrow_contract
 }
 
@@ -99,7 +92,6 @@ pub unconstrained fn deploy_escrow_with_logic(
 pub unconstrained fn create_mock_logic_contract(env: &mut TestEnvironment) -> AztecAddress {
     env.create_account_contract(100) // Use high number to distinguish from test accounts
 }
-
 
 /// Transfers tokens to escrow contract for testing withdrawals
 pub unconstrained fn fund_escrow_with_tokens(
@@ -110,12 +102,9 @@ pub unconstrained fn fund_escrow_with_tokens(
     amount: u128,
 ) {
     env.impersonate(funder);
-    Token::at(token_contract).transfer_private_to_private(
-        funder,
-        escrow_contract,
-        amount,
-        0
-    ).call(&mut env.private());
+    Token::at(token_contract).transfer_private_to_private(funder, escrow_contract, amount, 0).call(
+        &mut env.private(),
+    );
     env.advance_block_by(1);
 }
 
@@ -128,12 +117,9 @@ pub unconstrained fn fund_escrow_with_nft(
     token_id: Field,
 ) {
     env.impersonate(funder);
-    NFT::at(nft_contract).transfer_private_to_private(
-        funder,
-        escrow_contract,
-        token_id,
-        0
-    ).call(&mut env.private());
+    NFT::at(nft_contract).transfer_private_to_private(funder, escrow_contract, token_id, 0).call(
+        &mut env.private(),
+    );
     env.advance_block_by(1);
 }
 
@@ -145,10 +131,10 @@ pub unconstrained fn check_token_balance(
 ) {
     let current_contract = cheatcodes::get_contract_address();
     cheatcodes::set_contract_address(token_contract);
-    
+
     let balance = Token::balance_of_private(address);
     assert(balance == expected_amount, "Token balance mismatch");
-    
+
     cheatcodes::set_contract_address(current_contract);
 }
 

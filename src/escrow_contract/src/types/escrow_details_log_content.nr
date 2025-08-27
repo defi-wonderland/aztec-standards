@@ -1,9 +1,6 @@
 use aztec::{
-    protocol_types::{
-        address::AztecAddress,
-        traits::{Serialize, Deserialize},
-    },
     note::note_interface::NoteType,
+    protocol_types::{address::AztecAddress, traits::{Deserialize, Serialize}},
 };
 
 /// @notice Data privately emitted to participants that will use the escrow
@@ -19,7 +16,7 @@ pub struct EscrowDetailsLogContent {
     ivsk_m: Field,
     /// Master secret key for outgoing view - NOT SHARED for security
     ovsk_m: Field,
-    /// Master secret key for tagging - NOT SHARED for security  
+    /// Master secret key for tagging - NOT SHARED for security
     tsk_m: Field,
 }
 
@@ -31,7 +28,13 @@ impl EscrowDetailsLogContent {
     /// @param ovsk_m Master secret key for outgoing view (should be 0 when sharing with recipients)
     /// @param tsk_m Master secret key for tagging (should be 0 when sharing with recipients)
     /// @dev SECURITY: When sharing with recipients, ovsk_m and tsk_m should be set to 0
-    pub fn new(escrow: AztecAddress, nsk_m: Field, ivsk_m: Field, ovsk_m: Field, tsk_m: Field) -> Self {
+    pub fn new(
+        escrow: AztecAddress,
+        nsk_m: Field,
+        ivsk_m: Field,
+        ovsk_m: Field,
+        tsk_m: Field,
+    ) -> Self {
         Self { escrow, nsk_m, ivsk_m, ovsk_m, tsk_m }
     }
 

@@ -7,9 +7,9 @@ pub contract ClawbackLogic {
     // aztec library
     use aztec::{
         macros::{functions::private, storage::storage},
-        prelude::{AztecAddress, PrivateSet, NoteGetterOptions},
-        protocol_types::{traits::{ToField, FromField}, hash::poseidon2_hash_with_separator},
         oracle::random::random,
+        prelude::{AztecAddress, NoteGetterOptions, PrivateSet},
+        protocol_types::{hash::poseidon2_hash_with_separator, traits::{FromField, ToField}},
     };
 
     // Base library methods from escrow contract
@@ -62,27 +62,15 @@ pub contract ClawbackLogic {
         _share_escrow(&mut context, recipient, escrow, keys);
 
         // 4. Create ClawbackNote for the recipient to use for claiming
-        let clawback_note_recipient = ClawbackNote::new(
-            escrow,
-            recipient,
-            owner,
-            token,
-            amount,
-            deadline,
-        );
+        let clawback_note_recipient =
+            ClawbackNote::new(escrow, recipient, owner, token, amount, deadline);
 
         // 5. Insert ClawbackNote and emit to recipient
         storage.clawback_notes.insert(clawback_note_recipient);
 
         // 6. Create ClawbackNote for the owner to use for clawback
-        let clawback_note_owner = ClawbackNote::new(
-            escrow,
-            recipient,
-            owner,
-            token,
-            amount,
-            deadline,
-        );
+        let clawback_note_owner =
+            ClawbackNote::new(escrow, recipient, owner, token, amount, deadline);
 
         // 7. Insert ClawbackNote and emit to owner
         storage.clawback_notes.insert(clawback_note_owner);
@@ -112,14 +100,14 @@ pub contract ClawbackLogic {
             0,
         );
         let mut note_found = false;
-        
+
         // Linear search through notes to find match using fixed limit
         for i in 0..options.limit {
             if i < notes.len() {
                 let note = notes.get_unchecked(i);
-                if (note.get_escrow() == escrow) 
+                if (note.get_escrow() == escrow)
                     & (note.get_recipient() == caller)
-                    & (note.get_token() == token) 
+                    & (note.get_token() == token)
                     & (note.get_amount() == amount) {
                     found_note = note;
                     note_found = true;
@@ -132,10 +120,10 @@ pub contract ClawbackLogic {
         // 2. Check that the deadline hasn't passed
         // Get anchor block timestamp from private context
         let current_timestamp = context.get_block_header().global_variables.timestamp;
-        
+
         assert(
             current_timestamp < found_note.get_deadline(),
-            "ClawbackLogic: deadline has passed, tokens can only be clawed back by owner"
+            "ClawbackLogic: deadline has passed, tokens can only be clawed back by owner",
         );
 
         // 3. Execute withdrawal to the recipient
@@ -172,14 +160,14 @@ pub contract ClawbackLogic {
             0,
         );
         let mut note_found = false;
-        
+
         // Linear search through notes to find match using fixed limit
         for i in 0..options.limit {
             if i < notes.len() {
                 let note = notes.get_unchecked(i);
-                if (note.get_escrow() == escrow) 
+                if (note.get_escrow() == escrow)
                     & (note.get_owner() == caller)
-                    & (note.get_token() == token) 
+                    & (note.get_token() == token)
                     & (note.get_amount() == amount) {
                     found_note = note;
                     note_found = true;
@@ -192,10 +180,10 @@ pub contract ClawbackLogic {
         // 2. Check that the deadline has passed
         // Get anchor block timestamp from private context
         let current_timestamp = context.get_block_header().global_variables.timestamp;
-        
+
         assert(
             current_timestamp >= found_note.get_deadline(),
-            "ClawbackLogic: deadline has not passed, recipient can still claim tokens"
+            "ClawbackLogic: deadline has not passed, recipient can still claim tokens",
         );
 
         // 3. Execute withdrawal back to the owner

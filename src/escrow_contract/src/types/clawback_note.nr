@@ -38,7 +38,7 @@ impl NoteHash for ClawbackNote {
         // Create a hash of all the note's fields along with the storage slot
         let serialized = [
             self.escrow.to_field(),
-            self.recipient.to_field(), 
+            self.recipient.to_field(),
             self.owner.to_field(),
             self.token.to_field(),
             self.amount as Field,
@@ -46,7 +46,7 @@ impl NoteHash for ClawbackNote {
             self.randomness,
             storage_slot,
         ];
-        
+
         poseidon2_hash_with_separator(serialized, GENERATOR_INDEX__NOTE_HASH)
     }
 
@@ -97,15 +97,7 @@ impl ClawbackNote {
         // the full note pre-image anyway, and so the recipient already trusts them to not disclose this
         // information. We can therefore assume that the sender will cooperate in the random value generation.
         let randomness = unsafe { random() };
-        Self {
-            escrow,
-            recipient,
-            owner,
-            token,
-            amount,
-            deadline,
-            randomness,
-        }
+        Self { escrow, recipient, owner, token, amount, deadline, randomness }
     }
 
     /// @notice Returns the escrow address
