@@ -16,6 +16,8 @@ pub contract Logic {
     };
     // standard library
     use std::embedded_curve_ops::{EmbeddedCurvePoint, EmbeddedCurveScalar, fixed_base_scalar_mul};
+    // escrow contract
+    use escrow::Escrow;
 
     /// @notice Data privately emitted to an account that will use the escrow
     /// @param escrow The address of the escrow
@@ -120,6 +122,31 @@ pub contract Logic {
             account,
             PrivateLogContent.CONSTRAINED_ENCRYPTION,
         );
+    }
+
+    /// @notice Withdraws an amount of tokens from the provided escrow.
+    /// @param escrow The address of the escrow
+    /// @param account The address of the account that will use the escrow
+    /// @param token The address of the token
+    /// @param amount The amount of tokens to withdraw from the escrow
+    #[contract_library_method]
+    fn _withdraw(escrow: AztecAddress, account: AztecAddress, token: AztecAddress, amount: u128) {
+        Escrow::at(escrow).withdraw(token, amount, account);
+    }
+
+    /// @notice Withdraws an NFT from the provided escrow.
+    /// @param escrow The address of the escrow
+    /// @param account The address of the account that will use the escrow
+    /// @param nft The address of the NFT contract
+    /// @param token_id The id of the token to withdraw from the escrow
+    #[contract_library_method]
+    fn _withdraw_nft(
+        escrow: AztecAddress,
+        account: AztecAddress,
+        nft: AztecAddress,
+        token_id: Field,
+    ) {
+        Escrow::at(escrow).withdraw_nft(nft, token_id, account);
     }
 
     // /// @notice Derives public keys from secret keys.
