@@ -17,7 +17,6 @@ pub contract Escrow {
     /// @param token The address of the token
     /// @param amount The amount of tokens to withdraw from the escrow
     /// @param recipient The address of the recipient
-    #[noinitcheck]
     #[private]
     fn withdraw(token: AztecAddress, amount: u128, recipient: AztecAddress) {
         _assert_msg_sender(&mut context);
@@ -34,7 +33,6 @@ pub contract Escrow {
     /// @param nft The address of the NFT contract
     /// @param token_id The id of the token to withdraw from the escrow
     /// @param recipient The address of the recipient
-    #[noinitcheck]
     #[private]
     fn withdraw_nft(nft: AztecAddress, token_id: Field, recipient: AztecAddress) {
         _assert_msg_sender(&mut context);
