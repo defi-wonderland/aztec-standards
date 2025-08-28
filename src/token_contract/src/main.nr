@@ -655,7 +655,6 @@ pub contract Token {
         completer: AztecAddress,
         amount: u128,
     ) {
-        let validity_commitment = commitment.compute_validity_commitment(completer);
         commitment.complete(context, completer, amount);
     }
 
