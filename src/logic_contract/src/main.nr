@@ -214,7 +214,12 @@ pub contract Logic {
     /// @param ovsk_m Outgoing Viewing Key
     /// @param tsk_m Transaction Secret Key
     #[private]
-    fn test_secret_keys_to_public_keys(nsk_m: Field, ivsk_m: Field, ovsk_m: Field, tsk_m: Field) -> PublicKeys {
+    fn test_secret_keys_to_public_keys(
+        nsk_m: Field,
+        ivsk_m: Field,
+        ovsk_m: Field,
+        tsk_m: Field,
+    ) -> PublicKeys {
         _secret_keys_to_public_keys(nsk_m, ivsk_m, ovsk_m, tsk_m)
     }
 }

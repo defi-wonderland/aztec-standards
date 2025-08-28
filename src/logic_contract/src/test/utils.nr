@@ -1,11 +1,13 @@
 use crate::Logic;
 use aztec::{
     prelude::AztecAddress,
+    protocol_types::public_keys::{IvpkM, NpkM, OvpkM, Point, PublicKeys, TpkM},
     test::helpers::{cheatcodes, test_environment::TestEnvironment},
-    protocol_types::public_keys::{IvpkM, NpkM, OvpkM, PublicKeys, TpkM, Point},
 };
 
-pub unconstrained fn deploy_logic(escrow_class_id: Field) -> (&mut TestEnvironment, AztecAddress, AztecAddress) {
+pub unconstrained fn deploy_logic(
+    escrow_class_id: Field,
+) -> (&mut TestEnvironment, AztecAddress, AztecAddress) {
     let mut env = TestEnvironment::new();
 
     let owner = env.create_account(1);
@@ -14,10 +16,7 @@ pub unconstrained fn deploy_logic(escrow_class_id: Field) -> (&mut TestEnvironme
     env.impersonate(owner);
 
     // Deploy logic contract
-    let initializer_call_interface = Logic::interface().constructor(
-        owner,
-        escrow_class_id,
-    );
+    let initializer_call_interface = Logic::interface().constructor(owner, escrow_class_id);
     let logic_contract = env.deploy("./@logic_contract", "Logic").with_public_void_initializer(
         owner,
         initializer_call_interface,
@@ -72,5 +71,8 @@ pub unconstrained fn get_test_vector() -> (PublicKeys, [Field; 4], PublicKeys, [
         tpk_m: TpkM { inner: Point { x: tpk_x_2, y: tpk_y_2, is_infinite: false } },
     };
 
-    (public_keys_1, [nsk_m_1, ivsk_m_1, ovsk_m_1, tsk_m_1], public_keys_2, [nsk_m_2, ivsk_m_2, ovsk_m_2, tsk_m_2])
+    (
+        public_keys_1, [nsk_m_1, ivsk_m_1, ovsk_m_1, tsk_m_1], public_keys_2,
+        [nsk_m_2, ivsk_m_2, ovsk_m_2, tsk_m_2],
+    )
 }
