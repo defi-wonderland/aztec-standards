@@ -1,3 +1,5 @@
+mod test;
+
 use aztec::macros::aztec;
 
 #[aztec]
@@ -204,5 +206,15 @@ pub contract Logic {
         sender: AztecAddress,
     ) {
         _share_escrow(&mut context, escrow, keys, account, sender);
+    }
+
+    /// @notice Tests the _secret_keys_to_public_keys function
+    /// @param nsk_m Master Nullifier Secret Key
+    /// @param ivsk_m Incoming Viewing Key
+    /// @param ovsk_m Outgoing Viewing Key
+    /// @param tsk_m Transaction Secret Key
+    #[private]
+    fn test_secret_keys_to_public_keys(nsk_m: Field, ivsk_m: Field, ovsk_m: Field, tsk_m: Field) -> PublicKeys {
+        _secret_keys_to_public_keys(nsk_m, ivsk_m, ovsk_m, tsk_m)
     }
 }
