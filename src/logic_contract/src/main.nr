@@ -103,14 +103,12 @@ pub contract Logic {
     /// @param escrow The address of the escrow
     /// @param keys The escrow keys [nsk_m, ivsk_m, ovsk_m, tsk_m]
     /// @param account The address of the account that will use the escrow
-    /// @param sender The address of the sender of the event
     #[contract_library_method]
     fn _share_escrow(
         context: &mut PrivateContext,
         escrow: AztecAddress,
         keys: [Field; 4],
         account: AztecAddress,
-        sender: AztecAddress,
     ) {
         let event = EscrowDetailsLogContent { escrow, keys };
 
@@ -118,7 +116,7 @@ pub contract Logic {
         emit_event_in_private_log(
             event,
             context,
-            sender,
+            context.this_address(),
             account,
             PrivateLogContent.CONSTRAINED_ENCRYPTION,
         );
@@ -197,12 +195,7 @@ pub contract Logic {
     /// @param account The address of the account that will use the escrow
     /// @param sender The address of the sender of the event
     #[private]
-    fn test_share_escrow(
-        escrow: AztecAddress,
-        keys: [Field; 4],
-        account: AztecAddress,
-        sender: AztecAddress,
-    ) {
-        _share_escrow(&mut context, escrow, keys, account, sender);
+    fn test_share_escrow(escrow: AztecAddress, keys: [Field; 4], account: AztecAddress) {
+        _share_escrow(&mut context, escrow, keys, account);
     }
 }
