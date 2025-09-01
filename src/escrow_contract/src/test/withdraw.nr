@@ -7,11 +7,9 @@ use token::{test::utils as token_utils, Token};
 
 #[test]
 unconstrained fn escrow_withdraw_success() {
-    // Setup without account contracts. We are not using authwits here, so dummy accounts are enough
-    let (_, token_contract_address, _, recipient, minter) = token_utils::setup_with_minter(false);
-
     let escrow_secret: Field = 123456;
-    let (env, escrow_contract_address) = escrow_utils::deploy_escrow(escrow_secret);
+    let (env, escrow_contract_address, token_contract_address, _, recipient, minter) =
+        escrow_utils::deploy_escrow(false, escrow_secret);
 
     let escrow_instance = get_contract_instance(escrow_contract_address);
     let logic_contract_address = AztecAddress::from_field(escrow_instance.salt);
@@ -23,22 +21,24 @@ unconstrained fn escrow_withdraw_success() {
         &mut env.private(),
     );
     env.advance_block_by(1);
+    // Check the escrow received and can read the tokens
+    token_utils::check_private_balance(token_contract_address, escrow_contract_address, amount);
 
     env.impersonate(logic_contract_address);
     Escrow::at(escrow_contract_address).withdraw(token_contract_address, amount, recipient).call(
         &mut env.private(),
     );
     env.advance_block_by(1);
+
+    // Check recipient got tokens
+    token_utils::check_private_balance(token_contract_address, recipient, amount);
 }
 
 #[test(should_fail_with = "Not Authorized")]
 unconstrained fn escrow_withdraw_unauthorized() {
-    // Setup without account contracts. We are not using authwits here, so dummy accounts are enough
-    let (_, token_contract_address, owner, recipient, minter) =
-        token_utils::setup_with_minter(false);
-
     let escrow_secret: Field = 123456;
-    let (env, escrow_contract_address) = escrow_utils::deploy_escrow(escrow_secret);
+    let (env, escrow_contract_address, token_contract_address, owner, recipient, _) =
+        escrow_utils::deploy_escrow(false, escrow_secret);
 
     let escrow_instance = get_contract_instance(escrow_contract_address);
     let logic_contract_address = AztecAddress::from_field(escrow_instance.salt);
@@ -49,15 +49,4 @@ unconstrained fn escrow_withdraw_unauthorized() {
         &mut env.private(),
     );
     env.advance_block_by(1);
-
-    // Check recipient got shares
-    // token_utils::check_private_balance(token_contract_address, recipient, shares);
-    // token_utils::check_public_balance(token_contract_address, recipient, 0);
-
-    // // Check the total supply got updated
-    // let total_supply = Token::at(token_contract_address).total_supply().view(&mut env.public());
-    // assert(total_supply == shares, "Incorrect shares total supply");
-
-    // // Check vault has assets
-    // token_utils::check_public_balance(token_contract_address, vault_address, deposit_amount);
 }
