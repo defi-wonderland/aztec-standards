@@ -22,7 +22,7 @@ import { setupPXE } from './utils.js';
 import { PXE } from '@aztec/stdlib/interfaces/client';
 import { AztecLmdbStore } from '@aztec/kv-store/lmdb';
 import { getInitialTestAccountsManagers } from '@aztec/accounts/testing';
-import { LogicContractArtifact, LogicContract } from '../../../artifacts/Logic.js';
+import { LogicContractArtifact, LogicContract, EscrowDetailsLogContent } from '../../../artifacts/Logic.js';
 import { EscrowContractArtifact, EscrowContract } from '../../../artifacts/Escrow.js';
 
 /**
@@ -31,8 +31,9 @@ import { EscrowContractArtifact, EscrowContract } from '../../../artifacts/Escro
  * @param escrowClassId - The class id of the escrow contract.
  * @returns A deployed contract instance.
  */
-export async function deployLogic(deployer: AccountWallet, escrowClassId: Fr) {
-  const contract = await Contract.deploy(
+export async function deployLogicWithPublicKeys(publicKeys: PublicKeys, deployer: AccountWallet, escrowClassId: Fr) {
+  const contract = await Contract.deployWithPublicKeys(
+    publicKeys,
     deployer,
     LogicContractArtifact,
     [deployer.getAddress(), escrowClassId],
@@ -126,18 +127,29 @@ describe('Logic - Single PXE', () => {
   let bob: AccountWalletWithSecretKey;
   let carl: AccountWalletWithSecretKey;
 
+  // Logic contract
   let logic: LogicContract;
-  let escrow: EscrowContract;
-
-  let sk: Fr;
-  let keys: {
+  let logicSk: Fr;
+  let logicKeys: {
     masterNullifierSecretKey: GrumpkinScalar;
     masterIncomingViewingSecretKey: GrumpkinScalar;
     masterOutgoingViewingSecretKey: GrumpkinScalar;
     masterTaggingSecretKey: GrumpkinScalar;
     publicKeys: PublicKeys;
   };
-  let salt: Fr;
+  let logicSecretKeys: Fr[];
+
+  // Escrow contract
+  let escrow: EscrowContract;
+  let escrowSk: Fr;
+  let escrowKeys: {
+    masterNullifierSecretKey: GrumpkinScalar;
+    masterIncomingViewingSecretKey: GrumpkinScalar;
+    masterOutgoingViewingSecretKey: GrumpkinScalar;
+    masterTaggingSecretKey: GrumpkinScalar;
+    publicKeys: PublicKeys;
+  };
+  let escrowSalt: Fr;
   let escrowClassId: Fr;
   let secretKeys: Fr[];
 
@@ -146,33 +158,43 @@ describe('Logic - Single PXE', () => {
 
     [alice, bob, carl] = wallets;
 
+    // Derive the keys for the logic contract
+    logicSk = Fr.ONE;
+    logicKeys = await deriveKeys(logicSk);
+    logicSecretKeys = [
+      grumpkinScalarToFr(logicKeys.masterNullifierSecretKey),
+      grumpkinScalarToFr(logicKeys.masterIncomingViewingSecretKey),
+      grumpkinScalarToFr(logicKeys.masterOutgoingViewingSecretKey),
+      grumpkinScalarToFr(logicKeys.masterTaggingSecretKey),
+    ];
+
     // Get the class id of the escrow contract
     escrowClassId = (await getContractClassFromArtifact(EscrowContractArtifact)).id;
 
     // We default to a secret key of 1 for testing purposes
-    sk = Fr.ONE;
+    escrowSk = Fr.ONE.add(Fr.ONE);
 
     // Derive the keys from the secret key
-    keys = await deriveKeys(sk);
+    escrowKeys = await deriveKeys(escrowSk);
 
     // Convert the keys to Fr
     secretKeys = [
-      grumpkinScalarToFr(keys.masterNullifierSecretKey),
-      grumpkinScalarToFr(keys.masterIncomingViewingSecretKey),
-      grumpkinScalarToFr(keys.masterOutgoingViewingSecretKey),
-      grumpkinScalarToFr(keys.masterTaggingSecretKey),
+      grumpkinScalarToFr(escrowKeys.masterNullifierSecretKey),
+      grumpkinScalarToFr(escrowKeys.masterIncomingViewingSecretKey),
+      grumpkinScalarToFr(escrowKeys.masterOutgoingViewingSecretKey),
+      grumpkinScalarToFr(escrowKeys.masterTaggingSecretKey),
     ];
   });
 
   beforeEach(async () => {
-    // Deploy the logic contract with the escrow class id
-    logic = (await deployLogic(alice, escrowClassId)) as LogicContract;
+    // // Logic is deployed with the public keys because it sends encrypted events to the recipient and with the escrow class id
+    logic = (await deployLogicWithPublicKeys(logicKeys.publicKeys, alice, escrowClassId)) as LogicContract;
 
     // Use the logic contract address as the salt for the escrow contract
-    salt = new Fr(logic.instance.address.toBigInt());
+    escrowSalt = new Fr(logic.instance.address.toBigInt());
 
     // Deploy an escrow contract
-    escrow = (await deployEscrowWithPublicKeysAndSalt(keys.publicKeys, alice, salt)) as EscrowContract;
+    escrow = (await deployEscrowWithPublicKeysAndSalt(escrowKeys.publicKeys, alice, escrowSalt)) as EscrowContract;
   });
 
   afterAll(async () => {
@@ -184,13 +206,13 @@ describe('Logic - Single PXE', () => {
       const deploymentData = await getContractInstanceFromDeployParams(LogicContractArtifact, {
         constructorArtifact: 'constructor',
         constructorArgs: [alice.getAddress(), escrowClassId],
-        salt,
+        salt: escrowSalt,
         deployer: alice.getAddress(),
       });
 
       const deployer = new ContractDeployer(LogicContractArtifact, alice, undefined, 'constructor');
       const tx = deployer.deploy(alice.getAddress(), escrowClassId).send({
-        contractAddressSalt: salt,
+        contractAddressSalt: escrowSalt,
       });
 
       const receipt = await tx.getReceipt();
@@ -221,8 +243,8 @@ describe('Logic - Single PXE', () => {
         EscrowContractArtifact,
         [], // constructor args are null
         AztecAddress.ZERO, // deployer is null
-        salt,
-        keys.publicKeys,
+        escrowSalt,
+        escrowKeys.publicKeys,
       );
 
       expect(address).toEqual(escrow.instance.address);
@@ -238,28 +260,28 @@ describe('Logic - Single PXE', () => {
         .simulate();
 
       expect(new Fr(circuitPublicKeys.npk_m.inner.x).toString()).toBe(
-        keys.publicKeys.masterNullifierPublicKey.x.toString(),
+        escrowKeys.publicKeys.masterNullifierPublicKey.x.toString(),
       );
       expect(new Fr(circuitPublicKeys.npk_m.inner.y).toString()).toBe(
-        keys.publicKeys.masterNullifierPublicKey.y.toString(),
+        escrowKeys.publicKeys.masterNullifierPublicKey.y.toString(),
       );
       expect(new Fr(circuitPublicKeys.ivpk_m.inner.x).toString()).toBe(
-        keys.publicKeys.masterIncomingViewingPublicKey.x.toString(),
+        escrowKeys.publicKeys.masterIncomingViewingPublicKey.x.toString(),
       );
       expect(new Fr(circuitPublicKeys.ivpk_m.inner.y).toString()).toBe(
-        keys.publicKeys.masterIncomingViewingPublicKey.y.toString(),
+        escrowKeys.publicKeys.masterIncomingViewingPublicKey.y.toString(),
       );
       expect(new Fr(circuitPublicKeys.ovpk_m.inner.x).toString()).toBe(
-        keys.publicKeys.masterOutgoingViewingPublicKey.x.toString(),
+        escrowKeys.publicKeys.masterOutgoingViewingPublicKey.x.toString(),
       );
       expect(new Fr(circuitPublicKeys.ovpk_m.inner.y).toString()).toBe(
-        keys.publicKeys.masterOutgoingViewingPublicKey.y.toString(),
+        escrowKeys.publicKeys.masterOutgoingViewingPublicKey.y.toString(),
       );
       expect(new Fr(circuitPublicKeys.tpk_m.inner.x).toString()).toBe(
-        keys.publicKeys.masterTaggingPublicKey.x.toString(),
+        escrowKeys.publicKeys.masterTaggingPublicKey.x.toString(),
       );
       expect(new Fr(circuitPublicKeys.tpk_m.inner.y).toString()).toBe(
-        keys.publicKeys.masterTaggingPublicKey.y.toString(),
+        escrowKeys.publicKeys.masterTaggingPublicKey.y.toString(),
       );
     }, 300_000);
 
@@ -275,31 +297,33 @@ describe('Logic - Single PXE', () => {
         .simulate();
 
       expect(new Fr(circuitPublicKeys.npk_m.inner.x).toString()).not.toBe(
-        keys.publicKeys.masterNullifierPublicKey.x.toString(),
+        escrowKeys.publicKeys.masterNullifierPublicKey.x.toString(),
       );
       expect(new Fr(circuitPublicKeys.npk_m.inner.y).toString()).not.toBe(
-        keys.publicKeys.masterNullifierPublicKey.y.toString(),
+        escrowKeys.publicKeys.masterNullifierPublicKey.y.toString(),
       );
       expect(new Fr(circuitPublicKeys.ivpk_m.inner.x).toString()).not.toBe(
-        keys.publicKeys.masterIncomingViewingPublicKey.x.toString(),
+        escrowKeys.publicKeys.masterIncomingViewingPublicKey.x.toString(),
       );
       expect(new Fr(circuitPublicKeys.ivpk_m.inner.y).toString()).not.toBe(
-        keys.publicKeys.masterIncomingViewingPublicKey.y.toString(),
+        escrowKeys.publicKeys.masterIncomingViewingPublicKey.y.toString(),
       );
       expect(new Fr(circuitPublicKeys.ovpk_m.inner.x).toString()).not.toBe(
-        keys.publicKeys.masterOutgoingViewingPublicKey.x.toString(),
+        escrowKeys.publicKeys.masterOutgoingViewingPublicKey.x.toString(),
       );
       expect(new Fr(circuitPublicKeys.ovpk_m.inner.y).toString()).not.toBe(
-        keys.publicKeys.masterOutgoingViewingPublicKey.y.toString(),
+        escrowKeys.publicKeys.masterOutgoingViewingPublicKey.y.toString(),
       );
       expect(new Fr(circuitPublicKeys.tpk_m.inner.x).toString()).not.toBe(
-        keys.publicKeys.masterTaggingPublicKey.x.toString(),
+        escrowKeys.publicKeys.masterTaggingPublicKey.x.toString(),
       );
       expect(new Fr(circuitPublicKeys.tpk_m.inner.y).toString()).not.toBe(
-        keys.publicKeys.masterTaggingPublicKey.y.toString(),
+        escrowKeys.publicKeys.masterTaggingPublicKey.y.toString(),
       );
     }, 300_000);
+  });
 
+  describe('check_escrow', () => {
     it('logic should be able to check escrow correctly', async () => {
       await logic.methods.test_check_escrow(escrow.instance.address, secretKeys).simulate();
     });
@@ -315,8 +339,8 @@ describe('Logic - Single PXE', () => {
 
     it('check escrow with non zero deployer should fail', async () => {
       // Re-deploy the escrow contract with no universalDeploy
-      escrow = (await Contract.deployWithPublicKeys(keys.publicKeys, alice, EscrowContractArtifact, [])
-        .send({ contractAddressSalt: salt })
+      escrow = (await Contract.deployWithPublicKeys(escrowKeys.publicKeys, alice, EscrowContractArtifact, [])
+        .send({ contractAddressSalt: escrowSalt })
         .deployed()) as EscrowContract;
 
       await expect(logic.methods.test_check_escrow(escrow.instance.address, secretKeys).send().wait()).rejects.toThrow(
@@ -326,7 +350,11 @@ describe('Logic - Single PXE', () => {
 
     it('check escrow with incorrect class id should fail', async () => {
       // Re-deploy the logic contract with an incorrect class id
-      logic = (await deployLogic(alice, escrowClassId.add(Fr.ONE))) as LogicContract;
+      logic = (await deployLogicWithPublicKeys(
+        logicKeys.publicKeys,
+        alice,
+        escrowClassId.add(Fr.ONE),
+      )) as LogicContract;
 
       await expect(logic.methods.test_check_escrow(escrow.instance.address, secretKeys).send().wait()).rejects.toThrow(
         /Assertion failed: Escrow class id does not match/,
@@ -335,7 +363,11 @@ describe('Logic - Single PXE', () => {
 
     it('check escrow with incorrect salt should fail', async () => {
       // Re-deploy the escrow contract with a different salt (different from the logic contract address)
-      escrow = (await deployEscrowWithPublicKeysAndSalt(keys.publicKeys, alice, salt.add(Fr.ONE))) as EscrowContract;
+      escrow = (await deployEscrowWithPublicKeysAndSalt(
+        escrowKeys.publicKeys,
+        alice,
+        escrowSalt.add(Fr.ONE),
+      )) as EscrowContract;
 
       await expect(logic.methods.test_check_escrow(escrow.instance.address, secretKeys).send().wait()).rejects.toThrow(
         /Assertion failed: Escrow salt should be equal to the this address/,
@@ -344,5 +376,93 @@ describe('Logic - Single PXE', () => {
 
     // Testing non-zero initialization hash supposes there is an initialize function in the escrow contract
     // which is not the case for the current escrow contract
+  });
+
+  describe('share_escrow', () => {
+    it('logic should be able to share escrow correctly', async () => {
+      const alicePxe = pxe;
+      await alicePxe.registerAccount(bob.getSecretKey(), bob.getCompleteAddress().partialAddress);
+
+      // Register the logic contract as an account
+      const partialAddress = await logic.partialAddress;
+      await alicePxe.registerAccount(logicSk, partialAddress);
+
+      // Share the escrow contract with bob
+      const tx = await logic.methods
+        .test_share_escrow(escrow.instance.address, secretKeys, bob.getAddress())
+        .send()
+        .wait();
+      const blockNumber = tx.blockNumber!;
+
+      const bobPxe = pxe;
+
+      const events = await bobPxe.getPrivateEvents<EscrowDetailsLogContent>(
+        logic.address,
+        LogicContract.events.EscrowDetailsLogContent,
+        blockNumber,
+        1,
+        [bob.getAddress()],
+      );
+
+      expect(events.length).toBe(1);
+
+      const event = events[0];
+
+      expect(event.escrow).toEqual(escrow.instance.address);
+      expect(event.keys[0]).toEqual(escrowKeys.masterNullifierSecretKey.toBigInt());
+      expect(event.keys[1]).toEqual(escrowKeys.masterIncomingViewingSecretKey.toBigInt());
+      expect(event.keys[2]).toEqual(escrowKeys.masterOutgoingViewingSecretKey.toBigInt());
+      expect(event.keys[3]).toEqual(escrowKeys.masterTaggingSecretKey.toBigInt());
+    });
+
+    it('share escrow with multiple recipients correctly', async () => {
+      const alicePxe = pxe;
+
+      // Register the logic contract as an account
+      const partialAddress = await logic.partialAddress;
+      await alicePxe.registerAccount(logicSk, partialAddress);
+
+      // Share the escrow contract with bob
+      const txForBob = await logic.methods
+        .test_share_escrow(escrow.instance.address, secretKeys, bob.getAddress())
+        .send()
+        .wait();
+      const blockNumberBob = txForBob.blockNumber!;
+
+      const txForCarl = await logic.methods
+        .test_share_escrow(escrow.instance.address, secretKeys, carl.getAddress())
+        .send()
+        .wait();
+      const blockNumberCarl = txForCarl.blockNumber!;
+
+      const numberOfBlocks = blockNumberCarl - blockNumberBob + 1;
+
+      const bobPxe = pxe;
+
+      // Get the events for both bob and carl from bob's pxe for simplicity
+      const events = await bobPxe.getPrivateEvents<EscrowDetailsLogContent>(
+        logic.address,
+        LogicContract.events.EscrowDetailsLogContent,
+        blockNumberBob,
+        numberOfBlocks,
+        [bob.getAddress(), carl.getAddress()],
+      );
+
+      expect(events.length).toBe(2);
+
+      const eventForBob = events[0];
+      expect(eventForBob.escrow).toEqual(escrow.instance.address);
+      expect(eventForBob.keys[0]).toEqual(escrowKeys.masterNullifierSecretKey.toBigInt());
+      expect(eventForBob.keys[1]).toEqual(escrowKeys.masterIncomingViewingSecretKey.toBigInt());
+      expect(eventForBob.keys[2]).toEqual(escrowKeys.masterOutgoingViewingSecretKey.toBigInt());
+      expect(eventForBob.keys[3]).toEqual(escrowKeys.masterTaggingSecretKey.toBigInt());
+
+      const eventForCarl = events[1];
+      expect(eventForCarl.escrow).toEqual(escrow.instance.address);
+      expect(eventForCarl.keys[0]).toEqual(escrowKeys.masterNullifierSecretKey.toBigInt());
+      expect(eventForCarl.keys[1]).toEqual(escrowKeys.masterIncomingViewingSecretKey.toBigInt());
+      expect(eventForCarl.keys[2]).toEqual(escrowKeys.masterOutgoingViewingSecretKey.toBigInt());
+      expect(eventForCarl.keys[3]).toEqual(escrowKeys.masterTaggingSecretKey.toBigInt());
+    });
   });
 });
