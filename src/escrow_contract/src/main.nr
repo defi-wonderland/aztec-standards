@@ -2,12 +2,13 @@ use aztec::macros::aztec;
 
 #[aztec]
 pub contract Escrow {
-    use aztec::context::PrivateContext;
-    use aztec::macros::functions::{noinitcheck, private};
-    use aztec::oracle::get_contract_instance::get_contract_instance;
-    use aztec::prelude::AztecAddress;
-    use aztec::protocol_types::contract_instance::ContractInstance;
-    use aztec::protocol_types::traits::FromField;
+    use aztec::{
+        context::PrivateContext,
+        macros::functions::private,
+        oracle::get_contract_instance::get_contract_instance,
+        prelude::AztecAddress,
+        protocol_types::{contract_instance::ContractInstance, traits::FromField},
+    };
     use nft::NFT;
     use token::Token;
 
