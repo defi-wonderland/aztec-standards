@@ -130,8 +130,14 @@ pub contract Logic {
     /// @param token The address of the token
     /// @param amount The amount of tokens to withdraw from the escrow
     #[contract_library_method]
-    fn _withdraw(escrow: AztecAddress, account: AztecAddress, token: AztecAddress, amount: u128) {
-        Escrow::at(escrow).withdraw(token, amount, account);
+    fn _withdraw(
+        context: &mut PrivateContext,
+        escrow: AztecAddress,
+        account: AztecAddress,
+        token: AztecAddress,
+        amount: u128,
+    ) {
+        Escrow::at(escrow).withdraw(token, amount, account).call(context);
     }
 
     /// @notice Withdraws an NFT from the provided escrow.
@@ -141,12 +147,13 @@ pub contract Logic {
     /// @param token_id The id of the token to withdraw from the escrow
     #[contract_library_method]
     fn _withdraw_nft(
+        context: &mut PrivateContext,
         escrow: AztecAddress,
         account: AztecAddress,
         nft: AztecAddress,
         token_id: Field,
     ) {
-        Escrow::at(escrow).withdraw_nft(nft, token_id, account);
+        Escrow::at(escrow).withdraw_nft(nft, token_id, account).call(context);
     }
 
     // /// @notice Derives public keys from secret keys.
@@ -199,6 +206,36 @@ pub contract Logic {
     #[private]
     fn test_share_escrow(escrow: AztecAddress, keys: [Field; 4], account: AztecAddress) {
         _share_escrow(&mut context, escrow, keys, account);
+    }
+
+    /// @notice Tests the _withdraw function
+    /// @param escrow The address of the escrow
+    /// @param account The address of the account that will use the escrow
+    /// @param token The address of the token
+    /// @param amount The amount of tokens to withdraw from the escrow
+    #[private]
+    fn test_withdraw(
+        escrow: AztecAddress,
+        account: AztecAddress,
+        token: AztecAddress,
+        amount: u128,
+    ) {
+        _withdraw(&mut context, escrow, account, token, amount);
+    }
+
+    /// @notice Tests the _withdraw_nft function
+    /// @param escrow The address of the escrow
+    /// @param account The address of the account that will use the escrow
+    /// @param nft The address of the NFT contract
+    /// @param token_id The id of the token to withdraw from the escrow
+    #[private]
+    fn test_withdraw_nft(
+        escrow: AztecAddress,
+        account: AztecAddress,
+        nft: AztecAddress,
+        token_id: Field,
+    ) {
+        _withdraw_nft(&mut context, escrow, account, nft, token_id);
     }
 
     /// @notice Tests the _secret_keys_to_public_keys function
