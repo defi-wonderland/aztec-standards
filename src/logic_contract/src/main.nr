@@ -128,8 +128,14 @@ pub contract Logic {
     /// @param token The address of the token
     /// @param amount The amount of tokens to withdraw from the escrow
     #[contract_library_method]
-    fn _withdraw(escrow: AztecAddress, account: AztecAddress, token: AztecAddress, amount: u128) {
-        Escrow::at(escrow).withdraw(token, amount, account);
+    fn _withdraw(
+        context: &mut PrivateContext,
+        escrow: AztecAddress,
+        account: AztecAddress,
+        token: AztecAddress,
+        amount: u128,
+    ) {
+        Escrow::at(escrow).withdraw(token, amount, account).call(context);
     }
 
     /// @notice Withdraws an NFT from the provided escrow.
@@ -139,12 +145,13 @@ pub contract Logic {
     /// @param token_id The id of the token to withdraw from the escrow
     #[contract_library_method]
     fn _withdraw_nft(
+        context: &mut PrivateContext,
         escrow: AztecAddress,
         account: AztecAddress,
         nft: AztecAddress,
         token_id: Field,
     ) {
-        Escrow::at(escrow).withdraw_nft(nft, token_id, account);
+        Escrow::at(escrow).withdraw_nft(nft, token_id, account).call(context);
     }
 
     // /// @notice Derives public keys from secret keys.
@@ -175,27 +182,5 @@ pub contract Logic {
             ovpk_m: OvpkM { inner: ovpk_m },
             tpk_m: TpkM { inner: tpk_m },
         }
-    }
-
-    /** ==========================================================
-     * ================ LIBRARY TEST FUNCTIONS ===================
-     * ======================================================== */
-
-    /// @notice Tests the _check_escrow function
-    /// @param escrow The address of the escrow
-    /// @param keys The escrow keys
-    #[private]
-    fn test_check_escrow(escrow: AztecAddress, keys: [Field; 4]) {
-        _check_escrow(context, escrow, keys, storage.escrow_class_id);
-    }
-
-    /// @notice Tests the _share_escrow function
-    /// @param escrow The address of the escrow
-    /// @param keys The escrow keys
-    /// @param account The address of the account that will use the escrow
-    /// @param sender The address of the sender of the event
-    #[private]
-    fn test_share_escrow(escrow: AztecAddress, keys: [Field; 4], account: AztecAddress) {
-        _share_escrow(&mut context, escrow, keys, account);
     }
 }
