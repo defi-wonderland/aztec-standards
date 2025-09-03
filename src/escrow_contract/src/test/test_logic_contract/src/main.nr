@@ -1,7 +1,7 @@
 use aztec::macros::aztec;
 
 #[aztec]
-contract TestLogicContract {
+contract TestLogic {
     // aztec library
     use aztec::{
         macros::{events::event, functions::{initializer, private, public}, storage::storage},
