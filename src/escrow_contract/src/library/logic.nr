@@ -14,7 +14,7 @@ use aztec::{
 // standard library
 use std::embedded_curve_ops::{EmbeddedCurvePoint, EmbeddedCurveScalar, fixed_base_scalar_mul};
 // escrow contract
-use escrow::Escrow;
+use crate::Escrow;
 // escrow details event
 use crate::types::escrow_details_event::EscrowDetailsLogContent;
 
@@ -78,7 +78,8 @@ pub fn _share_escrow(
     account: AztecAddress,
 ) {
     let event_struct = EscrowDetailsLogContent { escrow, keys };
-    // Implementation from https://github.com/AztecProtocol/aztec-packages/blob/8777f58f94649bb55e3b86a90e6284ca6a4af4f2/noir-projects/aztec-nr/aztec/src/event/event_interface.nr
+
+    // Implementation from aztec-packages event_interface.nr in v1.2.1
     let (ciphertext, randomness) = to_encrypted_private_event_message(event_struct, account);
     let serialized_event_with_randomness = [randomness].concat(event_struct.serialize());
     let event_commitment = poseidon2_hash_with_separator(
