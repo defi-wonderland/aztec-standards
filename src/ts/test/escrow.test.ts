@@ -1,11 +1,4 @@
-import {
-  Fr,
-  AccountWalletWithSecretKey,
-  AccountWallet,
-  PublicKeys,
-  AztecAddress,
-  GrumpkinScalar,
-} from '@aztec/aztec.js';
+import { Fr, AccountWalletWithSecretKey, PublicKeys, AztecAddress, GrumpkinScalar } from '@aztec/aztec.js';
 import { deriveKeys } from '@aztec/stdlib/keys';
 import {
   setupPXE,
@@ -58,13 +51,11 @@ describe('Escrow', () => {
   };
   let escrowSalt: Fr;
 
-  beforeAll(async () => {
+  beforeEach(async () => {
     ({ pxe, deployer, wallets, store } = await setupTestSuite());
 
     [alice, bob, logicMock] = wallets;
-  });
 
-  beforeEach(async () => {
     // We default to a secret key of 1 for testing purposes
     escrowSk = Fr.random();
 
@@ -76,18 +67,16 @@ describe('Escrow', () => {
 
     // Deploy an escrow contract
     escrow = (await deployEscrow(escrowKeys.publicKeys, alice, escrowSalt)) as EscrowContract;
+
+    const partialAddressEscrow = await escrow.partialAddress;
+    await pxe.registerAccount(escrowSk, partialAddressEscrow);
   });
 
-  afterAll(async () => {
+  afterEach(async () => {
     await store.delete();
   });
 
   describe('authorization', () => {
-    beforeEach(async () => {
-      const partialAddressEscrow = await escrow.partialAddress;
-      await pxe.registerAccount(escrowSk, partialAddressEscrow);
-    });
-
     it('withdrawing tokens from self should fail', async () => {
       await expect(
         escrow.methods.withdraw(AztecAddress.ZERO, 0, AztecAddress.ZERO).simulate({ from: escrow.instance.address }),
@@ -117,30 +106,17 @@ describe('Escrow', () => {
 
   describe('withdraw', () => {
     beforeEach(async () => {
-      const partialAddressEscrow = await escrow.partialAddress;
-      await pxe.registerAccount(escrowSk, partialAddressEscrow);
-
       token = (await deployTokenWithMinter(alice, {})) as TokenContract;
       await token
         .withWallet(alice)
-        .methods.mint_to_private(escrow.instance.address, escrow.instance.address, AMOUNT)
+        .methods.mint_to_private(alice.getAddress(), escrow.instance.address, AMOUNT)
         .send()
         .wait();
     });
 
     it('logic should be able to withdraw correctly', async () => {
-      // Add bob to bob's PXE
-      await pxe.registerAccount(bob.getSecretKey(), bob.getCompleteAddress().partialAddress);
-
-      // Bob needs to register the escrow contract as an account
-      const partialAddressEscrow = await escrow.partialAddress;
-      await pxe.registerAccount(escrowSk, partialAddressEscrow);
-
-      // Bob needs to sync his private state to see the escrow details
-      await token.withWallet(bob).methods.sync_private_state().simulate({});
-
-      await expectTokenBalances(token, escrow.instance.address, wad(0), AMOUNT, bob);
-      await expectTokenBalances(token, bob.getAddress(), wad(0), wad(0), bob);
+      await expectTokenBalances(token, escrow.instance.address, wad(0), AMOUNT);
+      await expectTokenBalances(token, bob.getAddress(), wad(0), wad(0));
 
       const bobWithdrawTx = await escrow
         .withWallet(logicMock)
@@ -148,10 +124,8 @@ describe('Escrow', () => {
         .send()
         .wait();
 
-      await token.withWallet(bob).methods.sync_private_state().simulate({});
-
-      await expectTokenBalances(token, escrow.instance.address, wad(0), wad(0), bob);
-      await expectTokenBalances(token, bob.getAddress(), wad(0), AMOUNT, bob);
+      await expectTokenBalances(token, escrow.instance.address, wad(0), wad(0));
+      await expectTokenBalances(token, bob.getAddress(), wad(0), AMOUNT);
 
       const notes = await pxe.getNotes({ txHash: bobWithdrawTx.txHash });
       expect(notes.length).toBe(1);
@@ -161,18 +135,8 @@ describe('Escrow', () => {
     it('withdrawing less than the balance should succeed', async () => {
       const halfAmount = AMOUNT / 2n;
 
-      // Add bob to bob's PXE
-      await pxe.registerAccount(bob.getSecretKey(), bob.getCompleteAddress().partialAddress);
-
-      // Bob needs to register the escrow contract as an account
-      const partialAddressEscrow = await escrow.partialAddress;
-      await pxe.registerAccount(escrowSk, partialAddressEscrow);
-
-      // Bob needs to sync his private state to see the escrow details
-      await token.withWallet(bob).methods.sync_private_state().simulate({});
-
-      await expectTokenBalances(token, escrow.instance.address, wad(0), AMOUNT, bob);
-      await expectTokenBalances(token, bob.getAddress(), wad(0), wad(0), bob);
+      await expectTokenBalances(token, escrow.instance.address, wad(0), AMOUNT);
+      await expectTokenBalances(token, bob.getAddress(), wad(0), wad(0));
 
       const bobWithdrawTx = await escrow
         .withWallet(logicMock)
@@ -180,10 +144,8 @@ describe('Escrow', () => {
         .send()
         .wait();
 
-      await token.withWallet(bob).methods.sync_private_state().simulate({});
-
-      await expectTokenBalances(token, escrow.instance.address, wad(0), halfAmount, bob);
-      await expectTokenBalances(token, bob.getAddress(), wad(0), halfAmount, bob);
+      await expectTokenBalances(token, escrow.instance.address, wad(0), halfAmount);
+      await expectTokenBalances(token, bob.getAddress(), wad(0), halfAmount);
 
       const notes = await pxe.getNotes({ txHash: bobWithdrawTx.txHash });
       expect(notes.length).toBe(2);
@@ -207,25 +169,12 @@ describe('Escrow', () => {
     let tokenId: bigint;
 
     beforeEach(async () => {
-      const partialAddressEscrow = await escrow.partialAddress;
-      await pxe.registerAccount(escrowSk, partialAddressEscrow);
-
       tokenId = 1n;
       nft = (await deployNFTWithMinter(alice, {})) as NFTContract;
       await nft.withWallet(alice).methods.mint_to_private(escrow.instance.address, tokenId).send().wait();
     });
 
     it('logic should be able to withdraw NFT correctly', async () => {
-      // Add bob to bob's PXE
-      await pxe.registerAccount(bob.getSecretKey(), bob.getCompleteAddress().partialAddress);
-
-      // Bob needs to register the escrow contract as an account
-      const partialAddressEscrow = await escrow.partialAddress;
-      await pxe.registerAccount(escrowSk, partialAddressEscrow);
-
-      // Bob needs to sync his private state to see the escrow details
-      await nft.withWallet(bob).methods.sync_private_state().simulate({});
-
       await assertOwnsPrivateNFT(nft, tokenId, escrow.instance.address);
 
       const bobWithdrawTx = await escrow
@@ -233,8 +182,6 @@ describe('Escrow', () => {
         .methods.withdraw_nft(nft.instance.address, tokenId, bob.getAddress())
         .send()
         .wait();
-
-      await nft.withWallet(bob).methods.sync_private_state().simulate({});
 
       await assertOwnsPrivateNFT(nft, tokenId, bob.getAddress());
 
