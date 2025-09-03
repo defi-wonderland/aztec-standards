@@ -177,7 +177,7 @@ describe('Logic - Single PXE', () => {
   let escrowClassId: Fr;
   let secretKeys: Fr[];
 
-  beforeAll(async () => {
+  async function setup() {
     ({ pxe, deployer, wallets, store } = await setupTestSuite());
 
     [alice, bob, carl] = wallets;
@@ -208,6 +208,10 @@ describe('Logic - Single PXE', () => {
       grumpkinScalarToFr(escrowKeys.masterOutgoingViewingSecretKey),
       grumpkinScalarToFr(escrowKeys.masterTaggingSecretKey),
     ];
+  }
+
+  beforeAll(async () => {
+    await setup();
   });
 
   beforeEach(async () => {
@@ -582,6 +586,14 @@ describe('Logic - Single PXE', () => {
   });
 
   describe('withdraw NFT', () => {
+    // Without resetting the store, the test fails with this error:
+    // Simulation error: Array must contain at most 100 element(s) (0)
+    // at SchnorrAccount.entrypoint
+    beforeAll(async () => {
+      await store.delete();
+      await setup();
+    });
+
     let nft: NFTContract;
     let tokenId: bigint;
 
@@ -627,10 +639,7 @@ describe('Logic - Single PXE', () => {
       expectUintNote(notes[0], tokenId, bob.getAddress());
     });
 
-    // TODO: Test passes alone, but fails when running with other tests because of this error:
-    // Simulation error: Array must contain at most 100 element(s) (0)
-    // at SchnorrAccount.entrypoint
-    it.skip('withdrawing non-existent NFT should fail', async () => {
+    it('withdrawing non-existent NFT should fail', async () => {
       await expect(
         logic
           .withWallet(bob)
