@@ -138,7 +138,7 @@ export async function deployNFTWithMinter(deployer: AccountWallet, options?: Dep
   const contract = await Contract.deploy(
     deployer,
     NFTContractArtifact,
-    ['NFT', 'NFT', deployer.getAddress(), deployer.getAddress()],
+    ['TestNFT', 'TNFT', deployer.getAddress(), deployer.getAddress()],
     'constructor_with_minter',
   )
     .send(options)
