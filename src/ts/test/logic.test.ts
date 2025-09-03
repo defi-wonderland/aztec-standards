@@ -30,7 +30,7 @@ import {
 import { PXE } from '@aztec/stdlib/interfaces/client';
 import { AztecLmdbStore } from '@aztec/kv-store/lmdb';
 import { getInitialTestAccountsManagers } from '@aztec/accounts/testing';
-import { LogicContractArtifact, LogicContract, EscrowDetailsLogContent } from '../../../artifacts/Logic.js';
+import { TestLogicContractArtifact, TestLogicContract, EscrowDetailsLogContent } from '../../../artifacts/TestLogic.js';
 import { EscrowContractArtifact, EscrowContract } from '../../../artifacts/Escrow.js';
 import { TokenContract } from '../../../artifacts/Token.js';
 import { NFTContract } from '../../../artifacts/NFT.js';
@@ -45,13 +45,13 @@ export async function deployLogicWithPublicKeys(publicKeys: PublicKeys, deployer
   const contract = await Contract.deployWithPublicKeys(
     publicKeys,
     deployer,
-    LogicContractArtifact,
+    TestLogicContractArtifact,
     [deployer.getAddress(), escrowClassId],
     'constructor',
   )
     .send()
     .deployed();
-  return contract as LogicContract;
+  return contract as TestLogicContract;
 }
 
 /**
@@ -152,7 +152,7 @@ describe('Logic - Single PXE', () => {
   let carl: AccountWalletWithSecretKey;
 
   // Logic contract
-  let logic: LogicContract;
+  let logic: TestLogicContract;
   let logicSk: Fr;
   let logicKeys: {
     masterNullifierSecretKey: GrumpkinScalar;
@@ -212,7 +212,7 @@ describe('Logic - Single PXE', () => {
 
   beforeEach(async () => {
     // // Logic is deployed with the public keys because it sends encrypted events to the recipient and with the escrow class id
-    logic = (await deployLogicWithPublicKeys(logicKeys.publicKeys, alice, escrowClassId)) as LogicContract;
+    logic = (await deployLogicWithPublicKeys(logicKeys.publicKeys, alice, escrowClassId)) as TestLogicContract;
 
     // Use the logic contract address as the salt for the escrow contract
     escrowSalt = new Fr(logic.instance.address.toBigInt());
@@ -227,14 +227,14 @@ describe('Logic - Single PXE', () => {
 
   describe('Deployment', () => {
     it('deploys logic with correct constructor params', async () => {
-      const deploymentData = await getContractInstanceFromDeployParams(LogicContractArtifact, {
+      const deploymentData = await getContractInstanceFromDeployParams(TestLogicContractArtifact, {
         constructorArtifact: 'constructor',
         constructorArgs: [alice.getAddress(), escrowClassId],
         salt: escrowSalt,
         deployer: alice.getAddress(),
       });
 
-      const deployer = new ContractDeployer(LogicContractArtifact, alice, undefined, 'constructor');
+      const deployer = new ContractDeployer(TestLogicContractArtifact, alice, undefined, 'constructor');
       const tx = deployer.deploy(alice.getAddress(), escrowClassId).send({
         contractAddressSalt: escrowSalt,
       });
@@ -280,7 +280,7 @@ describe('Logic - Single PXE', () => {
   describe('secret_keys_to_public_keys', () => {
     it('logic derives public keys from private keys correctly', async () => {
       const circuitPublicKeys = await logic.methods
-        .test_secret_keys_to_public_keys(secretKeys[0], secretKeys[1], secretKeys[2], secretKeys[3])
+        .secret_keys_to_public_keys(secretKeys[0], secretKeys[1], secretKeys[2], secretKeys[3])
         .simulate();
 
       expect(new Fr(circuitPublicKeys.npk_m.inner.x).toString()).toBe(
@@ -312,7 +312,7 @@ describe('Logic - Single PXE', () => {
     it('logic key derivation should fail if the secret key is not correct', async () => {
       // We add 1 to the secret key to make it incorrect
       const circuitPublicKeys = await logic.methods
-        .test_secret_keys_to_public_keys(
+        .secret_keys_to_public_keys(
           secretKeys[0].add(Fr.ONE),
           secretKeys[1].add(Fr.ONE),
           secretKeys[2].add(Fr.ONE),
@@ -349,7 +349,7 @@ describe('Logic - Single PXE', () => {
 
   describe('check_escrow', () => {
     it('logic should be able to check escrow correctly', async () => {
-      await logic.methods.test_check_escrow(escrow.instance.address, secretKeys).simulate();
+      await logic.methods.check_escrow(escrow.instance.address, secretKeys).simulate();
     });
 
     it('check escrow with incorrect secret keys should fail', async () => {
@@ -357,7 +357,7 @@ describe('Logic - Single PXE', () => {
       let secretKeysPlusOne = secretKeys.map((sk) => sk.add(Fr.ONE));
 
       await expect(
-        logic.methods.test_check_escrow(escrow.instance.address, secretKeysPlusOne).send().wait(),
+        logic.methods.check_escrow(escrow.instance.address, secretKeysPlusOne).send().wait(),
       ).rejects.toThrow(/Assertion failed: Public keys do not match/);
     });
 
@@ -367,7 +367,7 @@ describe('Logic - Single PXE', () => {
         .send({ contractAddressSalt: escrowSalt })
         .deployed()) as EscrowContract;
 
-      await expect(logic.methods.test_check_escrow(escrow.instance.address, secretKeys).send().wait()).rejects.toThrow(
+      await expect(logic.methods.check_escrow(escrow.instance.address, secretKeys).send().wait()).rejects.toThrow(
         /Assertion failed: Escrow deployer should be null/,
       );
     });
@@ -378,9 +378,9 @@ describe('Logic - Single PXE', () => {
         logicKeys.publicKeys,
         alice,
         escrowClassId.add(Fr.ONE),
-      )) as LogicContract;
+      )) as TestLogicContract;
 
-      await expect(logic.methods.test_check_escrow(escrow.instance.address, secretKeys).send().wait()).rejects.toThrow(
+      await expect(logic.methods.check_escrow(escrow.instance.address, secretKeys).send().wait()).rejects.toThrow(
         /Assertion failed: Escrow class id does not match/,
       );
     });
@@ -393,7 +393,7 @@ describe('Logic - Single PXE', () => {
         escrowSalt.add(Fr.ONE),
       )) as EscrowContract;
 
-      await expect(logic.methods.test_check_escrow(escrow.instance.address, secretKeys).send().wait()).rejects.toThrow(
+      await expect(logic.methods.check_escrow(escrow.instance.address, secretKeys).send().wait()).rejects.toThrow(
         /Assertion failed: Escrow salt should be equal to the this address/,
       );
     });
@@ -412,17 +412,14 @@ describe('Logic - Single PXE', () => {
       await alicePxe.registerAccount(logicSk, partialAddress);
 
       // Share the escrow contract with bob
-      const tx = await logic.methods
-        .test_share_escrow(escrow.instance.address, secretKeys, bob.getAddress())
-        .send()
-        .wait();
+      const tx = await logic.methods.share_escrow(escrow.instance.address, secretKeys, bob.getAddress()).send().wait();
       const blockNumber = tx.blockNumber!;
 
       const bobPxe = pxe;
 
       const events = await bobPxe.getPrivateEvents<EscrowDetailsLogContent>(
         logic.address,
-        LogicContract.events.EscrowDetailsLogContent,
+        TestLogicContract.events.EscrowDetailsLogContent,
         blockNumber,
         1,
         [bob.getAddress()],
@@ -448,13 +445,13 @@ describe('Logic - Single PXE', () => {
 
       // Share the escrow contract with bob
       const txForBob = await logic.methods
-        .test_share_escrow(escrow.instance.address, secretKeys, bob.getAddress())
+        .share_escrow(escrow.instance.address, secretKeys, bob.getAddress())
         .send()
         .wait();
       const blockNumberBob = txForBob.blockNumber!;
 
       const txForCarl = await logic.methods
-        .test_share_escrow(escrow.instance.address, secretKeys, carl.getAddress())
+        .share_escrow(escrow.instance.address, secretKeys, carl.getAddress())
         .send()
         .wait();
       const blockNumberCarl = txForCarl.blockNumber!;
@@ -466,7 +463,7 @@ describe('Logic - Single PXE', () => {
       // Get the events for both bob and carl from bob's pxe for simplicity
       const events = await bobPxe.getPrivateEvents<EscrowDetailsLogContent>(
         logic.address,
-        LogicContract.events.EscrowDetailsLogContent,
+        TestLogicContract.events.EscrowDetailsLogContent,
         blockNumberBob,
         numberOfBlocks,
         [bob.getAddress(), carl.getAddress()],
@@ -524,7 +521,7 @@ describe('Logic - Single PXE', () => {
 
       const bobWithdrawTx = await logic
         .withWallet(bob)
-        .methods.test_withdraw(escrow.instance.address, bob.getAddress(), token.instance.address, AMOUNT)
+        .methods.withdraw(escrow.instance.address, bob.getAddress(), token.instance.address, AMOUNT)
         .send()
         .wait();
 
@@ -558,7 +555,7 @@ describe('Logic - Single PXE', () => {
 
       const bobWithdrawTx = await logic
         .withWallet(bob)
-        .methods.test_withdraw(escrow.instance.address, bob.getAddress(), token.instance.address, halfAmount)
+        .methods.withdraw(escrow.instance.address, bob.getAddress(), token.instance.address, halfAmount)
         .send()
         .wait();
 
@@ -577,7 +574,7 @@ describe('Logic - Single PXE', () => {
       await expect(
         logic
           .withWallet(bob)
-          .methods.test_withdraw(escrow.instance.address, bob.getAddress(), token.instance.address, AMOUNT + 1n)
+          .methods.withdraw(escrow.instance.address, bob.getAddress(), token.instance.address, AMOUNT + 1n)
           .send()
           .wait(),
       ).rejects.toThrow(/Assertion failed: Balance too low/);
@@ -616,7 +613,7 @@ describe('Logic - Single PXE', () => {
 
       const bobWithdrawTx = await logic
         .withWallet(bob)
-        .methods.test_withdraw_nft(escrow.instance.address, bob.getAddress(), nft.instance.address, tokenId)
+        .methods.withdraw_nft(escrow.instance.address, bob.getAddress(), nft.instance.address, tokenId)
         .send()
         .wait();
 
@@ -637,7 +634,7 @@ describe('Logic - Single PXE', () => {
       await expect(
         logic
           .withWallet(bob)
-          .methods.test_withdraw_nft(escrow.instance.address, bob.getAddress(), nft.instance.address, tokenId + 1n)
+          .methods.withdraw_nft(escrow.instance.address, bob.getAddress(), nft.instance.address, tokenId + 1n)
           .send()
           .wait(),
       ).rejects.toThrow(/Assertion failed: nft not found in private to public/);
