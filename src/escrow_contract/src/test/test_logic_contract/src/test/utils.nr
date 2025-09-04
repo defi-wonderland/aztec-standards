@@ -4,26 +4,34 @@ use aztec::{
     protocol_types::public_keys::{IvpkM, NpkM, OvpkM, Point, PublicKeys, TpkM},
     test::helpers::{cheatcodes, test_environment::TestEnvironment},
 };
+use nft::test::utils as nft_utils;
+use token::test::utils as token_utils;
 
 pub unconstrained fn deploy_logic(
+    env: &mut TestEnvironment,
     escrow_class_id: Field,
-) -> (&mut TestEnvironment, AztecAddress, AztecAddress) {
-    let mut env = TestEnvironment::new();
-
+) -> AztecAddress {
     let owner = env.create_account(1);
-
-    // Start the test in the account contract address
-    env.impersonate(owner);
 
     // Deploy logic contract
     let initializer_call_interface = TestLogic::interface().constructor(owner, escrow_class_id);
-    let logic_contract = env.deploy("./@test_logic_contract", "TestLogic").with_public_void_initializer(
-        owner,
-        initializer_call_interface,
-    );
+    let logic_contract = env
+        .deploy("./@test_logic_contract", "TestLogic")
+        .with_public_void_initializer(owner, initializer_call_interface);
     env.advance_block_by(1);
 
-    (&mut env, logic_contract.to_address(), owner)
+    logic_contract.to_address()
+}
+
+pub unconstrained fn deploy_instance_getter(env: &mut TestEnvironment) -> AztecAddress {
+    let owner = env.create_account(1);
+    let initializer_call_interface = TestLogic::interface().constructor(owner, 1);
+    let logic_contract = env
+        .deploy("./@test_logic_contract", "TestLogic")
+        .with_public_void_initializer(owner, initializer_call_interface);
+    env.advance_block_by(1);
+
+    logic_contract.to_address()
 }
 
 pub unconstrained fn get_test_vector() -> (PublicKeys, [Field; 4], PublicKeys, [Field; 4]) {
@@ -75,4 +83,37 @@ pub unconstrained fn get_test_vector() -> (PublicKeys, [Field; 4], PublicKeys, [
         public_keys_1, [nsk_m_1, ivsk_m_1, ovsk_m_1, tsk_m_1], public_keys_2,
         [nsk_m_2, ivsk_m_2, ovsk_m_2, tsk_m_2],
     )
+}
+
+pub unconstrained fn set_escrow_with_token_and_nft(
+    with_account_contracts: bool,
+    escrow_secret: Field,
+    ) -> (&mut TestEnvironment, AztecAddress, AztecAddress, AztecAddress, AztecAddress, AztecAddress, AztecAddress) {
+    // Setup without account contracts. We are not using authwits here, so dummy accounts are enough
+    let (env, token_contract_address, owner, recipient, minter) =
+        token_utils::setup_with_minter(with_account_contracts);
+
+    let nft_contract_address = nft_utils::deploy_nft_with_minter(env, owner, minter);
+
+    // Deploy escrow contract
+    let escrow_contract_address = deploy_escrow_with_secret(env, escrow_secret);
+
+    (
+        env, escrow_contract_address, token_contract_address, nft_contract_address, owner,
+        recipient, minter,
+    )
+}
+
+pub unconstrained fn deploy_escrow_with_secret(
+    env: &mut TestEnvironment,
+    escrow_secret: Field,
+) -> AztecAddress {
+    let escrow_contract_account = cheatcodes::add_account(escrow_secret);
+
+    let escrow_contract = env
+        .deploy_with_public_keys("./@escrow_contract", "Escrow", escrow_secret)
+        .without_initializer();
+    env.advance_block_by(1);
+
+    escrow_contract.to_address()
 }

@@ -1,10 +1,13 @@
-use crate::TestLogic;
 use crate::test::utils as logic_utils;
+use crate::TestLogic;
+use aztec::test::helpers::test_environment::TestEnvironment;
 
 // We test public key derivation using two different secret keys.
 #[test]
 unconstrained fn secret_keys_to_public_keys_success() {
-    let (env, logic_contract_address, _) = logic_utils::deploy_logic(1);
+    let mut env = TestEnvironment::new();
+
+    let logic_contract_address = logic_utils::deploy_logic(&mut env, 1);
 
     let (vector_public_keys_1, vector_secret_keys_1, vector_public_keys_2, vector_secret_keys_2) =
         logic_utils::get_test_vector();
@@ -51,7 +54,9 @@ unconstrained fn secret_keys_to_public_keys_success() {
 // Note that this test will fail since we modify one of the secret keys to produce a different public key than expected
 #[test(should_fail)]
 unconstrained fn secret_keys_to_public_keys_fail() {
-    let (env, logic_contract_address, _) = logic_utils::deploy_logic(1);
+    let mut env = TestEnvironment::new();
+
+    let logic_contract_address = logic_utils::deploy_logic(&mut env, 1);
 
     let (vector_public_keys_1, vector_secret_keys_1, _, _) = logic_utils::get_test_vector();
 

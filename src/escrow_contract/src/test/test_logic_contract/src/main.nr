@@ -7,8 +7,9 @@ contract TestLogic {
     // aztec library
     use aztec::{
         macros::{events::event, functions::{initializer, private, public}, storage::storage},
+        oracle::get_contract_instance::get_contract_instance,
         prelude::{AztecAddress, PublicImmutable},
-        protocol_types::public_keys::PublicKeys,
+        protocol_types::{contract_instance::ContractInstance, public_keys::PublicKeys},
     };
     use escrow_contract::library::logic::{
         _check_escrow, _secret_keys_to_public_keys, _share_escrow, _withdraw, _withdraw_nft,
@@ -100,5 +101,13 @@ contract TestLogic {
         tsk_m: Field,
     ) -> PublicKeys {
         _secret_keys_to_public_keys(nsk_m, ivsk_m, ovsk_m, tsk_m)
+    }
+
+    /// @notice Returns the contract instance of the provided address
+    /// @param address The address of the contract
+    /// @return The contract instance
+    #[private]
+    fn get_contract_instance_helper(address: AztecAddress) -> ContractInstance {
+        get_contract_instance(address)
     }
 }

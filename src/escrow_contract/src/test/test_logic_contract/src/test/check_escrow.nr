@@ -1,0 +1,83 @@
+use crate::test::utils as logic_utils;
+use crate::TestLogic;
+use aztec::protocol_types::traits::ToField;
+use aztec::test::helpers::test_environment::TestEnvironment;
+
+// Testing that check_escrow succeeds is not possible given that custom salt is not supported yet in the test environment,
+// it will always revert with "Escrow salt should be equal to the this address"
+// See
+// https://github.com/AztecProtocol/aztec-packages/issues/16656
+
+// Testing deployer and initialization hash has the same problem, it is not possible to deploy a contract with public keys and constructor/deployer
+
+#[test(should_fail_with = "Public keys do not match")]
+unconstrained fn check_escrow_public_keys_mismatch() {
+    let mut env = TestEnvironment::new();
+
+    // Secret keys derived using a different seed than 1, hence the public keys will not match
+    let secret = 1;
+    let (_, _, _, incorrect_sk) = logic_utils::get_test_vector();
+
+    let escrow = logic_utils::deploy_escrow_with_secret(&mut env, secret);
+
+    let instance_getter = logic_utils::deploy_instance_getter(&mut env);
+
+    let escrow_instance = TestLogic::at(instance_getter).get_contract_instance_helper(escrow).call(
+        &mut env.private(),
+    );
+
+    let escrow_class_id = escrow_instance.contract_class_id.to_field();
+
+    let logic = logic_utils::deploy_logic(&mut env, escrow_class_id);
+
+    TestLogic::at(logic)
+        .check_escrow(escrow, [incorrect_sk[0], incorrect_sk[1], incorrect_sk[2], incorrect_sk[3]])
+        .call(&mut env.private());
+}
+
+#[test(should_fail_with = "Escrow class id does not match")]
+unconstrained fn check_escrow_class_id_mismatch() {
+    let mut env = TestEnvironment::new();
+
+    // Secret key derived using 1 as the seed
+    let secret = 1;
+    let (_, sk, _, _) = logic_utils::get_test_vector();
+
+    let escrow = logic_utils::deploy_escrow_with_secret(&mut env, secret);
+
+    let instance_getter = logic_utils::deploy_instance_getter(&mut env);
+
+    let escrow_instance = TestLogic::at(instance_getter).get_contract_instance_helper(escrow).call(
+        &mut env.private(),
+    );
+
+    let escrow_class_id = escrow_instance.contract_class_id.to_field();
+
+    // We deploy with a different class id, so the test should fail
+    let logic = logic_utils::deploy_logic(&mut env, escrow_class_id + 1);
+
+    TestLogic::at(logic).check_escrow(escrow, [sk[0], sk[1], sk[2], sk[3]]).call(&mut env.private());
+}
+
+#[test(should_fail_with = "Escrow salt should be equal to the this address")]
+unconstrained fn check_escrow_salt_mismatch() {
+    let mut env = TestEnvironment::new();
+
+    // Secret key derived using 1 as the seed
+    let secret = 1;
+    let (_, sk, _, _) = logic_utils::get_test_vector();
+
+    let escrow = logic_utils::deploy_escrow_with_secret(&mut env, secret);
+
+    let instance_getter = logic_utils::deploy_instance_getter(&mut env);
+
+    let escrow_instance = TestLogic::at(instance_getter).get_contract_instance_helper(escrow).call(
+        &mut env.private(),
+    );
+
+    let escrow_class_id = escrow_instance.contract_class_id.to_field();
+
+    let logic = logic_utils::deploy_logic(&mut env, escrow_class_id);
+
+    TestLogic::at(logic).check_escrow(escrow, [sk[0], sk[1], sk[2], sk[3]]).call(&mut env.private());
+}
