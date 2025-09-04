@@ -23,17 +23,6 @@ pub unconstrained fn deploy_logic(
     logic_contract.to_address()
 }
 
-pub unconstrained fn deploy_instance_getter(env: &mut TestEnvironment) -> AztecAddress {
-    let owner = env.create_account(1);
-    let initializer_call_interface = TestLogic::interface().constructor(owner, 1);
-    let logic_contract = env
-        .deploy("./@test_logic_contract", "TestLogic")
-        .with_public_void_initializer(owner, initializer_call_interface);
-    env.advance_block_by(1);
-
-    logic_contract.to_address()
-}
-
 pub unconstrained fn get_test_vector() -> (PublicKeys, [Field; 4], PublicKeys, [Field; 4]) {
     // secret keys derived using 1 as the seed
     let nsk_m_1: Field = 0x1c46232974b84af1ea0f3f8e02d68b205fa0fd765839bdd298d270c6f4d87190;
