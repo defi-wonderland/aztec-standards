@@ -1,4 +1,4 @@
-use crate::Logic;
+use crate::TestLogic;
 use aztec::{
     prelude::AztecAddress,
     protocol_types::public_keys::{IvpkM, NpkM, OvpkM, Point, PublicKeys, TpkM},
@@ -16,8 +16,8 @@ pub unconstrained fn deploy_logic(
     env.impersonate(owner);
 
     // Deploy logic contract
-    let initializer_call_interface = Logic::interface().constructor(owner, escrow_class_id);
-    let logic_contract = env.deploy("./@logic_contract", "Logic").with_public_void_initializer(
+    let initializer_call_interface = TestLogic::interface().constructor(owner, escrow_class_id);
+    let logic_contract = env.deploy("./@test_logic_contract", "TestLogic").with_public_void_initializer(
         owner,
         initializer_call_interface,
     );

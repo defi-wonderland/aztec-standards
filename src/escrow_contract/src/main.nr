@@ -1,13 +1,17 @@
+mod library;
+mod types;
+
 use aztec::macros::aztec;
 
 #[aztec]
 pub contract Escrow {
-    use aztec::context::PrivateContext;
-    use aztec::macros::functions::{noinitcheck, private};
-    use aztec::oracle::get_contract_instance::get_contract_instance;
-    use aztec::prelude::AztecAddress;
-    use aztec::protocol_types::contract_instance::ContractInstance;
-    use aztec::protocol_types::traits::FromField;
+    use aztec::{
+        context::PrivateContext,
+        macros::functions::private,
+        oracle::get_contract_instance::get_contract_instance,
+        prelude::AztecAddress,
+        protocol_types::{contract_instance::ContractInstance, traits::FromField},
+    };
     use nft::NFT;
     use token::Token;
 
@@ -17,13 +21,11 @@ pub contract Escrow {
     /// @param token The address of the token
     /// @param amount The amount of tokens to withdraw from the escrow
     /// @param recipient The address of the recipient
-    #[noinitcheck]
     #[private]
     fn withdraw(token: AztecAddress, amount: u128, recipient: AztecAddress) {
         _assert_msg_sender(&mut context);
 
-        let token_contract = Token::at(token);
-        token_contract
+        Token::at(token)
             .transfer_private_to_private(context.this_address(), recipient, amount, 0)
             .call(&mut context);
     }
@@ -34,13 +36,11 @@ pub contract Escrow {
     /// @param nft The address of the NFT contract
     /// @param token_id The id of the token to withdraw from the escrow
     /// @param recipient The address of the recipient
-    #[noinitcheck]
     #[private]
     fn withdraw_nft(nft: AztecAddress, token_id: Field, recipient: AztecAddress) {
         _assert_msg_sender(&mut context);
 
-        let nft_contract = NFT::at(nft);
-        nft_contract
+        NFT::at(nft)
             .transfer_private_to_private(context.this_address(), recipient, token_id, 0)
             .call(&mut context);
     }

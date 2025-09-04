@@ -1,4 +1,4 @@
-use crate::Logic;
+use crate::TestLogic;
 use crate::test::utils as logic_utils;
 
 // We test public key derivation using two different secret keys.
@@ -9,8 +9,8 @@ unconstrained fn secret_keys_to_public_keys_success() {
     let (vector_public_keys_1, vector_secret_keys_1, vector_public_keys_2, vector_secret_keys_2) =
         logic_utils::get_test_vector();
 
-    let public_keys_1 = Logic::at(logic_contract_address)
-        .test_secret_keys_to_public_keys(
+    let public_keys_1 = TestLogic::at(logic_contract_address)
+        .secret_keys_to_public_keys(
             vector_secret_keys_1[0],
             vector_secret_keys_1[1],
             vector_secret_keys_1[2],
@@ -28,8 +28,8 @@ unconstrained fn secret_keys_to_public_keys_success() {
     assert_eq(vector_public_keys_1.tpk_m.inner.y, public_keys_1.tpk_m.inner.y);
     assert_eq(vector_public_keys_1, public_keys_1);
 
-    let public_keys_2 = Logic::at(logic_contract_address)
-        .test_secret_keys_to_public_keys(
+    let public_keys_2 = TestLogic::at(logic_contract_address)
+        .secret_keys_to_public_keys(
             vector_secret_keys_2[0],
             vector_secret_keys_2[1],
             vector_secret_keys_2[2],
@@ -58,8 +58,8 @@ unconstrained fn secret_keys_to_public_keys_fail() {
     // we modify the first secret key to be 1 greater than the original, which should derive a different public key
     let modified_secret_keys_1 = vector_secret_keys_1[0] + 1;
 
-    let public_keys_1 = Logic::at(logic_contract_address)
-        .test_secret_keys_to_public_keys(
+    let public_keys_1 = TestLogic::at(logic_contract_address)
+        .secret_keys_to_public_keys(
             modified_secret_keys_1,
             vector_secret_keys_1[1],
             vector_secret_keys_1[2],

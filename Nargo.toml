@@ -4,7 +4,7 @@ members = [
 "src/dripper",
 "src/nft_contract",
 "src/escrow_contract",
-"src/logic_contract",
+"src/escrow_contract/src/test/test_logic_contract",
 ]
 
 [benchmark]
