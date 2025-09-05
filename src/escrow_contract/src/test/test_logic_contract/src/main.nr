@@ -22,21 +22,17 @@ contract TestLogic {
         keys: [Field; 4],
     }
 
-    // @param owner The address of the owner
     // @param escrow_class_id The contract class id of the escrow contract
     #[storage]
     struct Storage<Context> {
-        owner: PublicImmutable<AztecAddress, Context>,
         escrow_class_id: PublicImmutable<Field, Context>,
     }
 
     /// @dev Initialize the contract
-    /// @param owner The address of the owner
     /// @param escrow_class_id The contract class id of the escrow contract
     #[public]
     #[initializer]
-    fn constructor(owner: AztecAddress, escrow_class_id: Field) {
-        storage.owner.initialize(owner);
+    fn constructor(escrow_class_id: Field) {
         storage.escrow_class_id.initialize(escrow_class_id);
     }
 
