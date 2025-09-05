@@ -11,12 +11,6 @@ import {
   GrumpkinScalar,
   getContractClassFromArtifact,
 } from '@aztec/aztec.js';
-import {
-  computeInitializationHash,
-  computeContractAddressFromInstance,
-  computeSaltedInitializationHash,
-} from '@aztec/stdlib/contract';
-import { getDefaultInitializer } from '@aztec/stdlib/abi';
 import { deriveKeys } from '@aztec/stdlib/keys';
 import {
   setupPXE,
