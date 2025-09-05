@@ -140,9 +140,26 @@ export default class LogicContractBenchmark extends Benchmark {
         .withWallet(deployer)
         .methods.secret_keys_to_public_keys(escrowKeysFr[0], escrowKeysFr[1], escrowKeysFr[2], escrowKeysFr[3]),
       // Check escrow correctness
-      logicContract.withWallet(deployer).methods.check_escrow(escrowContract.address, escrowKeysFr),
+      logicContract
+        .withWallet(deployer)
+        .methods.check_escrow(
+          escrowContract.address,
+          escrowKeysFr[0],
+          escrowKeysFr[1],
+          escrowKeysFr[2],
+          escrowKeysFr[3],
+        ),
       // Share escrow
-      logicContract.withWallet(deployer).methods.share_escrow(escrowContract.address, escrowKeysFr, recipient),
+      logicContract
+        .withWallet(deployer)
+        .methods.share_escrow(
+          recipient,
+          escrowContract.address,
+          escrowKeysFr[0],
+          escrowKeysFr[1],
+          escrowKeysFr[2],
+          escrowKeysFr[3],
+        ),
       // Full token withdrawal
       logicContract
         .withWallet(deployer)
