@@ -13,7 +13,7 @@ contract TestLogic {
     };
 
     /// @notice Data privately emitted to an account that will use the escrow
-    /// @notice We declare the event struct here to expose it in the abi as macro event cannot be used in libraries, only in contracts
+    /// @dev We declare the event struct here to expose it in the abi as macro event cannot be used in libraries, only in contracts
     /// @param escrow The address of the escrow
     /// @param nsk_m The escrow nullifier secret key
     /// @param ivsk_m The escrow incoming viewing key
