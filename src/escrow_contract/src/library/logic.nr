@@ -7,7 +7,7 @@ use aztec::{
         constants::GENERATOR_INDEX__EVENT_COMMITMENT,
         contract_instance::ContractInstance,
         hash::poseidon2_hash_with_separator,
-        public_keys::{NpkM, IvpkM, OvpkM, TpkM, PublicKeys},
+        public_keys::{IvpkM, NpkM, OvpkM, PublicKeys, TpkM},
         traits::{Serialize, ToField},
     },
 };
@@ -45,7 +45,8 @@ pub fn _check_escrow(
     let escrow_instance: ContractInstance = get_contract_instance(escrow);
 
     // Compute the public keys from the secret keys
-    let computed_public_keys: PublicKeys = _secret_keys_to_public_keys(nsk_m, ivsk_m, ovsk_m, tsk_m);
+    let computed_public_keys: PublicKeys =
+        _secret_keys_to_public_keys(nsk_m, ivsk_m, ovsk_m, tsk_m);
 
     // Check the public keys are computed correctly
     assert_eq(computed_public_keys, escrow_instance.public_keys, "Escrow public keys mismatch");

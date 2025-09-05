@@ -1,15 +1,15 @@
 use crate::test::utils as logic_utils;
 use crate::TestLogic;
+use aztec::oracle::get_contract_instance::get_contract_instance;
 use aztec::protocol_types::traits::ToField;
 use aztec::test::helpers::test_environment::TestEnvironment;
-use aztec::oracle::get_contract_instance::get_contract_instance;
 
 // TODO: Testing that check_escrow succeeds is not possible given that custom salt is not supported yet in the test environment,
 // it will always revert with "Escrow salt should be equal to the this address"
 // Testing deployer and initialization hash has the same problem, it is not possible to deploy a contract with public keys and constructor/deployer
 // https://github.com/AztecProtocol/aztec-packages/issues/16656
 
-#[test(should_fail_with = "Public keys do not match")]
+#[test(should_fail_with = "Assertion failed: Escrow public keys mismatch")]
 unconstrained fn check_escrow_public_keys_mismatch() {
     let mut env = TestEnvironment::new();
 
@@ -26,11 +26,11 @@ unconstrained fn check_escrow_public_keys_mismatch() {
     let logic = logic_utils::deploy_logic(&mut env, escrow_class_id);
 
     TestLogic::at(logic)
-        .check_escrow(escrow, [incorrect_sk[0], incorrect_sk[1], incorrect_sk[2], incorrect_sk[3]])
+        .check_escrow(escrow, incorrect_sk[0], incorrect_sk[1], incorrect_sk[2], incorrect_sk[3])
         .call(&mut env.private());
 }
 
-#[test(should_fail_with = "Escrow class id does not match")]
+#[test(should_fail_with = "Assertion failed: Escrow class id mismatch")]
 unconstrained fn check_escrow_class_id_mismatch() {
     let mut env = TestEnvironment::new();
 
@@ -47,10 +47,10 @@ unconstrained fn check_escrow_class_id_mismatch() {
     // We deploy with a different class id, so the test should fail
     let logic = logic_utils::deploy_logic(&mut env, escrow_class_id + 1);
 
-    TestLogic::at(logic).check_escrow(escrow, [sk[0], sk[1], sk[2], sk[3]]).call(&mut env.private());
+    TestLogic::at(logic).check_escrow(escrow, sk[0], sk[1], sk[2], sk[3]).call(&mut env.private());
 }
 
-#[test(should_fail_with = "Escrow salt should be equal to the this address")]
+#[test(should_fail_with = "Assertion failed: Escrow salt mismatch")]
 unconstrained fn check_escrow_salt_mismatch() {
     let mut env = TestEnvironment::new();
 
@@ -66,5 +66,5 @@ unconstrained fn check_escrow_salt_mismatch() {
 
     let logic = logic_utils::deploy_logic(&mut env, escrow_class_id);
 
-    TestLogic::at(logic).check_escrow(escrow, [sk[0], sk[1], sk[2], sk[3]]).call(&mut env.private());
+    TestLogic::at(logic).check_escrow(escrow, sk[0], sk[1], sk[2], sk[3]).call(&mut env.private());
 }

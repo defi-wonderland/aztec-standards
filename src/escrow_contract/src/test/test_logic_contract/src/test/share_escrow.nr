@@ -1,9 +1,9 @@
 use crate::test::utils as logic_utils;
 use crate::TestLogic;
 use aztec::{
-    test::helpers::test_environment::TestEnvironment,
-    messages::processing::{get_private_logs, pending_tagged_log::PendingTaggedLog},
     capsules::CapsuleArray,
+    messages::processing::{get_private_logs, pending_tagged_log::PendingTaggedLog},
+    test::helpers::test_environment::TestEnvironment,
     utils::array,
 };
 
@@ -22,9 +22,10 @@ unconstrained fn share_escrow_success() {
 
     let logic = logic_utils::deploy_logic(&mut env, 1);
 
-
     env.impersonate(sender);
-    TestLogic::at(logic).share_escrow(escrow, [sk[0], sk[1], sk[2], sk[3]], recipient).call(&mut env.private());
+    TestLogic::at(logic).share_escrow(recipient, escrow, sk[0], sk[1], sk[2], sk[3]).call(
+        &mut env.private(),
+    );
 
     env.advance_block_by(1);
 

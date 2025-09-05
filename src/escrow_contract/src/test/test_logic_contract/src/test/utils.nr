@@ -14,7 +14,7 @@ pub unconstrained fn deploy_logic(
     let owner = env.create_account(1);
 
     // Deploy logic contract
-    let initializer_call_interface = TestLogic::interface().constructor(owner, escrow_class_id);
+    let initializer_call_interface = TestLogic::interface().constructor(escrow_class_id);
     let logic_contract = env
         .deploy("./@test_logic_contract", "TestLogic")
         .with_public_void_initializer(owner, initializer_call_interface);
