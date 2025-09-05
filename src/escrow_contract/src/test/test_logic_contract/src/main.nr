@@ -45,7 +45,6 @@ contract TestLogic {
     /// @notice Verifies that the keys correspond to the escrow address and that the escrow instance data is correct.
     /// @dev Reverts if the data is not correct.
     /// @param escrow The address of the escrow
-    /// @param escrow_class_id The contract class id of the escrow contract
     /// @param nsk_m The escrow nullifier secret key
     /// @param ivsk_m The escrow incoming viewing key
     /// @param ovsk_m The escrow outgoing viewing key
