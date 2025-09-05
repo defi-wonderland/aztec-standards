@@ -198,7 +198,7 @@ export async function deployLogicWithPublicKeys(publicKeys: PublicKeys, deployer
     publicKeys,
     deployer,
     TestLogicContractArtifact,
-    [deployer.getAddress(), escrowClassId],
+    [escrowClassId],
     'constructor',
   )
     .send()
