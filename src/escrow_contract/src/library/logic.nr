@@ -43,7 +43,7 @@ pub fn _check_escrow(
         _secret_keys_to_public_keys(keys[0], keys[1], keys[2], keys[3]);
 
     // Check the public keys are computed correctly
-    assert_eq(computed_public_keys, escrow_instance.public_keys, "Public keys do not match");
+    assert_eq(computed_public_keys, escrow_instance.public_keys, "Escrow public keys mismatch");
 
     // Force the initialization hash and deployer to be null
     assert_eq(escrow_instance.initialization_hash, 0, "Escrow initialization hash should be null");
@@ -53,15 +53,11 @@ pub fn _check_escrow(
     assert_eq(
         escrow_instance.contract_class_id.to_field(),
         escrow_class_id,
-        "Escrow class id does not match",
+        "Escrow class id mismatch",
     );
 
     // Force the salt to be equal to the address of the logic contract (this contract)
-    assert_eq(
-        escrow_instance.salt,
-        context.this_address().to_field(),
-        "Escrow salt should be equal to the this address",
-    );
+    assert_eq(escrow_instance.salt, context.this_address().to_field(), "Escrow salt mismatch");
 }
 
 /// @notice Shares the escrow details needed to find and use the escrow contract

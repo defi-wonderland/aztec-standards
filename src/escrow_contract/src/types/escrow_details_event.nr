@@ -18,7 +18,6 @@ impl Serialize<5> for EscrowDetailsLogContent {
 
 impl EventInterface for EscrowDetailsLogContent {
     fn get_event_type_id() -> EventSelector {
-        // From expansion of the event macro
-        EventSelector::from_field(3937172520)
+        EventSelector::from_signature("EscrowDetailsLogContent((Field),[Field;4])")
     }
 }
