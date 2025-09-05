@@ -7,7 +7,7 @@ use aztec::{
         constants::GENERATOR_INDEX__EVENT_COMMITMENT,
         contract_instance::ContractInstance,
         hash::poseidon2_hash_with_separator,
-        public_keys::{IvpkM, NpkM, OvpkM, PublicKeys, TpkM},
+        public_keys::{NpkM, IvpkM, OvpkM, TpkM, PublicKeys},
         traits::{Serialize, ToField},
     },
 };
@@ -26,24 +26,29 @@ use crate::types::escrow_details_event::EscrowDetailsLogContent;
 /// @dev Reverts if the data is not correct.
 /// @param context The private context
 /// @param escrow The address of the escrow
-/// @param keys The escrow keys [nsk_m, ivsk_m, ovsk_m, tsk_m]
 /// @param escrow_class_id The contract class id of the escrow contract
+/// @param nsk_m The escrow nullifier secret key
+/// @param ivsk_m The escrow incoming viewing key
+/// @param ovsk_m The escrow outgoing viewing key
+/// @param tsk_m The escrow transaction secret key
 #[contract_library_method]
 pub fn _check_escrow(
     context: &mut PrivateContext,
     escrow: AztecAddress,
-    keys: [Field; 4],
     escrow_class_id: Field,
+    nsk_m: Field,
+    ivsk_m: Field,
+    ovsk_m: Field,
+    tsk_m: Field,
 ) {
     // Get the escrow instance
     let escrow_instance: ContractInstance = get_contract_instance(escrow);
 
     // Compute the public keys from the secret keys
-    let computed_public_keys: PublicKeys =
-        _secret_keys_to_public_keys(keys[0], keys[1], keys[2], keys[3]);
+    let computed_public_keys: PublicKeys = _secret_keys_to_public_keys(nsk_m, ivsk_m, ovsk_m, tsk_m);
 
     // Check the public keys are computed correctly
-    assert_eq(computed_public_keys, escrow_instance.public_keys, "Public keys do not match");
+    assert_eq(computed_public_keys, escrow_instance.public_keys, "Escrow public keys mismatch");
 
     // Force the initialization hash and deployer to be null
     assert_eq(escrow_instance.initialization_hash, 0, "Escrow initialization hash should be null");
@@ -53,31 +58,33 @@ pub fn _check_escrow(
     assert_eq(
         escrow_instance.contract_class_id.to_field(),
         escrow_class_id,
-        "Escrow class id does not match",
+        "Escrow class id mismatch",
     );
 
     // Force the salt to be equal to the address of the logic contract (this contract)
-    assert_eq(
-        escrow_instance.salt,
-        context.this_address().to_field(),
-        "Escrow salt should be equal to the this address",
-    );
+    assert_eq(escrow_instance.salt, context.this_address().to_field(), "Escrow salt mismatch");
 }
 
 /// @notice Shares the escrow details needed to find and use the escrow contract
 /// @dev Emits a private log with the escrow details
 /// @param context The private context
-/// @param escrow The address of the escrow
-/// @param keys The escrow keys [nsk_m, ivsk_m, ovsk_m, tsk_m]
 /// @param account The address of the account that will use the escrow
+/// @param escrow The address of the escrow
+/// @param nsk_m The escrow nullifier secret key
+/// @param ivsk_m The escrow incoming viewing key
+/// @param ovsk_m The escrow outgoing viewing key
+/// @param tsk_m The escrow transaction secret key
 #[contract_library_method]
 pub fn _share_escrow(
     context: &mut PrivateContext,
-    escrow: AztecAddress,
-    keys: [Field; 4],
     account: AztecAddress,
+    escrow: AztecAddress,
+    nsk_m: Field,
+    ivsk_m: Field,
+    ovsk_m: Field,
+    tsk_m: Field,
 ) {
-    let event_struct = EscrowDetailsLogContent { escrow, keys };
+    let event_struct = EscrowDetailsLogContent { escrow, nsk_m, ivsk_m, ovsk_m, tsk_m };
 
     // Implementation from aztec-packages event_interface.nr in v1.2.1
     let (ciphertext, randomness) = to_encrypted_private_event_message(event_struct, account);
@@ -93,7 +100,7 @@ pub fn _share_escrow(
 
 /// @notice Withdraws an amount of tokens from the provided escrow.
 /// @param escrow The address of the escrow
-/// @param account The address of the account that will use the escrow
+/// @param account The address of the account that will receive the tokens
 /// @param token The address of the token
 /// @param amount The amount of tokens to withdraw from the escrow
 #[contract_library_method]
@@ -109,7 +116,7 @@ pub fn _withdraw(
 
 /// @notice Withdraws an NFT from the provided escrow.
 /// @param escrow The address of the escrow
-/// @param account The address of the account that will use the escrow
+/// @param account The address of the account that will receive the NFT
 /// @param nft The address of the NFT contract
 /// @param token_id The id of the token to withdraw from the escrow
 #[contract_library_method]
