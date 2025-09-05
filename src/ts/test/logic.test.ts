@@ -46,7 +46,7 @@ export async function deployLogicWithPublicKeys(publicKeys: PublicKeys, deployer
     publicKeys,
     deployer,
     TestLogicContractArtifact,
-    [deployer.getAddress(), escrowClassId],
+    [escrowClassId],
     'constructor',
   )
     .send()
@@ -215,7 +215,7 @@ describe('Logic - Single PXE', () => {
   });
 
   beforeEach(async () => {
-    // // Logic is deployed with the public keys because it sends encrypted events to the recipient and with the escrow class id
+    // Logic is deployed with the public keys because it sends encrypted events to the recipient and with the escrow class id
     logic = (await deployLogicWithPublicKeys(logicKeys.publicKeys, alice, escrowClassId)) as TestLogicContract;
 
     // Use the logic contract address as the salt for the escrow contract
@@ -353,7 +353,9 @@ describe('Logic - Single PXE', () => {
 
   describe('check_escrow', () => {
     it('logic should be able to check escrow correctly', async () => {
-      await logic.methods.check_escrow(escrow.instance.address, secretKeys).simulate();
+      await logic.methods
+        .check_escrow(escrow.instance.address, secretKeys[0], secretKeys[1], secretKeys[2], secretKeys[3])
+        .simulate();
     });
 
     it('check escrow with incorrect secret keys should fail', async () => {
@@ -361,8 +363,17 @@ describe('Logic - Single PXE', () => {
       let secretKeysPlusOne = secretKeys.map((sk) => sk.add(Fr.ONE));
 
       await expect(
-        logic.methods.check_escrow(escrow.instance.address, secretKeysPlusOne).send().wait(),
-      ).rejects.toThrow(/Assertion failed: Public keys do not match/);
+        logic.methods
+          .check_escrow(
+            escrow.instance.address,
+            secretKeysPlusOne[0],
+            secretKeysPlusOne[1],
+            secretKeysPlusOne[2],
+            secretKeysPlusOne[3],
+          )
+          .send()
+          .wait(),
+      ).rejects.toThrow(/Assertion failed: Escrow public keys mismatch/);
     });
 
     it('check escrow with non zero deployer should fail', async () => {
@@ -371,9 +382,12 @@ describe('Logic - Single PXE', () => {
         .send({ contractAddressSalt: escrowSalt })
         .deployed()) as EscrowContract;
 
-      await expect(logic.methods.check_escrow(escrow.instance.address, secretKeys).send().wait()).rejects.toThrow(
-        /Assertion failed: Escrow deployer should be null/,
-      );
+      await expect(
+        logic.methods
+          .check_escrow(escrow.instance.address, secretKeys[0], secretKeys[1], secretKeys[2], secretKeys[3])
+          .send()
+          .wait(),
+      ).rejects.toThrow(/Assertion failed: Escrow deployer should be null/);
     });
 
     it('check escrow with incorrect class id should fail', async () => {
@@ -384,9 +398,12 @@ describe('Logic - Single PXE', () => {
         escrowClassId.add(Fr.ONE),
       )) as TestLogicContract;
 
-      await expect(logic.methods.check_escrow(escrow.instance.address, secretKeys).send().wait()).rejects.toThrow(
-        /Assertion failed: Escrow class id does not match/,
-      );
+      await expect(
+        logic.methods
+          .check_escrow(escrow.instance.address, secretKeys[0], secretKeys[1], secretKeys[2], secretKeys[3])
+          .send()
+          .wait(),
+      ).rejects.toThrow(/Assertion failed: Escrow class id mismatch/);
     });
 
     it('check escrow with incorrect salt should fail', async () => {
@@ -397,9 +414,12 @@ describe('Logic - Single PXE', () => {
         escrowSalt.add(Fr.ONE),
       )) as EscrowContract;
 
-      await expect(logic.methods.check_escrow(escrow.instance.address, secretKeys).send().wait()).rejects.toThrow(
-        /Assertion failed: Escrow salt should be equal to the this address/,
-      );
+      await expect(
+        logic.methods
+          .check_escrow(escrow.instance.address, secretKeys[0], secretKeys[1], secretKeys[2], secretKeys[3])
+          .send()
+          .wait(),
+      ).rejects.toThrow(/Assertion failed: Escrow salt mismatch/);
     });
 
     // Testing non-zero initialization hash supposes there is an initialize function in the escrow contract
@@ -416,7 +436,17 @@ describe('Logic - Single PXE', () => {
       await alicePxe.registerAccount(logicSk, partialAddress);
 
       // Share the escrow contract with bob
-      const tx = await logic.methods.share_escrow(escrow.instance.address, secretKeys, bob.getAddress()).send().wait();
+      const tx = await logic.methods
+        .share_escrow(
+          bob.getAddress(),
+          escrow.instance.address,
+          secretKeys[0],
+          secretKeys[1],
+          secretKeys[2],
+          secretKeys[3],
+        )
+        .send()
+        .wait();
       const blockNumber = tx.blockNumber!;
 
       const bobPxe = pxe;
@@ -434,10 +464,10 @@ describe('Logic - Single PXE', () => {
       const event = events[0];
 
       expect(event.escrow).toEqual(escrow.instance.address);
-      expect(event.keys[0]).toEqual(escrowKeys.masterNullifierSecretKey.toBigInt());
-      expect(event.keys[1]).toEqual(escrowKeys.masterIncomingViewingSecretKey.toBigInt());
-      expect(event.keys[2]).toEqual(escrowKeys.masterOutgoingViewingSecretKey.toBigInt());
-      expect(event.keys[3]).toEqual(escrowKeys.masterTaggingSecretKey.toBigInt());
+      expect(event.nsk_m).toEqual(escrowKeys.masterNullifierSecretKey.toBigInt());
+      expect(event.ivsk_m).toEqual(escrowKeys.masterIncomingViewingSecretKey.toBigInt());
+      expect(event.ovsk_m).toEqual(escrowKeys.masterOutgoingViewingSecretKey.toBigInt());
+      expect(event.tsk_m).toEqual(escrowKeys.masterTaggingSecretKey.toBigInt());
     });
 
     it('share escrow with multiple recipients correctly', async () => {
@@ -449,13 +479,27 @@ describe('Logic - Single PXE', () => {
 
       // Share the escrow contract with bob
       const txForBob = await logic.methods
-        .share_escrow(escrow.instance.address, secretKeys, bob.getAddress())
+        .share_escrow(
+          bob.getAddress(),
+          escrow.instance.address,
+          secretKeys[0],
+          secretKeys[1],
+          secretKeys[2],
+          secretKeys[3],
+        )
         .send()
         .wait();
       const blockNumberBob = txForBob.blockNumber!;
 
       const txForCarl = await logic.methods
-        .share_escrow(escrow.instance.address, secretKeys, carl.getAddress())
+        .share_escrow(
+          carl.getAddress(),
+          escrow.instance.address,
+          secretKeys[0],
+          secretKeys[1],
+          secretKeys[2],
+          secretKeys[3],
+        )
         .send()
         .wait();
       const blockNumberCarl = txForCarl.blockNumber!;
@@ -477,17 +521,17 @@ describe('Logic - Single PXE', () => {
 
       const eventForBob = events[0];
       expect(eventForBob.escrow).toEqual(escrow.instance.address);
-      expect(eventForBob.keys[0]).toEqual(escrowKeys.masterNullifierSecretKey.toBigInt());
-      expect(eventForBob.keys[1]).toEqual(escrowKeys.masterIncomingViewingSecretKey.toBigInt());
-      expect(eventForBob.keys[2]).toEqual(escrowKeys.masterOutgoingViewingSecretKey.toBigInt());
-      expect(eventForBob.keys[3]).toEqual(escrowKeys.masterTaggingSecretKey.toBigInt());
+      expect(eventForBob.nsk_m).toEqual(escrowKeys.masterNullifierSecretKey.toBigInt());
+      expect(eventForBob.ivsk_m).toEqual(escrowKeys.masterIncomingViewingSecretKey.toBigInt());
+      expect(eventForBob.ovsk_m).toEqual(escrowKeys.masterOutgoingViewingSecretKey.toBigInt());
+      expect(eventForBob.tsk_m).toEqual(escrowKeys.masterTaggingSecretKey.toBigInt());
 
       const eventForCarl = events[1];
       expect(eventForCarl.escrow).toEqual(escrow.instance.address);
-      expect(eventForCarl.keys[0]).toEqual(escrowKeys.masterNullifierSecretKey.toBigInt());
-      expect(eventForCarl.keys[1]).toEqual(escrowKeys.masterIncomingViewingSecretKey.toBigInt());
-      expect(eventForCarl.keys[2]).toEqual(escrowKeys.masterOutgoingViewingSecretKey.toBigInt());
-      expect(eventForCarl.keys[3]).toEqual(escrowKeys.masterTaggingSecretKey.toBigInt());
+      expect(eventForCarl.nsk_m).toEqual(escrowKeys.masterNullifierSecretKey.toBigInt());
+      expect(eventForCarl.ivsk_m).toEqual(escrowKeys.masterIncomingViewingSecretKey.toBigInt());
+      expect(eventForCarl.ovsk_m).toEqual(escrowKeys.masterOutgoingViewingSecretKey.toBigInt());
+      expect(eventForCarl.tsk_m).toEqual(escrowKeys.masterTaggingSecretKey.toBigInt());
     });
   });
 
