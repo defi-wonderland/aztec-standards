@@ -264,7 +264,7 @@ describe('Logic - Single PXE', () => {
       );
 
       expect(receiptAfterMined.contract.instance.address).toEqual(deploymentData.address);
-    }, 300_000);
+    });
 
     it('deploys escrow with correctly derived address', async () => {
       const { address, initializationHash } = await deriveContractAddress(
@@ -278,7 +278,7 @@ describe('Logic - Single PXE', () => {
       expect(address).toEqual(escrow.instance.address);
       expect(initializationHash).toEqual(Fr.ZERO);
       expect(initializationHash).toEqual(escrow.instance.initializationHash);
-    }, 300_000);
+    });
   });
 
   describe('secret_keys_to_public_keys', () => {
@@ -311,7 +311,7 @@ describe('Logic - Single PXE', () => {
       expect(new Fr(circuitPublicKeys.tpk_m.inner.y).toString()).toBe(
         escrowKeys.publicKeys.masterTaggingPublicKey.y.toString(),
       );
-    }, 300_000);
+    });
 
     it('logic key derivation should fail if the secret key is not correct', async () => {
       // We add 1 to the secret key to make it incorrect
@@ -348,7 +348,7 @@ describe('Logic - Single PXE', () => {
       expect(new Fr(circuitPublicKeys.tpk_m.inner.y).toString()).not.toBe(
         escrowKeys.publicKeys.masterTaggingPublicKey.y.toString(),
       );
-    }, 300_000);
+    });
   });
 
   describe('check_escrow', () => {
