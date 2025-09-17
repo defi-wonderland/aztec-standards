@@ -208,13 +208,13 @@ describe('Logic - Single PXE', () => {
     it('deploys logic with correct constructor params', async () => {
       const deploymentData = await getContractInstanceFromDeployParams(TestLogicContractArtifact, {
         constructorArtifact: 'constructor',
-        constructorArgs: [alice.getAddress(), escrowClassId],
+        constructorArgs: [escrowClassId],
         salt: escrowSalt,
         deployer: alice.getAddress(),
       });
 
       const deployer = new ContractDeployer(TestLogicContractArtifact, alice, undefined, 'constructor');
-      const tx = deployer.deploy(alice.getAddress(), escrowClassId).send({
+      const tx = deployer.deploy(escrowClassId).send({
         contractAddressSalt: escrowSalt,
       });
 
