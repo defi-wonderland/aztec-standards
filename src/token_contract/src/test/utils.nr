@@ -10,8 +10,8 @@ use aztec::{
         storage::storage_read,
     },
     protocol_types::{address::AztecAddress, storage::map::derive_storage_slot_in_map},
-    test::helpers::test_environment::TestEnvironment,
     state_vars::private_set::PrivateSet,
+    test::helpers::test_environment::TestEnvironment,
 };
 use aztec::test::helpers::authwit as authwit_cheatcodes;
 use std::ops::WrappingSub;
