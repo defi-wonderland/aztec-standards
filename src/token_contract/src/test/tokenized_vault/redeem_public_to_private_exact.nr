@@ -1,7 +1,7 @@
 use crate::{test::{tokenized_vault::tokenized_vault_utils, utils::{self, mint_amount}}, Token};
 use aztec::test::helpers::authwit as authwit_cheatcodes;
 
-#[test(should_fail_with = "Artifact not found when calling private function. Contract address: 0x0000000000000000000000000000000000000000000000000000000000000000.")]
+#[test(should_fail_with = "No contract instance found for address 0x0000000000000000000000000000000000000000000000000000000000000000")]
 unconstrained fn redeem_public_to_private_exact_without_asset() {
     // Setup without account contracts. We are not using authwits here, so dummy accounts are enough
     let (_, asset_address, owner, recipient) =
@@ -17,8 +17,8 @@ unconstrained fn redeem_public_to_private_exact_without_asset() {
 }
 
 // TODO(#15666 & #15118): this test fails because the ivsk is currently needed for emitting a note, but the vault contract doesn't have one.
-// #[test]
-#[test(should_fail_with = "No public key registered for address")]
+// #[test(should_fail_with = "No public key registered for address")]
+#[test]
 unconstrained fn redeem_public_to_private_exact_success() {
     // Setup with asset token
     let (env, vault_address, owner, recipient, asset_address) = utils::setup_with_asset(false);
@@ -62,8 +62,8 @@ unconstrained fn redeem_public_to_private_exact_success() {
 }
 
 // TODO(#15666 & #15118): this test fails because the ivsk is currently needed for emitting a note, but the vault contract doesn't have one.
-// #[test]
-#[test(should_fail_with = "No public key registered for address")]
+// #[test(should_fail_with = "No public key registered for address")]
+#[test]
 unconstrained fn redeem_public_to_private_exact_after_yield() {
     // Setup with asset token
     let (env, vault_address, owner, recipient, asset_address) = utils::setup_with_asset(false);
@@ -112,8 +112,8 @@ unconstrained fn redeem_public_to_private_exact_after_yield() {
 }
 
 // TODO(#15666 & #15118): this test fails because the ivsk is currently needed for emitting a note, but the vault contract doesn't have one.
-// #[test]
-#[test(should_fail_with = "No public key registered for address")]
+// #[test(should_fail_with = "No public key registered for address")]
+#[test]
 unconstrained fn redeem_public_to_private_exact_request_fewer_assets() {
     // Setup with asset token
     let (env, vault_address, owner, recipient, asset_address) = utils::setup_with_asset(false);
@@ -266,8 +266,8 @@ unconstrained fn redeem_public_to_private_exact_on_behalf_of_wrong_caller() {
 }
 
 // TODO(#15666 & #15118): this test fails because the ivsk is currently needed for emitting a note, but the vault contract doesn't have one.
-// #[test]
-#[test(should_fail_with = "No public key registered for address")]
+// #[test(should_fail_with = "No public key registered for address")]
+#[test]
 unconstrained fn redeem_public_to_private_exact_on_behalf_of_other_success() {
     // Setup with asset token
     let (env, vault_address, owner, recipient, asset_address) = utils::setup_with_asset(true);

@@ -94,12 +94,15 @@ unconstrained fn deposit_private_to_private_after_yield() {
 
     // Deposit
     let expected_shares: u128 = deposit_amount / 2; // The initial rate, when shares' supply is still 0, is given by the amount of assets held by the vault + 1. Since yield = 1, the rate is 1:2.
-    Token::at(vault_address).deposit_private_to_private(
+    env.call_private(
         owner,
-        recipient,
-        deposit_amount,
-        expected_shares,
-        0,
+        Token::at(vault_address).deposit_private_to_private(
+            owner,
+            recipient,
+            deposit_amount,
+            expected_shares,
+            0,
+        ),
     );
 
     // Check recipient got shares
@@ -247,7 +250,7 @@ unconstrained fn deposit_private_to_private_on_behalf_of_wrong_caller() {
     // At the first deposit 1 share = 1 asset
     let shares = deposit_amount;
     env.call_private(
-        owner,
+        recipient,
         Token::at(vault_address).deposit_private_to_private(
             owner,
             recipient,

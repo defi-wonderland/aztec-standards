@@ -253,7 +253,7 @@ unconstrained fn deposit_public_to_private_on_behalf_of_wrong_caller() {
     // At the first deposit 1 share = 1 asset
     let shares = deposit_amount;
     env.call_private(
-        owner,
+        recipient,
         Token::at(vault_address).deposit_public_to_private(
             owner,
             recipient,

@@ -3,7 +3,8 @@ use aztec::test::helpers::authwit as authwit_cheatcodes;
 
 // #[test(should_fail_with = "Artifact not found when enriching public simulation error. Contract address: 0x0000000000000000000000000000000000000000000000000000000000000000.")]
 // TODO(https://defi-wonderland.slack.com/archives/C086S2Y2925/p1751922367349379): private --> public execution flow is broken in noir tests. While this should fail in private context, the public context error is currently thrown.
-#[test(should_fail_with = "Trying to read from uninitialized PublicImmutable")]
+// #[test(should_fail_with = "Trying to read from uninitialized PublicImmutable")]
+#[test(should_fail_with = "No contract instance found for address 0x0000000000000000000000000000000000000000000000000000000000000000")]
 unconstrained fn deposit_private_to_private_exact_without_asset() {
     // Setup without account contracts. We are not using authwits here, so dummy accounts are enough
     let (_, asset_address, owner, recipient) =
@@ -125,7 +126,7 @@ unconstrained fn deposit_private_to_private_exact_after_yield() {
 // #[test]
 // TODO: Test is incorrectly failing due to an issue that affects the discovery of partial notes.
 // When a partial note is initialized and completed and also a note is added, the partial note is not found.
-#[test(should_fail_with = "A partial note's completion log did not result in any notes being found - this should never happen")]
+// #[test(should_fail_with = "A partial note's completion log did not result in any notes being found - this should never happen")]
 unconstrained fn deposit_private_to_private_exact_request_fewer_shares() {
     // Setup with asset token
     let (env, vault_address, owner, recipient, asset_address) = utils::setup_with_asset(true);
