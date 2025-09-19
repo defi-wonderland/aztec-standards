@@ -464,12 +464,9 @@ describe('Tokenized Vault', () => {
       await asset.methods.mint_to_public(bob.getAddress(), initialAmount).send({ from: alice.getAddress() }).wait();
 
       // Alice deposits public assets, receives public shares
-      const depositAction = vault.methods.deposit_public_to_public(
-        alice.getAddress(),
-        alice.getAddress(),
-        assetsAlice,
-        0,
-      );
+      const depositAction = vault
+        .withWallet(alice)
+        .methods.deposit_public_to_public(alice.getAddress(), alice.getAddress(), assetsAlice, 0);
       await setPublicAuthWit(carl, depositAction, alice);
       await callVaultWithPublicAuthWit(depositAction, alice, assetsAlice);
 
@@ -477,13 +474,9 @@ describe('Tokenized Vault', () => {
       await asset.methods.mint_to_public(vault.address, yieldAmount).send({ from: alice.getAddress() }).wait();
 
       // Bob issues public shares for public assets
-      const issueAction = vault.methods.issue_public_to_public(
-        bob.getAddress(),
-        bob.getAddress(),
-        sharesBob,
-        assetsBob,
-        0,
-      );
+      const issueAction = vault
+        .withWallet(bob)
+        .methods.issue_public_to_public(bob.getAddress(), bob.getAddress(), sharesBob, assetsBob, 0);
       await setPublicAuthWit(carl, issueAction, bob);
       await callVaultWithPublicAuthWit(issueAction, bob, assetsBob);
 
@@ -1308,7 +1301,6 @@ describe('Tokenized Vault', () => {
           .withdraw_public_to_private(alice.getAddress(), alice.getAddress(), assetsAlice + 1, 0)
           .send({ from: alice.getAddress() })
           .wait(),
-        // ).rejects.toThrow(/No public key registered for address/);
       ).rejects.toThrow(/app_logic_reverted/);
     }, 300_000);
 
@@ -1324,7 +1316,7 @@ describe('Tokenized Vault', () => {
           .withdraw_private_to_private(alice.getAddress(), alice.getAddress(), assetsAlice + 1, sharesRequested, 0)
           .send({ from: alice.getAddress() })
           .wait(),
-      ).rejects.toThrow(/No public key registered for address/); // /app_logic_reverted/ /Insufficient shares burnt/
+      ).rejects.toThrow(/app_logic_reverted/);
 
       // Attempt burning more shares than Alice actually has
       sharesRequested = assetsAlice + 1;
@@ -1377,7 +1369,7 @@ describe('Tokenized Vault', () => {
           )
           .send({ from: alice.getAddress() })
           .wait(),
-      ).rejects.toThrow(/No public key registered for address/); // /app_logic_reverted/ /Underflow/
+      ).rejects.toThrow(/app_logic_reverted/);
 
       // Attempt burning more shares than Alice actually has
       sharesRequested = assetsAlice + 1;
@@ -1432,7 +1424,7 @@ describe('Tokenized Vault', () => {
           .redeem_public_to_private_exact(alice.getAddress(), alice.getAddress(), sharesRequested, minAssets, 0)
           .send({ from: alice.getAddress() })
           .wait(),
-      ).rejects.toThrow(/No public key registered for address/); // /app_logic_reverted/ /Underflow/
+      ).rejects.toThrow(/app_logic_reverted/);
     }, 300_000);
 
     it('redeem_private_to_public', async () => {
@@ -1472,7 +1464,7 @@ describe('Tokenized Vault', () => {
           .redeem_private_to_private_exact(alice.getAddress(), alice.getAddress(), sharesRequested, minAssets, 0)
           .send({ from: alice.getAddress() })
           .wait(),
-      ).rejects.toThrow(/No public key registered for address/); // /app_logic_reverted/ /Underflow/
+      ).rejects.toThrow(/app_logic_reverted/);
     }, 300_000);
   });
 });
