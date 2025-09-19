@@ -19,6 +19,7 @@
     "test:nr": "aztec test",
     "lint:prettier": "prettier '**/*.{js,ts}' --write",
     "bench": "NODE_NO_WARNINGS=1 aztec-benchmark --suffix _base",
+    "build": "yarn compile && aztec-postprocess-contract",
     "ccc": "yarn clean && yarn compile && yarn codegen"
   },
   "lint-staged": {
