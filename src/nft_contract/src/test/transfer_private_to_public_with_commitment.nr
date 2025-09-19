@@ -28,10 +28,7 @@ unconstrained fn nft_transfer_private_to_public_with_commitment_success() {
     utils::assert_owns_public_nft(env, nft_contract_address, recipient, token_id);
 
     // Verify commitment is stored
-    assert(
-        utils::get_commitment_stored(nft_contract_address, returned_commitment),
-        "Commitment not stored",
-    );
+    utils::check_commitment_is_stored(env, nft_contract_address, returned_commitment);
 }
 
 #[test]
@@ -63,10 +60,7 @@ unconstrained fn nft_transfer_private_to_public_with_commitment_authorized_succe
     utils::assert_owns_public_nft(env, nft_contract_address, recipient, token_id);
 
     // Verify commitment is stored
-    assert(
-        utils::get_commitment_stored(nft_contract_address, returned_commitment),
-        "Commitment not stored",
-    );
+    utils::check_commitment_is_stored(env, nft_contract_address, returned_commitment);
 }
 
 #[test]
@@ -93,7 +87,7 @@ unconstrained fn nft_transfer_private_to_public_with_commitment_and_finalize_suc
     // Verify intermediate state (public ownership and commitment)
     utils::assert_private_nft_nullified(env, nft_contract_address, owner, token_id);
     utils::assert_owns_public_nft(env, nft_contract_address, recipient, token_id);
-    assert(utils::get_commitment_stored(nft_contract_address, commitment), "Commitment not stored");
+    utils::check_commitment_is_stored(env, nft_contract_address, commitment);
 }
 
 #[test(should_fail_with = "nft not found in private to public")]

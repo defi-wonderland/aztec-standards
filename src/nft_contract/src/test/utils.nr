@@ -71,28 +71,30 @@ pub unconstrained fn setup_and_mint_to_private(
     (env, nft_contract_address, owner, minter, recipient)
 }
 
-pub unconstrained fn get_nft_exists(nft_contract_address: AztecAddress, token_id: Field) -> bool {
-    let current_contract_address = get_contract_address();
-    cheatcodes::set_contract_address(nft_contract_address);
-    let block_number = get_block_number();
-
-    let nft_exists_slot = NFT::storage_layout().nft_exists.slot;
-    let nft_slot = derive_storage_slot_in_map(nft_exists_slot, token_id);
-    let exists: bool = storage_read(nft_contract_address, nft_slot, block_number);
-
-    cheatcodes::set_contract_address(current_contract_address);
-    exists
-}
-
-pub unconstrained fn assert_nft_exists(nft_contract_address: AztecAddress, token_id: Field) {
-    assert(get_nft_exists(nft_contract_address, token_id), "NFT does not exist");
-}
-
-pub unconstrained fn assert_nft_does_not_exist(
+pub unconstrained fn assert_nft_exists(
+    env: TestEnvironment,
     nft_contract_address: AztecAddress,
     token_id: Field,
 ) {
-    assert(!get_nft_exists(nft_contract_address, token_id), "NFT exists when it should not");
+    env.public_context_at(nft_contract_address, |context| {
+        let nft_exists_slot = NFT::storage_layout().nft_exists.slot;
+        let nft_slot = derive_storage_slot_in_map(nft_exists_slot, token_id);
+        let nft_exists = context.storage_read(nft_slot);
+        assert(nft_exists, "NFT does not exist");
+    });
+}
+
+pub unconstrained fn assert_nft_does_not_exist(
+    env: TestEnvironment,
+    nft_contract_address: AztecAddress,
+    token_id: Field,
+) {
+    env.public_context_at(nft_contract_address, |context| {
+        let nft_exists_slot = NFT::storage_layout().nft_exists.slot;
+        let nft_slot = derive_storage_slot_in_map(nft_exists_slot, token_id);
+        let nft_exists = context.storage_read(nft_slot);
+        assert(!nft_exists, "NFT exists when it should not");
+    });
 }
 
 pub unconstrained fn assert_owns_public_nft(
@@ -131,8 +133,6 @@ pub unconstrained fn owns_private_nft(
     owner: AztecAddress,
     token_id: Field,
 ) -> bool {
-    let current_contract_address = get_contract_address();
-    cheatcodes::set_contract_address(nft_contract_address);
     // Direct call to unconstrained
     let (private_nfts, _) =
         env.simulate_utility(NFT::at(nft_contract_address).get_private_nfts(owner, 0));
@@ -143,20 +143,16 @@ pub unconstrained fn owns_private_nft(
             nft_found = true;
         }
     }
-    cheatcodes::set_contract_address(current_contract_address);
     nft_found
 }
 
-pub unconstrained fn get_commitment_stored(
+pub unconstrained fn check_commitment_is_stored(
+    env: TestEnvironment,
     nft_contract_address: AztecAddress,
     commitment: Field,
-) -> bool {
-    let current_contract_address = get_contract_address();
-    cheatcodes::set_contract_address(nft_contract_address);
-    let block_number = get_block_number();
-
-    let stored: bool = storage_read(nft_contract_address, commitment, block_number);
-
-    cheatcodes::set_contract_address(current_contract_address);
-    stored
+) {
+    env.public_context_at(nft_contract_address, |context| {
+        let stored = context.storage_read(commitment);
+        assert_eq(stored, true);
+    });
 }
