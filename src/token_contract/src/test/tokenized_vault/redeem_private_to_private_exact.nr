@@ -1,7 +1,8 @@
 use crate::{test::{tokenized_vault::tokenized_vault_utils, utils::{self, mint_amount}}, Token};
 use aztec::test::helpers::authwit as authwit_cheatcodes;
 
-#[test(should_fail_with = "Artifact not found when calling private function. Contract address: 0x0000000000000000000000000000000000000000000000000000000000000000.")]
+// #[test(should_fail_with = "Artifact not found when calling private function. Contract address: 0x0000000000000000000000000000000000000000000000000000000000000000.")]
+#[test(should_fail_with = "No contract instance found for address 0x0000000000000000000000000000000000000000000000000000000000000000")]
 unconstrained fn redeem_private_to_private_exact_without_asset() {
     // Setup without account contracts. We are not using authwits here, so dummy accounts are enough
     let (_, asset_address, owner, recipient) =
