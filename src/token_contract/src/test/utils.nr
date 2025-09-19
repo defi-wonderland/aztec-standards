@@ -10,7 +10,8 @@ use aztec::{
         storage::storage_read,
     },
     protocol_types::{address::AztecAddress, storage::map::derive_storage_slot_in_map},
-    test::helpers::{test_environment::TestEnvironment, txe_oracles::set_contract_address},
+    test::helpers::test_environment::TestEnvironment,
+    state_vars::private_set::PrivateSet,
 };
 use aztec::test::helpers::authwit as authwit_cheatcodes;
 use std::ops::WrappingSub;
@@ -289,34 +290,37 @@ pub unconstrained fn get_private_balance(
 }
 
 pub unconstrained fn get_private_balance_notes(
+    env: TestEnvironment,
     token_contract_address: AztecAddress,
     account: AztecAddress,
     offset: u32,
 ) -> BoundedVec<UintNote, MAX_NOTES_PER_PAGE> {
-    let current_contract_address = get_contract_address();
-    set_contract_address(token_contract_address);
-    let mut options = NoteViewerOptions::new();
-    let private_balances_slot = Token::storage_layout().private_balances.slot;
-    let private_balance_slot = derive_storage_slot_in_map(private_balances_slot, account);
-    let notes: BoundedVec<UintNote, MAX_NOTES_PER_PAGE> =
-        view_notes(private_balance_slot, options.set_offset(offset));
-    set_contract_address(current_contract_address);
+    let notes = env.utility_context(|context| {
+        let mut options = NoteViewerOptions::new();
+        let private_balances_slot = Token::storage_layout().private_balances.slot;
+        let private_balance_slot = derive_storage_slot_in_map(private_balances_slot, account);
+        let set = PrivateSet::new(context, private_balance_slot);
+        let notes: BoundedVec<UintNote, MAX_NOTES_PER_PAGE> =
+            set.view_notes(options.set_offset(offset));
+        notes
+    });
+
     notes
 }
 
 /// @notice Retrieves whether a commitment has been stored in the storage of the target contract
 pub unconstrained fn _commitment_storage_read(
+    env: TestEnvironment,
     target_contract_address: AztecAddress,
     commitment: Field,
 ) -> bool {
     // store current contract address
     let current_contract_address = get_contract_address();
     // set target contract address
-    set_contract_address(target_contract_address);
-    let block_number = get_block_number();
-    let value: bool = storage_read(target_contract_address, commitment, block_number);
-    // restore current contract address
-    set_contract_address(current_contract_address);
+    let value = env.public_context_at(target_contract_address, |context| {
+        let value: bool = context.storage_read(commitment);
+        value
+    });
     value
 }
 

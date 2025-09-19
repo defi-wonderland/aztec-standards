@@ -1,7 +1,7 @@
 use crate::{test::utils, Token};
 use aztec::{
     protocol_types::{address::AztecAddress, storage::map::derive_storage_slot_in_map},
-    test::helpers::{test_environment::TestEnvironment, txe_oracles::set_contract_address},
+    test::helpers::test_environment::TestEnvironment,
 };
 
 #[test]
