@@ -191,7 +191,7 @@ unconstrained fn redeem_public_to_private_exact_request_too_many_assets() {
     );
 }
 
-#[test(should_fail_with = "Unknown auth witness for message hash ")]
+#[test(should_fail_with = "Unknown auth witness for message hash")]
 unconstrained fn redeem_public_to_private_exact_without_approval() {
     // Setup with asset token
     let (env, vault_address, owner, recipient, asset_address) = utils::setup_with_asset(true);
@@ -212,7 +212,7 @@ unconstrained fn redeem_public_to_private_exact_without_approval() {
     let shares_to_burn: u128 = deposit_amount;
     let min_assets: u128 = deposit_amount;
     env.call_private(
-        deposit_recipient,
+        recipient,
         Token::at(vault_address).redeem_public_to_private_exact(
             deposit_recipient,
             recipient,

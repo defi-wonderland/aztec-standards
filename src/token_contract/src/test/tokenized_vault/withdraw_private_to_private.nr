@@ -20,7 +20,7 @@ unconstrained fn withdraw_private_to_private_without_asset() {
 
 // TODO(#15666 & #15118): this test fails because the ivsk is currently needed for emitting a note, but the vault contract doesn't have one.
 // #[test(should_fail_with = "No public key registered for address")]
-// #[test]
+#[test]
 unconstrained fn withdraw_private_to_private_success() {
     // Setup with asset token
     let (env, vault_address, owner, recipient, asset_address) = utils::setup_with_asset(false);
