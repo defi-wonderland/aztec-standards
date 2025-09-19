@@ -1,6 +1,9 @@
 use crate::NFT;
 use crate::test::utils;
-use aztec::{protocol_types::address::AztecAddress, test::helpers::authwit as authwit_cheatcodes};
+use aztec::{
+    oracle::random::random, protocol_types::address::AztecAddress,
+    test::helpers::authwit as authwit_cheatcodes,
+};
 
 #[test]
 unconstrained fn nft_transfer_public_to_private_success() {
@@ -77,8 +80,12 @@ unconstrained fn nft_transfer_public_to_private_unauthorized_fail() {
         utils::setup_and_mint_to_public(true, token_id);
 
     // Create transfer interface with non-zero nonce (indicating authorization needed)
-    let transfer_call_interface =
-        NFT::at(nft_contract_address).transfer_public_to_private(owner, recipient, token_id, 1);
+    let transfer_call_interface = NFT::at(nft_contract_address).transfer_public_to_private(
+        owner,
+        recipient,
+        token_id,
+        random(),
+    );
 
     // Impersonate recipient but DON'T add authorization witness
     // This test verifies that without an authorization witness (authwit),

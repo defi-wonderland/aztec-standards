@@ -91,7 +91,7 @@ pub contract NFT {
         token_id: Field,
         _nonce: Field,
     ) {
-        _validate_from_private(&mut context, from);
+        _validate_from_private::<4>(&mut context, from);
 
         _remove_private_token_owner(storage.private_nfts.at(from), token_id);
         NFT::at(context.this_address())
@@ -113,7 +113,7 @@ pub contract NFT {
         token_id: Field,
         _nonce: Field,
     ) -> Field {
-        _validate_from_private(&mut context, from);
+        _validate_from_private::<4>(&mut context, from);
 
         _remove_private_token_owner(storage.private_nfts.at(from), token_id);
         NFT::at(context.this_address())
@@ -138,7 +138,7 @@ pub contract NFT {
         token_id: Field,
         _nonce: Field,
     ) {
-        _validate_from_private(&mut context, from);
+        _validate_from_private::<4>(&mut context, from);
 
         _remove_private_token_owner(storage.private_nfts.at(from), token_id);
         _update_private_token_owner(&mut context, storage.private_nfts.at(to), to, token_id);
@@ -157,7 +157,7 @@ pub contract NFT {
         commitment: Field,
         _nonce: Field,
     ) {
-        _validate_from_private(&mut context, from);
+        _validate_from_private::<4>(&mut context, from);
 
         _remove_private_token_owner(storage.private_nfts.at(from), token_id);
         let completer = from;
@@ -179,7 +179,7 @@ pub contract NFT {
         token_id: Field,
         _nonce: Field,
     ) {
-        _validate_from_private(&mut context, from);
+        _validate_from_private::<4>(&mut context, from);
 
         NFT::at(context.this_address())
             .update_public_token_owner_internal(from, AztecAddress::zero(), token_id)
@@ -403,7 +403,7 @@ pub contract NFT {
     /// @param _nonce The nonce used for authwitness
     #[private]
     fn burn_private(from: AztecAddress, token_id: Field, _nonce: Field) {
-        _validate_from_private(&mut context, from);
+        _validate_from_private::<3>(&mut context, from);
 
         _remove_private_token_owner(storage.private_nfts.at(from), token_id);
         NFT::at(context.this_address()).set_nft_exists_internal(token_id, false).enqueue(
@@ -574,9 +574,9 @@ pub contract NFT {
     /// @param context The context of the private call
     /// @param from The address of the sender
     #[contract_library_method]
-    fn _validate_from_private(context: &mut PrivateContext, from: AztecAddress) {
+    fn _validate_from_private<let N: u32>(context: &mut PrivateContext, from: AztecAddress) {
         if (!from.eq(context.msg_sender())) {
-            assert_current_call_valid_authwit::<0>(context, from);
+            assert_current_call_valid_authwit::<N>(context, from);
         }
     }
 

@@ -32,7 +32,7 @@ unconstrained fn nft_mint_to_private_fail_same_nft_twice() {
 
     // Verify the NFT was minted correctly
     utils::assert_owns_private_nft(env, nft_contract_address, owner, token_id);
-    utils::assert_nft_exists(nft_contract_address, token_id);
+    utils::assert_nft_exists(env, nft_contract_address, token_id);
 
     // Second call should fail
     env.call_private(minter, mint_call_interface);

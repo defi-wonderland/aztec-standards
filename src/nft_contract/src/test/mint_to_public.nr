@@ -31,7 +31,7 @@ unconstrained fn nft_mint_to_public_fail_same_nft_twice() {
     let actual_owner = env.view_public(NFT::at(nft_contract_address).public_owner_of(token_id));
     assert(actual_owner == owner, "NFT not minted to correct owner");
 
-    utils::assert_nft_exists(nft_contract_address, token_id);
+    utils::assert_nft_exists(env, nft_contract_address, token_id);
 
     // Second call should fail
     env.call_public(minter, mint_call_interface);
