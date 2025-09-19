@@ -35,7 +35,7 @@ export default class TokenContractBenchmark extends Benchmark {
     const managers = await getInitialTestAccountsManagers(pxe);
     const accounts = await Promise.all(managers.map((acc) => acc.register()));
     const [deployer] = accounts;
-    const deployedBaseContract = await deployTokenWithMinter(deployer);
+    const deployedBaseContract = await deployTokenWithMinter(deployer, { from: deployer.getAddress() });
     const tokenContract = await TokenContract.at(deployedBaseContract.address, deployer);
     return { pxe, deployer, accounts, tokenContract };
   }
