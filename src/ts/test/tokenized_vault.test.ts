@@ -41,24 +41,26 @@ describe('Tokenized Vault', () => {
     action: ContractFunctionInteraction,
     from: AccountWalletWithSecretKey,
     amount: number,
-    nonce: number = 0,
+    options: { nonce?: number; caller?: AccountWalletWithSecretKey } = {},
   ) {
+    const { nonce = 0, caller = from } = options;
     const transfer = asset.methods.transfer_public_to_public(from.getAddress(), vault.address, amount, nonce);
     await setPublicAuthWit(vault.address, transfer, from);
-    await action.send({ from: from.getAddress() }).wait();
+    await action.send({ from: caller.getAddress() }).wait();
   }
 
   async function callVaultWithPrivateAuthWit(
     action: ContractFunctionInteraction,
     from: AccountWalletWithSecretKey,
     amount: number,
-    nonce: number = 0,
+    options: { nonce?: number; caller?: AccountWalletWithSecretKey } = {},
   ) {
+    const { nonce = 0, caller = from } = options;
     const transfer = asset.methods.transfer_private_to_public(from.getAddress(), vault.address, amount, nonce);
     const transferAuthWitness = await setPrivateAuthWit(vault.address, transfer, from);
     await action
       .with({ authWitnesses: [transferAuthWitness] })
-      .send({ from: from.getAddress() })
+      .send({ from: caller.getAddress() })
       .wait();
   }
 
@@ -76,9 +78,7 @@ describe('Tokenized Vault', () => {
 
     // Alice deposits private assets, receives private shares
     await callVaultWithPrivateAuthWit(
-      vault
-        .withWallet(account)
-        .methods.deposit_private_to_private(account.getAddress(), account.getAddress(), assets, shares, 0),
+      vault.methods.deposit_private_to_private(account.getAddress(), account.getAddress(), assets, shares, 0),
       account,
       assets,
     );
@@ -90,7 +90,7 @@ describe('Tokenized Vault', () => {
 
     // Alice deposits public assets, receives public shares
     await callVaultWithPublicAuthWit(
-      vault.withWallet(account).methods.deposit_public_to_public(account.getAddress(), account.getAddress(), assets, 0),
+      vault.methods.deposit_public_to_public(account.getAddress(), account.getAddress(), assets, 0),
       account,
       assets,
     );
@@ -464,21 +464,28 @@ describe('Tokenized Vault', () => {
       await asset.methods.mint_to_public(bob.getAddress(), initialAmount).send({ from: alice.getAddress() }).wait();
 
       // Alice deposits public assets, receives public shares
-      const depositAction = vault
-        .withWallet(alice)
-        .methods.deposit_public_to_public(alice.getAddress(), alice.getAddress(), assetsAlice, 0);
+      const depositAction = vault.methods.deposit_public_to_public(
+        alice.getAddress(),
+        alice.getAddress(),
+        assetsAlice,
+        0,
+      );
       await setPublicAuthWit(carl, depositAction, alice);
-      await callVaultWithPublicAuthWit(depositAction, alice, assetsAlice);
+      await callVaultWithPublicAuthWit(depositAction, alice, assetsAlice, { caller: carl });
 
       // Simulate yield: mint assets to vault
       await asset.methods.mint_to_public(vault.address, yieldAmount).send({ from: alice.getAddress() }).wait();
 
       // Bob issues public shares for public assets
-      const issueAction = vault
-        .withWallet(bob)
-        .methods.issue_public_to_public(bob.getAddress(), bob.getAddress(), sharesBob, assetsBob, 0);
+      const issueAction = vault.methods.issue_public_to_public(
+        bob.getAddress(),
+        bob.getAddress(),
+        sharesBob,
+        assetsBob,
+        0,
+      );
       await setPublicAuthWit(carl, issueAction, bob);
-      await callVaultWithPublicAuthWit(issueAction, bob, assetsBob);
+      await callVaultWithPublicAuthWit(issueAction, bob, assetsBob, { caller: carl });
 
       // Check asset balances
       await expectTokenBalances(asset, alice, initialAmount - assetsAlice, 0);
@@ -547,6 +554,7 @@ describe('Tokenized Vault', () => {
         depositAction.with({ authWitnesses: [depositAuthWitness] }),
         alice,
         assetsAlice,
+        { caller: carl },
       );
 
       // Simulate yield: mint assets to vault
@@ -561,7 +569,9 @@ describe('Tokenized Vault', () => {
         0,
       );
       const issueAuthWitness = await setPrivateAuthWit(carl, issueAction, bob);
-      await callVaultWithPrivateAuthWit(issueAction.with({ authWitnesses: [issueAuthWitness] }), bob, assetsBob);
+      await callVaultWithPrivateAuthWit(issueAction.with({ authWitnesses: [issueAuthWitness] }), bob, assetsBob, {
+        caller: carl,
+      });
 
       // Check asset balances
       await expectTokenBalances(asset, alice, 0, initialAmount - assetsAlice);
@@ -620,7 +630,12 @@ describe('Tokenized Vault', () => {
         0,
       );
       const depositAuthWitness = await setPrivateAuthWit(carl, depositAction, alice);
-      await callVaultWithPublicAuthWit(depositAction.with({ authWitnesses: [depositAuthWitness] }), alice, assetsAlice);
+      await callVaultWithPublicAuthWit(
+        depositAction.with({ authWitnesses: [depositAuthWitness] }),
+        alice,
+        assetsAlice,
+        { caller: carl },
+      );
 
       // Simulate yield: mint assets to vault
       await asset.methods.mint_to_public(vault.address, yieldAmount).send({ from: alice.getAddress() }).wait();
@@ -634,7 +649,9 @@ describe('Tokenized Vault', () => {
         0,
       );
       const issueAuthWitness = await setPrivateAuthWit(carl, issueAction, bob);
-      await callVaultWithPublicAuthWit(issueAction.with({ authWitnesses: [issueAuthWitness] }), bob, assetsBob);
+      await callVaultWithPublicAuthWit(issueAction.with({ authWitnesses: [issueAuthWitness] }), bob, assetsBob, {
+        caller: carl,
+      });
 
       // Check asset balances
       await expectTokenBalances(asset, alice, initialAmount - assetsAlice, 0);
@@ -711,6 +728,7 @@ describe('Tokenized Vault', () => {
         depositAction.with({ authWitnesses: [depositAuthWitness] }),
         alice,
         assetsAlice,
+        { caller: carl },
       );
 
       // Simulate yield: mint assets to vault
@@ -725,7 +743,9 @@ describe('Tokenized Vault', () => {
         0,
       );
       const issueAuthWitness = await setPrivateAuthWit(carl, issueAction, bob);
-      await callVaultWithPrivateAuthWit(issueAction.with({ authWitnesses: [issueAuthWitness] }), bob, assetsBob);
+      await callVaultWithPrivateAuthWit(issueAction.with({ authWitnesses: [issueAuthWitness] }), bob, assetsBob, {
+        caller: carl,
+      });
 
       // Check asset balances
       await expectTokenBalances(asset, alice, 0, initialAmount - assetsAlice);
@@ -796,6 +816,7 @@ describe('Tokenized Vault', () => {
         depositAction.with({ authWitnesses: [depositAuthWitness] }),
         alice,
         assetsAlice,
+        { caller: carl },
       );
 
       // Simulate yield: mint assets to vault
@@ -814,6 +835,7 @@ describe('Tokenized Vault', () => {
         publicDepositAction.with({ authWitnesses: [publicDepositAuthWitness] }),
         bob,
         assetsBob,
+        { caller: carl },
       );
 
       // Check asset balances
