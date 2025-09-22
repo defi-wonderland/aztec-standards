@@ -263,12 +263,9 @@ pub contract Token {
             INITIAL_TRANSFER_CALL_MAX_NOTES,
         );
 
+        let completer = context.msg_sender();
         Token::at(context.this_address())
-            .increase_commitment_balance_internal(
-                PartialUintNote::from_field(commitment),
-                from,
-                amount,
-            )
+            .increase_commitment_balance_internal(PartialUintNote { commitment }, completer, amount)
             .enqueue(&mut context);
     }
 
