@@ -18,8 +18,6 @@ unconstrained fn withdraw_private_to_private_without_asset() {
     );
 }
 
-// TODO(#15666 & #15118): this test fails because the ivsk is currently needed for emitting a note, but the vault contract doesn't have one.
-// #[test(should_fail_with = "No public key registered for address")]
 #[test]
 unconstrained fn withdraw_private_to_private_success() {
     // Setup with asset token
@@ -62,8 +60,6 @@ unconstrained fn withdraw_private_to_private_success() {
     utils::check_public_balance(env, asset_address, vault_address, 0);
 }
 
-// TODO(#15666 & #15118): this test fails because the ivsk is currently needed for emitting a note, but the vault contract doesn't have one.
-// #[test(should_fail_with = "No public key registered for address")]
 #[test]
 unconstrained fn withdraw_private_to_private_after_yield() {
     // Setup with asset token
@@ -111,8 +107,6 @@ unconstrained fn withdraw_private_to_private_after_yield() {
     utils::check_private_balance(env, asset_address, recipient, deposit_amount + 1);
 }
 
-// TODO(#15666 & #15118): this test fails because the ivsk is currently needed for emitting a note, but the vault contract doesn't have one.
-// #[test(should_fail_with = "No public key registered for address")]
 #[test]
 unconstrained fn withdraw_private_to_private_request_fewer_assets() {
     // Setup with asset token
@@ -156,9 +150,6 @@ unconstrained fn withdraw_private_to_private_request_fewer_assets() {
     utils::check_public_balance(env, asset_address, vault_address, 1);
 }
 
-// TODO: this test should fail because the ivsk is currently needed for emitting a note, but the vault contract doesn't have one.
-// However, tests written in noir execute enqueued public call immediately instead of at the end of private execution.
-// #[test(should_fail_with = "No public key registered for address")]
 #[test(should_fail_with = "Insufficient shares burnt")]
 unconstrained fn withdraw_private_to_private_request_too_many_assets() {
     // Setup with asset token
@@ -266,8 +257,6 @@ unconstrained fn withdraw_private_to_private_on_behalf_of_wrong_caller() {
     );
 }
 
-// TODO(#15666 & #15118): this test fails because the ivsk is currently needed for emitting a note, but the vault contract doesn't have one.
-// #[test(should_fail_with = "No public key registered for address")]
 #[test]
 unconstrained fn withdraw_private_to_private_on_behalf_of_other_success() {
     // Setup with asset token

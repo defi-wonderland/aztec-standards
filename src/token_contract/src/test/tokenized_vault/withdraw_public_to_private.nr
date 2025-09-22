@@ -1,9 +1,6 @@
 use crate::{test::{tokenized_vault::tokenized_vault_utils, utils::{self, mint_amount}}, Token};
 use aztec::test::helpers::authwit as authwit_cheatcodes;
 
-// #[test(should_fail_with = "Artifact not found when enriching public simulation error. Contract address: 0x0000000000000000000000000000000000000000000000000000000000000000.")]
-// TODO(https://defi-wonderland.slack.com/archives/C086S2Y2925/p1751922367349379): private --> public execution flow is broken in noir tests. While this should fail in private context, the public context error is currently thrown.
-// #[test(should_fail_with = "Trying to read from uninitialized PublicImmutable")]
 #[test(should_fail_with = "No contract instance found for address 0x0000000000000000000000000000000000000000000000000000000000000000")]
 unconstrained fn withdraw_public_to_private_without_asset() {
     // Setup without account contracts. We are not using authwits here, so dummy accounts are enough
@@ -19,8 +16,6 @@ unconstrained fn withdraw_public_to_private_without_asset() {
     );
 }
 
-// TODO(#15666 & #15118): this test fails because the ivsk is currently needed for emitting a note, but the vault contract doesn't have one.
-// #[test(should_fail_with = "No public key registered for address")]
 // #[test]
 unconstrained fn withdraw_public_to_private_success() {
     // Setup with asset token
@@ -61,8 +56,6 @@ unconstrained fn withdraw_public_to_private_success() {
     utils::check_public_balance(env, asset_address, vault_address, 0);
 }
 
-// TODO(#15666 & #15118): this test fails because the ivsk is currently needed for emitting a note, but the vault contract doesn't have one.
-// #[test(should_fail_with = "No public key registered for address")]
 #[test]
 unconstrained fn withdraw_public_to_private_after_yield() {
     // Setup with asset token
@@ -175,8 +168,6 @@ unconstrained fn withdraw_public_to_private_on_behalf_of_wrong_caller() {
     );
 }
 
-// TODO(#15666 & #15118): this test fails because the ivsk is currently needed for emitting a note, but the vault contract doesn't have one.
-// #[test(should_fail_with = "No public key registered for address")]
 #[test]
 unconstrained fn withdraw_public_to_private_on_behalf_of_other_success() {
     // Setup with asset token
