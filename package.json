@@ -20,7 +20,7 @@
     "lint:prettier": "prettier '**/*.{js,ts}' --write",
     "bench": "NODE_NO_WARNINGS=1 aztec-benchmark --suffix _base",
     "build": "yarn compile && aztec-postprocess-contract",
-    "ccc": "yarn clean && yarn compile && yarn codegen"
+    "cccp": "yarn clean && yarn compile && yarn codegen && aztec-postprocess-contract"
   },
   "lint-staged": {
     "*.ts": "prettier --write -u"
@@ -32,7 +32,7 @@
     "@aztec/protocol-contracts": "2.0.3",
     "@aztec/pxe": "2.0.3",
     "@aztec/stdlib": "2.0.3",
-    "@defi-wonderland/aztec-benchmark": "1.0.1",
+    "@defi-wonderland/aztec-benchmark": "2.0.0",
     "@types/node": "22.5.1"
   },
   "devDependencies": {
