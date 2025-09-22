@@ -3,7 +3,7 @@ use aztec::test::helpers::authwit as authwit_cheatcodes;
 
 // #[test(should_fail_with = "Artifact not found when enriching public simulation error. Contract address: 0x0000000000000000000000000000000000000000000000000000000000000000.")]
 // TODO(https://defi-wonderland.slack.com/archives/C086S2Y2925/p1751922367349379): private --> public execution flow is broken in noir tests. While this should fail in private context, the public context error is currently thrown.
-#[test(should_fail_with = "Trying to read from uninitialized PublicImmutable")]
+#[test(should_fail_with = "Failed to sync block: Unable to insert values into tree NullifierTree")]
 unconstrained fn deposit_private_to_public_without_asset() {
     // Setup without account contracts. We are not using authwits here, so dummy accounts are enough
     let (_, asset_address, owner, recipient) = utils::setup_and_mint_to_public_without_minter(true);
@@ -63,7 +63,7 @@ unconstrained fn deposit_private_to_public_after_yield() {
 
     // Mint some asset tokens to the vault contract
     let yield_amount: u128 = 1;
-    Token::at(asset_address).mint_to_public(vault_address, yield_amount);
+    env.call_public(owner, Token::at(asset_address).mint_to_public(vault_address, yield_amount));
 
     // Mint some asset tokens to owner
     let deposit_amount: u128 = mint_amount;
@@ -139,7 +139,7 @@ unconstrained fn deposit_private_to_public_on_behalf_of_wrong_caller() {
 
     // Deposit
     env.call_private(
-        owner,
+        recipient,
         Token::at(vault_address).deposit_private_to_public(owner, recipient, deposit_amount, 0),
     );
 }

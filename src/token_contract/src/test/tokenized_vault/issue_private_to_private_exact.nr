@@ -1,7 +1,7 @@
 use crate::{test::utils::{self, mint_amount}, Token};
 use aztec::test::helpers::authwit as authwit_cheatcodes;
 
-#[test(should_fail_with = "Artifact not found when calling private function. Contract address: 0x0000000000000000000000000000000000000000000000000000000000000000.")]
+#[test(should_fail_with = "No contract instance found for address 0x0000000000000000000000000000000000000000000000000000000000000000")]
 unconstrained fn issue_private_to_private_exact_without_asset() {
     // Setup without account contracts. We are not using authwits here, so dummy accounts are enough
     let (_, asset_address, owner, recipient) =
@@ -119,7 +119,8 @@ unconstrained fn issue_private_to_private_exact_after_yield() {
 
 // TODO: Test is incorrectly failing due to an issue that affects the discovery of partial notes.
 // When a partial note is initialized and completed and also a note is added, the partial note is not found.
-#[test(should_fail_with = "A partial note's completion log did not result in any notes being found - this should never happen")]
+// #[test(should_fail_with = "A partial note's completion log did not result in any notes being found - this should never happen")]
+#[test]
 unconstrained fn issue_private_to_private_exact_too_many_assets() {
     // Setup with asset token
     let (env, vault_address, owner, recipient, asset_address) = utils::setup_with_asset(true);
@@ -247,7 +248,7 @@ unconstrained fn issue_private_to_private_exact_on_behalf_of_wrong_caller() {
     // At the first deposit 1 share = 1 asset
     let max_assets = deposit_amount;
     env.call_private(
-        owner,
+        recipient,
         Token::at(vault_address).issue_private_to_private_exact(
             owner,
             recipient,

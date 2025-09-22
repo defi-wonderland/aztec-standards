@@ -47,12 +47,15 @@ unconstrained fn deposit_public_to_private_exact_success() {
     // Deposit
     // At the first deposit 1 share = 1 asset
     let min_shares = deposit_amount;
-    Token::at(vault_address).deposit_public_to_private_exact(
+    env.call_private(
         owner,
-        recipient,
-        deposit_amount,
-        min_shares,
-        0,
+        Token::at(vault_address).deposit_public_to_private_exact(
+            owner,
+            recipient,
+            deposit_amount,
+            min_shares,
+            0,
+        ),
     );
 
     // Check recipient got shares
@@ -74,7 +77,7 @@ unconstrained fn deposit_public_to_private_exact_after_yield() {
 
     // Mint some asset tokens to the vault contract
     let yield_amount: u128 = 1;
-    Token::at(asset_address).mint_to_public(vault_address, yield_amount);
+    env.call_public(owner, Token::at(asset_address).mint_to_public(vault_address, yield_amount));
 
     // Mint some asset tokens to owner
     let deposit_amount: u128 = mint_amount;
@@ -93,12 +96,15 @@ unconstrained fn deposit_public_to_private_exact_after_yield() {
 
     // Deposit
     let min_shares: u128 = deposit_amount / 2; // The initial rate, when shares' supply is still 0, is given by the amount of assets held by the vault + 1. Since yield = 1, the rate is 1:2.
-    Token::at(vault_address).deposit_public_to_private_exact(
+    env.call_private(
         owner,
-        recipient,
-        deposit_amount,
-        min_shares,
-        0,
+        Token::at(vault_address).deposit_public_to_private_exact(
+            owner,
+            recipient,
+            deposit_amount,
+            min_shares,
+            0,
+        ),
     );
 
     // Check recipient got shares
@@ -121,7 +127,8 @@ unconstrained fn deposit_public_to_private_exact_after_yield() {
 // #[test]
 // TODO: Test is incorrectly failing due to an issue that affects the discovery of partial notes.
 // When a partial note is initialized and completed and also a note is added, the partial note is not found.
-#[test(should_fail_with = "A partial note's completion log did not result in any notes being found - this should never happen")]
+// #[test(should_fail_with = "A partial note's completion log did not result in any notes being found - this should never happen")]
+#[test]
 unconstrained fn deposit_public_to_private_exact_request_fewer_shares() {
     // Setup with asset token
     let (env, vault_address, owner, recipient, asset_address) = utils::setup_with_asset(true);
@@ -144,12 +151,15 @@ unconstrained fn deposit_public_to_private_exact_request_fewer_shares() {
     // Deposit
     // At the first deposit 1 share = 1 asset
     let min_shares = deposit_amount - 1; // But should receive deposit_amount
-    Token::at(vault_address).deposit_public_to_private_exact(
+    env.call_private(
         owner,
-        recipient,
-        deposit_amount,
-        min_shares,
-        0,
+        Token::at(vault_address).deposit_public_to_private_exact(
+            owner,
+            recipient,
+            deposit_amount,
+            min_shares,
+            0,
+        ),
     );
 
     // Check recipient got shares
@@ -186,12 +196,15 @@ unconstrained fn deposit_public_to_private_exact_request_too_many_shares() {
     // Deposit
     // At the first deposit 1 share = 1 asset
     let min_shares = deposit_amount + 1;
-    Token::at(vault_address).deposit_public_to_private_exact(
+    env.call_private(
         owner,
-        recipient,
-        deposit_amount,
-        min_shares,
-        0,
+        Token::at(vault_address).deposit_public_to_private_exact(
+            owner,
+            recipient,
+            deposit_amount,
+            min_shares,
+            0,
+        ),
     );
 }
 
@@ -207,12 +220,15 @@ unconstrained fn deposit_public_to_private_exact_without_asset_approval() {
     // Deposit
     // At the first deposit 1 share = 1 asset
     let min_shares = deposit_amount;
-    Token::at(vault_address).deposit_public_to_private_exact(
+    env.call_private(
         owner,
-        recipient,
-        deposit_amount,
-        min_shares,
-        0,
+        Token::at(vault_address).deposit_public_to_private_exact(
+            owner,
+            recipient,
+            deposit_amount,
+            min_shares,
+            0,
+        ),
     );
 }
 
@@ -237,12 +253,15 @@ unconstrained fn deposit_public_to_private_exact_on_behalf_of_wrong_caller() {
     // Deposit
     // At the first deposit 1 share = 1 asset
     let min_shares = deposit_amount;
-    Token::at(vault_address).deposit_public_to_private_exact(
-        owner,
+    env.call_private(
         recipient,
-        deposit_amount,
-        min_shares,
-        0,
+        Token::at(vault_address).deposit_public_to_private_exact(
+            owner,
+            recipient,
+            deposit_amount,
+            min_shares,
+            0,
+        ),
     );
 }
 
@@ -278,12 +297,15 @@ unconstrained fn deposit_public_to_private_exact_on_behalf_of_other_success() {
     );
 
     // Deposit
-    Token::at(vault_address).deposit_public_to_private_exact(
+    env.call_private(
         owner,
-        recipient,
-        deposit_amount,
-        min_shares,
-        0,
+        Token::at(vault_address).deposit_public_to_private_exact(
+            owner,
+            recipient,
+            deposit_amount,
+            min_shares,
+            0,
+        ),
     );
 
     // Check recipient got shares

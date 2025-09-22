@@ -1,7 +1,7 @@
 use crate::{test::utils::{self, mint_amount}, Token};
 use aztec::test::helpers::authwit as authwit_cheatcodes;
 
-#[test(should_fail_with = "Artifact not found when calling private function. Contract address: 0x0000000000000000000000000000000000000000000000000000000000000000.")]
+#[test(should_fail_with = "No contract instance found for address 0x0000000000000000000000000000000000000000000000000000000000000000")]
 unconstrained fn issue_private_to_public_exact_without_asset() {
     // Setup without account contracts. We are not using authwits here, so dummy accounts are enough
     let (_, asset_address, owner, recipient) =
@@ -245,7 +245,7 @@ unconstrained fn issue_private_to_public_exact_on_behalf_of_wrong_caller() {
     // At the first deposit 1 share = 1 asset
     let max_assets = deposit_amount;
     env.call_private(
-        owner,
+        recipient,
         Token::at(vault_address).issue_private_to_public_exact(
             owner,
             recipient,

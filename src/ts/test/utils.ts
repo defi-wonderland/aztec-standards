@@ -151,7 +151,7 @@ export async function deployVaultAndAssetWithMinter(deployer: AccountWallet): Pr
 export async function setPrivateAuthWit(
   caller: AztecAddress | { getAddress: () => AztecAddress },
   action: ContractFunctionInteraction,
-  deployer: AccountWallet,
+  account: AccountWallet,
 ): Promise<AuthWitness> {
   const callerAddress = caller instanceof AztecAddress ? caller : caller.getAddress();
 
@@ -159,13 +159,13 @@ export async function setPrivateAuthWit(
     caller: callerAddress,
     action: action,
   };
-  return deployer.createAuthWit(intent);
+  return account.createAuthWit(intent);
 }
 
 export async function setPublicAuthWit(
   caller: AztecAddress | { getAddress: () => AztecAddress },
   action: ContractFunctionInteraction,
-  deployer: AccountWallet,
+  account: AccountWallet,
 ) {
   const callerAddress = caller instanceof AztecAddress ? caller : caller.getAddress();
 
@@ -173,6 +173,6 @@ export async function setPublicAuthWit(
     caller: callerAddress,
     action: action,
   };
-  await deployer.createAuthWit(intent);
-  await (await deployer.setPublicAuthWit(intent, true)).send({ from: deployer.getAddress() }).wait();
+  await account.createAuthWit(intent);
+  await (await account.setPublicAuthWit(intent, true)).send({ from: account.getAddress() }).wait();
 }
