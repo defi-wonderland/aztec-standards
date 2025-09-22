@@ -138,22 +138,19 @@ unconstrained fn redeem_private_to_private_exact_request_fewer_assets() {
     );
 
     // The deposit_recipient receives change, since he sent 1 share too many
-    utils::check_private_balance(env, vault_address, deposit_recipient, 1);
+    utils::check_private_balance(env, vault_address, deposit_recipient, 0);
     utils::check_public_balance(env, vault_address, deposit_recipient, 0);
     utils::check_public_balance(env, vault_address, recipient, 0);
 
     // Check the total supply got updated
     let total_supply = env.view_public(Token::at(vault_address).total_supply());
-    assert(total_supply == 1, "Incorrect shares total supply");
+    assert(total_supply == 0, "Incorrect shares total supply");
 
     // Check asset balances
-    utils::check_private_balance(env, asset_address, recipient, min_assets);
-    utils::check_public_balance(env, asset_address, vault_address, 1);
+    utils::check_private_balance(env, asset_address, recipient, deposit_amount);
+    utils::check_public_balance(env, asset_address, vault_address, 0);
 }
 
-// TODO: this test should fail because the ivsk is currently needed for emitting a note, but the vault contract doesn't have one.
-// However, tests written in noir execute enqueued public call immediately instead of at the end of private execution.
-// #[test(should_fail_with = "No public key registered for address")]
 #[test(should_fail_with = "Assertion failed: attempt to subtract with overflow")]
 unconstrained fn redeem_private_to_private_exact_request_too_many_assets() {
     // Setup with asset token

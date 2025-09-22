@@ -1,20 +1,16 @@
 use crate::{test::{tokenized_vault::tokenized_vault_utils, utils::{self, mint_amount}}, Token};
 use aztec::test::helpers::authwit as authwit_cheatcodes;
 
-// #[test(should_fail_with = "Artifact not found when enriching public simulation error. Contract address: 0x0000000000000000000000000000000000000000000000000000000000000000.")]
-// TODO(https://defi-wonderland.slack.com/archives/C086S2Y2925/p1751922367349379): private --> public execution flow is broken in noir tests. While this should fail in private context, the public context error is currently thrown.
-#[test(should_fail_with = "Trying to read from uninitialized PublicImmutable")]
+#[test(should_fail_with = "No contract instance found for address 0x0000000000000000000000000000000000000000000000000000000000000000")]
 unconstrained fn withdraw_private_to_private_without_asset() {
     // Setup without account contracts. We are not using authwits here, so dummy accounts are enough
-    let (_, asset_address, owner, recipient) =
-        utils::setup_and_mint_to_public_without_minter(false);
-
-    let (env, vault_address, _, _, minter) = utils::setup_with_minter(false);
+    let (env, vault_address, owner, recipient, minter) = utils::setup_with_minter(false);
+    utils::mint_to_private(env, vault_address, owner, mint_amount, minter);
 
     // Withdrawal should fail because the PublicImmutable asset was not initialized
     env.call_private(
         owner,
-        Token::at(vault_address).withdraw_private_to_private(owner, recipient, 0, 0, 0),
+        Token::at(vault_address).withdraw_private_to_private(owner, recipient, 0, mint_amount, 0),
     );
 }
 
