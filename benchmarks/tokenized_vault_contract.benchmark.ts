@@ -49,13 +49,17 @@ export default class TokenContractBenchmark extends Benchmark {
     const assetMethods = assetContract.withWallet(deployer).methods;
 
     // Mint initial asset supply to the deployer
-    await assetContract.withWallet(deployer).methods.mint_to_public(deployer.getAddress(), amt(100)).send().wait();
+    await assetContract
+      .withWallet(deployer)
+      .methods.mint_to_public(deployer.getAddress(), amt(100))
+      .send({ from: deployer.getAddress() })
+      .wait();
     for (let i = 0; i < 6; i++) {
       // 1 Note per benchmark test so that a single full Note is used in each.
       await assetContract
         .withWallet(deployer)
         .methods.mint_to_private(deployer.getAddress(), deployer.getAddress(), amt(1))
-        .send()
+        .send({ from: deployer.getAddress() })
         .wait();
     }
 
@@ -65,7 +69,7 @@ export default class TokenContractBenchmark extends Benchmark {
     await vaultContract
       .withWallet(deployer)
       .methods.deposit_public_to_public(deployer.getAddress(), AztecAddress.ZERO, amt(1), 1234)
-      .send()
+      .send({ from: deployer.getAddress() })
       .wait();
 
     /* ======================= PUBLIC AUTHWITS ========================== */
@@ -92,7 +96,7 @@ export default class TokenContractBenchmark extends Benchmark {
     // 3. deposit_private_to_private_exact
     // 4. issue_private_to_public_exact
     // 5. issue_private_to_private_exact
-    const authWitnesses = [];
+    const authWitnesses: AuthWitness[] = [];
     for (let i = 0; i < 5; i++) {
       const nonce = 100 + i;
       action = assetMethods.transfer_private_to_public(deployer.getAddress(), vaultContract.address, amt(1), nonce);
