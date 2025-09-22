@@ -176,8 +176,12 @@ export async function setPublicAuthWit(
 
 /**
  * Initializes a transfer commitment
- * @param deployer - The wallet to deploy the contract with.
- * @returns Partial not commitment
+ * @param token - The token contract instance.
+ * @param caller - The wallet that will interact with the token contract.
+ * @param from - The address of the sender.
+ * @param to - The address of the recipient.
+ * @param completer - The address allowed to complete the partial note.
+ * @returns Partial note commitment
  */
 export async function initializeTransferCommitment(
   token: TokenContract,
@@ -205,6 +209,7 @@ export async function initializeTransferCommitment(
 
   // Prove and send the exact same request
   const prov = await caller.proveTx(req, sim.privateExecutionResult);
+  // const tx = await prov.toTx(); v2.0.3
   const txHash = await caller.sendTx(prov.toTx());
   await caller.getTxReceipt(txHash);
 
