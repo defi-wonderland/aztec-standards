@@ -485,6 +485,8 @@ describe('Token - Single PXE', () => {
   }, 300_000);
 });
 
+// While upgrading in early August multi PXE support was broken, this test is skipped until it is fixed.
+// TODO: we should re-evaluate the necessity of this test suite, the other contracts don't have it and we don't seem to care.
 describe.skip('Token - Multi PXE', () => {
   let pxe: PXE;
 
