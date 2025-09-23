@@ -16,7 +16,7 @@ unconstrained fn withdraw_public_to_private_without_asset() {
     );
 }
 
-// #[test]
+#[test]
 unconstrained fn withdraw_public_to_private_success() {
     // Setup with asset token
     let (env, vault_address, owner, recipient, asset_address) = utils::setup_with_asset(false);
