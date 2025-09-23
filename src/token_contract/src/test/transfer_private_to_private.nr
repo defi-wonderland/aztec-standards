@@ -29,7 +29,7 @@ unconstrained fn transfer_private_on_behalf_of_other() {
     utils::check_private_balance(env, token_contract_address, recipient, transfer_amount);
 }
 
-// TODO: skipping for now
+#[test]
 unconstrained fn transfer_private_multiple_notes_recursively() {
     // Setup with account contracts. Slower since we actually deploy them, but needed for authwits.
     let (mut env, token_contract_address, owner, recipient, minter) =

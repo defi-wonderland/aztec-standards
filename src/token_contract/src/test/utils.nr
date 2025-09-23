@@ -295,7 +295,7 @@ pub unconstrained fn get_private_balance_notes(
     account: AztecAddress,
     offset: u32,
 ) -> BoundedVec<UintNote, MAX_NOTES_PER_PAGE> {
-    let notes = env.utility_context(|context| {
+    let notes = env.utility_context_at(token_contract_address, |context| {
         let mut options = NoteViewerOptions::new();
         let private_balances_slot = Token::storage_layout().private_balances.slot;
         let private_balance_slot = derive_storage_slot_in_map(private_balances_slot, account);
