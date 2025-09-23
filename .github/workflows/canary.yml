@@ -49,7 +49,7 @@ jobs:
           yarn add @defi-wonderland/aztec-standards@canary
 
       - name: Compile
-        run: yarn build
+        run: yarn compile
 
       - name: Codegen
         run: aztec codegen target --outdir artifacts

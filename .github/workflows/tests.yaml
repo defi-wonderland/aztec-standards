@@ -65,7 +65,7 @@ jobs:
           run: yarn --frozen-lockfile
   
         - name: Compile
-          run: yarn build
+          run: yarn compile
   
         - name: Codegen
           run: yarn codegen
