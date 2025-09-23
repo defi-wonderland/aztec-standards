@@ -1,6 +1,5 @@
 use aztec::{
     context::{PrivateContext, UtilityContext},
-    macros::storage::storage,
     note::{
         note_emission::OuterNoteEmission,
         note_getter_options::{NoteGetterOptions, SortOrder},
