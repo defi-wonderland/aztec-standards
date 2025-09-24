@@ -16,12 +16,12 @@ contract TestLogic {
     };
 
     /// @notice Data privately emitted to an account that will use the escrow
-    /// @notice We declare the event struct here to expose it in the abi as macro event cannot be used in libraries, only in contracts
+    /// @dev We declare the event struct here to expose it in the abi as macro event cannot be used in libraries, only in contracts
     /// @param escrow The address of the escrow
-    /// @param nsk_m The escrow nullifier secret key
-    /// @param ivsk_m The escrow incoming viewing key
-    /// @param ovsk_m The escrow outgoing viewing key
-    /// @param tsk_m The escrow transaction secret key
+    /// @param nsk_m Master Nullifier Secret Key
+    /// @param ivsk_m Incoming Viewing Key
+    /// @param ovsk_m Outgoing Viewing Key
+    /// @param tsk_m Tagging Secret Key
     #[event]
     struct EscrowDetailsLogContent {
         escrow: AztecAddress,
@@ -48,11 +48,10 @@ contract TestLogic {
     /// @notice Verifies that the keys correspond to the escrow address and that the escrow instance data is correct.
     /// @dev Reverts if the data is not correct.
     /// @param escrow The address of the escrow
-    /// @param escrow_class_id The contract class id of the escrow contract
-    /// @param nsk_m The escrow nullifier secret key
-    /// @param ivsk_m The escrow incoming viewing key
-    /// @param ovsk_m The escrow outgoing viewing key
-    /// @param tsk_m The escrow transaction secret key
+    /// @param nsk_m Master Nullifier Secret Key
+    /// @param ivsk_m Incoming Viewing Key
+    /// @param ovsk_m Outgoing Viewing Key
+    /// @param tsk_m Tagging Secret Key
     #[private]
     fn check_escrow(
         escrow: AztecAddress,
@@ -76,10 +75,10 @@ contract TestLogic {
     /// @dev Emits a private log with the escrow details
     /// @param account The address of the account that will receive the escrow details
     /// @param escrow The address of the escrow
-    /// @param nsk_m The escrow nullifier secret key
-    /// @param ivsk_m The escrow incoming viewing key
-    /// @param ovsk_m The escrow outgoing viewing key
-    /// @param tsk_m The escrow transaction secret key
+    /// @param nsk_m Master Nullifier Secret Key
+    /// @param ivsk_m Incoming Viewing Key
+    /// @param ovsk_m Outgoing Viewing Key
+    /// @param tsk_m Tagging Secret Key
     #[private]
     fn share_escrow(
         account: AztecAddress,
@@ -121,7 +120,7 @@ contract TestLogic {
     /// @param nsk_m Master Nullifier Secret Key
     /// @param ivsk_m Incoming Viewing Key
     /// @param ovsk_m Outgoing Viewing Key
-    /// @param tsk_m Transaction Secret Key
+    /// @param tsk_m Tagging Secret Key
     /// @return PublicKeys containing the derived public keys.
     #[private]
     fn secret_keys_to_public_keys(
