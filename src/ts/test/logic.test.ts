@@ -11,12 +11,6 @@ import {
   GrumpkinScalar,
   getContractClassFromArtifact,
 } from '@aztec/aztec.js';
-import {
-  computeInitializationHash,
-  computeContractAddressFromInstance,
-  computeSaltedInitializationHash,
-} from '@aztec/stdlib/contract';
-import { getDefaultInitializer } from '@aztec/stdlib/abi';
 import { deriveKeys } from '@aztec/stdlib/keys';
 import {
   setupPXE,
@@ -34,82 +28,7 @@ import { TestLogicContractArtifact, TestLogicContract, EscrowDetailsLogContent }
 import { EscrowContractArtifact, EscrowContract } from '../../../artifacts/Escrow.js';
 import { TokenContract } from '../../../artifacts/Token.js';
 import { NFTContract } from '../../../artifacts/NFT.js';
-
-/**
- * Deploys the Logic contract.
- * @param deployer - The wallet to deploy the contract with.
- * @param escrowClassId - The class id of the escrow contract.
- * @returns A deployed contract instance.
- */
-export async function deployLogic(deployer: AccountWallet, escrowClassId: Fr) {
-  const contract = await Contract.deploy(deployer, TestLogicContractArtifact, [escrowClassId], 'constructor')
-    .send()
-    .deployed();
-  return contract as TestLogicContract;
-}
-
-/**
- * Deploys the Escrow contract.
- * @param publicKeys - The public keys to use for the contract.
- * @param deployer - The wallet to deploy the contract with.
- * @param salt - The salt to use for the contract address. If not provided, a random salt will be used.
- * @returns A deployed contract instance.
- */
-export async function deployEscrowWithPublicKeysAndSalt(
-  publicKeys: PublicKeys,
-  deployer: AccountWallet,
-  salt: Fr = Fr.random(),
-  args: unknown[] = [],
-  constructor?: string,
-): Promise<EscrowContract> {
-  const contract = await Contract.deployWithPublicKeys(publicKeys, deployer, EscrowContractArtifact, args, constructor)
-    .send({ contractAddressSalt: salt, universalDeploy: true })
-    .deployed();
-  return contract as EscrowContract;
-}
-
-/**
- * Predicts the contract address for a given artifact and constructor arguments.
- * @param artifact - The contract artifact.
- * @param constructorArgs - The arguments to pass to the constructor.
- * @param deployer - The address of the deployer.
- * @param salt - The salt to use for the contract address. If not provided, a random salt will be used.
- * @param publicKeys - The public keys to use for the contract.
- * @returns The predicted contract address.
- */
-export async function deriveContractAddress(
-  artifact: any,
-  constructorArgs: any,
-  deployer: AztecAddress = AztecAddress.ZERO,
-  salt: Fr = Fr.random(),
-  publicKeys: PublicKeys,
-) {
-  if (!publicKeys) {
-    publicKeys = await PublicKeys.random();
-  }
-
-  const contractClass = await getContractClassFromArtifact(artifact);
-  const contractClassId = contractClass.id;
-  const constructorArtifact = getDefaultInitializer(artifact);
-  const initializationHash = await computeInitializationHash(constructorArtifact, constructorArgs);
-  const saltedInitializationHash = await computeSaltedInitializationHash({
-    initializationHash,
-    salt,
-    deployer,
-  });
-
-  const address = await computeContractAddressFromInstance({
-    originalContractClassId: contractClassId,
-    saltedInitializationHash: saltedInitializationHash,
-    publicKeys: publicKeys,
-  });
-
-  return { address, initializationHash, saltedInitializationHash };
-}
-
-export function grumpkinScalarToFr(scalar: GrumpkinScalar) {
-  return new Fr(scalar.toBigInt());
-}
+import { deployLogic, deployEscrowWithPublicKeysAndSalt, grumpkinScalarToFr, deriveContractAddress } from './utils.js';
 
 // Check if an address owns a specific NFT in private state
 async function assertOwnsPrivateNFT(
