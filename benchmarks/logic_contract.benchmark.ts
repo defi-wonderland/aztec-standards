@@ -17,11 +17,7 @@ import { TokenContract } from '../artifacts/Token.js';
 import { EscrowContract, EscrowContractArtifact } from '../artifacts/Escrow.js';
 import { NFTContract } from '../artifacts/NFT.js';
 import { TestLogicContract } from '../artifacts/TestLogic.js';
-import {
-  deployLogicWithPublicKeys,
-  deployEscrowWithPublicKeysAndSalt,
-  grumpkinScalarToFr,
-} from '../src/ts/test/utils.js';
+import { deployLogic, deployEscrowWithPublicKeysAndSalt, grumpkinScalarToFr } from '../src/ts/test/utils.js';
 import { deployTokenWithMinter, deployNFTWithMinter, setupPXE } from '../src/ts/test/utils.js';
 
 // Extend the BenchmarkContext from the new package
@@ -57,15 +53,10 @@ export default class LogicContractBenchmark extends Benchmark {
     const [deployer] = accounts;
 
     const logicSk = Fr.random();
-    const logicKeys = await deriveKeys(logicSk);
     const escrowClassId = (await getContractClassFromArtifact(EscrowContractArtifact)).id;
 
     // Deploy logic contract
-    const logicContract = (await deployLogicWithPublicKeys(
-      logicKeys.publicKeys,
-      deployer,
-      escrowClassId,
-    )) as TestLogicContract;
+    const logicContract = (await deployLogic(deployer, escrowClassId)) as TestLogicContract;
     const partialAddressLogic = await logicContract.partialAddress;
     await pxe.registerAccount(logicSk, partialAddressLogic);
 
