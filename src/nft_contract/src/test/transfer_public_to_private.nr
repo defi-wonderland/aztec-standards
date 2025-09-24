@@ -1,6 +1,9 @@
 use crate::NFT;
 use crate::test::utils;
-use aztec::{prelude::AztecAddress, test::helpers::authwit as authwit_cheatcodes};
+use aztec::{
+    oracle::random::random, protocol_types::address::AztecAddress,
+    test::helpers::authwit as authwit_cheatcodes,
+};
 
 #[test]
 unconstrained fn nft_transfer_public_to_private_success() {
@@ -13,16 +16,15 @@ unconstrained fn nft_transfer_public_to_private_success() {
     utils::assert_owns_public_nft(env, nft_contract_address, owner, token_id);
 
     // Transfer NFT from public to private state
-    env.impersonate(owner);
-    NFT::at(nft_contract_address).transfer_public_to_private(owner, recipient, token_id, 0).call(
-        &mut env.private(),
+    env.call_private(
+        owner,
+        NFT::at(nft_contract_address).transfer_public_to_private(owner, recipient, token_id, 0),
     );
-    env.advance_block_by(1);
 
     // Verify the NFT is no longer owned publicly by owner
     utils::assert_owns_public_nft(env, nft_contract_address, AztecAddress::zero(), token_id);
     // Verify the NFT is now owned privately by recipient
-    utils::assert_owns_private_nft(nft_contract_address, recipient, token_id);
+    utils::assert_owns_private_nft(env, nft_contract_address, recipient, token_id);
 }
 
 #[test]
@@ -44,14 +46,12 @@ unconstrained fn nft_transfer_public_to_private_authorized_success() {
     );
 
     // Impersonate recipient to perform the authorized transfer
-    env.impersonate(recipient);
-    transfer_call_interface.call(&mut env.private());
-    env.advance_block_by(1);
+    env.call_private(recipient, transfer_call_interface);
 
     // Verify the NFT is no longer owned publicly by owner
     utils::assert_owns_public_nft(env, nft_contract_address, AztecAddress::zero(), token_id);
     // Verify the NFT is now owned privately by recipient
-    utils::assert_owns_private_nft(nft_contract_address, recipient, token_id);
+    utils::assert_owns_private_nft(env, nft_contract_address, recipient, token_id);
 }
 
 #[test(should_fail_with = "caller is not owner")]
@@ -61,10 +61,15 @@ unconstrained fn nft_transfer_public_to_private_not_owned_fail() {
     let non_existent_token_id = 12345;
 
     // Attempt to transfer a token that doesn't exist / isn't owned
-    env.impersonate(owner);
-    NFT::at(nft_contract_address)
-        .transfer_public_to_private(owner, recipient, non_existent_token_id, 0)
-        .call(&mut env.private());
+    env.call_private(
+        owner,
+        NFT::at(nft_contract_address).transfer_public_to_private(
+            owner,
+            recipient,
+            non_existent_token_id,
+            0,
+        ),
+    );
 }
 
 #[test(should_fail_with = "Unknown auth witness for message hash")]
@@ -75,12 +80,15 @@ unconstrained fn nft_transfer_public_to_private_unauthorized_fail() {
         utils::setup_and_mint_to_public(true, token_id);
 
     // Create transfer interface with non-zero nonce (indicating authorization needed)
-    let transfer_call_interface =
-        NFT::at(nft_contract_address).transfer_public_to_private(owner, recipient, token_id, 1);
+    let transfer_call_interface = NFT::at(nft_contract_address).transfer_public_to_private(
+        owner,
+        recipient,
+        token_id,
+        random(),
+    );
 
     // Impersonate recipient but DON'T add authorization witness
     // This test verifies that without an authorization witness (authwit),
     // the recipient cannot transfer the NFT on behalf of the owner
-    env.impersonate(recipient);
-    transfer_call_interface.call(&mut env.private());
+    env.call_private(recipient, transfer_call_interface);
 }

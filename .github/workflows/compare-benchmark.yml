@@ -53,6 +53,10 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.base.sha }}
 
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.17.0
+
       - name: Detect Aztec version (BASE)
         id: basever
         run: |

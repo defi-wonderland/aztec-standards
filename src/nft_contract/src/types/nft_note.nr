@@ -13,7 +13,6 @@ use aztec::{
         },
         hash::poseidon2_hash_with_separator,
         traits::{Deserialize, Hash, Packable, Serialize, ToField},
-        utils::arrays::array_concat,
     },
 };
 
@@ -25,8 +24,8 @@ use aztec::{
 
 // docs:start:nft_note
 /// A private note representing a token id associated to an account.
+#[derive(Eq, Serialize, Packable)]
 #[custom_note]
-#[derive(Eq, Serialize)]
 pub struct NFTNote {
     // The ordering of these fields is important given that it must:
     //   a) match that of NFTPartialNotePrivateContent, and
@@ -92,6 +91,7 @@ impl NoteHash for NFTNote {
 }
 
 impl NFTNote {
+
     pub fn new(token_id: Field, owner: AztecAddress) -> Self {
         // Safety: We use the randomness to preserve the privacy of the note recipient by preventing brute-forcing,
         // so a malicious sender could use non-random values to make the note less private. But they already know
@@ -123,7 +123,6 @@ impl NFTNote {
         storage_slot: Field,
         context: &mut PrivateContext,
         recipient: AztecAddress,
-        sender: AztecAddress,
         completer: AztecAddress,
     ) -> PartialNFTNote {
         // Safety: We use the randomness to preserve the privacy of the note recipient by preventing brute-forcing,
@@ -149,7 +148,7 @@ impl NFTNote {
         };
 
         let encrypted_log =
-            note::compute_partial_note_log(private_log_content, storage_slot, recipient, sender);
+            note::compute_partial_note_log(private_log_content, storage_slot, recipient);
         // Regardless of the original content size, the log is padded with random bytes up to
         // `PRIVATE_LOG_SIZE_IN_FIELDS` to prevent leaking information about the actual size.
         let length = encrypted_log.len();
@@ -181,7 +180,7 @@ impl NFTPartialNotePrivateContent {
     fn compute_partial_commitment(self, storage_slot: Field) -> Field {
         // Here we commit to all private values, including the storage slot.
         poseidon2_hash_with_separator(
-            array_concat(self.pack(), [storage_slot]),
+            self.pack().concat([storage_slot]),
             GENERATOR_INDEX__NOTE_HASH,
         )
     }
@@ -214,6 +213,11 @@ pub struct PartialNFTNote {
 }
 
 impl PartialNFTNote {
+    /// Creates a new partial note with the given commitment.
+    pub fn new(commitment: Field) -> Self {
+        Self { commitment }
+    }
+
     /// Returns the commitment field of this partial note.
     pub fn commitment(self) -> Field {
         self.commitment
