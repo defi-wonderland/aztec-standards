@@ -7,7 +7,8 @@ use aztec::{
     utils::array,
 };
 
-// This test is skipped because it needs to be updated to work with the new sync private state
+// TODO: This test is skipped because it needs to be updated to work with the new sync private state
+// Sync private state after env.advance_block_by(1);
 // #[test]
 unconstrained fn share_escrow_success() {
     let mut env = TestEnvironment::new();
@@ -28,8 +29,6 @@ unconstrained fn share_escrow_success() {
     );
 
     env.advance_block_by(1);
-
-    // TODO: sync private state and continue with the test
 
     let mut logs: CapsuleArray<PendingTaggedLog> = get_private_logs(sender);
     println(logs);
