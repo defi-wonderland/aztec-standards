@@ -188,19 +188,12 @@ export async function setPublicAuthWit(
 
 /**
  * Deploys the Logic contract.
- * @param publicKeys - The public keys to use for the contract.
  * @param deployer - The wallet to deploy the contract with.
- * @param escrowClassId - The escrow class ID.
+ * @param escrowClassId - The class id of the escrow contract.
  * @returns A deployed contract instance.
  */
-export async function deployLogicWithPublicKeys(publicKeys: PublicKeys, deployer: AccountWallet, escrowClassId: Fr) {
-  const contract = await Contract.deployWithPublicKeys(
-    publicKeys,
-    deployer,
-    TestLogicContractArtifact,
-    [escrowClassId],
-    'constructor',
-  )
+export async function deployLogic(deployer: AccountWallet, escrowClassId: Fr) {
+  const contract = await Contract.deploy(deployer, TestLogicContractArtifact, [escrowClassId], 'constructor')
     .send()
     .deployed();
   return contract as TestLogicContract;

@@ -28,12 +28,7 @@ import { TestLogicContractArtifact, TestLogicContract, EscrowDetailsLogContent }
 import { EscrowContractArtifact, EscrowContract } from '../../../artifacts/Escrow.js';
 import { TokenContract } from '../../../artifacts/Token.js';
 import { NFTContract } from '../../../artifacts/NFT.js';
-import {
-  deployLogicWithPublicKeys,
-  deployEscrowWithPublicKeysAndSalt,
-  grumpkinScalarToFr,
-  deriveContractAddress,
-} from './utils.js';
+import { deployLogic, deployEscrowWithPublicKeysAndSalt, grumpkinScalarToFr, deriveContractAddress } from './utils.js';
 
 // Check if an address owns a specific NFT in private state
 async function assertOwnsPrivateNFT(
@@ -71,15 +66,6 @@ describe('Logic - Single PXE', () => {
 
   // Logic contract
   let logic: TestLogicContract;
-  let logicSk: Fr;
-  let logicKeys: {
-    masterNullifierSecretKey: GrumpkinScalar;
-    masterIncomingViewingSecretKey: GrumpkinScalar;
-    masterOutgoingViewingSecretKey: GrumpkinScalar;
-    masterTaggingSecretKey: GrumpkinScalar;
-    publicKeys: PublicKeys;
-  };
-  let logicSecretKeys: Fr[];
 
   // Escrow contract
   let escrow: EscrowContract;
@@ -99,16 +85,6 @@ describe('Logic - Single PXE', () => {
     ({ pxe, deployer, wallets, store } = await setupTestSuite());
 
     [alice, bob, carl] = wallets;
-
-    // Derive the keys for the logic contract
-    logicSk = Fr.ONE;
-    logicKeys = await deriveKeys(logicSk);
-    logicSecretKeys = [
-      grumpkinScalarToFr(logicKeys.masterNullifierSecretKey),
-      grumpkinScalarToFr(logicKeys.masterIncomingViewingSecretKey),
-      grumpkinScalarToFr(logicKeys.masterOutgoingViewingSecretKey),
-      grumpkinScalarToFr(logicKeys.masterTaggingSecretKey),
-    ];
 
     // Get the class id of the escrow contract
     escrowClassId = (await getContractClassFromArtifact(EscrowContractArtifact)).id;
@@ -134,7 +110,7 @@ describe('Logic - Single PXE', () => {
 
   beforeEach(async () => {
     // Logic is deployed with the public keys because it sends encrypted events to the recipient and with the escrow class id
-    logic = (await deployLogicWithPublicKeys(logicKeys.publicKeys, alice, escrowClassId)) as TestLogicContract;
+    logic = (await deployLogic(alice, escrowClassId)) as TestLogicContract;
 
     // Use the logic contract address as the salt for the escrow contract
     escrowSalt = new Fr(logic.instance.address.toBigInt());
@@ -151,13 +127,13 @@ describe('Logic - Single PXE', () => {
     it('deploys logic with correct constructor params', async () => {
       const deploymentData = await getContractInstanceFromDeployParams(TestLogicContractArtifact, {
         constructorArtifact: 'constructor',
-        constructorArgs: [alice.getAddress(), escrowClassId],
+        constructorArgs: [escrowClassId],
         salt: escrowSalt,
         deployer: alice.getAddress(),
       });
 
       const deployer = new ContractDeployer(TestLogicContractArtifact, alice, undefined, 'constructor');
-      const tx = deployer.deploy(alice.getAddress(), escrowClassId).send({
+      const tx = deployer.deploy(escrowClassId).send({
         contractAddressSalt: escrowSalt,
       });
 
@@ -182,7 +158,7 @@ describe('Logic - Single PXE', () => {
       );
 
       expect(receiptAfterMined.contract.instance.address).toEqual(deploymentData.address);
-    }, 300_000);
+    });
 
     it('deploys escrow with correctly derived address', async () => {
       const { address, initializationHash } = await deriveContractAddress(
@@ -196,7 +172,7 @@ describe('Logic - Single PXE', () => {
       expect(address).toEqual(escrow.instance.address);
       expect(initializationHash).toEqual(Fr.ZERO);
       expect(initializationHash).toEqual(escrow.instance.initializationHash);
-    }, 300_000);
+    });
   });
 
   describe('secret_keys_to_public_keys', () => {
@@ -229,7 +205,7 @@ describe('Logic - Single PXE', () => {
       expect(new Fr(circuitPublicKeys.tpk_m.inner.y).toString()).toBe(
         escrowKeys.publicKeys.masterTaggingPublicKey.y.toString(),
       );
-    }, 300_000);
+    });
 
     it('logic key derivation should fail if the secret key is not correct', async () => {
       // We add 1 to the secret key to make it incorrect
@@ -266,7 +242,7 @@ describe('Logic - Single PXE', () => {
       expect(new Fr(circuitPublicKeys.tpk_m.inner.y).toString()).not.toBe(
         escrowKeys.publicKeys.masterTaggingPublicKey.y.toString(),
       );
-    }, 300_000);
+    });
   });
 
   describe('check_escrow', () => {
@@ -310,11 +286,7 @@ describe('Logic - Single PXE', () => {
 
     it('check escrow with incorrect class id should fail', async () => {
       // Re-deploy the logic contract with an incorrect class id
-      logic = (await deployLogicWithPublicKeys(
-        logicKeys.publicKeys,
-        alice,
-        escrowClassId.add(Fr.ONE),
-      )) as TestLogicContract;
+      logic = (await deployLogic(alice, escrowClassId.add(Fr.ONE))) as TestLogicContract;
 
       await expect(
         logic.methods
@@ -348,10 +320,6 @@ describe('Logic - Single PXE', () => {
     it('logic should be able to share escrow correctly', async () => {
       const alicePxe = pxe;
       await alicePxe.registerAccount(bob.getSecretKey(), bob.getCompleteAddress().partialAddress);
-
-      // Register the logic contract as an account
-      const partialAddress = await logic.partialAddress;
-      await alicePxe.registerAccount(logicSk, partialAddress);
 
       // Share the escrow contract with bob
       const tx = await logic.methods
@@ -390,10 +358,6 @@ describe('Logic - Single PXE', () => {
 
     it('share escrow with multiple recipients correctly', async () => {
       const alicePxe = pxe;
-
-      // Register the logic contract as an account
-      const partialAddress = await logic.partialAddress;
-      await alicePxe.registerAccount(logicSk, partialAddress);
 
       // Share the escrow contract with bob
       const txForBob = await logic.methods

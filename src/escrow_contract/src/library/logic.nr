@@ -7,7 +7,7 @@ use aztec::{
         constants::GENERATOR_INDEX__EVENT_COMMITMENT,
         contract_instance::ContractInstance,
         hash::poseidon2_hash_with_separator,
-        public_keys::{NpkM, IvpkM, OvpkM, TpkM, PublicKeys},
+        public_keys::{IvpkM, NpkM, OvpkM, PublicKeys, TpkM},
         traits::{Serialize, ToField},
     },
 };
@@ -27,10 +27,10 @@ use crate::types::escrow_details_event::EscrowDetailsLogContent;
 /// @param context The private context
 /// @param escrow The address of the escrow
 /// @param escrow_class_id The contract class id of the escrow contract
-/// @param nsk_m The escrow nullifier secret key
-/// @param ivsk_m The escrow incoming viewing key
-/// @param ovsk_m The escrow outgoing viewing key
-/// @param tsk_m The escrow transaction secret key
+/// @param nsk_m Master Nullifier Secret Key
+/// @param ivsk_m Incoming Viewing Key
+/// @param ovsk_m Outgoing Viewing Key
+/// @param tsk_m Tagging Secret Key
 #[contract_library_method]
 pub fn _check_escrow(
     context: &mut PrivateContext,
@@ -45,7 +45,8 @@ pub fn _check_escrow(
     let escrow_instance: ContractInstance = get_contract_instance(escrow);
 
     // Compute the public keys from the secret keys
-    let computed_public_keys: PublicKeys = _secret_keys_to_public_keys(nsk_m, ivsk_m, ovsk_m, tsk_m);
+    let computed_public_keys: PublicKeys =
+        _secret_keys_to_public_keys(nsk_m, ivsk_m, ovsk_m, tsk_m);
 
     // Check the public keys are computed correctly
     assert_eq(computed_public_keys, escrow_instance.public_keys, "Escrow public keys mismatch");
@@ -70,10 +71,10 @@ pub fn _check_escrow(
 /// @param context The private context
 /// @param account The address of the account that will use the escrow
 /// @param escrow The address of the escrow
-/// @param nsk_m The escrow nullifier secret key
-/// @param ivsk_m The escrow incoming viewing key
-/// @param ovsk_m The escrow outgoing viewing key
-/// @param tsk_m The escrow transaction secret key
+/// @param nsk_m Master Nullifier Secret Key
+/// @param ivsk_m Incoming Viewing Key
+/// @param ovsk_m Outgoing Viewing Key
+/// @param tsk_m Tagging Secret Key
 #[contract_library_method]
 pub fn _share_escrow(
     context: &mut PrivateContext,
@@ -134,7 +135,7 @@ pub fn _withdraw_nft(
 /// @param nsk_m Master Nullifier Secret Key
 /// @param ivsk_m Incoming Viewing Key
 /// @param ovsk_m Outgoing Viewing Key
-/// @param tsk_m Transaction Secret Key
+/// @param tsk_m Tagging Secret Key
 /// @return PublicKeys containing the derived public keys.
 #[contract_library_method]
 pub fn _secret_keys_to_public_keys(
