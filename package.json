@@ -1,6 +1,6 @@
 {
   "name": "@defi-wonderland/aztec-standards",
-  "version": "1.2.1",
+  "version": "2.0.3",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/defi-wonderland/aztec-standards.git"
@@ -19,7 +19,7 @@
     "test:nr": "aztec test",
     "lint:prettier": "prettier '**/*.{js,ts}' --write",
     "bench": "NODE_NO_WARNINGS=1 aztec-benchmark --suffix _base",
-    "cccp": "yarn clean && yarn compile && yarn codegen && aztec-postprocess-contract"
+    "ccc": "yarn clean && yarn compile && yarn codegen"
   },
   "lint-staged": {
     "*.ts": "prettier --write -u"
