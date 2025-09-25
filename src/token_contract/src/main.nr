@@ -474,8 +474,8 @@ pub contract Token {
     * ======================= MINTABLE ==========================
     * ======================================================== */
 
-    /// @notice Mints tokens to a commitment
-    /// @dev Mints tokens to a commitment and enqueues a public call to increase the total supply
+    /// @notice Mints tokens to a private balance
+    /// @dev Mints tokens to a private balance and enqueues a public call to increase the total supply
     /// @param from The address of the sender
     /// @param to The address of the recipient
     /// @param amount The amount of tokens to mint
