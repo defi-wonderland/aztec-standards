@@ -382,7 +382,7 @@ describe('Token - Single PXE', () => {
 
     // alice prepares partial note for bob
     await token.methods
-      .initialize_transfer_commitment(bob.getAddress(), alice.getAddress(), bob.getAddress())
+      .initialize_transfer_commitment(alice.getAddress(), bob.getAddress())
       .send({ from: alice.getAddress() })
       .wait();
 
