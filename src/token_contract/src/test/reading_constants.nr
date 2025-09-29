@@ -10,7 +10,7 @@ unconstrained fn check_decimals_private() {
     let (env, token_contract_address, _, _) = utils::setup(false);
 
     // Check decimals
-    let result = Token::at(token_contract_address).private_get_decimals().view(&mut env.private());
+    let result = env.view_public(Token::at(token_contract_address).private_get_decimals());
 
     assert(result == 18);
 }
@@ -21,7 +21,7 @@ unconstrained fn check_decimals_public() {
     let (env, token_contract_address, _, _) = utils::setup(false);
 
     // Check decimals
-    let result = Token::at(token_contract_address).public_get_decimals().view(&mut env.public());
+    let result = env.view_public(Token::at(token_contract_address).public_get_decimals());
 
     assert(result == 18);
 }

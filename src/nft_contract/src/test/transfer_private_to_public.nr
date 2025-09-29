@@ -1,6 +1,6 @@
 use crate::NFT;
 use crate::test::utils;
-use aztec::{prelude::AztecAddress, test::helpers::authwit as authwit_cheatcodes};
+use aztec::{protocol_types::address::AztecAddress, test::helpers::authwit as authwit_cheatcodes};
 
 #[test]
 unconstrained fn nft_transfer_private_to_public_self_success() {
@@ -10,21 +10,20 @@ unconstrained fn nft_transfer_private_to_public_self_success() {
         utils::setup_and_mint_to_private(false, token_id);
 
     // Verify initial ownership state
-    utils::assert_owns_private_nft(nft_contract_address, owner, token_id);
+    utils::assert_owns_private_nft(env, nft_contract_address, owner, token_id);
     utils::assert_owns_public_nft(env, nft_contract_address, AztecAddress::zero(), token_id);
 
     // Transfer NFT from private to public state (self-transfer)
-    env.impersonate(owner);
-    NFT::at(nft_contract_address).transfer_private_to_public(owner, owner, token_id, 0).call(
-        &mut env.private(),
+    env.call_private(
+        owner,
+        NFT::at(nft_contract_address).transfer_private_to_public(owner, owner, token_id, 0),
     );
-    env.advance_block_by(1);
 
     // Verify the NFT is now owned publicly by owner
     utils::assert_owns_public_nft(env, nft_contract_address, owner, token_id);
 
     // Verify the NFT is no longer owned privately
-    utils::assert_private_nft_nullified(nft_contract_address, owner, token_id);
+    utils::assert_private_nft_nullified(env, nft_contract_address, owner, token_id);
 }
 
 #[test]
@@ -35,7 +34,7 @@ unconstrained fn nft_transfer_private_to_public_authorized_success() {
         utils::setup_and_mint_to_private(true, token_id);
 
     // Verify initial ownership state
-    utils::assert_owns_private_nft(nft_contract_address, owner, token_id);
+    utils::assert_owns_private_nft(env, nft_contract_address, owner, token_id);
     utils::assert_owns_public_nft(env, nft_contract_address, AztecAddress::zero(), token_id);
 
     // Create the transfer call interface
@@ -50,16 +49,14 @@ unconstrained fn nft_transfer_private_to_public_authorized_success() {
     );
 
     // Impersonate recipient to perform the authorized transfer
-    env.impersonate(recipient);
-    transfer_call_interface.call(&mut env.private());
-    env.advance_block_by(1);
+    let _ = env.call_private(recipient, transfer_call_interface);
 
     // Verify the NFT is now owned publicly by recipient
     utils::assert_owns_public_nft(env, nft_contract_address, recipient, token_id);
-    utils::assert_private_nft_nullified(nft_contract_address, recipient, token_id);
+    utils::assert_private_nft_nullified(env, nft_contract_address, recipient, token_id);
 
     // Verify the NFT is no longer owned privately by owner
-    utils::assert_private_nft_nullified(nft_contract_address, owner, token_id);
+    utils::assert_private_nft_nullified(env, nft_contract_address, owner, token_id);
 }
 
 #[test(should_fail_with = "Unknown auth witness for message hash")]
@@ -74,10 +71,8 @@ unconstrained fn nft_transfer_private_to_public_unauthorized_fail() {
         NFT::at(nft_contract_address).transfer_private_to_public(owner, recipient, token_id, 0);
 
     // Impersonate recipient but DON'T add authorization witness
-    env.impersonate(recipient);
-
     // Should fail because recipient has no authorization witness from owner
-    transfer_call_interface.call(&mut env.private());
+    env.call_private(recipient, transfer_call_interface);
 }
 
 #[test(should_fail_with = "nft not found in private to public")]
@@ -87,10 +82,15 @@ unconstrained fn nft_transfer_private_to_public_non_existent_nft_fail() {
     let non_existent_token_id = 12345;
 
     // Attempt to transfer a non-existent NFT from private to public
-    env.impersonate(owner);
-    NFT::at(nft_contract_address)
-        .transfer_private_to_public(owner, recipient, non_existent_token_id, 0)
-        .call(&mut env.private());
+    env.call_private(
+        owner,
+        NFT::at(nft_contract_address).transfer_private_to_public(
+            owner,
+            recipient,
+            non_existent_token_id,
+            0,
+        ),
+    );
 }
 
 #[test(should_fail_with = "nft not found in private to public")]
@@ -104,8 +104,8 @@ unconstrained fn nft_transfer_private_to_public_already_public_fail() {
     utils::assert_owns_public_nft(env, nft_contract_address, owner, token_id);
 
     // Attempt to transfer from private state when NFT is actually in public state
-    env.impersonate(owner);
-    NFT::at(nft_contract_address).transfer_private_to_public(owner, recipient, token_id, 0).call(
-        &mut env.private(),
+    env.call_private(
+        owner,
+        NFT::at(nft_contract_address).transfer_private_to_public(owner, recipient, token_id, 0),
     );
 }

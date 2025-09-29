@@ -4,17 +4,14 @@ use aztec::test::helpers::authwit as authwit_cheatcodes;
 #[test(should_fail_with = "Trying to read from uninitialized PublicImmutable")]
 unconstrained fn redeem_private_to_public_without_asset() {
     // Setup without account contracts. We are not using authwits here, so dummy accounts are enough
-    let (_, asset_address, owner, recipient) =
-        utils::setup_and_mint_to_public_without_minter(false);
-
-    let (env, vault_address, _, _, minter) = utils::setup_with_minter(false);
+    let (env, vault_address, owner, recipient, minter) = utils::setup_with_minter(false);
+    utils::mint_to_private(env, vault_address, owner, mint_amount, minter);
 
     // Withdrawal should fail because the PublicImmutable asset was not initialized
-    env.impersonate(owner);
-    Token::at(vault_address).redeem_private_to_public(owner, recipient, mint_amount, 0).call(
-        &mut env.private(),
+    env.call_private(
+        owner,
+        Token::at(vault_address).redeem_private_to_public(owner, recipient, mint_amount, 0),
     );
-    env.advance_block_by(1);
 }
 
 #[test]
@@ -34,24 +31,28 @@ unconstrained fn redeem_private_to_public_success() {
         deposit_amount,
     );
 
-    env.impersonate(deposit_recipient);
     let requested_shares: u128 = deposit_amount;
-    Token::at(vault_address)
-        .redeem_private_to_public(deposit_recipient, recipient, requested_shares, 0)
-        .call(&mut env.private());
-    env.advance_block_by(1);
+    env.call_private(
+        deposit_recipient,
+        Token::at(vault_address).redeem_private_to_public(
+            deposit_recipient,
+            recipient,
+            requested_shares,
+            0,
+        ),
+    );
 
     // All shares are burnt
-    utils::check_private_balance(vault_address, deposit_recipient, 0);
-    utils::check_private_balance(vault_address, recipient, 0);
+    utils::check_private_balance(env, vault_address, deposit_recipient, 0);
+    utils::check_private_balance(env, vault_address, recipient, 0);
 
     // Check the total supply got updated
-    let total_supply = Token::at(vault_address).total_supply().view(&mut env.public());
+    let total_supply = env.view_public(Token::at(vault_address).total_supply());
     assert(total_supply == 0, "Incorrect shares total supply");
 
     // Check asset balances
-    utils::check_public_balance(asset_address, vault_address, 0);
-    utils::check_public_balance(asset_address, recipient, deposit_amount);
+    utils::check_public_balance(env, asset_address, vault_address, 0);
+    utils::check_public_balance(env, asset_address, recipient, deposit_amount);
 }
 
 #[test]
@@ -73,29 +74,31 @@ unconstrained fn redeem_private_to_public_after_yield() {
 
     // Mint some asset tokens to the vault contract
     let yield_amount: u128 = 2; // Using 2 instead of 1 avoids rounding issues from anti-inflation logic: 1 goes to the user, 1 stays in the vault.
-    env.impersonate(owner);
-    Token::at(asset_address).mint_to_public(vault_address, yield_amount).call(&mut env.public());
-    env.advance_block_by(1);
+    env.call_public(owner, Token::at(asset_address).mint_to_public(vault_address, yield_amount));
 
     // Withdraw
-    env.impersonate(deposit_recipient);
     let requested_shares: u128 = deposit_amount;
-    Token::at(vault_address)
-        .redeem_private_to_public(deposit_recipient, recipient, requested_shares, 0)
-        .call(&mut env.private());
-    env.advance_block_by(1);
+    env.call_private(
+        deposit_recipient,
+        Token::at(vault_address).redeem_private_to_public(
+            deposit_recipient,
+            recipient,
+            requested_shares,
+            0,
+        ),
+    );
 
     // All shares are burnt
-    utils::check_private_balance(vault_address, deposit_recipient, 0);
-    utils::check_private_balance(vault_address, recipient, 0);
+    utils::check_private_balance(env, vault_address, deposit_recipient, 0);
+    utils::check_private_balance(env, vault_address, recipient, 0);
 
     // Check the total supply got updated
-    let total_supply = Token::at(vault_address).total_supply().view(&mut env.public());
+    let total_supply = env.view_public(Token::at(vault_address).total_supply());
     assert(total_supply == 0, "Incorrect shares total supply");
 
     // Check asset balances. The vault should still have 1 token due to rounding.
-    utils::check_public_balance(asset_address, vault_address, 1);
-    utils::check_public_balance(asset_address, recipient, deposit_amount + 1);
+    utils::check_public_balance(env, asset_address, vault_address, 1);
+    utils::check_public_balance(env, asset_address, recipient, deposit_amount + 1);
 }
 
 #[test(should_fail_with = "Unknown auth witness for message hash ")]
@@ -116,12 +119,16 @@ unconstrained fn redeem_private_to_public_without_approval() {
     );
 
     // Withdraw
-    env.impersonate(recipient);
     let requested_shares: u128 = deposit_amount;
-    Token::at(vault_address)
-        .redeem_private_to_public(deposit_recipient, recipient, requested_shares, 0)
-        .call(&mut env.private());
-    env.advance_block_by(1);
+    env.call_private(
+        recipient,
+        Token::at(vault_address).redeem_private_to_public(
+            deposit_recipient,
+            recipient,
+            requested_shares,
+            0,
+        ),
+    );
 }
 
 #[test(should_fail_with = "Unknown auth witness for message hash ")]
@@ -156,11 +163,15 @@ unconstrained fn redeem_private_to_public_on_behalf_of_wrong_caller() {
     );
 
     // Withdraw
-    env.impersonate(recipient);
-    Token::at(vault_address)
-        .redeem_private_to_public(deposit_recipient, recipient, requested_shares, 0)
-        .call(&mut env.private());
-    env.advance_block_by(1);
+    env.call_private(
+        recipient,
+        Token::at(vault_address).redeem_private_to_public(
+            deposit_recipient,
+            recipient,
+            requested_shares,
+            0,
+        ),
+    );
 }
 
 #[test]
@@ -195,21 +206,25 @@ unconstrained fn redeem_private_to_public_on_behalf_of_other_success() {
     );
 
     // Withdraw
-    env.impersonate(recipient);
-    Token::at(vault_address)
-        .redeem_private_to_public(deposit_recipient, recipient, requested_shares, 0)
-        .call(&mut env.private());
-    env.advance_block_by(1);
+    env.call_private(
+        recipient,
+        Token::at(vault_address).redeem_private_to_public(
+            deposit_recipient,
+            recipient,
+            requested_shares,
+            0,
+        ),
+    );
 
     // All shares are burnt
-    utils::check_private_balance(vault_address, deposit_recipient, 0);
-    utils::check_private_balance(vault_address, recipient, 0);
+    utils::check_private_balance(env, vault_address, deposit_recipient, 0);
+    utils::check_private_balance(env, vault_address, recipient, 0);
 
     // Check the total supply got updated
-    let total_supply = Token::at(vault_address).total_supply().view(&mut env.public());
+    let total_supply = env.view_public(Token::at(vault_address).total_supply());
     assert(total_supply == 0, "Incorrect shares total supply");
 
     // Check asset balances
-    utils::check_public_balance(asset_address, vault_address, 0);
-    utils::check_public_balance(asset_address, recipient, deposit_amount);
+    utils::check_public_balance(env, asset_address, vault_address, 0);
+    utils::check_public_balance(env, asset_address, recipient, deposit_amount);
 }
