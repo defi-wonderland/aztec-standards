@@ -13,7 +13,7 @@ unconstrained fn transfer_private_to_commitment() {
     // Prepare commitment
     let commitment = env.call_private(
         owner,
-        Token::at(token_contract_address).initialize_transfer_commitment(owner, recipient, owner),
+        Token::at(token_contract_address).initialize_transfer_commitment(recipient, owner),
     );
 
     // Transfer tokens
@@ -46,11 +46,7 @@ unconstrained fn transfer_private_to_commitment_on_behalf_of_other() {
     // Prepare commitment
     let commitment = env.call_private(
         owner,
-        Token::at(token_contract_address).initialize_transfer_commitment(
-            owner,
-            recipient,
-            recipient,
-        ),
+        Token::at(token_contract_address).initialize_transfer_commitment(recipient, recipient),
     );
 
     let transfer_to_commitment_call_interface = Token::at(token_contract_address)
@@ -80,11 +76,7 @@ unconstrained fn transfer_private_to_commitment_wrong_completer() {
 
     let commitment = env.call_private(
         owner,
-        Token::at(token_contract_address).initialize_transfer_commitment(
-            owner,
-            recipient,
-            recipient,
-        ),
+        Token::at(token_contract_address).initialize_transfer_commitment(recipient, recipient),
     );
 
     // Transfer tokens
