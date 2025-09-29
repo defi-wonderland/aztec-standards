@@ -20,8 +20,7 @@ unconstrained fn mint_to_private_success() {
 #[test(should_fail_with = "Assertion failed: caller is not minter")]
 unconstrained fn mint_to_private_failure_as_non_minter() {
     // Setup without account contracts. We are not using authwits here, so dummy accounts are enough
-    let (mut env, token_contract_address, owner, recipient, minter) =
-        utils::setup_with_minter(false);
+    let (mut env, token_contract_address, owner, recipient, _) = utils::setup_with_minter(false);
 
     let mint_amount: u128 = 10_000;
     let mint_to_private_call_interface =
