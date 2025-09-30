@@ -264,7 +264,11 @@ pub contract Token {
         );
 
         let completer = context.msg_sender();
-        PartialUintNote { commitment }.complete_from_private(&mut context, completer, amount);
+        PartialUintNote::from_field(commitment).complete_from_private(
+            &mut context,
+            completer,
+            amount,
+        );
     }
 
     /// @notice Transfer tokens from public balance to private balance
