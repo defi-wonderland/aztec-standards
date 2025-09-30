@@ -13,6 +13,7 @@ import {
   AuthWitness,
   ContractFunctionInteraction,
 } from '@aztec/aztec.js';
+import { decodeFromAbi } from '@aztec/stdlib/abi';
 import { getPXEServiceConfig } from '@aztec/pxe/config';
 import { createPXEService } from '@aztec/pxe/server';
 import { createStore } from '@aztec/kv-store/lmdb';
@@ -175,4 +176,46 @@ export async function setPublicAuthWit(
   };
   await account.createAuthWit(intent);
   await (await account.setPublicAuthWit(intent, true)).send({ from: account.getAddress() }).wait();
+}
+
+/**
+ * Initializes a transfer commitment
+ * @param token - The token contract instance.
+ * @param caller - The wallet that will interact with the token contract.
+ * @param from - The address of the sender.
+ * @param to - The address of the recipient.
+ * @param completer - The address allowed to complete the partial note.
+ * @returns Partial note commitment
+ */
+export async function initializeTransferCommitment(
+  token: TokenContract,
+  caller: AccountWallet,
+  from: AztecAddress,
+  to: AztecAddress,
+  completer: AztecAddress,
+) {
+  // alice prepares partial note for bob
+  const fnAbi = TokenContract.artifact.functions.find((f) => f.name === 'initialize_transfer_commitment')!;
+  const fn_interaction = token.methods.initialize_transfer_commitment(from, to, completer);
+
+  // Build the request once
+  const req = await fn_interaction.create({ fee: { estimateGas: false } }); // set the same fee options you’ll use
+
+  // Simulate using the exact request
+  const sim = await caller.simulateTx(
+    req,
+    true /* simulatePublic */,
+    undefined /* skipTxValidation */,
+    true /* skipFeeEnforcement */,
+  );
+  const rawReturnValues = sim.getPrivateReturnValues().nested[0].values; // decode as needed
+  const commitment = decodeFromAbi(fnAbi.returnTypes, rawReturnValues as Fr[]);
+
+  // Prove and send the exact same request
+  const prov = await caller.proveTx(req, sim.privateExecutionResult);
+  const tx = await prov.toTx();
+  const txHash = await caller.sendTx(tx);
+  await caller.getTxReceipt(txHash);
+
+  return commitment as bigint;
 }

@@ -297,9 +297,9 @@ pub contract Token {
 
     /// @notice Initializes a transfer commitment to be used for transfers/mints
     /// @dev Returns a partial note that can be used to execute transfers/mints
-    ///      `from` will also be the completer of the partial note.
     /// @param from The address of the sender
     /// @param to The address of the recipient
+    /// @param completer The address allowed to complete the partial note
     /// @return commitment The partial note initialized for the transfer/mint commitment
     #[private]
     fn initialize_transfer_commitment(
