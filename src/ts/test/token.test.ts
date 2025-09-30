@@ -410,12 +410,14 @@ describe('Token - Single PXE', () => {
       .send({ from: alice.getAddress() })
       .wait();
     // alice now has no tokens
-    expect(await token.methods.balance_of_public(alice.getAddress()).simulate()).toBe(0n);
+    expect(await token.methods.balance_of_public(alice.getAddress()).simulate({ from: alice.getAddress() })).toBe(0n);
     // bob has tokens in private
-    expect(await token.methods.balance_of_public(bob.getAddress()).simulate()).toBe(0n);
-    expect(await token.methods.balance_of_private(bob.getAddress()).simulate()).toBe(AMOUNT);
+    expect(await token.methods.balance_of_public(bob.getAddress()).simulate({ from: alice.getAddress() })).toBe(0n);
+    expect(await token.methods.balance_of_private(bob.getAddress()).simulate({ from: alice.getAddress() })).toBe(
+      AMOUNT,
+    );
     // total supply is still the same
-    expect(await token.methods.total_supply().simulate()).toBe(AMOUNT);
+    expect(await token.methods.total_supply().simulate({ from: alice.getAddress() })).toBe(AMOUNT);
   }, 300_000);
 
   // TODO: Can't figure out why this is failing
