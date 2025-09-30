@@ -5,6 +5,7 @@ import { getInitialTestAccountsManagers } from '@aztec/accounts/testing';
 
 // Import the new Benchmark base class and context
 import { Benchmark, BenchmarkContext } from '@defi-wonderland/aztec-benchmark';
+import type { NamedBenchmarkedInteraction } from '@defi-wonderland/aztec-benchmark/dist/types.js';
 
 import { TokenContract } from '../artifacts/Token.js';
 import { EscrowContract } from '../artifacts/Escrow.js';
@@ -66,17 +67,22 @@ export default class TokenContractBenchmark extends Benchmark {
   /**
    * Returns the list of TokenContract methods to be benchmarked.
    */
-  getMethods(context: TokenBenchmarkContext): ContractFunctionInteraction[] {
+  getMethods(context: TokenBenchmarkContext): Array<NamedBenchmarkedInteraction | ContractFunctionInteraction> {
     const { accounts, tokenContract, nftContract, escrowContract, tokenAmount, tokenId } = context;
     const logicMock = accounts[1];
     const recipient = accounts[2].getAddress();
+    const halfAmount = 50;
 
-    const methods: ContractFunctionInteraction[] = [
-      // TODO: it is not possible to benchmark the same method multiple times with different setups.
+    const methods: Array<NamedBenchmarkedInteraction | ContractFunctionInteraction> = [
       // Partial token withdrawal (with change)
-      // escrowContract.withWallet(logicMock).methods.withdraw(tokenContract.address, amt(50), recipient),
+      {
+        interaction: escrowContract
+          .withWallet(logicMock)
+          .methods.withdraw(tokenContract.address, halfAmount, recipient),
+        name: '(partial) withdraw',
+      },
       // Full token withdrawal
-      escrowContract.withWallet(logicMock).methods.withdraw(tokenContract.address, tokenAmount, recipient),
+      escrowContract.withWallet(logicMock).methods.withdraw(tokenContract.address, halfAmount, recipient),
       // NFT withdrawal
       escrowContract.withWallet(logicMock).methods.withdraw_nft(nftContract.address, tokenId, recipient),
     ];
