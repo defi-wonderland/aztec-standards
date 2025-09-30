@@ -65,8 +65,12 @@ export const expectTokenBalances = async (
     throw new Error('Unsupported type for balance');
   };
 
-  expect(await t.methods.balance_of_public(aztecAddress).simulate()).toBe(toBigInt(publicBalance));
-  expect(await t.methods.balance_of_private(aztecAddress).simulate()).toBe(toBigInt(privateBalance));
+  expect(await t.methods.balance_of_public(aztecAddress).simulate({ from: aztecAddress })).toBe(
+    toBigInt(publicBalance),
+  );
+  expect(await t.methods.balance_of_private(aztecAddress).simulate({ from: aztecAddress })).toBe(
+    toBigInt(privateBalance),
+  );
 };
 
 export const AMOUNT = 1000n;
@@ -84,7 +88,7 @@ export async function deployTokenWithMinter(deployer: Wallet, options?: DeployOp
     ['PrivateToken', 'PT', 18, deployer.getAddress(), AztecAddress.ZERO],
     'constructor_with_minter',
   )
-    .send(options)
+    .send({ ...options, from: deployer.getAddress() })
     .deployed();
   return contract;
 }
@@ -96,7 +100,7 @@ export async function deployTokenWithInitialSupply(deployer: AccountWallet) {
     ['PrivateToken', 'PT', 18, 0, deployer.getAddress(), deployer.getAddress()],
     'constructor_with_initial_supply',
   )
-    .send()
+    .send({ from: deployer.getAddress() })
     .deployed();
   return contract;
 }
@@ -113,7 +117,7 @@ export async function deployNFTWithMinter(deployer: AccountWallet, options?: Dep
     ['NFT', 'NFT', deployer.getAddress(), deployer.getAddress()],
     'constructor_with_minter',
   )
-    .send(options)
+    .send({ ...options, from: deployer.getAddress() })
     .deployed();
   return contract;
 }
@@ -130,7 +134,7 @@ export async function deployVaultAndAssetWithMinter(deployer: AccountWallet): Pr
     ['PrivateToken', 'PT', 6, deployer.getAddress(), AztecAddress.ZERO],
     'constructor_with_minter',
   )
-    .send()
+    .send({ from: deployer.getAddress() })
     .deployed();
 
   const vaultContract = await Contract.deploy(
@@ -139,7 +143,7 @@ export async function deployVaultAndAssetWithMinter(deployer: AccountWallet): Pr
     ['VaultToken', 'VT', 6, assetContract.address, AztecAddress.ZERO],
     'constructor_with_asset',
   )
-    .send()
+    .send({ from: deployer.getAddress() })
     .deployed();
 
   return [vaultContract, assetContract];
@@ -148,7 +152,7 @@ export async function deployVaultAndAssetWithMinter(deployer: AccountWallet): Pr
 export async function setPrivateAuthWit(
   caller: AztecAddress | { getAddress: () => AztecAddress },
   action: ContractFunctionInteraction,
-  deployer: AccountWallet,
+  account: AccountWallet,
 ): Promise<AuthWitness> {
   const callerAddress = caller instanceof AztecAddress ? caller : caller.getAddress();
 
@@ -156,13 +160,13 @@ export async function setPrivateAuthWit(
     caller: callerAddress,
     action: action,
   };
-  return deployer.createAuthWit(intent);
+  return account.createAuthWit(intent);
 }
 
 export async function setPublicAuthWit(
   caller: AztecAddress | { getAddress: () => AztecAddress },
   action: ContractFunctionInteraction,
-  deployer: AccountWallet,
+  account: AccountWallet,
 ) {
   const callerAddress = caller instanceof AztecAddress ? caller : caller.getAddress();
 
@@ -170,8 +174,8 @@ export async function setPublicAuthWit(
     caller: callerAddress,
     action: action,
   };
-  await deployer.createAuthWit(intent);
-  await (await deployer.setPublicAuthWit(intent, true)).send().wait();
+  await account.createAuthWit(intent);
+  await (await account.setPublicAuthWit(intent, true)).send({ from: account.getAddress() }).wait();
 }
 
 /**

@@ -9,14 +9,13 @@ unconstrained fn nft_initialize_transfer_commitment_success() {
         utils::setup_and_mint_to_private(false, token_id);
 
     // Initialize transfer commitment
-    env.impersonate(owner);
-    let commitment = NFT::at(nft_contract_address)
-        .initialize_transfer_commitment(owner, recipient, owner)
-        .call(&mut env.private());
-    env.advance_block_by(1);
+    let commitment = env.call_private(
+        owner,
+        NFT::at(nft_contract_address).initialize_transfer_commitment(owner, recipient, owner),
+    );
 
     // Verify commitment is stored
-    assert(utils::get_commitment_stored(nft_contract_address, commitment), "Commitment not stored");
+    utils::check_commitment_is_stored(env, nft_contract_address, commitment);
 }
 
 #[test]
@@ -27,14 +26,13 @@ unconstrained fn nft_initialize_transfer_commitment_by_recipient_success() {
         utils::setup_and_mint_to_private(false, token_id);
 
     // Initialize transfer commitment as recipient
-    env.impersonate(recipient);
-    let commitment = NFT::at(nft_contract_address)
-        .initialize_transfer_commitment(owner, recipient, recipient)
-        .call(&mut env.private());
-    env.advance_block_by(1);
+    let commitment = env.call_private(
+        recipient,
+        NFT::at(nft_contract_address).initialize_transfer_commitment(owner, recipient, recipient),
+    );
 
     // Verify commitment is stored
-    assert(utils::get_commitment_stored(nft_contract_address, commitment), "Commitment not stored");
+    utils::check_commitment_is_stored(env, nft_contract_address, commitment);
 }
 
 #[test]
@@ -45,14 +43,13 @@ unconstrained fn nft_initialize_transfer_commitment_self_success() {
         utils::setup_and_mint_to_private(false, token_id);
 
     // Initialize transfer commitment to self
-    env.impersonate(owner);
-    let commitment = NFT::at(nft_contract_address)
-        .initialize_transfer_commitment(owner, owner, owner)
-        .call(&mut env.private());
-    env.advance_block_by(1);
+    let commitment = env.call_private(
+        owner,
+        NFT::at(nft_contract_address).initialize_transfer_commitment(owner, owner, owner),
+    );
 
     // Verify commitment is stored
-    assert(utils::get_commitment_stored(nft_contract_address, commitment), "Commitment not stored");
+    utils::check_commitment_is_stored(env, nft_contract_address, commitment);
 }
 
 #[test]
@@ -63,12 +60,11 @@ unconstrained fn nft_initialize_transfer_commitment_by_third_party_success() {
         utils::setup_and_mint_to_private(false, token_id);
 
     // Initialize transfer commitment as minter (third party)
-    env.impersonate(minter);
-    let commitment = NFT::at(nft_contract_address)
-        .initialize_transfer_commitment(owner, recipient, minter)
-        .call(&mut env.private());
-    env.advance_block_by(1);
+    let commitment = env.call_private(
+        minter,
+        NFT::at(nft_contract_address).initialize_transfer_commitment(owner, recipient, minter),
+    );
 
     // Verify commitment is stored
-    assert(utils::get_commitment_stored(nft_contract_address, commitment), "Commitment not stored");
+    utils::check_commitment_is_stored(env, nft_contract_address, commitment);
 }

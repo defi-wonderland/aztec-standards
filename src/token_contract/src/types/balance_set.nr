@@ -1,12 +1,14 @@
 use aztec::{
     context::{PrivateContext, UtilityContext},
     note::{
-        note_emission::OuterNoteEmission, note_getter_options::SortOrder,
-        note_interface::NoteProperties, retrieved_note::RetrievedNote,
+        note_emission::OuterNoteEmission,
+        note_getter_options::{NoteGetterOptions, SortOrder},
+        note_interface::NoteProperties,
+        note_viewer_options::NoteViewerOptions,
+        retrieved_note::RetrievedNote,
     },
-    prelude::{NoteGetterOptions, NoteViewerOptions, PrivateSet},
     protocol_types::{address::AztecAddress, constants::MAX_NOTE_HASH_READ_REQUESTS_PER_CALL},
-    state_vars::storage::Storage,
+    state_vars::{private_set::PrivateSet, storage::HasStorageSlot},
 };
 
 use std::ops::Add;
@@ -17,7 +19,7 @@ pub struct BalanceSet<Context> {
 }
 
 // TODO(#13824): remove this impl once we allow structs to hold state variables.
-impl<Context> Storage<1> for BalanceSet<Context> {
+impl<Context> HasStorageSlot<1> for BalanceSet<Context> {
     fn get_storage_slot(self) -> Field {
         self.set.get_storage_slot()
     }
