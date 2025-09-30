@@ -213,8 +213,8 @@ export async function initializeTransferCommitment(
 
   // Prove and send the exact same request
   const prov = await caller.proveTx(req, sim.privateExecutionResult);
-  // const tx = await prov.toTx(); v2.0.3
-  const txHash = await caller.sendTx(prov.toTx());
+  const tx = await prov.toTx();
+  const txHash = await caller.sendTx(tx);
   await caller.getTxReceipt(txHash);
 
   return commitment as bigint;
