@@ -8,7 +8,16 @@ import {
   Wallet,
   getContractInstanceFromInstantiationParams,
 } from '@aztec/aztec.js';
-import { AMOUNT, deployTokenWithMinter, expectTokenBalances, expectUintNote, setupPXE, wad } from './utils.js';
+import { decodeFromAbi } from '@aztec/stdlib/abi';
+import {
+  AMOUNT,
+  deployTokenWithMinter,
+  expectTokenBalances,
+  expectUintNote,
+  initializeTransferCommitment,
+  setupPXE,
+  wad,
+} from './utils.js';
 import { PXE } from '@aztec/stdlib/interfaces/client';
 import { AztecLmdbStore } from '@aztec/kv-store/lmdb';
 import { getInitialTestAccountsManagers } from '@aztec/accounts/testing';
@@ -364,7 +373,7 @@ describe('Token - Single PXE', () => {
     expect(alicePublicBalance).toBe(AMOUNT);
   }, 300_000);
 
-  it.skip('mint in public, prepare partial note and finalize it', async () => {
+  it('mint in public, prepare partial note and finalize it', async () => {
     await token.withWallet(alice);
 
     await token.methods.mint_to_public(alice.getAddress(), AMOUNT).send({ from: alice.getAddress() }).wait();
@@ -381,10 +390,13 @@ describe('Token - Single PXE', () => {
     expect(await token.methods.total_supply().simulate({ from: alice.getAddress() })).toBe(AMOUNT);
 
     // alice prepares partial note for bob
-    await token.methods
-      .initialize_transfer_commitment(bob.getAddress(), alice.getAddress(), bob.getAddress())
-      .send({ from: alice.getAddress() })
-      .wait();
+    const commitment = await initializeTransferCommitment(
+      token,
+      alice,
+      alice.getAddress(),
+      bob.getAddress(),
+      alice.getAddress(),
+    );
 
     // alice still has tokens in public
     expect(await token.methods.balance_of_public(alice.getAddress()).simulate({ from: alice.getAddress() })).toBe(
@@ -392,15 +404,20 @@ describe('Token - Single PXE', () => {
     );
 
     // finalize partial note passing the commitment slot
-    // await token.methods.transfer_public_to_commitment(AMOUNT, latestEvent.hiding_point_slot).send({ from: alice.getAddress() }).wait();
-
+    await token
+      .withWallet(alice)
+      .methods.transfer_public_to_commitment(alice.getAddress(), commitment as bigint, AMOUNT, 0)
+      .send({ from: alice.getAddress() })
+      .wait();
     // alice now has no tokens
-    // expect(await token.methods.balance_of_public(alice.getAddress()).simulate({ from: alice.getAddress() })).toBe(0n);
-    // // bob has tokens in private
-    // expect(await token.methods.balance_of_public(bob.getAddress()).simulate({ from: alice.getAddress() })).toBe(0n);
-    // expect(await token.methods.balance_of_private(bob.getAddress()).simulate({ from: alice.getAddress() })).toBe(AMOUNT);
-    // // total supply is still the same
-    // expect(await token.methods.total_supply().simulate({ from: alice.getAddress() })).toBe(AMOUNT);
+    expect(await token.methods.balance_of_public(alice.getAddress()).simulate({ from: alice.getAddress() })).toBe(0n);
+    // bob has tokens in private
+    expect(await token.methods.balance_of_public(bob.getAddress()).simulate({ from: alice.getAddress() })).toBe(0n);
+    expect(await token.methods.balance_of_private(bob.getAddress()).simulate({ from: alice.getAddress() })).toBe(
+      AMOUNT,
+    );
+    // total supply is still the same
+    expect(await token.methods.total_supply().simulate({ from: alice.getAddress() })).toBe(AMOUNT);
   }, 300_000);
 
   // TODO: Can't figure out why this is failing
