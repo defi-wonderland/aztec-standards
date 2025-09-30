@@ -23,7 +23,7 @@ jobs:
 
     runs-on: 
       labels: ${{ matrix.os }}
-    timeout-minutes: 30
+    timeout-minutes: 45
 
     steps:
       # ──────────────────────────────────────────────────────────────
