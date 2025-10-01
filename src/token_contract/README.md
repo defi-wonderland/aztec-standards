@@ -18,8 +18,28 @@ This contract follows the [AIP-20 Aztec Token Standard](https://forum.aztec.netw
 - `total_supply: u128`: Total token supply.
 - `minter: AztecAddress`: Authorized minter address (if set).
 - `upgrade_authority: AztecAddress`: Address allowed to perform contract upgrades (zero address if not upgradeable).
+- `asset: AztecAddress`: Underlying asset address for yield-bearing vault functionality.
 
 ## Initializer Functions
+
+### constructor_with_asset
+```rust
+/// @notice Initializes the token as a yield-bearing vault with an underlying asset
+/// @param name The name of the token
+/// @param symbol The symbol of the token
+/// @param decimals The number of decimals of the token
+/// @param asset The address of the underlying asset
+/// @param upgrade_authority The address of the upgrade authority (zero if not upgradeable)
+#[public]
+#[initializer]
+fn constructor_with_asset(
+    name: str<31>,
+    symbol: str<31>,
+    decimals: u8,
+    asset: AztecAddress,
+    upgrade_authority: AztecAddress,
+) { /* ... */ }
+```
 
 ### constructor_with_initial_supply
 ```rust
@@ -300,11 +320,11 @@ fn transfer_public_to_private(
 ```rust
 /// @notice Initializes a transfer commitment to be used for transfers/mints
 /// @dev Returns a partial note that can be used to execute transfers/mints
-/// @param from The address of the sender
 /// @param to The address of the recipient
+/// @param completer The address used to compute the validity commitment
 /// @return commitment The partial note initialized for the transfer/mint commitment
 #[private]
-fn initialize_transfer_commitment(from: AztecAddress, to: AztecAddress) -> Field { /* ... */ }
+fn initialize_transfer_commitment(to: AztecAddress, completer: AztecAddress) -> Field { /* ... */ }
 ```
 
 ### mint_to_private
@@ -327,5 +347,164 @@ fn mint_to_private(from: AztecAddress, to: AztecAddress, amount: u128) { /* ... 
 /// @param nonce The nonce used for authwit
 #[private]
 fn burn_private(from: AztecAddress, amount: u128, nonce: Field) { /* ... */ }
+```
+
+## Yield-Bearing Vault Functions
+
+This contract also implements yield-bearing vault functionality when initialized with `constructor_with_asset`. The vault allows users to deposit underlying assets and receive shares representing their proportional ownership of the growing asset pool.
+
+### Deposit Functions
+
+#### deposit_public_to_public
+```rust
+/// @notice Deposits underlying assets from public balance and mints shares to public balance
+/// @param from The address providing the assets
+/// @param to The address receiving the shares
+/// @param assets The amount of underlying assets to deposit
+/// @param nonce The nonce used for authwit
+#[public]
+fn deposit_public_to_public(from: AztecAddress, to: AztecAddress, assets: u128, nonce: Field) { /* ... */ }
+```
+
+#### deposit_public_to_private
+```rust
+/// @notice Deposits underlying assets from public balance and mints shares to private balance
+/// @param from The address providing the assets
+/// @param to The address receiving the shares
+/// @param assets The amount of underlying assets to deposit
+/// @param nonce The nonce used for authwit
+#[private]
+fn deposit_public_to_private(from: AztecAddress, to: AztecAddress, assets: u128, nonce: Field) { /* ... */ }
+```
+
+#### deposit_private_to_private
+```rust
+/// @notice Deposits underlying assets from private balance and mints shares to private balance
+/// @param from The address providing the assets
+/// @param to The address receiving the shares
+/// @param assets The amount of underlying assets to deposit
+/// @param nonce The nonce used for authwit
+#[private]
+fn deposit_private_to_private(from: AztecAddress, to: AztecAddress, assets: u128, nonce: Field) { /* ... */ }
+```
+
+#### deposit_private_to_public
+```rust
+/// @notice Deposits underlying assets from private balance and mints shares to public balance
+/// @param from The address providing the assets
+/// @param to The address receiving the shares
+/// @param assets The amount of underlying assets to deposit
+/// @param nonce The nonce used for authwit
+#[private]
+fn deposit_private_to_public(from: AztecAddress, to: AztecAddress, assets: u128, nonce: Field) { /* ... */ }
+```
+
+### Exact Deposit Functions
+
+#### deposit_public_to_private_exact
+```rust
+/// @notice Deposits underlying assets from public balance for exact shares to private balance
+/// @param from The address providing the assets
+/// @param to The address receiving the shares
+/// @param assets The amount of underlying assets to deposit
+/// @param min_shares The minimum shares expected to receive
+/// @param nonce The nonce used for authwit
+#[private]
+fn deposit_public_to_private_exact(from: AztecAddress, to: AztecAddress, assets: u128, min_shares: u128, nonce: Field) { /* ... */ }
+```
+
+#### deposit_private_to_private_exact
+```rust
+/// @notice Deposits underlying assets from private balance for exact shares to private balance
+/// @param from The address providing the assets
+/// @param to The address receiving the shares
+/// @param assets The amount of underlying assets to deposit
+/// @param min_shares The minimum shares expected to receive
+/// @param nonce The nonce used for authwit
+#[private]
+fn deposit_private_to_private_exact(from: AztecAddress, to: AztecAddress, assets: u128, min_shares: u128, nonce: Field) { /* ... */ }
+```
+
+### Issue Functions
+
+#### issue_public_to_public
+```rust
+/// @notice Issues exact shares for underlying assets from public balance to public balance
+/// @param from The address providing the assets
+/// @param to The address receiving the shares
+/// @param shares The exact amount of shares to issue
+/// @param nonce The nonce used for authwit
+#[public]
+fn issue_public_to_public(from: AztecAddress, to: AztecAddress, shares: u128, nonce: Field) { /* ... */ }
+```
+
+#### issue_public_to_private
+```rust
+/// @notice Issues exact shares for underlying assets from public balance to private balance
+/// @param from The address providing the assets
+/// @param to The address receiving the shares
+/// @param shares The exact amount of shares to issue
+/// @param nonce The nonce used for authwit
+#[private]
+fn issue_public_to_private(from: AztecAddress, to: AztecAddress, shares: u128, nonce: Field) { /* ... */ }
+```
+
+### Withdraw Functions
+
+#### withdraw_public_to_public
+```rust
+/// @notice Withdraws underlying assets by burning shares from public balance to public balance
+/// @param from The address providing the shares
+/// @param to The address receiving the assets
+/// @param assets The amount of underlying assets to withdraw
+/// @param nonce The nonce used for authwit
+#[public]
+fn withdraw_public_to_public(from: AztecAddress, to: AztecAddress, assets: u128, nonce: Field) { /* ... */ }
+```
+
+#### withdraw_public_to_private
+```rust
+/// @notice Withdraws underlying assets by burning shares from public balance to private balance
+/// @param from The address providing the shares
+/// @param to The address receiving the assets
+/// @param assets The amount of underlying assets to withdraw
+/// @param nonce The nonce used for authwit
+#[private]
+fn withdraw_public_to_private(from: AztecAddress, to: AztecAddress, assets: u128, nonce: Field) { /* ... */ }
+```
+
+#### withdraw_private_to_private
+```rust
+/// @notice Withdraws underlying assets by burning shares from private balance to private balance
+/// @param from The address providing the shares
+/// @param to The address receiving the assets
+/// @param assets The amount of underlying assets to withdraw
+/// @param nonce The nonce used for authwit
+#[private]
+fn withdraw_private_to_private(from: AztecAddress, to: AztecAddress, assets: u128, nonce: Field) { /* ... */ }
+```
+
+### Redeem Functions
+
+#### redeem_public_to_public
+```rust
+/// @notice Redeems shares for underlying assets from public balance to public balance
+/// @param from The address providing the shares
+/// @param to The address receiving the assets
+/// @param shares The amount of shares to redeem
+/// @param nonce The nonce used for authwit
+#[public]
+fn redeem_public_to_public(from: AztecAddress, to: AztecAddress, shares: u128, nonce: Field) { /* ... */ }
+```
+
+#### redeem_private_to_public
+```rust
+/// @notice Redeems shares for underlying assets from private balance to public balance
+/// @param from The address providing the shares
+/// @param to The address receiving the assets
+/// @param shares The amount of shares to redeem
+/// @param nonce The nonce used for authwit
+#[private]
+fn redeem_private_to_public(from: AztecAddress, to: AztecAddress, shares: u128, nonce: Field) { /* ... */ }
 ```
 
