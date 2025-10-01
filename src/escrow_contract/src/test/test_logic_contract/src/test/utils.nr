@@ -1,12 +1,16 @@
 use crate::TestLogic;
+use dep::escrow_contract::Escrow;
 use aztec::{
     protocol_types::{
-        address::AztecAddress, point::Point, public_keys::{IvpkM, NpkM, OvpkM, PublicKeys, TpkM},
+        address::AztecAddress,
+        point::Point,
+        public_keys::{IvpkM, NpkM, OvpkM, PublicKeys, TpkM},
         traits::ToField,
     },
-    test::helpers::{test_environment::TestEnvironment, utils::ContractDeployment, txe_oracles as cheatcodes},
+    test::helpers::{
+        test_environment::TestEnvironment, txe_oracles as cheatcodes, utils::ContractDeployment,
+    },
 };
-use dep::escrow_contract::Escrow;
 use nft::test::utils as nft_utils;
 use token::test::utils as token_utils;
 
@@ -80,7 +84,7 @@ pub unconstrained fn get_test_vector() -> (PublicKeys, [Field; 4], PublicKeys, [
 pub unconstrained fn set_escrow_with_token_and_nft(
     with_account_contracts: bool,
     escrow_secret: Field,
-) -> (TestEnvironment, AztecAddress, AztecAddress, AztecAddress, AztecAddress, AztecAddress, AztecAddress) {
+    ) -> (TestEnvironment, AztecAddress, AztecAddress, AztecAddress, AztecAddress, AztecAddress, AztecAddress) {
     // Setup without account contracts. We are not using authwits here, so dummy accounts are enough
     let (mut env, token_contract_address, owner, recipient, minter) =
         token_utils::setup_with_minter(with_account_contracts);
@@ -109,11 +113,8 @@ pub unconstrained fn deploy_escrow_with_secret(
     // In v2.0.3, we manually create ContractDeployment with secret as the salt
     // The salt will be stored in the contract instance and checked by _assert_msg_sender
     // The test extracts logic_contract_address from escrow_instance.salt
-    let deployer = ContractDeployment {
-        env: *env,
-        path: "@escrow_contract/Escrow",
-        secret: escrow_secret,
-    };
+    let deployer =
+        ContractDeployment { env: *env, path: "@escrow_contract/Escrow", secret: escrow_secret };
 
     deployer.without_initializer()
 }

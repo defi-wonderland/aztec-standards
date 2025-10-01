@@ -2,7 +2,7 @@ use crate::Escrow;
 use crate::test::utils as escrow_utils;
 use aztec::oracle::get_contract_instance::get_contract_instance;
 use aztec::protocol_types::{address::AztecAddress, traits::FromField};
-use nft::{test::utils as nft_utils, NFT};
+use nft::{NFT, test::utils as nft_utils};
 
 #[test]
 unconstrained fn escrow_withdraw_nft_success() {
@@ -21,7 +21,12 @@ unconstrained fn escrow_withdraw_nft_success() {
     );
 
     // Check the escrow received and can read the nft
-    nft_utils::assert_owns_private_nft(env, nft_contract_address, escrow_contract_address, token_id);
+    nft_utils::assert_owns_private_nft(
+        env,
+        nft_contract_address,
+        escrow_contract_address,
+        token_id,
+    );
 
     env.call_private(
         logic_contract_address,

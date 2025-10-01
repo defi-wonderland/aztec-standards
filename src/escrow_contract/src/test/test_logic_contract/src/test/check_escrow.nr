@@ -1,8 +1,7 @@
 use crate::test::utils as logic_utils;
 use crate::TestLogic;
 use aztec::{
-    oracle::get_contract_instance::get_contract_instance,
-    protocol_types::traits::ToField,
+    oracle::get_contract_instance::get_contract_instance, protocol_types::traits::ToField,
     test::helpers::test_environment::TestEnvironment,
 };
 
@@ -30,7 +29,13 @@ unconstrained fn check_escrow_public_keys_mismatch() {
     let caller = env.create_light_account();
     env.call_private(
         caller,
-        TestLogic::at(logic).check_escrow(escrow, incorrect_sk[0], incorrect_sk[1], incorrect_sk[2], incorrect_sk[3]),
+        TestLogic::at(logic).check_escrow(
+            escrow,
+            incorrect_sk[0],
+            incorrect_sk[1],
+            incorrect_sk[2],
+            incorrect_sk[3],
+        ),
     );
 }
 

@@ -16,13 +16,7 @@ impl Serialize for EscrowDetailsLogContent {
     let N: u32 = 5;
 
     fn serialize(self) -> [Field; Self::N] {
-        [
-            self.escrow.to_field(),
-            self.nsk_m,
-            self.ivsk_m,
-            self.ovsk_m,
-            self.tsk_m,
-        ]
+        [self.escrow.to_field(), self.nsk_m, self.ivsk_m, self.ovsk_m, self.tsk_m]
     }
 }
 
