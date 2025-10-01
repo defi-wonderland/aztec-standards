@@ -460,11 +460,10 @@ pub contract Token {
 
     /// @notice Mints tokens to a commitment
     /// @dev Mints tokens to a commitment and enqueues a public call to increase the total supply
-    /// @param from The address of the sender
     /// @param to The address of the recipient
     /// @param amount The amount of tokens to mint
     #[private]
-    fn mint_to_private(from: AztecAddress, to: AztecAddress, amount: u128) {
+    fn mint_to_private(to: AztecAddress, amount: u128) {
         _validate_minter(context.msg_sender(), storage.minter.read());
 
         _mint_to_private(&mut context, storage.private_balances, to, amount);
