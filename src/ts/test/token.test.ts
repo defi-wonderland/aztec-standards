@@ -203,7 +203,7 @@ describe('Token - Single PXE', () => {
     // First mint to private 2 tokens to alice
     await token
       .withWallet(alice)
-      .methods.mint_to_private(alice.getAddress(), alice.getAddress(), AMOUNT * 2n)
+      .methods.mint_to_private(alice.getAddress(), AMOUNT * 2n)
       .send({ from: alice.getAddress() })
       .wait();
 
@@ -229,7 +229,7 @@ describe('Token - Single PXE', () => {
     // Mint 1 token privately to alice
     await token
       .withWallet(alice)
-      .methods.mint_to_private(alice.getAddress(), alice.getAddress(), AMOUNT)
+      .methods.mint_to_private(alice.getAddress(), AMOUNT)
       .send({ from: alice.getAddress() })
       .wait();
 
@@ -248,7 +248,7 @@ describe('Token - Single PXE', () => {
     // Mint 2 tokens privately to alice
     await token
       .withWallet(alice)
-      .methods.mint_to_private(alice.getAddress(), alice.getAddress(), AMOUNT * 2n)
+      .methods.mint_to_private(alice.getAddress(), AMOUNT * 2n)
       .send({ from: alice.getAddress() })
       .wait();
 
@@ -278,7 +278,7 @@ describe('Token - Single PXE', () => {
     // Mint 2 tokens privately to alice
     await token
       .withWallet(alice)
-      .methods.mint_to_private(alice.getAddress(), alice.getAddress(), AMOUNT * 2n)
+      .methods.mint_to_private(alice.getAddress(), AMOUNT * 2n)
       .send({ from: alice.getAddress() })
       .wait();
 
@@ -297,7 +297,7 @@ describe('Token - Single PXE', () => {
     // Mint 2 tokens privately to alice
     await token
       .withWallet(alice)
-      .methods.mint_to_private(alice.getAddress(), alice.getAddress(), AMOUNT * 2n)
+      .methods.mint_to_private(alice.getAddress(), AMOUNT * 2n)
       .send({ from: alice.getAddress() })
       .wait();
 

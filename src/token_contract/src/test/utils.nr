@@ -206,11 +206,7 @@ pub unconstrained fn mint_to_private(
     let note_randomness = random();
     let _ = OracleMock::mock("getRandomField").returns(note_randomness);
 
-    let from = recipient; // we are setting from to recipient because of TODO(#9887)
-    env.call_private(
-        caller,
-        Token::at(token_contract_address).mint_to_private(from, recipient, amount),
-    );
+    env.call_private(caller, Token::at(token_contract_address).mint_to_private(recipient, amount));
 }
 
 pub unconstrained fn transfer_in_private(
