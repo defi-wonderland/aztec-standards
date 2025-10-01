@@ -49,7 +49,7 @@ export default class TokenContractBenchmark extends Benchmark {
     const owner = alice.getAddress();
     const methods: ContractFunctionInteraction[] = [
       // Mint methods
-      tokenContract.withWallet(alice).methods.mint_to_private(owner, owner, amt(100)),
+      tokenContract.withWallet(alice).methods.mint_to_private(owner, amt(100)),
       tokenContract.withWallet(alice).methods.mint_to_public(owner, amt(100)),
       // Transfer methods
       tokenContract.withWallet(alice).methods.transfer_private_to_public(owner, bob.getAddress(), amt(10), 0),
