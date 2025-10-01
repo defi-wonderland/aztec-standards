@@ -1,6 +1,6 @@
 mod test;
-mod library;
-mod types;
+pub mod library;
+pub mod types;
 
 use aztec::macros::aztec;
 
@@ -10,8 +10,9 @@ pub contract Escrow {
         context::PrivateContext,
         macros::functions::private,
         oracle::get_contract_instance::get_contract_instance,
-        prelude::AztecAddress,
-        protocol_types::{contract_instance::ContractInstance, traits::FromField},
+        protocol_types::{
+            address::AztecAddress, contract_instance::ContractInstance, traits::FromField,
+        },
     };
     use nft::NFT;
     use token::Token;

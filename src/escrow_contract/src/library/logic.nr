@@ -1,9 +1,10 @@
 // aztec library
-use aztec::{
-    messages::logs::{event::to_encrypted_private_event_message, utils::prefix_with_tag},
+use dep::aztec::{
+    context::PrivateContext,
+    messages::logs::event::to_encrypted_private_event_message,
     oracle::get_contract_instance::get_contract_instance,
-    prelude::{AztecAddress, PrivateContext},
     protocol_types::{
+        address::AztecAddress,
         constants::GENERATOR_INDEX__EVENT_COMMITMENT,
         contract_instance::ContractInstance,
         hash::poseidon2_hash_with_separator,
@@ -95,8 +96,13 @@ pub fn _share_escrow(
         GENERATOR_INDEX__EVENT_COMMITMENT,
     );
     context.push_nullifier(event_commitment);
-    let log_content = prefix_with_tag(ciphertext, context.msg_sender(), account);
-    context.emit_private_log(log_content, log_content.len());
+
+    // Emit the encrypted log - pad to required size (18 fields)
+    let mut padded_ciphertext: [Field; 18] = [0; 18];
+    for i in 0..ciphertext.len() {
+        padded_ciphertext[i] = ciphertext[i];
+    }
+    context.emit_private_log(padded_ciphertext, ciphertext.len() as u32);
 }
 
 /// @notice Withdraws an amount of tokens from the provided escrow.

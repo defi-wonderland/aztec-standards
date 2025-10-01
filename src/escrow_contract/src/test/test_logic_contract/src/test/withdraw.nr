@@ -7,19 +7,18 @@ use token::{test::utils as token_utils, Token};
 
 #[test(should_fail_with = "Not Authorized")]
 unconstrained fn withdraw_unauthorized() {
-    let (env, escrow, token, _, _, recipient, minter) =
+    let (mut env, escrow, token, _, _, recipient, minter) =
         logic_utils::set_escrow_with_token_and_nft(false, 1);
 
     // Mint some tokens to escrow
     let amount: u128 = token_utils::mint_amount;
-    env.impersonate(minter);
-    Token::at(token).mint_to_private(minter, escrow, amount).call(&mut env.private());
-    env.advance_block_by(1);
+    env.call_private(minter, Token::at(token).mint_to_private(minter, escrow, amount));
 
     // Check the escrow received and can read the tokens
-    token_utils::check_private_balance(token, escrow, amount);
+    token_utils::check_private_balance(env, token, escrow, amount);
 
-    let logic = logic_utils::deploy_logic(env, 1);
+    let logic = logic_utils::deploy_logic(&mut env, 1);
 
-    TestLogic::at(logic).withdraw(escrow, token, recipient, amount).call(&mut env.private());
+    let caller = env.create_light_account();
+    env.call_private(caller, TestLogic::at(logic).withdraw(escrow, recipient, token, amount));
 }

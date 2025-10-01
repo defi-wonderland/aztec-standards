@@ -8,28 +8,34 @@ contract TestLogic {
     use aztec::{
         macros::{events::event, functions::{initializer, private, public}, storage::storage},
         oracle::get_contract_instance::get_contract_instance,
-        prelude::{AztecAddress, PublicImmutable},
-        protocol_types::{contract_instance::ContractInstance, public_keys::PublicKeys},
+        protocol_types::{
+            address::AztecAddress, contract_instance::ContractInstance, public_keys::PublicKeys,
+        },
+        state_vars::public_immutable::PublicImmutable,
     };
     use escrow_contract::library::logic::{
         _check_escrow, _secret_keys_to_public_keys, _share_escrow, _withdraw, _withdraw_nft,
     };
 
-    /// @notice Data privately emitted to an account that will use the escrow
-    /// @dev We declare the event struct here to expose it in the abi as macro event cannot be used in libraries, only in contracts
-    /// @param escrow The address of the escrow
-    /// @param nsk_m Master Nullifier Secret Key
-    /// @param ivsk_m Incoming Viewing Key
-    /// @param ovsk_m Outgoing Viewing Key
-    /// @param tsk_m Tagging Secret Key
-    #[event]
-    struct EscrowDetailsLogContent {
-        escrow: AztecAddress,
-        nsk_m: Field,
-        ivsk_m: Field,
-        ovsk_m: Field,
-        tsk_m: Field,
-    }
+    // NOTE: Event emission seems to now be working via library methods in v2.0.3.
+    // The EscrowDetailsLogContent struct is defined in types/escrow_details_event.nr
+    // Event decryption and validation should be tested in TypeScript integration tests.
+
+    // /// @notice Data privately emitted to an account that will use the escrow
+    // /// @dev We declare the event struct here to expose it in the abi as macro event cannot be used in libraries, only in contracts
+    // /// @param escrow The address of the escrow
+    // /// @param nsk_m Master Nullifier Secret Key
+    // /// @param ivsk_m Incoming Viewing Key
+    // /// @param ovsk_m Outgoing Viewing Key
+    // /// @param tsk_m Tagging Secret Key
+    // #[event]
+    // struct EscrowDetailsLogContent {
+    //     escrow: AztecAddress,
+    //     nsk_m: Field,
+    //     ivsk_m: Field,
+    //     ovsk_m: Field,
+    //     tsk_m: Field,
+    // }
 
     // @param escrow_class_id The contract class id of the escrow contract
     #[storage]

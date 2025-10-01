@@ -1,21 +1,28 @@
-use aztec::{
+use dep::aztec::{
     event::{event_interface::EventInterface, event_selector::EventSelector},
-    prelude::AztecAddress,
-    protocol_types::traits::{FromField, Serialize, ToField},
+    protocol_types::{address::AztecAddress, traits::{Serialize, ToField}},
 };
 
 // #[event] macro cannot be used in libraries, only in contracts.
 pub struct EscrowDetailsLogContent {
-    escrow: AztecAddress,
-    nsk_m: Field,
-    ivsk_m: Field,
-    ovsk_m: Field,
-    tsk_m: Field,
+    pub escrow: AztecAddress,
+    pub nsk_m: Field,
+    pub ivsk_m: Field,
+    pub ovsk_m: Field,
+    pub tsk_m: Field,
 }
 
-impl Serialize<5> for EscrowDetailsLogContent {
-    fn serialize(self) -> [Field; 5] {
-        [self.escrow.to_field(), self.nsk_m, self.ivsk_m, self.ovsk_m, self.tsk_m]
+impl Serialize for EscrowDetailsLogContent {
+    let N: u32 = 5;
+
+    fn serialize(self) -> [Field; Self::N] {
+        [
+            self.escrow.to_field(),
+            self.nsk_m,
+            self.ivsk_m,
+            self.ovsk_m,
+            self.tsk_m,
+        ]
     }
 }
 
