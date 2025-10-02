@@ -11,4 +11,5 @@ members = [
 token = "benchmarks/token_contract.benchmark.ts"
 nft = "benchmarks/nft_contract.benchmark.ts"
 tokenized_vault = "benchmarks/tokenized_vault_contract.benchmark.ts"
+escrow_contract = "benchmarks/escrow_contract.benchmark.ts"
 logic = "benchmarks/logic_contract.benchmark.ts"

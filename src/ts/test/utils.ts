@@ -26,7 +26,7 @@ import {
 } from '@aztec/stdlib/contract';
 import { getDefaultInitializer } from '@aztec/stdlib/abi';
 import { TokenContract, TokenContractArtifact } from '../../../artifacts/Token.js';
-import { NFTContractArtifact } from '../../../artifacts/NFT.js';
+import { NFTContract, NFTContractArtifact } from '../../../artifacts/NFT.js';
 import { TestLogicContractArtifact, TestLogicContract } from '../../../artifacts/TestLogic.js';
 import { EscrowContractArtifact, EscrowContract } from '../../../artifacts/Escrow.js';
 
@@ -115,6 +115,33 @@ export async function deployTokenWithInitialSupply(deployer: AccountWallet) {
   return contract;
 }
 
+// --- NFT Utils ---
+
+// Check if an address owns a specific NFT in public state
+export async function assertOwnsPublicNFT(
+  nft: NFTContract,
+  tokenId: bigint,
+  expectedOwner: AztecAddress,
+  caller?: AccountWallet,
+) {
+  const n = caller ? nft.withWallet(caller) : nft;
+  const owner = await n.methods.public_owner_of(tokenId).simulate();
+  expect(owner.equals(expectedOwner)).toBe(true);
+}
+
+// Check if an address owns a specific NFT in private state
+export async function assertOwnsPrivateNFT(
+  nft: NFTContract,
+  tokenId: bigint,
+  owner: AztecAddress,
+  caller?: AccountWallet,
+) {
+  const n = caller ? nft.withWallet(caller) : nft;
+  const [nfts, _] = await n.methods.get_private_nfts(owner, 0).simulate();
+  const hasNFT = nfts.some((id: bigint) => id === tokenId);
+  expect(hasNFT).toBe(true);
+}
+
 /**
  * Deploys the NFT contract with a specified minter.
  * @param deployer - The wallet to deploy the contract with.
@@ -124,13 +151,15 @@ export async function deployNFTWithMinter(deployer: AccountWallet, options?: Dep
   const contract = await Contract.deploy(
     deployer,
     NFTContractArtifact,
-    ['NFT', 'NFT', deployer.getAddress(), deployer.getAddress()],
+    ['TestNFT', 'TNFT', deployer.getAddress(), deployer.getAddress()],
     'constructor_with_minter',
   )
     .send({ ...options, from: deployer.getAddress() })
     .deployed();
   return contract;
 }
+
+// --- Tokenized Vault Utils ---
 
 /**
  * Deploys the Token contract with a specified minter.
@@ -158,6 +187,30 @@ export async function deployVaultAndAssetWithMinter(deployer: AccountWallet): Pr
 
   return [vaultContract, assetContract];
 }
+
+// --- Escrow Utils ---
+
+/**
+ * Deploys the Escrow contract.
+ * @param publicKeys - The public keys to use for the contract.
+ * @param deployer - The wallet to deploy the contract with.
+ * @param salt - The salt to use for the contract address. If not provided, a random salt will be used.
+ * @returns A deployed contract instance.
+ */
+export async function deployEscrow(
+  publicKeys: PublicKeys,
+  deployer: AccountWallet,
+  salt: Fr = Fr.random(),
+  args: unknown[] = [],
+  constructor?: string,
+): Promise<EscrowContract> {
+  const contract = await Contract.deployWithPublicKeys(publicKeys, deployer, EscrowContractArtifact, args, constructor)
+    .send({ contractAddressSalt: salt, universalDeploy: true })
+    .deployed();
+  return contract as EscrowContract;
+}
+
+// --- General Utils ---
 
 export async function setPrivateAuthWit(
   caller: AztecAddress | { getAddress: () => AztecAddress },
