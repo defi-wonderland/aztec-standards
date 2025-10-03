@@ -1,9 +1,7 @@
 use crate::Escrow;
 use aztec::{
-    protocol_types::{address::AztecAddress, traits::ToField},
-    test::helpers::{
-        test_environment::TestEnvironment, txe_oracles as cheatcodes, utils::ContractDeployment,
-    },
+    protocol_types::address::AztecAddress,
+    test::helpers::{test_environment::TestEnvironment, utils::ContractDeployment},
 };
 use nft::test::utils as nft_utils;
 use token::test::utils as token_utils;
@@ -36,10 +34,6 @@ pub unconstrained fn deploy_escrow_with_secret(
     let _escrow_account = cheatcodes::add_account(escrow_secret);
 
     // Deploy the Escrow contract using escrow_secret as the salt
-    // In v1.2.1, deploy_with_public_keys used the secret as the salt
-    // In v2.0.3, we manually create ContractDeployment with secret as the salt
-    // The salt will be stored in the contract instance and checked by _assert_msg_sender
-    // The test extracts logic_contract_address from escrow_instance.salt
     let _escrow_contract =
         ContractDeployment { env: *env, path: "@escrow_contract/Escrow", secret: escrow_secret };
 
