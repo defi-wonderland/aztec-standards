@@ -27,10 +27,7 @@ unconstrained fn check_escrow_public_keys_mismatch() {
     let logic = logic_utils::deploy_logic(&mut env, escrow_class_id);
 
     let caller = env.create_light_account();
-    env.call_private(
-        caller,
-        TestLogic::at(logic).check_escrow(escrow, incorrect_msk),
-    );
+    env.call_private(caller, TestLogic::at(logic).check_escrow(escrow, incorrect_msk));
 }
 
 #[test(should_fail_with = "Assertion failed: Escrow class id mismatch")]
