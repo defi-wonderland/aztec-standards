@@ -1,7 +1,7 @@
 use crate::Escrow;
 use aztec::{
     protocol_types::address::AztecAddress,
-    test::helpers::{txe_oracles, test_environment::TestEnvironment, utils::ContractDeployment},
+    test::helpers::{txe_oracles as cheatcodes, test_environment::TestEnvironment, utils::ContractDeployment},
 };
 use nft::test::utils as nft_utils;
 use token::test::utils as token_utils;
@@ -31,7 +31,7 @@ pub unconstrained fn deploy_escrow_with_secret(
 ) -> AztecAddress {
     // Create an account with the custom secret, which generates the public keys
     // This registers the public keys with the test environment so the escrow can decrypt notes
-    let _escrow_account = txe_oracles::add_account(escrow_secret);
+    let _escrow_account = cheatcodes::add_account(escrow_secret);
 
     // Deploy the Escrow contract using escrow_secret as the salt
     let _escrow_contract =
