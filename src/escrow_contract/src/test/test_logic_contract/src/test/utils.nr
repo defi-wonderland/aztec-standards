@@ -2,8 +2,9 @@ use crate::TestLogic;
 use aztec::{
     prelude::AztecAddress,
     protocol_types::public_keys::{IvpkM, NpkM, OvpkM, Point, PublicKeys, TpkM},
-    test::helpers::{cheatcodes, test_environment::TestEnvironment},
+    test::helpers::test_environment::TestEnvironment,
 };
+use escrow_contract::library::logic::MasterSecretKeys;
 use nft::test::utils as nft_utils;
 use token::test::utils as token_utils;
 
@@ -23,12 +24,14 @@ pub unconstrained fn deploy_logic(
     logic_contract.to_address()
 }
 
-pub unconstrained fn get_test_vector() -> (PublicKeys, [Field; 4], PublicKeys, [Field; 4]) {
+pub unconstrained fn get_test_vector() -> (PublicKeys, MasterSecretKeys, PublicKeys, MasterSecretKeys) {
     // secret keys derived using 1 as the seed
-    let nsk_m_1: Field = 0x1c46232974b84af1ea0f3f8e02d68b205fa0fd765839bdd298d270c6f4d87190;
-    let ivsk_m_1: Field = 0x23077d282aa597e7a1c6ffb4a1069cffd9743e861451076740cf42cb632fec84;
-    let ovsk_m_1: Field = 0x0fd5dc80151e24e20e402fa82437be7483431347ca4aabde674cdb12598d0fc0;
-    let tsk_m_1: Field = 0x0d104e3f086a9c3127b4152bac929180c21c06f9539b62843f4971753dd4ecf9;
+    let master_secret_keys_1 = MasterSecretKeys {
+        nsk_m: 0x1c46232974b84af1ea0f3f8e02d68b205fa0fd765839bdd298d270c6f4d87190,
+        ivsk_m: 0x23077d282aa597e7a1c6ffb4a1069cffd9743e861451076740cf42cb632fec84,
+        ovsk_m: 0x0fd5dc80151e24e20e402fa82437be7483431347ca4aabde674cdb12598d0fc0,
+        tsk_m: 0x0d104e3f086a9c3127b4152bac929180c21c06f9539b62843f4971753dd4ecf9,
+    };
 
     let npk_x_1: Field = 0x0b6111daac402252e041933aad127a26c9851acb11ced405d8563435bb33e0b8;
     let npk_y_1: Field = 0x0ecf620002229630f89c4f06638c3155f7e331a98e3304d92f2b7e213250d3f6;
@@ -46,20 +49,23 @@ pub unconstrained fn get_test_vector() -> (PublicKeys, [Field; 4], PublicKeys, [
         tpk_m: TpkM { inner: Point { x: tpk_x_1, y: tpk_y_1, is_infinite: false } },
     };
 
-    // secret keys derived using 0x1d6b99ffb5bdcb5bdf86334af11362e602b2c245ea0edb5dc60f83ce6f4972f0 as the seed
-    let nsk_m_2: Field = 0x12eef6e682b1353f4e4ac2736ff9c5007b89666d89c04c203c7ad99b68a51fea;
-    let ivsk_m_2: Field = 0x0add4bb1dc9ec91f8351ba9a308b4760445a53949e1f0de0b186473adf3de4d5;
-    let ovsk_m_2: Field = 0x217d4155f818e4237253bc40db9e1cc9b27e9d2509c9f694336a1a9c6bb0416f;
-    let tsk_m_2: Field = 0x2731c1bf3d58ae73ef7f36f15ff444964aed6bbba02f36612c0e3c485cff2e49;
+    // secret keys derived using string "RANDOM_SECRET_KEY" left-padded to 32 bytes with spaces as the seed:
+    // 0x20202020202020202020202020202052414e444f4d5f5345435245545f4b4559
+    let master_secret_keys_2 = MasterSecretKeys {
+        nsk_m: 0x0e9600b209142cfe453ee5082e0eb5916b381f81a1967556afe1049c87cbb2ae,
+        ivsk_m: 0x01243994b0481f12305a17f6f12ed689e38c62d116efa1e2ff61718459f1d9b3,
+        ovsk_m: 0x14958e327b2cbdfd7c18add0d5fc376e533f9ee47f18f47259c862a0429deaa4,
+        tsk_m: 0x23c16c7e7fba57703aaf07ba75076c74d93747f2610e28689350b5e2f9061417,
+    };
 
-    let npk_x_2: Field = 0x19855f74850761f5bd6b831942a1ab014b731fe6ff845f0cdc71b86373cf996c;
-    let npk_y_2: Field = 0x27cf95bde2b632c42489c529d70d553280eacb696ebfab6f54f68eeb65614ca1;
-    let ivpk_x_2: Field = 0x1156e8a1a21091476403fc021fc8c8c2417010fcc049803608310b4cbd1e0e30;
-    let ivpk_y_2: Field = 0x0764e90e1a97f43846017cffc6e638e5b32511e6c27f340a5661a63095afc7c4;
-    let ovpk_x_2: Field = 0x06c70892ab6bdac9743aec506692654421f94eac1f3dc487f6bb8de3be4fd01a;
-    let ovpk_y_2: Field = 0x11d429b716eb2f88bc928f6a7b8e8b8f27915ad1fa6177ab7d3df6a394dd19dc;
-    let tpk_x_2: Field = 0x24bfcc0c8ec358db24627aee83f23a9df244557dacadb96509ba3ded16c8085e;
-    let tpk_y_2: Field = 0x2105965ffa2511ef35854bf255c979811f76110191fae7eaf9a2b17d5c422fdd;
+    let npk_x_2: Field = 0x00ecf1384fa9a5acdaddcf0ca577d12d80309aab813dcf96ea79fad43f3daad9;
+    let npk_y_2: Field = 0x24c81884aece11096a3058433339dd0180756c44b4372951f169c939f569f4fb;
+    let ivpk_x_2: Field = 0x1d352885fed013e664fecb7cba4b2866f247616160d7b83218dfdba95302c16d;
+    let ivpk_y_2: Field = 0x0c99f03d15323e6a59211db9ac5e81027671f8892030f06c9f541876974407ca;
+    let ovpk_x_2: Field = 0x022d55fad39b3889ddecf7ab7634030c15da637e86e3ed550c8148076055e31a;
+    let ovpk_y_2: Field = 0x27b58d54d8f22b769382eb8753181e3d56b0e2a247af7df7c79c28f01f168cc1;
+    let tpk_x_2: Field = 0x2c3a360ec75935a2f3a12761bd764fe6fd97acaec5d085144795a05cbdf0b01b;
+    let tpk_y_2: Field = 0x304512f4fad762bccf727a1cb5b1654211a6fdb7c09535faa1a786dd935bff55;
 
     let public_keys_2 = PublicKeys {
         npk_m: NpkM { inner: Point { x: npk_x_2, y: npk_y_2, is_infinite: false } },
@@ -68,10 +74,7 @@ pub unconstrained fn get_test_vector() -> (PublicKeys, [Field; 4], PublicKeys, [
         tpk_m: TpkM { inner: Point { x: tpk_x_2, y: tpk_y_2, is_infinite: false } },
     };
 
-    (
-        public_keys_1, [nsk_m_1, ivsk_m_1, ovsk_m_1, tsk_m_1], public_keys_2,
-        [nsk_m_2, ivsk_m_2, ovsk_m_2, tsk_m_2],
-    )
+    (public_keys_1, master_secret_keys_1, public_keys_2, master_secret_keys_2)
 }
 
 pub unconstrained fn set_escrow_with_token_and_nft(
@@ -97,8 +100,6 @@ pub unconstrained fn deploy_escrow_with_secret(
     env: &mut TestEnvironment,
     escrow_secret: Field,
 ) -> AztecAddress {
-    let escrow_contract_account = cheatcodes::add_account(escrow_secret);
-
     let escrow_contract = env
         .deploy_with_public_keys("./@escrow_contract", "Escrow", escrow_secret)
         .without_initializer();
