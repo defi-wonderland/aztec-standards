@@ -10,5 +10,5 @@ mod transfer_private_to_public_with_commitment;
 mod transfer_private_to_public;
 mod transfer_public_to_private;
 mod transfer_public_to_public;
-mod utils;
+pub mod utils;
 mod view;

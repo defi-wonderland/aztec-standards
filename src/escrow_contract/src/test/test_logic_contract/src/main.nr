@@ -7,8 +7,11 @@ contract TestLogic {
     // aztec library
     use aztec::{
         macros::{events::event, functions::{initializer, private, public}, storage::storage},
-        prelude::{AztecAddress, PublicImmutable},
-        protocol_types::public_keys::PublicKeys,
+        oracle::get_contract_instance::get_contract_instance,
+        protocol_types::{
+            address::AztecAddress, contract_instance::ContractInstance, public_keys::PublicKeys,
+        },
+        state_vars::public_immutable::PublicImmutable,
     };
     use escrow_contract::library::logic::{
         _check_escrow, _secret_keys_to_public_keys, _share_escrow, _withdraw, _withdraw_nft,

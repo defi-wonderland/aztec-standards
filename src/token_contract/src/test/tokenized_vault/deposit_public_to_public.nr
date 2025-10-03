@@ -13,6 +13,7 @@ unconstrained fn deposit_public_to_public_without_asset() {
     // Authorize the vault to use the caller's assets
     let deposit_amount: u128 = mint_amount;
     utils::authorize_transfer_public_to_public(
+        env,
         asset_address,
         vault_address,
         owner,
@@ -21,11 +22,10 @@ unconstrained fn deposit_public_to_public_without_asset() {
     );
 
     // Deposit should fail because the PublicImmutable asset was not initialized
-    env.impersonate(owner);
-    Token::at(vault_address).deposit_public_to_public(owner, recipient, deposit_amount, 0).call(
-        &mut env.public(),
+    env.call_public(
+        owner,
+        Token::at(vault_address).deposit_public_to_public(owner, recipient, deposit_amount, 0),
     );
-    env.advance_block_by(1);
 }
 
 #[test]
@@ -35,13 +35,12 @@ unconstrained fn deposit_public_to_public_success() {
 
     // Mint some asset tokens to owner
     let deposit_amount: u128 = mint_amount;
-    env.impersonate(owner);
-    Token::at(asset_address).mint_to_public(owner, deposit_amount).call(&mut env.public());
-    env.advance_block_by(1);
+    env.call_public(owner, Token::at(asset_address).mint_to_public(owner, deposit_amount));
 
     // Deposit assets to get shares
     // Authorize the vault to use the caller's assets
     utils::authorize_transfer_public_to_public(
+        env,
         asset_address,
         vault_address,
         owner,
@@ -50,22 +49,21 @@ unconstrained fn deposit_public_to_public_success() {
     );
 
     // Deposit
-    env.impersonate(owner);
-    Token::at(vault_address).deposit_public_to_public(owner, recipient, deposit_amount, 0).call(
-        &mut env.public(),
+    env.call_public(
+        owner,
+        Token::at(vault_address).deposit_public_to_public(owner, recipient, deposit_amount, 0),
     );
-    env.advance_block_by(1);
 
     // Check recipient got shares
     // At the first deposit 1 share = 1 asset
-    utils::check_public_balance(vault_address, recipient, deposit_amount);
+    utils::check_public_balance(env, vault_address, recipient, deposit_amount);
 
     // Check the total supply got updated
-    let total_supply = Token::at(vault_address).total_supply().view(&mut env.public());
+    let total_supply = env.view_public(Token::at(vault_address).total_supply());
     assert(total_supply == deposit_amount, "Incorrect shares total supply");
 
     // Check vault has assets
-    utils::check_public_balance(asset_address, vault_address, deposit_amount);
+    utils::check_public_balance(env, asset_address, vault_address, deposit_amount);
 }
 
 #[test]
@@ -75,19 +73,16 @@ unconstrained fn deposit_public_to_public_after_yield() {
 
     // Mint some asset tokens to the vault contract
     let yield_amount: u128 = 1;
-    env.impersonate(owner);
-    Token::at(asset_address).mint_to_public(vault_address, yield_amount).call(&mut env.public());
-    env.advance_block_by(1);
+    env.call_public(owner, Token::at(asset_address).mint_to_public(vault_address, yield_amount));
 
     // Mint some asset tokens to owner
     let deposit_amount: u128 = mint_amount;
-    env.impersonate(owner);
-    Token::at(asset_address).mint_to_public(owner, deposit_amount).call(&mut env.public());
-    env.advance_block_by(1);
+    env.call_public(owner, Token::at(asset_address).mint_to_public(owner, deposit_amount));
 
     // Deposit assets to get shares
     // Authorize the vault to use the caller's assets
     utils::authorize_transfer_public_to_public(
+        env,
         asset_address,
         vault_address,
         owner,
@@ -96,22 +91,26 @@ unconstrained fn deposit_public_to_public_after_yield() {
     );
 
     // Deposit
-    env.impersonate(owner);
-    Token::at(vault_address).deposit_public_to_public(owner, recipient, deposit_amount, 0).call(
-        &mut env.public(),
+    env.call_public(
+        owner,
+        Token::at(vault_address).deposit_public_to_public(owner, recipient, deposit_amount, 0),
     );
-    env.advance_block_by(1);
 
     // Check recipient got shares
     let expected_shares: u128 = deposit_amount / 2; // The initial rate, when shares' supply is still 0, is given by the amount of assets held by the vault + 1. Since yield = 1, the rate is 1:2.
-    utils::check_public_balance(vault_address, recipient, expected_shares);
+    utils::check_public_balance(env, vault_address, recipient, expected_shares);
 
     // Check the total supply got updated
-    let total_supply = Token::at(vault_address).total_supply().view(&mut env.public());
+    let total_supply = env.view_public(Token::at(vault_address).total_supply());
     assert(total_supply == expected_shares, "Incorrect shares total supply");
 
     // Check vault has assets
-    utils::check_public_balance(asset_address, vault_address, deposit_amount + yield_amount);
+    utils::check_public_balance(
+        env,
+        asset_address,
+        vault_address,
+        deposit_amount + yield_amount,
+    );
 }
 
 #[test(should_fail_with = "unauthorized")]
@@ -121,16 +120,13 @@ unconstrained fn deposit_public_to_public_without_asset_approval() {
 
     // Mint some asset tokens to owner
     let deposit_amount: u128 = mint_amount;
-    env.impersonate(owner);
-    Token::at(asset_address).mint_to_public(owner, deposit_amount).call(&mut env.public());
-    env.advance_block_by(1);
+    env.call_public(owner, Token::at(asset_address).mint_to_public(owner, deposit_amount));
 
     // Deposit
-    env.impersonate(owner);
-    Token::at(vault_address).deposit_public_to_public(owner, recipient, deposit_amount, 0).call(
-        &mut env.public(),
+    env.call_public(
+        owner,
+        Token::at(vault_address).deposit_public_to_public(owner, recipient, deposit_amount, 0),
     );
-    env.advance_block_by(1);
 }
 
 #[test(should_fail_with = "unauthorized")]
@@ -140,13 +136,12 @@ unconstrained fn deposit_public_to_public_on_behalf_of_wrong_caller() {
 
     // Mint some asset tokens to owner
     let deposit_amount: u128 = mint_amount;
-    env.impersonate(owner);
-    Token::at(asset_address).mint_to_public(owner, deposit_amount).call(&mut env.public());
-    env.advance_block_by(1);
+    env.call_public(owner, Token::at(asset_address).mint_to_public(owner, deposit_amount));
 
     // Deposit assets to get shares
     // Authorize the vault to use the caller's assets
     utils::authorize_transfer_public_to_public(
+        env,
         asset_address,
         vault_address,
         owner,
@@ -155,11 +150,10 @@ unconstrained fn deposit_public_to_public_on_behalf_of_wrong_caller() {
     );
 
     // Deposit
-    env.impersonate(recipient);
-    Token::at(vault_address).deposit_public_to_public(owner, recipient, deposit_amount, 0).call(
-        &mut env.public(),
+    env.call_public(
+        recipient,
+        Token::at(vault_address).deposit_public_to_public(owner, recipient, deposit_amount, 0),
     );
-    env.advance_block_by(1);
 }
 
 #[test]
@@ -169,12 +163,11 @@ unconstrained fn deposit_public_to_public_on_behalf_of_other_success() {
 
     // Mint some asset tokens to owner
     let deposit_amount: u128 = mint_amount;
-    env.impersonate(owner);
-    Token::at(asset_address).mint_to_public(owner, deposit_amount).call(&mut env.public());
-    env.advance_block_by(1);
+    env.call_public(owner, Token::at(asset_address).mint_to_public(owner, deposit_amount));
 
     // Authorize the vault to use the caller's assets
     utils::authorize_transfer_public_to_public(
+        env,
         asset_address,
         vault_address,
         owner,
@@ -186,26 +179,26 @@ unconstrained fn deposit_public_to_public_on_behalf_of_other_success() {
     let deposit_public_to_public_call_interface =
         Token::at(vault_address).deposit_public_to_public(owner, recipient, deposit_amount, 0);
     authwit_cheatcodes::add_public_authwit_from_call_interface(
+        env,
         owner,
         recipient,
         deposit_public_to_public_call_interface,
     );
 
     // Deposit
-    env.impersonate(recipient);
-    Token::at(vault_address).deposit_public_to_public(owner, recipient, deposit_amount, 0).call(
-        &mut env.public(),
+    env.call_public(
+        recipient,
+        Token::at(vault_address).deposit_public_to_public(owner, recipient, deposit_amount, 0),
     );
-    env.advance_block_by(1);
 
     // Check recipient got shares
     // At the first deposit 1 share = 1 asset
-    utils::check_public_balance(vault_address, recipient, deposit_amount);
+    utils::check_public_balance(env, vault_address, recipient, deposit_amount);
 
     // Check the total supply got updated
-    let total_supply = Token::at(vault_address).total_supply().view(&mut env.public());
+    let total_supply = env.view_public(Token::at(vault_address).total_supply());
     assert(total_supply == deposit_amount, "Incorrect shares total supply");
 
     // Check vault has assets
-    utils::check_public_balance(asset_address, vault_address, deposit_amount);
+    utils::check_public_balance(env, asset_address, vault_address, deposit_amount);
 }

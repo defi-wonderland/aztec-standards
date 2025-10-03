@@ -10,16 +10,13 @@ unconstrained fn withdraw_private_to_private_exact_without_asset() {
     let (env, vault_address, _, _, minter) = utils::setup_with_minter(false);
 
     // Withdrawal should fail because the PublicImmutable asset was not initialized
-    env.impersonate(owner);
-    Token::at(vault_address).withdraw_private_to_private_exact(owner, recipient, 0, 0, 0).call(
-        &mut env.private(),
+    env.call_private(
+        owner,
+        Token::at(vault_address).withdraw_private_to_private_exact(owner, recipient, 0, 0, 0),
     );
-    env.advance_block_by(1);
 }
 
-// TODO(#15666 & #15118): this test fails because the ivsk is currently needed for emitting a note, but the vault contract doesn't have one.
-// #[test]
-#[test(should_fail_with = "No public key registered for address")]
+#[test]
 unconstrained fn withdraw_private_to_private_exact_success() {
     // Setup with asset token
     let (env, vault_address, owner, recipient, asset_address) = utils::setup_with_asset(false);
@@ -36,35 +33,32 @@ unconstrained fn withdraw_private_to_private_exact_success() {
         deposit_amount,
     );
 
-    env.impersonate(deposit_recipient);
     let shares_to_burn: u128 = deposit_amount;
-    Token::at(vault_address)
-        .withdraw_private_to_private_exact(
+    env.call_private(
+        deposit_recipient,
+        Token::at(vault_address).withdraw_private_to_private_exact(
             deposit_recipient,
             recipient,
             deposit_amount,
             shares_to_burn,
             0,
-        )
-        .call(&mut env.private());
-    env.advance_block_by(1);
+        ),
+    );
 
     // All shares are burnt
-    utils::check_public_balance(vault_address, deposit_recipient, 0);
-    utils::check_public_balance(vault_address, recipient, 0);
+    utils::check_public_balance(env, vault_address, deposit_recipient, 0);
+    utils::check_public_balance(env, vault_address, recipient, 0);
 
     // Check the total supply got updated
-    let total_supply = Token::at(vault_address).total_supply().view(&mut env.public());
+    let total_supply = env.view_public(Token::at(vault_address).total_supply());
     assert(total_supply == 0, "Incorrect shares total supply");
 
     // Check asset balances
-    utils::check_private_balance(asset_address, recipient, deposit_amount);
-    utils::check_public_balance(asset_address, vault_address, 0);
+    utils::check_private_balance(env, asset_address, recipient, deposit_amount);
+    utils::check_public_balance(env, asset_address, vault_address, 0);
 }
 
-// TODO(#15666 & #15118): this test fails because the ivsk is currently needed for emitting a note, but the vault contract doesn't have one.
-// #[test]
-#[test(should_fail_with = "No public key registered for address")]
+#[test]
 unconstrained fn withdraw_private_to_private_exact_after_yield() {
     // Setup with asset token
     let (env, vault_address, owner, recipient, asset_address) = utils::setup_with_asset(false);
@@ -83,40 +77,35 @@ unconstrained fn withdraw_private_to_private_exact_after_yield() {
 
     // Mint some asset tokens to the vault contract
     let yield_amount: u128 = 2; // Using 2 instead of 1 avoids rounding issues from anti-inflation logic: 1 goes to the user, 1 stays in the vault.
-    env.impersonate(owner);
-    Token::at(asset_address).mint_to_public(vault_address, yield_amount).call(&mut env.public());
-    env.advance_block_by(1);
+    env.call_public(owner, Token::at(asset_address).mint_to_public(vault_address, yield_amount));
 
     // Withdraw
     let shares_to_burn: u128 = deposit_amount;
-    env.impersonate(deposit_recipient);
-    Token::at(vault_address)
-        .withdraw_private_to_private_exact(
+    env.call_private(
+        deposit_recipient,
+        Token::at(vault_address).withdraw_private_to_private_exact(
             deposit_recipient,
             recipient,
             deposit_amount + 1,
             shares_to_burn,
             0,
-        )
-        .call(&mut env.private());
-    env.advance_block_by(1);
+        ),
+    );
 
     // All shares are burnt
-    utils::check_public_balance(vault_address, deposit_recipient, 0);
-    utils::check_public_balance(vault_address, recipient, 0);
+    utils::check_public_balance(env, vault_address, deposit_recipient, 0);
+    utils::check_public_balance(env, vault_address, recipient, 0);
 
     // Check the total supply got updated
-    let total_supply = Token::at(vault_address).total_supply().view(&mut env.public());
+    let total_supply = env.view_public(Token::at(vault_address).total_supply());
     assert(total_supply == 0, "Incorrect shares total supply");
 
     // Check asset balances. The vault should still have 1 token due to rounding.
-    utils::check_public_balance(asset_address, vault_address, 1);
-    utils::check_private_balance(asset_address, recipient, deposit_amount + 1);
+    utils::check_public_balance(env, asset_address, vault_address, 1);
+    utils::check_private_balance(env, asset_address, recipient, deposit_amount + 1);
 }
 
-// TODO(#15666 & #15118): this test fails because the ivsk is currently needed for emitting a note, but the vault contract doesn't have one.
-// #[test]
-#[test(should_fail_with = "No public key registered for address")]
+#[test]
 unconstrained fn withdraw_private_to_private_exact_request_fewer_assets() {
     // Setup with asset token
     let (env, vault_address, owner, recipient, asset_address) = utils::setup_with_asset(false);
@@ -133,32 +122,31 @@ unconstrained fn withdraw_private_to_private_exact_request_fewer_assets() {
         deposit_amount,
     );
 
-    env.impersonate(deposit_recipient);
     let shares_to_burn: u128 = deposit_amount;
     let requested_assets: u128 = deposit_amount - 1;
-    Token::at(vault_address)
-        .withdraw_private_to_private_exact(
+    env.call_private(
+        deposit_recipient,
+        Token::at(vault_address).withdraw_private_to_private_exact(
             deposit_recipient,
             recipient,
             requested_assets,
             shares_to_burn,
             0,
-        )
-        .call(&mut env.private());
-    env.advance_block_by(1);
+        ),
+    );
 
     // The deposit_recipient receives change, since he sent 1 share too many
-    utils::check_private_balance(vault_address, deposit_recipient, 1);
-    utils::check_public_balance(vault_address, deposit_recipient, 0);
-    utils::check_public_balance(vault_address, recipient, 0);
+    utils::check_private_balance(env, vault_address, deposit_recipient, 1);
+    utils::check_public_balance(env, vault_address, deposit_recipient, 0);
+    utils::check_public_balance(env, vault_address, recipient, 0);
 
     // Check the total supply got updated
-    let total_supply = Token::at(vault_address).total_supply().view(&mut env.public());
+    let total_supply = env.view_public(Token::at(vault_address).total_supply());
     assert(total_supply == 1, "Incorrect shares total supply");
 
     // Check asset balances
-    utils::check_private_balance(asset_address, recipient, requested_assets);
-    utils::check_public_balance(asset_address, vault_address, 1);
+    utils::check_private_balance(env, asset_address, recipient, requested_assets);
+    utils::check_public_balance(env, asset_address, vault_address, 1);
 }
 
 // TODO: this test should fail because the ivsk is currently needed for emitting a note, but the vault contract doesn't have one.
@@ -181,18 +169,17 @@ unconstrained fn withdraw_private_to_private_exact_request_too_many_assets() {
         deposit_amount,
     );
 
-    env.impersonate(deposit_recipient);
     let shares_to_burn: u128 = deposit_amount - 1;
-    Token::at(vault_address)
-        .withdraw_private_to_private_exact(
+    env.call_private(
+        deposit_recipient,
+        Token::at(vault_address).withdraw_private_to_private_exact(
             deposit_recipient,
             recipient,
             deposit_amount,
             shares_to_burn,
             0,
-        )
-        .call(&mut env.private());
-    env.advance_block_by(1);
+        ),
+    );
 }
 
 #[test(should_fail_with = "Unknown auth witness for message hash ")]
@@ -213,18 +200,17 @@ unconstrained fn withdraw_private_to_private_exact_without_approval() {
     );
 
     // Withdraw
-    env.impersonate(recipient);
     let shares_to_burn: u128 = deposit_amount;
-    Token::at(vault_address)
-        .withdraw_private_to_private_exact(
+    env.call_private(
+        recipient,
+        Token::at(vault_address).withdraw_private_to_private_exact(
             deposit_recipient,
             recipient,
             deposit_amount,
             shares_to_burn,
             0,
-        )
-        .call(&mut env.private());
-    env.advance_block_by(1);
+        ),
+    );
 }
 
 #[test(should_fail_with = "Unknown auth witness for message hash ")]
@@ -261,22 +247,19 @@ unconstrained fn withdraw_private_to_private_exact_on_behalf_of_wrong_caller() {
     );
 
     // Withdraw
-    env.impersonate(recipient);
-    Token::at(vault_address)
-        .withdraw_private_to_private_exact(
+    env.call_private(
+        recipient,
+        Token::at(vault_address).withdraw_private_to_private_exact(
             deposit_recipient,
             recipient,
             deposit_amount,
             shares_to_burn,
             0,
-        )
-        .call(&mut env.private());
-    env.advance_block_by(1);
+        ),
+    );
 }
 
-// TODO(#15666 & #15118): this test fails because the ivsk is currently needed for emitting a note, but the vault contract doesn't have one.
-// #[test]
-#[test(should_fail_with = "No public key registered for address")]
+#[test]
 unconstrained fn withdraw_private_to_private_exact_on_behalf_of_other_success() {
     // Setup with asset token
     let (env, vault_address, owner, recipient, asset_address) = utils::setup_with_asset(true);
@@ -310,27 +293,26 @@ unconstrained fn withdraw_private_to_private_exact_on_behalf_of_other_success() 
     );
 
     // Withdraw
-    env.impersonate(recipient);
-    Token::at(vault_address)
-        .withdraw_private_to_private_exact(
+    env.call_private(
+        recipient,
+        Token::at(vault_address).withdraw_private_to_private_exact(
             deposit_recipient,
             recipient,
             deposit_amount,
             shares_to_burn,
             0,
-        )
-        .call(&mut env.private());
-    env.advance_block_by(1);
+        ),
+    );
 
     // All shares are burnt
-    utils::check_public_balance(vault_address, deposit_recipient, 0);
-    utils::check_public_balance(vault_address, recipient, 0);
+    utils::check_public_balance(env, vault_address, deposit_recipient, 0);
+    utils::check_public_balance(env, vault_address, recipient, 0);
 
     // Check the total supply got updated
-    let total_supply = Token::at(vault_address).total_supply().view(&mut env.public());
+    let total_supply = env.view_public(Token::at(vault_address).total_supply());
     assert(total_supply == 0, "Incorrect shares total supply");
 
     // Check asset balances
-    utils::check_private_balance(asset_address, recipient, deposit_amount);
-    utils::check_public_balance(asset_address, vault_address, 0);
+    utils::check_private_balance(env, asset_address, recipient, deposit_amount);
+    utils::check_public_balance(env, asset_address, vault_address, 0);
 }
