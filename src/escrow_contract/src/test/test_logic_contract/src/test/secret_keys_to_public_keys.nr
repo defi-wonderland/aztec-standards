@@ -1,6 +1,7 @@
 use crate::test::utils as logic_utils;
 use crate::TestLogic;
 use aztec::test::helpers::test_environment::TestEnvironment;
+use escrow_contract::library::logic::MasterSecretKeys;
 
 // We test public key derivation using two different secret keys.
 #[test]
@@ -15,12 +16,7 @@ unconstrained fn secret_keys_to_public_keys_success() {
     let caller = env.create_light_account();
     let public_keys_1 = env.call_private(
         caller,
-        TestLogic::at(logic_contract_address).secret_keys_to_public_keys(
-            vector_secret_keys_1[0],
-            vector_secret_keys_1[1],
-            vector_secret_keys_1[2],
-            vector_secret_keys_1[3],
-        ),
+        TestLogic::at(logic_contract_address).secret_keys_to_public_keys(vector_secret_keys_1),
     );
 
     assert_eq(vector_public_keys_1.npk_m.inner.x, public_keys_1.npk_m.inner.x);
@@ -35,12 +31,7 @@ unconstrained fn secret_keys_to_public_keys_success() {
 
     let public_keys_2 = env.call_private(
         caller,
-        TestLogic::at(logic_contract_address).secret_keys_to_public_keys(
-            vector_secret_keys_2[0],
-            vector_secret_keys_2[1],
-            vector_secret_keys_2[2],
-            vector_secret_keys_2[3],
-        ),
+        TestLogic::at(logic_contract_address).secret_keys_to_public_keys(vector_secret_keys_2),
     );
 
     assert_eq(vector_public_keys_2.npk_m.inner.x, public_keys_2.npk_m.inner.x);
@@ -64,17 +55,17 @@ unconstrained fn secret_keys_to_public_keys_fail() {
     let (vector_public_keys_1, vector_secret_keys_1, _, _) = logic_utils::get_test_vector();
 
     // we modify the first secret key to be 1 greater than the original, which should derive a different public key
-    let modified_secret_keys_1 = vector_secret_keys_1[0] + 1;
+    let modified_secret_keys: MasterSecretKeys = MasterSecretKeys {
+        nsk_m: vector_secret_keys_1.nsk_m + 1,
+        ivsk_m: vector_secret_keys_1.ivsk_m + 1,
+        ovsk_m: vector_secret_keys_1.ovsk_m + 1,
+        tsk_m: vector_secret_keys_1.tsk_m + 1,
+    };
 
     let caller = env.create_light_account();
     let public_keys_1 = env.call_private(
         caller,
-        TestLogic::at(logic_contract_address).secret_keys_to_public_keys(
-            modified_secret_keys_1,
-            vector_secret_keys_1[1],
-            vector_secret_keys_1[2],
-            vector_secret_keys_1[3],
-        ),
+        TestLogic::at(logic_contract_address).secret_keys_to_public_keys(modified_secret_keys),
     );
 
     assert_eq(vector_public_keys_1, public_keys_1);

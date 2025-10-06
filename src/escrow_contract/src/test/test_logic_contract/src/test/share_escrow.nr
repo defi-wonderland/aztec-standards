@@ -19,7 +19,7 @@ use aztec::{
 //     let recipient = env.create_light_account();
 //     let sender = env.create_light_account();
 //
-//     let (_, sk, _, _) = logic_utils::get_test_vector();
+//     let (_, msk, _, _) = logic_utils::get_test_vector();
 //
 //     let secret = 1;
 //     let escrow = logic_utils::deploy_escrow_with_secret(&mut env, secret);
@@ -35,6 +35,6 @@ use aztec::{
 //     // the escrow salt equal the logic contract address in test environment
 //     env.call_private(
 //         sender,
-//         TestLogic::at(logic).share_escrow(recipient, escrow, sk[0], sk[1], sk[2], sk[3]),
+//         TestLogic::at(logic).share_escrow(recipient, escrow, msk),
 //     );
 // }

@@ -15,22 +15,18 @@ contract TestLogic {
     };
     use escrow_contract::library::logic::{
         _check_escrow, _secret_keys_to_public_keys, _share_escrow, _withdraw, _withdraw_nft,
+        MasterSecretKeys,
     };
 
     /// @notice Data privately emitted to an account that will use the escrow
-    /// @dev We declare the event struct here to expose it in the abi as macro event cannot be used in libraries, only in contracts
+    /// @dev We declare the event struct here to expose it in the abi as macro event cannot be declared in libraries, only in contracts
+    /// @dev See to library/logic.nr _share_escrow function for the event emission implementation
     /// @param escrow The address of the escrow
-    /// @param nsk_m Master Nullifier Secret Key
-    /// @param ivsk_m Incoming Viewing Key
-    /// @param ovsk_m Outgoing Viewing Key
-    /// @param tsk_m Tagging Secret Key
+    /// @param master_secret_keys The master secret keys
     #[event]
     struct EscrowDetailsLogContent {
         escrow: AztecAddress,
-        nsk_m: Field,
-        ivsk_m: Field,
-        ovsk_m: Field,
-        tsk_m: Field,
+        master_secret_keys: MasterSecretKeys,
     }
 
     // @param escrow_class_id The contract class id of the escrow contract
@@ -50,26 +46,14 @@ contract TestLogic {
     /// @notice Verifies that the keys correspond to the escrow address and that the escrow instance data is correct.
     /// @dev Reverts if the data is not correct.
     /// @param escrow The address of the escrow
-    /// @param nsk_m Master Nullifier Secret Key
-    /// @param ivsk_m Incoming Viewing Key
-    /// @param ovsk_m Outgoing Viewing Key
-    /// @param tsk_m Tagging Secret Key
+    /// @param master_secret_keys The master secret keys
     #[private]
-    fn check_escrow(
-        escrow: AztecAddress,
-        nsk_m: Field,
-        ivsk_m: Field,
-        ovsk_m: Field,
-        tsk_m: Field,
-    ) {
+    fn check_escrow(escrow: AztecAddress, master_secret_keys: MasterSecretKeys) {
         _check_escrow(
             &mut context,
             escrow,
             storage.escrow_class_id.read(),
-            nsk_m,
-            ivsk_m,
-            ovsk_m,
-            tsk_m,
+            master_secret_keys,
         );
     }
 
@@ -77,20 +61,14 @@ contract TestLogic {
     /// @dev Emits a private log with the escrow details
     /// @param account The address of the account that will receive the escrow details
     /// @param escrow The address of the escrow
-    /// @param nsk_m Master Nullifier Secret Key
-    /// @param ivsk_m Incoming Viewing Key
-    /// @param ovsk_m Outgoing Viewing Key
-    /// @param tsk_m Tagging Secret Key
+    /// @param master_secret_keys The master secret keys
     #[private]
     fn share_escrow(
         account: AztecAddress,
         escrow: AztecAddress,
-        nsk_m: Field,
-        ivsk_m: Field,
-        ovsk_m: Field,
-        tsk_m: Field,
+        master_secret_keys: MasterSecretKeys,
     ) {
-        _share_escrow(&mut context, account, escrow, nsk_m, ivsk_m, ovsk_m, tsk_m);
+        _share_escrow(&mut context, account, escrow, master_secret_keys);
     }
 
     /// @notice Withdraws an amount of tokens from the provided escrow.
@@ -119,18 +97,10 @@ contract TestLogic {
     }
 
     /// @notice Derives public keys from secret keys.
-    /// @param nsk_m Master Nullifier Secret Key
-    /// @param ivsk_m Incoming Viewing Key
-    /// @param ovsk_m Outgoing Viewing Key
-    /// @param tsk_m Tagging Secret Key
+    /// @param master_secret_keys The master secret keys
     /// @return PublicKeys containing the derived public keys.
     #[private]
-    fn secret_keys_to_public_keys(
-        nsk_m: Field,
-        ivsk_m: Field,
-        ovsk_m: Field,
-        tsk_m: Field,
-    ) -> PublicKeys {
-        _secret_keys_to_public_keys(nsk_m, ivsk_m, ovsk_m, tsk_m)
+    fn secret_keys_to_public_keys(master_secret_keys: MasterSecretKeys) -> PublicKeys {
+        _secret_keys_to_public_keys(master_secret_keys)
     }
 }

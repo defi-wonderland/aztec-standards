@@ -16,7 +16,7 @@ unconstrained fn check_escrow_public_keys_mismatch() {
 
     // Secret keys derived using a different seed than 1, hence the public keys will not match
     let secret = 1;
-    let (_, _, _, incorrect_sk) = logic_utils::get_test_vector();
+    let (_, _, _, incorrect_msk) = logic_utils::get_test_vector();
 
     let escrow = logic_utils::deploy_escrow_with_secret(&mut env, secret);
 
@@ -27,16 +27,7 @@ unconstrained fn check_escrow_public_keys_mismatch() {
     let logic = logic_utils::deploy_logic(&mut env, escrow_class_id);
 
     let caller = env.create_light_account();
-    env.call_private(
-        caller,
-        TestLogic::at(logic).check_escrow(
-            escrow,
-            incorrect_sk[0],
-            incorrect_sk[1],
-            incorrect_sk[2],
-            incorrect_sk[3],
-        ),
-    );
+    env.call_private(caller, TestLogic::at(logic).check_escrow(escrow, incorrect_msk));
 }
 
 #[test(should_fail_with = "Assertion failed: Escrow class id mismatch")]
@@ -45,7 +36,7 @@ unconstrained fn check_escrow_class_id_mismatch() {
 
     // Secret key derived using 1 as the seed
     let secret = 1;
-    let (_, sk, _, _) = logic_utils::get_test_vector();
+    let (_, msk, _, _) = logic_utils::get_test_vector();
 
     let escrow = logic_utils::deploy_escrow_with_secret(&mut env, secret);
 
@@ -57,7 +48,7 @@ unconstrained fn check_escrow_class_id_mismatch() {
     let logic = logic_utils::deploy_logic(&mut env, escrow_class_id + 1);
 
     let owner = env.create_light_account();
-    env.call_private(owner, TestLogic::at(logic).check_escrow(escrow, sk[0], sk[1], sk[2], sk[3]));
+    env.call_private(owner, TestLogic::at(logic).check_escrow(escrow, msk));
 }
 
 #[test(should_fail_with = "Assertion failed: Escrow salt mismatch")]
@@ -66,7 +57,7 @@ unconstrained fn check_escrow_salt_mismatch() {
 
     // Secret key derived using 1 as the seed
     let secret = 1;
-    let (_, sk, _, _) = logic_utils::get_test_vector();
+    let (_, msk, _, _) = logic_utils::get_test_vector();
 
     let escrow = logic_utils::deploy_escrow_with_secret(&mut env, secret);
 
@@ -77,5 +68,5 @@ unconstrained fn check_escrow_salt_mismatch() {
     let logic = logic_utils::deploy_logic(&mut env, escrow_class_id);
 
     let owner = env.create_light_account();
-    env.call_private(owner, TestLogic::at(logic).check_escrow(escrow, sk[0], sk[1], sk[2], sk[3]));
+    env.call_private(owner, TestLogic::at(logic).check_escrow(escrow, msk));
 }
