@@ -44,8 +44,8 @@ export default class TokenContractBenchmark extends Benchmark {
     // Initialize partial notes
     const [alice, bob] = accounts;
     const owner = alice.getAddress();
-    const commitment_1 = await initializeTransferCommitment(tokenContract, alice, owner, bob.getAddress(), owner);
-    const commitment_2 = await initializeTransferCommitment(tokenContract, alice, owner, bob.getAddress(), owner);
+    const commitment_1 = await initializeTransferCommitment(tokenContract, alice, bob.getAddress(), owner);
+    const commitment_2 = await initializeTransferCommitment(tokenContract, alice, bob.getAddress(), owner);
 
     const commitments = [commitment_1, commitment_2];
 
@@ -78,7 +78,7 @@ export default class TokenContractBenchmark extends Benchmark {
       tokenContract.withWallet(alice).methods.burn_public(owner, amt(10), 0),
 
       // Partial notes methods
-      tokenContract.withWallet(alice).methods.initialize_transfer_commitment(owner, bob.getAddress(), owner),
+      tokenContract.withWallet(alice).methods.initialize_transfer_commitment(bob.getAddress(), owner),
       tokenContract.withWallet(alice).methods.transfer_private_to_commitment(owner, commitments[0], amt(10), 0),
       tokenContract.withWallet(alice).methods.transfer_public_to_commitment(owner, commitments[1], amt(10), 0),
     ];
