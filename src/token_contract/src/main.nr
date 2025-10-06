@@ -1,4 +1,4 @@
-mod types;
+pub mod types;
 mod test;
 
 use aztec::macros::aztec;
@@ -259,13 +259,11 @@ pub contract Token {
         );
 
         let completer = context.msg_sender();
-        Token::at(context.this_address())
-            .increase_commitment_balance_internal(
-                PartialUintNote::from_field(commitment),
-                completer,
-                amount,
-            )
-            .enqueue(&mut context);
+        PartialUintNote::from_field(commitment).complete_from_private(
+            &mut context,
+            completer,
+            amount,
+        );
     }
 
     /// @notice Transfer tokens from public balance to private balance
@@ -291,8 +289,9 @@ pub contract Token {
     }
 
     /// @notice Initializes a transfer commitment to be used for transfers/mints
+    /// @dev Returns a partial note that can be used to execute transfers/mints
     /// @param to The address of the recipient
-    /// @param completer The address used to compute the validity commitment
+    /// @param completer The address allowed to complete the partial note
     /// @return commitment The partial note initialized for the transfer/mint commitment
     #[private]
     fn initialize_transfer_commitment(to: AztecAddress, completer: AztecAddress) -> Field {
@@ -385,19 +384,6 @@ pub contract Token {
     #[internal]
     fn decrease_public_balance_internal(from: AztecAddress, amount: u128) {
         _decrease_public_balance(storage.public_balances, from, amount);
-    }
-
-    /// @notice Increases the balance of the commitment by `amount`
-    /// @param commitment The partial note representing the commitment (privacy entrance)
-    /// @param amount The amount of tokens to increase the balance by
-    #[public]
-    #[internal]
-    fn increase_commitment_balance_internal(
-        commitment: PartialUintNote,
-        completer: AztecAddress,
-        amount: u128,
-    ) {
-        _increase_commitment_balance(&mut context, commitment, completer, amount);
     }
 
     /** ==========================================================

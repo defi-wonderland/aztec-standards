@@ -66,7 +66,7 @@ unconstrained fn transfer_private_to_commitment_on_behalf_of_other() {
     utils::check_private_balance(env, token_contract_address, recipient, transfer_amount);
 }
 
-#[test(should_fail_with = "Invalid partial note or completer")]
+#[test(should_fail_with = "Nullifier witness not found for nullifier")]
 unconstrained fn transfer_private_to_commitment_wrong_completer() {
     let (env, token_contract_address, owner, recipient) =
         utils::setup_and_mint_to_private_without_minter(false);
