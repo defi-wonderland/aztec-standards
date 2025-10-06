@@ -190,13 +190,12 @@ export async function setPublicAuthWit(
 export async function initializeTransferCommitment(
   token: TokenContract,
   caller: AccountWallet,
-  from: AztecAddress,
   to: AztecAddress,
   completer: AztecAddress,
 ) {
   // alice prepares partial note for bob
   const fnAbi = TokenContract.artifact.functions.find((f) => f.name === 'initialize_transfer_commitment')!;
-  const fn_interaction = token.methods.initialize_transfer_commitment(from, to, completer);
+  const fn_interaction = token.methods.initialize_transfer_commitment(to, completer);
 
   // Build the request once
   const req = await fn_interaction.create({ fee: { estimateGas: false } }); // set the same fee options you’ll use

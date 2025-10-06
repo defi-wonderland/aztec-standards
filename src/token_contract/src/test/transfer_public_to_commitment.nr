@@ -34,7 +34,7 @@ unconstrained fn transfer_public_to_commitment_external_orchestration() {
     // We prepare the transfer
     let commitment_result = env.call_private(
         owner,
-        Token::at(token_contract_address).initialize_transfer_commitment(owner, recipient, owner),
+        Token::at(token_contract_address).initialize_transfer_commitment(recipient, owner),
     );
     let commitment = commitment_result;
 
@@ -85,7 +85,7 @@ unconstrained fn transfer_public_to_commitment_failure_not_an_owner() {
     // in the contract.)
     let commitment_result = env.call_private(
         owner,
-        Token::at(token_contract_address).initialize_transfer_commitment(owner, not_owner, owner),
+        Token::at(token_contract_address).initialize_transfer_commitment(owner, owner),
     );
     let commitment = commitment_result;
 

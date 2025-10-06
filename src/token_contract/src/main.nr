@@ -203,13 +203,8 @@ pub contract Token {
 
         // Only the sender will be able to complete the partial note
         let completer = context.msg_sender();
-        let commitment = _initialize_transfer_commitment(
-            &mut context,
-            storage.private_balances,
-            from,
-            to,
-            completer,
-        );
+        let commitment =
+            _initialize_transfer_commitment(&mut context, storage.private_balances, to, completer);
         commitment.to_field()
     }
 
@@ -236,7 +231,7 @@ pub contract Token {
             INITIAL_TRANSFER_CALL_MAX_NOTES,
         );
 
-        _increase_private_balance(&mut context, storage.private_balances, from, to, amount);
+        _increase_private_balance(&mut context, storage.private_balances, to, amount);
     }
 
     /// @notice Transfer tokens from private balance to the recipient's commitment (recipient must create a commitment first)
@@ -290,28 +285,18 @@ pub contract Token {
             &mut context,
         );
 
-        _increase_private_balance(&mut context, storage.private_balances, from, to, amount);
+        _increase_private_balance(&mut context, storage.private_balances, to, amount);
     }
 
     /// @notice Initializes a transfer commitment to be used for transfers/mints
     /// @dev Returns a partial note that can be used to execute transfers/mints
-    /// @param from The address of the sender
     /// @param to The address of the recipient
     /// @param completer The address allowed to complete the partial note
     /// @return commitment The partial note initialized for the transfer/mint commitment
     #[private]
-    fn initialize_transfer_commitment(
-        from: AztecAddress,
-        to: AztecAddress,
-        completer: AztecAddress,
-    ) -> Field {
-        let commitment = _initialize_transfer_commitment(
-            &mut context,
-            storage.private_balances,
-            from,
-            to,
-            completer,
-        );
+    fn initialize_transfer_commitment(to: AztecAddress, completer: AztecAddress) -> Field {
+        let commitment =
+            _initialize_transfer_commitment(&mut context, storage.private_balances, to, completer);
         commitment.to_field()
     }
 
@@ -461,14 +446,13 @@ pub contract Token {
 
     /// @notice Mints tokens to a commitment
     /// @dev Mints tokens to a commitment and enqueues a public call to increase the total supply
-    /// @param from The address of the sender
     /// @param to The address of the recipient
     /// @param amount The amount of tokens to mint
     #[private]
-    fn mint_to_private(from: AztecAddress, to: AztecAddress, amount: u128) {
+    fn mint_to_private(to: AztecAddress, amount: u128) {
         _validate_minter(context.msg_sender(), storage.minter.read());
 
-        _mint_to_private(&mut context, storage.private_balances, from, to, amount);
+        _mint_to_private(&mut context, storage.private_balances, to, amount);
     }
 
     /// @notice Mints tokens to a public balance
@@ -593,7 +577,6 @@ pub contract Token {
     fn _increase_private_balance(
         context: &mut PrivateContext,
         private_balances: Map<AztecAddress, BalanceSet<&mut PrivateContext>, &mut PrivateContext>,
-        from: AztecAddress,
         to: AztecAddress,
         amount: u128,
     ) {
@@ -708,7 +691,6 @@ pub contract Token {
     fn _initialize_transfer_commitment(
         context: &mut PrivateContext,
         private_balances: Map<AztecAddress, BalanceSet<&mut PrivateContext>, &mut PrivateContext>,
-        from: AztecAddress,
         to: AztecAddress,
         completer: AztecAddress,
     ) -> PartialUintNote {
@@ -738,11 +720,10 @@ pub contract Token {
     fn _mint_to_private(
         context: &mut PrivateContext,
         private_balances: Map<AztecAddress, BalanceSet<&mut PrivateContext>, &mut PrivateContext>,
-        from: AztecAddress,
         to: AztecAddress,
         amount: u128,
     ) {
-        _increase_private_balance(context, private_balances, from, to, amount);
+        _increase_private_balance(context, private_balances, to, amount);
 
         Token::at(context.this_address()).increase_total_supply_internal(amount).enqueue(context);
     }
@@ -872,7 +853,7 @@ pub contract Token {
         );
 
         // Mint shares in private
-        _mint_to_private(&mut context, storage.private_balances, from, to, shares);
+        _mint_to_private(&mut context, storage.private_balances, to, shares);
 
         // Take the assets from the sender
         Token::at(storage.asset.read())
@@ -904,7 +885,7 @@ pub contract Token {
         );
 
         // Mint shares in private
-        _mint_to_private(&mut context, storage.private_balances, from, to, shares);
+        _mint_to_private(&mut context, storage.private_balances, to, shares);
 
         // Take the assets from the sender
         Token::at(storage.asset.read())
@@ -957,14 +938,13 @@ pub contract Token {
         _validate_from_private::<5>(&mut context, from);
 
         // Increase recipient's private balance with `min_shares`
-        _increase_private_balance(&mut context, storage.private_balances, from, to, min_shares);
+        _increase_private_balance(&mut context, storage.private_balances, to, min_shares);
 
         // TODO (optimization): partial note logs and validity_commitment nullifier are not needed
         // Initialize commitment that allows to mint outstanding shares to the recipient in public
         let partial_note = _initialize_transfer_commitment(
             &mut context,
             storage.private_balances,
-            from,
             to,
             context.this_address(),
         );
@@ -1005,14 +985,13 @@ pub contract Token {
         _validate_from_private::<5>(&mut context, from);
 
         // Increase recipient's private balance with `min_shares`
-        _increase_private_balance(&mut context, storage.private_balances, from, to, min_shares);
+        _increase_private_balance(&mut context, storage.private_balances, to, min_shares);
 
         // TODO (optimization): partial note logs and validity_commitment nullifier are not needed
         // Initialize commitment that allows to mint outstanding shares to the recipient in public
         let partial_note = _initialize_transfer_commitment(
             &mut context,
             storage.private_balances,
-            from,
             to,
             context.this_address(),
         );
@@ -1105,7 +1084,7 @@ pub contract Token {
             .enqueue(&mut context);
 
         // Mint shares to the recipient
-        _mint_to_private(&mut context, storage.private_balances, from, to, shares);
+        _mint_to_private(&mut context, storage.private_balances, to, shares);
     }
 
     /// @notice Issues exactly the requested shares to a public balance and receives the underlying asset from a private balance
@@ -1129,7 +1108,7 @@ pub contract Token {
         // TODO (optimization): partial note logs and validity_commitment nullifier are not needed (?)
         // Initialize commitment that allows to refund excess assets to the sender in public
         let asset_commitment = Token::at(storage.asset.read())
-            .initialize_transfer_commitment(from, from, context.this_address())
+            .initialize_transfer_commitment(from, context.this_address())
             .call(&mut context);
 
         // Take max_assets from the sender
@@ -1168,7 +1147,7 @@ pub contract Token {
         // TODO (optimization): partial note logs and validity_commitment nullifier are not needed (?)
         // Initialize commitment that allows to refund excess assets to the sender in public
         let asset_commitment = Token::at(storage.asset.read())
-            .initialize_transfer_commitment(from, from, context.this_address())
+            .initialize_transfer_commitment(from, context.this_address())
             .call(&mut context);
 
         // Take max_assets from the sender
@@ -1182,7 +1161,7 @@ pub contract Token {
             .enqueue(&mut context);
 
         // Mint shares to recipient in private
-        _mint_to_private(&mut context, storage.private_balances, from, to, shares);
+        _mint_to_private(&mut context, storage.private_balances, to, shares);
     }
 
     /* ====================== WITHDRAW ======================== */
@@ -1297,7 +1276,6 @@ pub contract Token {
             &mut context,
             storage.private_balances,
             from,
-            from,
             context.this_address(),
         );
 
@@ -1348,7 +1326,6 @@ pub contract Token {
         let partial_note = _initialize_transfer_commitment(
             &mut context,
             storage.private_balances,
-            from,
             from,
             context.this_address(),
         );
@@ -1439,7 +1416,7 @@ pub contract Token {
         // TODO (optimization): partial note logs and validity_commitment nullifier are not needed (?)
         // Initialize commitment that allows to transfer outstanding assets to the recipient in public
         let asset_commitment = Token::at(storage.asset.read())
-            .initialize_transfer_commitment(from, to, context.this_address())
+            .initialize_transfer_commitment(to, context.this_address())
             .call(&mut context);
 
         // Transfers any outstanding assets without revealing the recipient
@@ -1479,7 +1456,7 @@ pub contract Token {
         // TODO (optimization): partial note logs and validity_commitment nullifier are not needed (?)
         // Initialize commitment that allows to transfer outstanding assets to the recipient in public
         let asset_commitment = Token::at(storage.asset.read())
-            .initialize_transfer_commitment(from, to, context.this_address())
+            .initialize_transfer_commitment(to, context.this_address())
             .call(&mut context);
 
         // Transfers any outstanding assets without revealing the recipient

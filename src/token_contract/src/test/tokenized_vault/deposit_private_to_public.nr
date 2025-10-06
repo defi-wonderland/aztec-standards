@@ -24,7 +24,7 @@ unconstrained fn deposit_private_to_public_success() {
 
     // Mint some asset tokens to owner
     let deposit_amount: u128 = mint_amount;
-    env.call_private(owner, Token::at(asset_address).mint_to_private(owner, owner, deposit_amount));
+    env.call_private(owner, Token::at(asset_address).mint_to_private(owner, deposit_amount));
 
     // Deposit assets to get shares
     // Authorize the vault to use the caller's assets
@@ -67,7 +67,7 @@ unconstrained fn deposit_private_to_public_after_yield() {
 
     // Mint some asset tokens to owner
     let deposit_amount: u128 = mint_amount;
-    env.call_private(owner, Token::at(asset_address).mint_to_private(owner, owner, deposit_amount));
+    env.call_private(owner, Token::at(asset_address).mint_to_private(owner, deposit_amount));
 
     // Deposit assets to get shares
     // Authorize the vault to use the caller's assets
@@ -109,7 +109,7 @@ unconstrained fn deposit_private_to_public_without_asset_approval() {
 
     // Mint some asset tokens to owner
     let deposit_amount: u128 = mint_amount;
-    env.call_private(owner, Token::at(asset_address).mint_to_private(owner, owner, deposit_amount));
+    env.call_private(owner, Token::at(asset_address).mint_to_private(owner, deposit_amount));
 
     // Deposit
     env.call_private(
@@ -125,7 +125,7 @@ unconstrained fn deposit_private_to_public_on_behalf_of_wrong_caller() {
 
     // Mint some asset tokens to owner
     let deposit_amount: u128 = mint_amount;
-    env.call_private(owner, Token::at(asset_address).mint_to_private(owner, owner, deposit_amount));
+    env.call_private(owner, Token::at(asset_address).mint_to_private(owner, deposit_amount));
 
     // Deposit assets to get shares
     // Authorize the vault to use the caller's assets
@@ -151,7 +151,7 @@ unconstrained fn deposit_private_to_public_on_behalf_of_other_success() {
 
     // Mint some asset tokens to owner
     let deposit_amount: u128 = mint_amount;
-    env.call_private(owner, Token::at(asset_address).mint_to_private(owner, owner, deposit_amount));
+    env.call_private(owner, Token::at(asset_address).mint_to_private(owner, deposit_amount));
 
     // Deposit assets to get shares
     // Authorize the vault to use the caller's assets
