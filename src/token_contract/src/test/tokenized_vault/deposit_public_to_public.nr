@@ -7,7 +7,7 @@ unconstrained fn deposit_public_to_public_without_asset() {
     let (_, asset_address, owner, recipient) =
         utils::setup_and_mint_to_public_without_minter(false);
 
-    let (env, vault_address, _, _, minter) = utils::setup_with_minter(false);
+    let (env, vault_address, _, _, _) = utils::setup_with_minter(false);
 
     // Deposit assets to get shares
     // Authorize the vault to use the caller's assets

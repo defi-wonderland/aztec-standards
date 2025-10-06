@@ -4,7 +4,7 @@ use aztec::test::helpers::authwit as authwit_cheatcodes;
 #[test(should_fail_with = "Trying to read from uninitialized PublicImmutable")]
 unconstrained fn issue_public_to_public_without_asset() {
     // Setup without account contracts. We are not using authwits here, so dummy accounts are enough
-    let (env, vault_address, owner, recipient, minter) = utils::setup_with_minter(false);
+    let (env, vault_address, owner, recipient, _) = utils::setup_with_minter(false);
 
     // Issue should fail because the PublicImmutable asset was not initialized
     env.call_public(

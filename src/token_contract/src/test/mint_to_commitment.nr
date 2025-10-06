@@ -1,6 +1,5 @@
 use crate::{test::utils, Token};
 use aztec::oracle::random::random;
-use uint_note::uint_note::PartialUintNote;
 
 #[test]
 unconstrained fn mint_to_commitment_success() {
