@@ -7,7 +7,6 @@ use token::{test::utils as token_utils, Token};
 // TODO: Fix error "No public key registered for address 0x0000000000000000000000000000000000000000000000000000000000000001."
 
 // #[test]
-#[allow(dead_code)]
 unconstrained fn escrow_withdraw_success() {
     let escrow_secret: Field = 123456;
     let (mut env, escrow_contract_address, token_contract_address, _, _, recipient, minter) =
@@ -41,7 +40,6 @@ unconstrained fn escrow_withdraw_success() {
 }
 
 // #[test]
-#[allow(dead_code)]
 unconstrained fn escrow_withdraw_twice_success() {
     let escrow_secret: Field = 123456;
     let (mut env, escrow_contract_address, token_contract_address, _, _, recipient, minter) =
