@@ -799,7 +799,7 @@ pub contract Token {
         amount: u128,
         max_notes: u32,
     ) -> bool {
-        private_balances.at(account).private_balance_gte(amount, max_notes)
+        private_balances.at(account).is_gte(amount, max_notes)
     }
 
     /// @notice Returns the private balance of the account
@@ -814,7 +814,7 @@ pub contract Token {
         owner: AztecAddress,
         max_notes: u32,
     ) -> u128 {
-        private_balances.at(owner).private_balance_of(max_notes)
+        private_balances.at(owner).sum(max_notes)
     }
 
     /** ==========================================================

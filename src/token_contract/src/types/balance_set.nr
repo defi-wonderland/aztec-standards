@@ -115,7 +115,7 @@ impl BalanceSet<&mut PrivateContext> {
     /// @param amount The amount of tokens to check
     /// @param max_notes The maximum number of notes to check
     /// @return True if the private balance of the owner has at least `amount`, false otherwise
-    pub fn private_balance_gte(self: Self, amount: u128, max_notes: u32) -> bool {
+    pub fn is_gte(self: Self, amount: u128, max_notes: u32) -> bool {
         let options = NoteGetterOptions::with_preprocessor(preprocess_notes_min_sum, amount)
             .sort(UintNote::properties().value, SortOrder.DESC)
             .set_limit(max_notes);
@@ -140,7 +140,7 @@ impl BalanceSet<&mut PrivateContext> {
     /// @dev The number of notes checked is limited to `max_notes`
     /// @param max_notes The maximum number of notes to check
     /// @return The private balance of the owner
-    pub fn private_balance_of(self: Self, max_notes: u32) -> u128 {
+    pub fn sum(self: Self, max_notes: u32) -> u128 {
         let options = NoteGetterOptions::new()
             .sort(UintNote::properties().value, SortOrder.DESC)
             .set_limit(max_notes);
