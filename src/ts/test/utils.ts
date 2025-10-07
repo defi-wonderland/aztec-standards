@@ -125,7 +125,7 @@ export async function assertOwnsPublicNFT(
   caller?: AccountWallet,
 ) {
   const n = caller ? nft.withWallet(caller) : nft;
-  const owner = await n.methods.public_owner_of(tokenId).simulate();
+  const owner = await n.methods.public_owner_of(tokenId).simulate({ from: expectedOwner });
   expect(owner.equals(expectedOwner)).toBe(true);
 }
 
@@ -137,7 +137,7 @@ export async function assertOwnsPrivateNFT(
   caller?: AccountWallet,
 ) {
   const n = caller ? nft.withWallet(caller) : nft;
-  const [nfts, _] = await n.methods.get_private_nfts(owner, 0).simulate();
+  const [nfts, _] = await n.methods.get_private_nfts(owner, 0).simulate({ from: owner });
   const hasNFT = nfts.some((id: bigint) => id === tokenId);
   expect(hasNFT).toBe(true);
 }
@@ -205,7 +205,7 @@ export async function deployEscrow(
   constructor?: string,
 ): Promise<EscrowContract> {
   const contract = await Contract.deployWithPublicKeys(publicKeys, deployer, EscrowContractArtifact, args, constructor)
-    .send({ contractAddressSalt: salt, universalDeploy: true })
+    .send({ contractAddressSalt: salt, universalDeploy: true, from: deployer.getAddress() })
     .deployed();
   return contract as EscrowContract;
 }
@@ -251,7 +251,7 @@ export async function setPublicAuthWit(
  */
 export async function deployLogic(deployer: AccountWallet, escrowClassId: Fr) {
   const contract = await Contract.deploy(deployer, TestLogicContractArtifact, [escrowClassId], 'constructor')
-    .send()
+    .send({ from: deployer.getAddress() })
     .deployed();
   return contract as TestLogicContract;
 }
@@ -271,7 +271,7 @@ export async function deployEscrowWithPublicKeysAndSalt(
   constructor?: string,
 ): Promise<EscrowContract> {
   const contract = await Contract.deployWithPublicKeys(publicKeys, deployer, EscrowContractArtifact, args, constructor)
-    .send({ contractAddressSalt: salt, universalDeploy: true })
+    .send({ contractAddressSalt: salt, universalDeploy: true, from: deployer.getAddress() })
     .deployed();
   return contract as EscrowContract;
 }
