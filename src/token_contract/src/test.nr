@@ -13,5 +13,7 @@ mod transfer_public_to_public;
 mod transfer_public_to_commitment;
 mod transfer_public_to_private;
 mod tokenized_vault;
+mod has_private_balance;
+mod private_balance_of;
 
 pub mod utils;
