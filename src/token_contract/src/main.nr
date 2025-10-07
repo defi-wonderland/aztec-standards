@@ -300,6 +300,34 @@ pub contract Token {
         commitment.to_field()
     }
 
+    /// @notice Checks if the private balance of the account has at least `amount`
+    /// @dev The number of notes checked is limited to `INITIAL_TRANSFER_CALL_MAX_NOTES`
+    /// @param account The address of the account
+    /// @param amount The amount of tokens to check
+    /// @return True if the private balance of the sender has at least `amount`, false otherwise
+    #[private]
+    fn has_private_balance(account: AztecAddress, amount: u128) -> bool {
+        _has_private_balance(
+            storage.private_balances,
+            account,
+            amount,
+            INITIAL_TRANSFER_CALL_MAX_NOTES,
+        )
+    }
+
+    /// @notice Returns the private balance of the account
+    /// @dev The number of notes checked is limited to `INITIAL_TRANSFER_CALL_MAX_NOTES`
+    /// @param account The address of the account
+    /// @return The private balance of the account
+    #[private]
+    fn private_balance_of(account: AztecAddress) -> u128 {
+        _private_balance_of(
+            storage.private_balances,
+            account,
+            INITIAL_TRANSFER_CALL_MAX_NOTES,
+        )
+    }
+
     /// @notice Recursively subtracts balance from commitment
     /// @dev Used to subtract balances that exceed the max notes limit
     /// @param account The address of the account to subtract the balance from
@@ -755,6 +783,38 @@ pub contract Token {
         );
 
         Token::at(context.this_address()).decrease_total_supply_internal(amount).enqueue(context);
+    }
+
+    /// @notice Checks if the private balance of the account has at least `amount`
+    /// @dev The number of notes checked is limited to `max_notes`
+    /// @param private_balances The storage pointer to the private balances
+    /// @param account The address of the account
+    /// @param amount The amount of tokens to check
+    /// @param max_notes The maximum number of notes to check
+    /// @return True if the private balance of the account has at least `amount`, false otherwise
+    #[contract_library_method]
+    fn _has_private_balance(
+        private_balances: Map<AztecAddress, BalanceSet<&mut PrivateContext>, &mut PrivateContext>,
+        account: AztecAddress,
+        amount: u128,
+        max_notes: u32,
+    ) -> bool {
+        private_balances.at(account).private_balance_gte(amount, max_notes)
+    }
+
+    /// @notice Returns the private balance of the account
+    /// @dev The number of notes checked is limited to `max_notes`
+    /// @param private_balances The storage pointer to the private balances
+    /// @param account The address of the account
+    /// @param max_notes The maximum number of notes to check
+    /// @return The private balance of the account
+    #[contract_library_method]
+    fn _private_balance_of(
+        private_balances: Map<AztecAddress, BalanceSet<&mut PrivateContext>, &mut PrivateContext>,
+        owner: AztecAddress,
+        max_notes: u32,
+    ) -> u128 {
+        private_balances.at(owner).private_balance_of(max_notes)
     }
 
     /** ==========================================================

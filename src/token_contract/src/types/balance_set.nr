@@ -109,6 +109,51 @@ impl BalanceSet<&mut PrivateContext> {
 
         subtracted
     }
+
+    /// @notice Checks if the private balance of the owner has at least `amount`
+    /// @dev The number of notes checked is limited to `max_notes`
+    /// @param amount The amount of tokens to check
+    /// @param max_notes The maximum number of notes to check
+    /// @return True if the private balance of the owner has at least `amount`, false otherwise
+    pub fn private_balance_gte(self: Self, amount: u128, max_notes: u32) -> bool {
+        let options = NoteGetterOptions::with_preprocessor(preprocess_notes_min_sum, amount)
+            .sort(UintNote::properties().value, SortOrder.DESC)
+            .set_limit(max_notes);
+        let notes = self.set.get_notes(options);
+
+        let mut sum = 0 as u128;
+        for i in 0..options.limit {
+            if i < notes.len() {
+                let note = notes.get_unchecked(i);
+                sum = sum + note.note.get_value();
+            }
+        }
+
+        // Returning boolean allows branching for the caller. If this would instead assert that the user holds at least `amount`, the caller would not be able to branch.
+        // Hence the asserting responsability falls on the caller.
+        // An inherent property of private state is that you cannot prove the absence of something in private execution, only its presence.
+        // In case the user holds equal to or more than `target_amount`, the caller can choose to branch by providing less notes.
+        sum >= amount
+    }
+
+    /// @notice Returns the private balance of the owner
+    /// @dev The number of notes checked is limited to `max_notes`
+    /// @param max_notes The maximum number of notes to check
+    /// @return The private balance of the owner
+    pub fn private_balance_of(self: Self, max_notes: u32) -> u128 {
+        let options = NoteGetterOptions::new()
+            .sort(UintNote::properties().value, SortOrder.DESC)
+            .set_limit(max_notes);
+        let notes = self.set.get_notes(options);
+        let mut sum = 0 as u128;
+        for i in 0..options.limit {
+            if i < notes.len() {
+                let note = notes.get_unchecked(i);
+                sum = sum + note.note.get_value();
+            }
+        }
+        sum
+    }
 }
 
 // Computes the partial sum of the notes array, stopping once 'min_sum' is reached. This can be used to minimize the
