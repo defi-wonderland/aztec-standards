@@ -1,5 +1,5 @@
 pub mod types;
-mod test;
+pub mod test;
 
 use aztec::macros::aztec;
 
