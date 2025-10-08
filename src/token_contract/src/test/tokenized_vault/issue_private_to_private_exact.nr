@@ -28,7 +28,7 @@ unconstrained fn issue_private_to_private_exact_success() {
 
     // Mint some asset tokens to owner
     let deposit_amount: u128 = mint_amount;
-    env.call_private(owner, Token::at(asset_address).mint_to_private(owner, owner, deposit_amount));
+    env.call_private(owner, Token::at(asset_address).mint_to_private(owner, deposit_amount));
 
     // Deposit assets to get shares
     // Authorize the vault to use the caller's assets
@@ -78,7 +78,7 @@ unconstrained fn issue_private_to_private_exact_after_yield() {
 
     // Mint some asset tokens to owner
     let deposit_amount: u128 = mint_amount;
-    env.call_private(owner, Token::at(asset_address).mint_to_private(owner, owner, deposit_amount));
+    env.call_private(owner, Token::at(asset_address).mint_to_private(owner, deposit_amount));
 
     // Deposit assets to get shares
     // Authorize the vault to use the caller's assets
@@ -126,7 +126,7 @@ unconstrained fn issue_private_to_private_exact_too_many_assets() {
 
     // Mint some asset tokens to owner
     let max_deposit: u128 = mint_amount;
-    env.call_private(owner, Token::at(asset_address).mint_to_private(owner, owner, max_deposit));
+    env.call_private(owner, Token::at(asset_address).mint_to_private(owner, max_deposit));
 
     // Deposit assets to get shares
     // Authorize the vault to use the caller's assets
@@ -172,7 +172,7 @@ unconstrained fn issue_private_to_private_exact_request_too_many_shares() {
 
     // Mint some asset tokens to owner
     let deposit_amount: u128 = mint_amount;
-    env.call_private(owner, Token::at(asset_address).mint_to_private(owner, owner, deposit_amount));
+    env.call_private(owner, Token::at(asset_address).mint_to_private(owner, deposit_amount));
 
     // Deposit assets to get shares
     // Authorize the vault to use the caller's assets
@@ -207,7 +207,7 @@ unconstrained fn issue_private_to_private_exact_without_asset_approval() {
 
     // Mint some asset tokens to owner
     let deposit_amount: u128 = mint_amount;
-    env.call_private(owner, Token::at(asset_address).mint_to_private(owner, owner, deposit_amount));
+    env.call_private(owner, Token::at(asset_address).mint_to_private(owner, deposit_amount));
 
     // Issue shares
     // At the first deposit 1 share = 1 asset
@@ -231,7 +231,7 @@ unconstrained fn issue_private_to_private_exact_on_behalf_of_wrong_caller() {
 
     // Mint some asset tokens to owner
     let deposit_amount: u128 = mint_amount;
-    env.call_private(owner, Token::at(asset_address).mint_to_private(owner, owner, deposit_amount));
+    env.call_private(owner, Token::at(asset_address).mint_to_private(owner, deposit_amount));
 
     // Deposit assets to get shares
     // Authorize the vault to use the caller's assets
@@ -265,7 +265,7 @@ unconstrained fn issue_private_to_private_exact_on_behalf_of_other_success() {
 
     // Mint some asset tokens to owner
     let deposit_amount: u128 = mint_amount;
-    env.call_private(owner, Token::at(asset_address).mint_to_private(owner, owner, deposit_amount));
+    env.call_private(owner, Token::at(asset_address).mint_to_private(owner, deposit_amount));
 
     // Deposit assets to get shares
     // Authorize the vault to use the caller's assets
