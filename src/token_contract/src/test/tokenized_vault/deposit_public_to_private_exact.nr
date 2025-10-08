@@ -118,10 +118,6 @@ unconstrained fn deposit_public_to_private_exact_after_yield() {
     );
 }
 
-// #[test]
-// TODO: Test is incorrectly failing due to an issue that affects the discovery of partial notes.
-// When a partial note is initialized and completed and also a note is added, the partial note is not found.
-// #[test(should_fail_with = "A partial note's completion log did not result in any notes being found - this should never happen")]
 #[test]
 unconstrained fn deposit_public_to_private_exact_request_fewer_shares() {
     // Setup with asset token
