@@ -3,10 +3,7 @@ use aztec::test::helpers::authwit as authwit_cheatcodes;
 
 #[test(should_fail_with = "Assertion failed: Balance too low")]
 unconstrained fn withdraw_private_to_private_exact_without_asset() {
-    // Setup without account contracts. We are not using authwits here, so dummy accounts are enough
-    let (_, _, owner, recipient) = utils::setup_and_mint_to_public_without_minter(false);
-
-    let (env, vault_address, _, _, _) = utils::setup_with_minter(false);
+    let (env, vault_address, owner, recipient, _) = utils::setup_with_minter(false);
 
     // Withdrawal should fail because the PublicImmutable asset was not initialized
     env.call_private(
