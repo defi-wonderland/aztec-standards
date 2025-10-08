@@ -331,11 +331,10 @@ fn initialize_transfer_commitment(to: AztecAddress, completer: AztecAddress) -> 
 ```rust
 /// @notice Mints tokens into a private balance
 /// @dev Requires minter, enqueues supply update
-/// @param from The address of the sender
 /// @param to The address of the recipient
 /// @param amount The amount of tokens to mint
 #[private]
-fn mint_to_private(from: AztecAddress, to: AztecAddress, amount: u128) { /* ... */ }
+fn mint_to_private(to: AztecAddress, amount: u128) { /* ... */ }
 ```
 
 ### burn_private
@@ -372,9 +371,10 @@ fn deposit_public_to_public(from: AztecAddress, to: AztecAddress, assets: u128, 
 /// @param from The address providing the assets
 /// @param to The address receiving the shares
 /// @param assets The amount of underlying assets to deposit
+/// @param shares The amount of shares that should be minted to the recipient
 /// @param nonce The nonce used for authwit
 #[private]
-fn deposit_public_to_private(from: AztecAddress, to: AztecAddress, assets: u128, nonce: Field) { /* ... */ }
+fn deposit_public_to_private(from: AztecAddress, to: AztecAddress, assets: u128, shares: u128, nonce: Field) { /* ... */ }
 ```
 
 #### deposit_private_to_private
@@ -383,9 +383,10 @@ fn deposit_public_to_private(from: AztecAddress, to: AztecAddress, assets: u128,
 /// @param from The address providing the assets
 /// @param to The address receiving the shares
 /// @param assets The amount of underlying assets to deposit
+/// @param shares The amount of shares that should be minted to the recipient
 /// @param nonce The nonce used for authwit
 #[private]
-fn deposit_private_to_private(from: AztecAddress, to: AztecAddress, assets: u128, nonce: Field) { /* ... */ }
+fn deposit_private_to_private(from: AztecAddress, to: AztecAddress, assets: u128, shares: u128, nonce: Field) { /* ... */ }
 ```
 
 #### deposit_private_to_public
@@ -433,9 +434,10 @@ fn deposit_private_to_private_exact(from: AztecAddress, to: AztecAddress, assets
 /// @param from The address providing the assets
 /// @param to The address receiving the shares
 /// @param shares The exact amount of shares to issue
+/// @param max_assets The maximum amount of assets that should be deposited
 /// @param nonce The nonce used for authwit
 #[public]
-fn issue_public_to_public(from: AztecAddress, to: AztecAddress, shares: u128, nonce: Field) { /* ... */ }
+fn issue_public_to_public(from: AztecAddress, to: AztecAddress, shares: u128, max_assets: u128, nonce: Field) { /* ... */ }
 ```
 
 #### issue_public_to_private
@@ -444,9 +446,36 @@ fn issue_public_to_public(from: AztecAddress, to: AztecAddress, shares: u128, no
 /// @param from The address providing the assets
 /// @param to The address receiving the shares
 /// @param shares The exact amount of shares to issue
+/// @param max_assets The maximum amount of assets that should be deposited
 /// @param nonce The nonce used for authwit
 #[private]
-fn issue_public_to_private(from: AztecAddress, to: AztecAddress, shares: u128, nonce: Field) { /* ... */ }
+fn issue_public_to_private(from: AztecAddress, to: AztecAddress, shares: u128, max_assets: u128, nonce: Field) { /* ... */ }
+```
+
+#### issue_private_to_public_exact
+```rust
+/// @notice Issues exact shares for underlying assets from private balance to public balance
+/// @dev Any excess assets transferred in private will be returned via commitment during public execution
+/// @param from The address providing the assets
+/// @param to The address receiving the shares
+/// @param shares The exact amount of shares to issue
+/// @param max_assets The maximum amount of assets that should be deposited
+/// @param nonce The nonce used for authwit
+#[private]
+fn issue_private_to_public_exact(from: AztecAddress, to: AztecAddress, shares: u128, max_assets: u128, nonce: Field) { /* ... */ }
+```
+
+#### issue_private_to_private_exact
+```rust
+/// @notice Issues exact shares for underlying assets from private balance to private balance
+/// @dev Any excess assets transferred in private will be returned via commitment during public execution
+/// @param from The address providing the assets
+/// @param to The address receiving the shares
+/// @param shares The exact amount of shares to issue
+/// @param max_assets The maximum amount of assets that should be deposited
+/// @param nonce The nonce used for authwit
+#[private]
+fn issue_private_to_private_exact(from: AztecAddress, to: AztecAddress, shares: u128, max_assets: u128, nonce: Field) { /* ... */ }
 ```
 
 ### Withdraw Functions
@@ -479,9 +508,36 @@ fn withdraw_public_to_private(from: AztecAddress, to: AztecAddress, assets: u128
 /// @param from The address providing the shares
 /// @param to The address receiving the assets
 /// @param assets The amount of underlying assets to withdraw
+/// @param shares The amount of shares to burn
 /// @param nonce The nonce used for authwit
 #[private]
-fn withdraw_private_to_private(from: AztecAddress, to: AztecAddress, assets: u128, nonce: Field) { /* ... */ }
+fn withdraw_private_to_private(from: AztecAddress, to: AztecAddress, assets: u128, shares: u128, nonce: Field) { /* ... */ }
+```
+
+#### withdraw_private_to_public_exact
+```rust
+/// @notice Withdraws exact underlying assets by burning shares from private balance to public balance
+/// @dev Excess shares transferred in private will be returned via commitment during public execution
+/// @param from The address providing the shares
+/// @param to The address receiving the assets
+/// @param assets The amount of underlying assets to withdraw
+/// @param max_shares The maximum amount of shares to burn
+/// @param nonce The nonce used for authwit
+#[private]
+fn withdraw_private_to_public_exact(from: AztecAddress, to: AztecAddress, assets: u128, max_shares: u128, nonce: Field) { /* ... */ }
+```
+
+#### withdraw_private_to_private_exact
+```rust
+/// @notice Withdraws exact underlying assets by burning shares from private balance to private balance
+/// @dev Excess shares transferred in private will be returned via commitment during public execution
+/// @param from The address providing the shares
+/// @param to The address receiving the assets
+/// @param assets The amount of underlying assets to withdraw
+/// @param max_shares The maximum amount of shares to burn
+/// @param nonce The nonce used for authwit
+#[private]
+fn withdraw_private_to_private_exact(from: AztecAddress, to: AztecAddress, assets: u128, max_shares: u128, nonce: Field) { /* ... */ }
 ```
 
 ### Redeem Functions
@@ -506,5 +562,31 @@ fn redeem_public_to_public(from: AztecAddress, to: AztecAddress, shares: u128, n
 /// @param nonce The nonce used for authwit
 #[private]
 fn redeem_private_to_public(from: AztecAddress, to: AztecAddress, shares: u128, nonce: Field) { /* ... */ }
+```
+
+#### redeem_private_to_private_exact
+```rust
+/// @notice Redeems shares for exact underlying assets from private balance to private balance
+/// @dev Outstanding assets beyond min_assets will be transferred via commitment during public execution
+/// @param from The address providing the shares
+/// @param to The address receiving the assets
+/// @param shares The amount of shares to redeem
+/// @param min_assets The minimum amount of assets to withdraw immediately in private
+/// @param nonce The nonce used for authwit
+#[private]
+fn redeem_private_to_private_exact(from: AztecAddress, to: AztecAddress, shares: u128, min_assets: u128, nonce: Field) { /* ... */ }
+```
+
+#### redeem_public_to_private_exact
+```rust
+/// @notice Redeems shares for exact underlying assets from public balance to private balance
+/// @dev Outstanding assets beyond min_assets will be transferred via commitment during public execution
+/// @param from The address providing the shares
+/// @param to The address receiving the assets
+/// @param shares The amount of shares to redeem
+/// @param min_assets The minimum amount of assets to withdraw immediately in private
+/// @param nonce The nonce used for authwit
+#[private]
+fn redeem_public_to_private_exact(from: AztecAddress, to: AztecAddress, shares: u128, min_assets: u128, nonce: Field) { /* ... */ }
 ```
 
