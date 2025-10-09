@@ -1286,7 +1286,6 @@ describe('Tokenized Vault', () => {
       await mintAndDepositInPublic(alice, initialAmount, assetsAlice);
 
       // Attempt withdrawing more assets than allowed
-      // TODO(#15666 & #15118): this test fails because the ivsk is currently needed for emitting a note, but the vault contract doesn't have one.
       await expect(
         vault.methods
           .withdraw_public_to_private(alice.getAddress(), alice.getAddress(), assetsAlice + 1, 0)
@@ -1300,7 +1299,6 @@ describe('Tokenized Vault', () => {
       await mintAndDepositInPrivate(alice, initialAmount, assetsAlice, sharesAlice);
 
       // Attempt withdrawing more assets than allowed
-      // TODO(#15666 & #15118): this test fails because the ivsk is currently needed for emitting a note, but the vault contract doesn't have one.
       let sharesRequested = assetsAlice;
       await expect(
         vault.methods
@@ -1347,7 +1345,6 @@ describe('Tokenized Vault', () => {
       await mintAndDepositInPrivate(alice, initialAmount, assetsAlice, sharesAlice);
 
       // Attempt withdrawing more assets than allowed
-      // TODO(#15666 & #15118): this test fails because the ivsk is currently needed for emitting a note, but the vault contract doesn't have one.
       let sharesRequested = assetsAlice;
       await expect(
         vault.methods
@@ -1398,7 +1395,7 @@ describe('Tokenized Vault', () => {
 
       // Attempt redeeming more shares than Alice actually has
       let sharesRequested = assetsAlice + 1;
-      let minAssets = 0; // minAssets > 0 would cause fail with "No public key registered for address" (TODO(#15666 & #15118))
+      let minAssets = 1;
       await expect(
         vault.methods
           .redeem_public_to_private_exact(alice.getAddress(), alice.getAddress(), sharesRequested, minAssets, 0)
@@ -1407,7 +1404,6 @@ describe('Tokenized Vault', () => {
       ).rejects.toThrow(/app_logic_reverted/); // /Underflow/
 
       // Attempt redeeming with an invalid rate
-      // TODO(#15666 & #15118): this test fails because the ivsk is currently needed for emitting a note, but the vault contract doesn't have one.
       sharesRequested = assetsAlice;
       minAssets = assetsAlice + 1;
       await expect(
@@ -1438,7 +1434,7 @@ describe('Tokenized Vault', () => {
 
       // Attempt redeeming more shares than Alice actually has
       let sharesRequested = assetsAlice + 1;
-      let minAssets = 0; // minAssets > 0 would cause fail with "No public key registered for address" (TODO(#15666 & #15118))
+      let minAssets = 1;
       await expect(
         vault.methods
           .redeem_private_to_private_exact(alice.getAddress(), alice.getAddress(), sharesRequested, minAssets, 0)
@@ -1447,7 +1443,6 @@ describe('Tokenized Vault', () => {
       ).rejects.toThrow(/Assertion failed: Balance too low 'subtracted > 0'/);
 
       // Attempt redeeming with an invalid rate
-      // TODO(#15666 & #15118): this test fails because the ivsk is currently needed for emitting a note, but the vault contract doesn't have one.
       sharesRequested = assetsAlice;
       minAssets = assetsAlice + 1;
       await expect(

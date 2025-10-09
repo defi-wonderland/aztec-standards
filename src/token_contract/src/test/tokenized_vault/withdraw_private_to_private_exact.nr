@@ -3,10 +3,7 @@ use aztec::test::helpers::authwit as authwit_cheatcodes;
 
 #[test(should_fail_with = "Assertion failed: Balance too low")]
 unconstrained fn withdraw_private_to_private_exact_without_asset() {
-    // Setup without account contracts. We are not using authwits here, so dummy accounts are enough
-    let (_, _, owner, recipient) = utils::setup_and_mint_to_public_without_minter(false);
-
-    let (env, vault_address, _, _, _) = utils::setup_with_minter(false);
+    let (env, vault_address, owner, recipient, _) = utils::setup_with_minter(false);
 
     // Withdrawal should fail because the PublicImmutable asset was not initialized
     env.call_private(
@@ -148,9 +145,6 @@ unconstrained fn withdraw_private_to_private_exact_request_fewer_assets() {
     utils::check_public_balance(env, asset_address, vault_address, 1);
 }
 
-// TODO: this test should fail because the ivsk is currently needed for emitting a note, but the vault contract doesn't have one.
-// However, tests written in noir execute enqueued public call immediately instead of at the end of private execution.
-// #[test(should_fail_with = "No public key registered for address")]
 #[test(should_fail_with = "Assertion failed: attempt to subtract with overflow")]
 unconstrained fn withdraw_private_to_private_exact_request_too_many_assets() {
     // Setup with asset token
