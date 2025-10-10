@@ -494,11 +494,7 @@ pub contract NFT {
         token_id: Field,
     ) {
         let new_note = NFTNote::new(token_id, to);
-        private_nft_set.insert(new_note).emit(
-            context,
-            to,
-            MessageDelivery.CONSTRAINED_ONCHAIN,
-        );
+        private_nft_set.insert(new_note).emit(context, to, MessageDelivery.CONSTRAINED_ONCHAIN);
     }
 
     /// @notice Removes the private token owner
