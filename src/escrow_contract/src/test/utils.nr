@@ -1,7 +1,9 @@
 use crate::Escrow;
 use aztec::{
     protocol_types::address::AztecAddress,
-    test::helpers::{txe_oracles as cheatcodes, test_environment::TestEnvironment, utils::ContractDeployment},
+    test::helpers::{
+        test_environment::TestEnvironment, txe_oracles as cheatcodes, utils::ContractDeployment,
+    },
 };
 use nft::test::utils as nft_utils;
 use token::test::utils as token_utils;
