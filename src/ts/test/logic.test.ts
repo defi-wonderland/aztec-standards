@@ -472,8 +472,14 @@ describe('Logic - Single PXE', () => {
 
       const notes = await bobPxe.getNotes({ contractAddress: token.address, txHash: bobWithdrawTx.txHash });
       expect(notes.length).toBe(2);
-      expectUintNote(notes[0], halfAmount, escrow.instance.address);
-      expectUintNote(notes[1], halfAmount, bob.getAddress());
+      // PXE does not guarantee correct order
+      if (notes[0].note.items[0] == new Fr(escrow.instance.address.toBigInt())) {
+        expectUintNote(notes[0], halfAmount, escrow.instance.address);
+        expectUintNote(notes[1], halfAmount, bob.getAddress());
+      } else {
+        expectUintNote(notes[1], halfAmount, escrow.instance.address);
+        expectUintNote(notes[0], halfAmount, bob.getAddress());
+      }
     });
 
     it('withdrawing more than the balance should fail', async () => {
