@@ -15,7 +15,7 @@ pub contract Token {
             functions::{initializer, internal, private, public, utility, view},
             storage::storage,
         },
-        messages::logs::note::encode_and_encrypt_note,
+        messages::message_delivery::MessageDelivery,
         protocol_types::{
             address::AztecAddress,
             constants::CONTRACT_INSTANCE_REGISTRY_CONTRACT_ADDRESS,
@@ -563,10 +563,11 @@ pub contract Token {
         // Subtracts `amount` from the private balance of `account`
         let change = _subtract_balance(context, private_balances, account, amount, max_notes);
         // Increases `change` to the private balance of `account`, and emits a private balance note to account
-        private_balances.at(account).add(account, change).emit(encode_and_encrypt_note(
+        private_balances.at(account).add(account, change).emit(
             context,
             account,
-        ));
+            MessageDelivery.CONSTRAINED_ONCHAIN,
+        );
     }
 
     /// @notice Updates the given storage pointer `private_balances` to increase the private balance of `to` by `amount`
@@ -581,7 +582,11 @@ pub contract Token {
         amount: u128,
     ) {
         // Increases `amount` to the private balance of `to`, and emits a private balance note to `to` from `from`
-        private_balances.at(to).add(to, amount).emit(encode_and_encrypt_note(context, to));
+        private_balances.at(to).add(to, amount).emit(
+            context,
+            to,
+            MessageDelivery.CONSTRAINED_ONCHAIN,
+        );
     }
 
     /// @notice Updates the given storage pointer `public_balances` to increase the public balance of `to` by `amount`

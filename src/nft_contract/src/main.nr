@@ -15,7 +15,7 @@ pub contract NFT {
             functions::{initializer, internal, private, public, utility, view},
             storage::storage,
         },
-        messages::logs::note::encode_and_encrypt_note,
+        messages::message_delivery::MessageDelivery,
         note::{
             constants::MAX_NOTES_PER_PAGE, note_getter_options::NoteGetterOptions,
             note_interface::NoteProperties, note_viewer_options::NoteViewerOptions,
@@ -372,10 +372,11 @@ pub contract NFT {
         _validate_minter(context.msg_sender(), storage.minter.read());
 
         NFT::at(context.this_address()).set_nft_exists_internal(token_id, true).enqueue(&mut context);
-        storage.private_nfts.at(to).insert(NFTNote::new(token_id, to)).emit(encode_and_encrypt_note(
+        storage.private_nfts.at(to).insert(NFTNote::new(token_id, to)).emit(
             &mut context,
             to,
-        ));
+            MessageDelivery.CONSTRAINED_ONCHAIN,
+        );
     }
 
     /// @notice Mints a token to a public address
@@ -493,7 +494,11 @@ pub contract NFT {
         token_id: Field,
     ) {
         let new_note = NFTNote::new(token_id, to);
-        private_nft_set.insert(new_note).emit(encode_and_encrypt_note(context, to));
+        private_nft_set.insert(new_note).emit(
+            context,
+            to,
+            MessageDelivery.CONSTRAINED_ONCHAIN,
+        );
     }
 
     /// @notice Removes the private token owner
