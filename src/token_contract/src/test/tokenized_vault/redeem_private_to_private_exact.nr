@@ -239,6 +239,7 @@ unconstrained fn redeem_private_to_private_exact_on_behalf_of_wrong_caller() {
         0,
     );
     authwit_cheatcodes::add_private_authwit_from_call_interface(
+        env,
         deposit_recipient,
         owner,
         redeem_private_to_private_exact_call_interface,
@@ -286,6 +287,7 @@ unconstrained fn redeem_private_to_private_exact_on_behalf_of_other_success() {
         0,
     );
     authwit_cheatcodes::add_private_authwit_from_call_interface(
+        env,
         deposit_recipient,
         recipient,
         redeem_private_to_private_exact_call_interface,

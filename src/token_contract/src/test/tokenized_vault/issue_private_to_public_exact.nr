@@ -30,6 +30,7 @@ unconstrained fn issue_private_to_public_exact_success() {
     // Deposit assets to get shares
     // Authorize the vault to use the caller's assets
     utils::authorize_transfer_private_to_public(
+        env,
         asset_address,
         vault_address,
         owner,
@@ -80,6 +81,7 @@ unconstrained fn issue_private_to_public_exact_after_yield() {
     // Deposit assets to get shares
     // Authorize the vault to use the caller's assets
     utils::authorize_transfer_private_to_public(
+        env,
         asset_address,
         vault_address,
         owner,
@@ -125,6 +127,7 @@ unconstrained fn issue_private_to_public_exact_too_many_assets() {
     // Deposit assets to get shares
     // Authorize the vault to use the caller's assets
     utils::authorize_transfer_private_to_public(
+        env,
         asset_address,
         vault_address,
         owner,
@@ -171,6 +174,7 @@ unconstrained fn issue_private_to_public_exact_request_too_many_shares() {
     // Deposit assets to get shares
     // Authorize the vault to use the caller's assets
     utils::authorize_transfer_private_to_public(
+        env,
         asset_address,
         vault_address,
         owner,
@@ -230,6 +234,7 @@ unconstrained fn issue_private_to_public_exact_on_behalf_of_wrong_caller() {
     // Deposit assets to get shares
     // Authorize the vault to use the caller's assets
     utils::authorize_transfer_private_to_public(
+        env,
         asset_address,
         vault_address,
         owner,
@@ -264,6 +269,7 @@ unconstrained fn issue_private_to_public_exact_on_behalf_of_other_success() {
     // Deposit assets to get shares
     // Authorize the vault to use the caller's assets
     utils::authorize_transfer_private_to_public(
+        env,
         asset_address,
         vault_address,
         owner,
@@ -278,6 +284,7 @@ unconstrained fn issue_private_to_public_exact_on_behalf_of_other_success() {
     let issue_private_to_public_exact_call_interface = Token::at(vault_address)
         .issue_private_to_public_exact(owner, recipient, requested_shares, max_assets, 0);
     authwit_cheatcodes::add_private_authwit_from_call_interface(
+        env,
         owner,
         recipient,
         issue_private_to_public_exact_call_interface,

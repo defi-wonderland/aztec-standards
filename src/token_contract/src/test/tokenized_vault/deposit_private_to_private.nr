@@ -30,6 +30,7 @@ unconstrained fn deposit_private_to_private_success() {
     // Deposit assets to get shares
     // Authorize the vault to use the caller's assets
     utils::authorize_transfer_private_to_public(
+        env,
         asset_address,
         vault_address,
         owner,
@@ -79,6 +80,7 @@ unconstrained fn deposit_private_to_private_after_yield() {
     // Deposit assets to get shares
     // Authorize the vault to use the caller's assets
     utils::authorize_transfer_private_to_public(
+        env,
         asset_address,
         vault_address,
         owner,
@@ -128,6 +130,7 @@ unconstrained fn deposit_private_to_private_request_fewer_shares() {
     // Deposit assets to get shares
     // Authorize the vault to use the caller's assets
     utils::authorize_transfer_private_to_public(
+        env,
         asset_address,
         vault_address,
         owner,
@@ -173,6 +176,7 @@ unconstrained fn deposit_private_to_private_request_too_many_shares() {
     // Deposit assets to get shares
     // Authorize the vault to use the caller's assets
     utils::authorize_transfer_private_to_public(
+        env,
         asset_address,
         vault_address,
         owner,
@@ -233,6 +237,7 @@ unconstrained fn deposit_private_to_private_on_behalf_of_wrong_caller() {
     // Deposit assets to get shares
     // Authorize the vault to use the caller's assets
     utils::authorize_transfer_private_to_public(
+        env,
         asset_address,
         vault_address,
         owner,
@@ -267,6 +272,7 @@ unconstrained fn deposit_private_to_private_on_behalf_of_other_success() {
     // Deposit assets to get shares
     // Authorize the vault to use the caller's assets
     utils::authorize_transfer_private_to_public(
+        env,
         asset_address,
         vault_address,
         owner,
@@ -280,6 +286,7 @@ unconstrained fn deposit_private_to_private_on_behalf_of_other_success() {
     let deposit_private_to_private_call_interface = Token::at(vault_address)
         .deposit_private_to_private(owner, recipient, deposit_amount, shares, 0);
     authwit_cheatcodes::add_private_authwit_from_call_interface(
+        env,
         owner,
         recipient,
         deposit_private_to_private_call_interface,
