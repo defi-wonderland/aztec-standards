@@ -473,7 +473,7 @@ describe('Logic - Single PXE', () => {
       const notes = await bobPxe.getNotes({ contractAddress: token.address, txHash: bobWithdrawTx.txHash });
       expect(notes.length).toBe(2);
       // PXE does not guarantee correct order
-      if (notes[0].note.items[0] == new Fr(escrow.instance.address.toBigInt())) {
+      if (notes[0].note.items[0].equals(new Fr(escrow.instance.address.toBigInt()))) {
         expectUintNote(notes[0], halfAmount, escrow.instance.address);
         expectUintNote(notes[1], halfAmount, bob.getAddress());
       } else {
