@@ -56,10 +56,14 @@ export default class TokenContractBenchmark extends Benchmark {
     await tokenContract
       .withWallet(deployer)
       .methods.mint_to_private(deployer.getAddress(), escrowContract.address, tokenAmount)
-      .send()
+      .send({ from: deployer.getAddress() })
       .wait();
     const tokenId = 1;
-    await nftContract.withWallet(deployer).methods.mint_to_private(escrowContract.address, tokenId).send().wait();
+    await nftContract
+      .withWallet(deployer)
+      .methods.mint_to_private(escrowContract.address, tokenId)
+      .send({ from: deployer.getAddress() })
+      .wait();
 
     return { pxe, deployer, accounts, tokenContract, nftContract, escrowContract, tokenAmount, tokenId };
   }

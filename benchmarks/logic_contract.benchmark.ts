@@ -31,12 +31,11 @@ interface LogicBenchmarkContext extends BenchmarkContext {
   escrowContract: EscrowContract;
   tokenAmount: number;
   tokenId: number;
-  escrowKeys: {
-    masterNullifierSecretKey: GrumpkinScalar;
-    masterIncomingViewingSecretKey: GrumpkinScalar;
-    masterOutgoingViewingSecretKey: GrumpkinScalar;
-    masterTaggingSecretKey: GrumpkinScalar;
-    publicKeys: PublicKeys;
+  secretKeys: {
+    nsk_m: Fr;
+    ivsk_m: Fr;
+    ovsk_m: Fr;
+    tsk_m: Fr;
   };
 }
 
@@ -63,6 +62,12 @@ export default class LogicContractBenchmark extends Benchmark {
     // Setup escrow
     const escrowSk = Fr.random();
     const escrowKeys = await deriveKeys(escrowSk);
+    const secretKeys = {
+      nsk_m: grumpkinScalarToFr(escrowKeys.masterNullifierSecretKey),
+      ivsk_m: grumpkinScalarToFr(escrowKeys.masterIncomingViewingSecretKey),
+      ovsk_m: grumpkinScalarToFr(escrowKeys.masterOutgoingViewingSecretKey),
+      tsk_m: grumpkinScalarToFr(escrowKeys.masterTaggingSecretKey),
+    };
     const escrowSalt = new Fr(logicContract.instance.address.toBigInt());
     const escrowContract = (await deployEscrowWithPublicKeysAndSalt(
       escrowKeys.publicKeys,
@@ -83,10 +88,14 @@ export default class LogicContractBenchmark extends Benchmark {
     await tokenContract
       .withWallet(deployer)
       .methods.mint_to_private(deployer.getAddress(), escrowContract.address, tokenAmount)
-      .send()
+      .send({ from: deployer.getAddress() })
       .wait();
     const tokenId = 1;
-    await nftContract.withWallet(deployer).methods.mint_to_private(escrowContract.address, tokenId).send().wait();
+    await nftContract
+      .withWallet(deployer)
+      .methods.mint_to_private(escrowContract.address, tokenId)
+      .send({ from: deployer.getAddress() })
+      .wait();
 
     return {
       pxe,
@@ -98,7 +107,7 @@ export default class LogicContractBenchmark extends Benchmark {
       escrowContract,
       tokenAmount,
       tokenId,
-      escrowKeys,
+      secretKeys,
     };
   }
 
@@ -115,42 +124,17 @@ export default class LogicContractBenchmark extends Benchmark {
       tokenId,
       deployer,
       logicContract,
-      escrowKeys,
+      secretKeys,
     } = context;
     const recipient = accounts[2].getAddress();
-    const escrowKeysFr = [
-      grumpkinScalarToFr(escrowKeys.masterNullifierSecretKey),
-      grumpkinScalarToFr(escrowKeys.masterIncomingViewingSecretKey),
-      grumpkinScalarToFr(escrowKeys.masterOutgoingViewingSecretKey),
-      grumpkinScalarToFr(escrowKeys.masterTaggingSecretKey),
-    ];
 
     const methods: ContractFunctionInteraction[] = [
       // Derive public keys from secret keys
-      logicContract
-        .withWallet(deployer)
-        .methods.secret_keys_to_public_keys(escrowKeysFr[0], escrowKeysFr[1], escrowKeysFr[2], escrowKeysFr[3]),
+      logicContract.withWallet(deployer).methods.secret_keys_to_public_keys(secretKeys),
       // Check escrow correctness
-      logicContract
-        .withWallet(deployer)
-        .methods.check_escrow(
-          escrowContract.address,
-          escrowKeysFr[0],
-          escrowKeysFr[1],
-          escrowKeysFr[2],
-          escrowKeysFr[3],
-        ),
+      logicContract.withWallet(deployer).methods.check_escrow(escrowContract.address, secretKeys),
       // Share escrow
-      logicContract
-        .withWallet(deployer)
-        .methods.share_escrow(
-          recipient,
-          escrowContract.address,
-          escrowKeysFr[0],
-          escrowKeysFr[1],
-          escrowKeysFr[2],
-          escrowKeysFr[3],
-        ),
+      logicContract.withWallet(deployer).methods.share_escrow(recipient, escrowContract.address, secretKeys),
       // Full token withdrawal
       logicContract
         .withWallet(deployer)
