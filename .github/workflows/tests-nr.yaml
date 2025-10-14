@@ -57,26 +57,12 @@ jobs:
           run: |
             VERSION=${{ steps.aztec-version.outputs.version }} aztec-up
         
-        - name: Start sandbox
-          run: |
-            aztec start --sandbox &
-
         - name: Install project dependencies
           run: yarn --frozen-lockfile
   
         - name: Compile
           run: yarn compile
-  
-        - name: Codegen
-          run: yarn codegen
-
-        - name: Start PXE
-          run: |
-            VERSION=${{ steps.aztec-version.outputs.version }} aztec start --port 8081 --pxe --pxe.nodeUrl=http://localhost:8080/ --pxe.proverEnabled false &
 
         - name: Run nr tests
           run: |
             script -e -c "aztec test --test-threads ${{ matrix.threads }}"
-
-        - name: Run js tests
-          run: script -e -c "BASE_PXE_URL=http://localhost NODE_NO_WARNINGS=1 node --experimental-vm-modules $(yarn bin jest) --no-cache --runInBand --config jest.integration.config.json"
