@@ -5,7 +5,11 @@ use aztec::protocol_types::{address::AztecAddress, traits::FromField};
 use token::{test::utils as token_utils, Token};
 
 // TODO: Fix error "No public key registered for address 0x0000000000000000000000000000000000000000000000000000000000000001."
-
+// Previously, with env.impersonate(any address) we could impersonate any address even if it didn't have keys,
+// but now with env.call_private(any address, ...) it is not possible.
+// The sender must have keys and the address must be registered in PXE like this. 
+// Because the escrow contract cannot be deployed with the salt that we want yet, 
+// it defaults to address 0x1 which we don't know the secret of.
 // #[test]
 unconstrained fn escrow_withdraw_success() {
     let escrow_secret: Field = 123456;
