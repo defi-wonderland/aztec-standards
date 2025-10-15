@@ -368,6 +368,22 @@ This contract also implements yield-bearing vault functionality when initialized
 >
 > the AIP-4626 functionality of this contract is not yet production ready. Use it at your own risk. In particular there is a known overflow issue in the asset<>share conversion logic used on deposits and withdrawals. This can corrupt balances for sufficiently large inputs.
 
+### Function Patterns
+
+Some Tokenized Vault private methods require both `assets` and `shares` amounts as inputs because the exchange rate cannot be computed within the private context. To accommodate this, two complementary patterns are provided:
+
+**Standard Pattern** (e.g., deposit_public_to_private): 
+- Exchange rate is provided by the user, giving `assets` and `shares` as inputs.
+- Best when exchange rate is known and stable.
+- Any slippage or miscalculation will either cause the transaction to revert or leave the difference in favor of the vault (never the user).
+- Can be more gas-efficient in certain cases.
+
+**Exact Pattern** (e.g., deposit_public_to_private_exact): 
+- Enforces the exact exchange rate at public execution time.
+- A portion of the tokens is immediately transferred privately, allowing users to use them in other protocols, while any outstanding or surplus amount is settled privately during public execution via partial notes.
+- Best for volatile exchange rates and when slipage could cause significant losses.
+- May be more expensive due to the additional settlement logic.
+
 ### Deposit Functions
 
 #### deposit_public_to_public
