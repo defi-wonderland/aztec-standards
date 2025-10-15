@@ -1,5 +1,5 @@
 // aztec library
-use dep::aztec::{
+use aztec::{
     context::PrivateContext,
     messages::logs::event::to_encrypted_private_event_message,
     oracle::{

@@ -1,4 +1,4 @@
-use dep::aztec::{
+use aztec::{
     event::{event_interface::EventInterface, event_selector::EventSelector},
     protocol_types::{address::AztecAddress, traits::{Serialize, ToField}},
 };

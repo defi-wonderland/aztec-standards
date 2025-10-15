@@ -1,5 +1,5 @@
 use crate::TestLogic;
-use dep::escrow_contract::Escrow;
+use escrow_contract::Escrow;
 use aztec::{
     protocol_types::{
         address::AztecAddress,
