@@ -8,6 +8,10 @@ This implementation provides a robust foundation for fungible tokens on Aztec, e
 
 This contract follows the [AIP-20 Aztec Token Standard](https://forum.aztec.network/t/request-for-comments-aip-20-aztec-token-standard/7737). Feel free to review and discuss the specification on the Aztec forum.
 
+## AIP-4626: Aztec Tokenized Vault Standard
+
+Optionally, the `Token` contract can be configured as a Tokenized Vault. Learn more [here](#aip-4626-aztec-tokenized-vault-standard-1).
+
 ## Storage Fields
 
 - `name: str<31>`: Token name (compressed).
@@ -348,9 +352,37 @@ fn mint_to_private(to: AztecAddress, amount: u128) { /* ... */ }
 fn burn_private(from: AztecAddress, amount: u128, nonce: Field) { /* ... */ }
 ```
 
-## Yield-Bearing Vault Functions
+## AIP-4626: Aztec Tokenized Vault Standard
 
-This contract also implements yield-bearing vault functionality when initialized with `constructor_with_asset`. The vault allows users to deposit underlying assets and receive shares representing their proportional ownership of the growing asset pool.
+The Token contract (as of now the Tokenized Vault) follows the [AIP-4626: Tokenized Vault Standard](https://forum.aztec.network/t/request-for-comments-aip-4626-tokenized-vault/8079) when configured appropriately. Feel free to review and discuss the specification on the Aztec forum.
+
+## Tokenized Vault Functions
+
+This contract also implements yield-bearing vault functionality when initialized with `constructor_with_asset`. The vault allows users to deposit underlying assets and receive shares representing their proportional ownership of the growing asset pool. The design is an adaptation of the [ERC-4626](https://eips.ethereum.org/EIPS/eip-4626). While the Tokenized Vault contract publicly holds the underlying asset deposits and accrued yield, shares can be held either publicly or privately. Likewise, underlying assets can be deposited from or withdrawn to both public and private balances.
+
+> ⚠️ **WARNING — Private Balance Loss**
+>
+> any asset tokens transfered to the Tokenized Vault's private balance will be lost forever, as the contract doesn't have keys to spend a private balance nor any recovery mechanism. Yield must be sent to the Vault's public balance.
+
+> ⚠️ **WARNING — Experimental Feature**
+>
+> the AIP-4626 functionality of this contract is not yet production ready. Use it at your own risk. In particular there is a known overflow issue in the asset<>share conversion logic used on deposits and withdrawals. This can corrupt balances for sufficiently large inputs.
+
+### Function Patterns
+
+Some Tokenized Vault private methods require both `assets` and `shares` amounts as inputs because the exchange rate cannot be computed within the private context. To accommodate this, two complementary patterns are provided:
+
+**Standard Pattern** (e.g., deposit_public_to_private): 
+- Exchange rate is provided by the user, giving `assets` and `shares` as inputs.
+- Best when exchange rate is known and stable.
+- Any slippage or miscalculation will either cause the transaction to revert or leave the difference in favor of the vault (never the user).
+- Can be more gas-efficient in certain cases.
+
+**Exact Pattern** (e.g., deposit_public_to_private_exact): 
+- Enforces the exact exchange rate at public execution time.
+- A portion of the tokens is immediately transferred privately, allowing users to use them in other protocols, while any outstanding or surplus amount is settled privately during public execution via partial notes.
+- Best for volatile exchange rates and when slipage could cause significant losses.
+- May be more expensive due to the additional settlement logic.
 
 ### Deposit Functions
 

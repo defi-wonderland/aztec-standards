@@ -871,7 +871,7 @@ pub contract Token {
 
     /// @notice Deposits the underlying asset from a public balance and receives shares to a private balance
     /// @dev The shares are calculated based on the ratio (total_supply + offset) / (total_assets + 1) minus any acceptable slippage.
-    ///      The ratio can only decrease or remain the same as time goes by. Any asset surplus is kept by the contract as yield.
+    ///      The ratio can only decrease or remain the same as time goes by. Any asset excess is kept by the contract as yield.
     /// @param from The address of the sender
     /// @param to The address of the recipient
     /// @param assets The amount of assets to deposit
@@ -903,7 +903,7 @@ pub contract Token {
 
     /// @notice Deposits the underlying asset from a private balance and receives shares to a private balance
     /// @dev The shares are calculated based on the ratio (total_supply + offset) / (total_assets + 1) minus any acceptable slippage.
-    ///      The ratio can only decrease or remain the same as time goes by. Any asset surplus is kept by the contract as yield.
+    ///      The ratio can only decrease or remain the same as time goes by. Any asset excess is kept by the contract as yield.
     /// @param from The address of the sender
     /// @param to The address of the recipient
     /// @param assets The amount of assets to deposit
@@ -1118,7 +1118,7 @@ pub contract Token {
             .transfer_public_to_public(from, context.this_address(), max_assets, _nonce)
             .enqueue(&mut context);
 
-        // Validate the amount of assets transferred and send back any surplus
+        // Validate the amount of assets transferred and send back any excess
         Token::at(context.this_address())
             .settle_issuance_from_public_internal(from, shares, max_assets)
             .enqueue(&mut context);
@@ -1156,7 +1156,7 @@ pub contract Token {
             .transfer_private_to_public(from, context.this_address(), max_assets, _nonce)
             .call(&mut context);
 
-        // Validate max_assets in public and refund any surplus to the sender with a commitment
+        // Validate max_assets in public and refund any excess to the sender with a commitment
         Token::at(context.this_address())
             .settle_issuance_from_private_with_commitment(asset_commitment, shares, max_assets)
             .enqueue(&mut context);
@@ -1195,7 +1195,7 @@ pub contract Token {
             .transfer_private_to_public(from, context.this_address(), max_assets, _nonce)
             .call(&mut context);
 
-        // Validate max_assets in public and refund any surplus to the sender with a commitment
+        // Validate max_assets in public and refunds any excess to the sender with a commitment
         Token::at(context.this_address())
             .settle_issuance_from_private_with_commitment(asset_commitment, shares, max_assets)
             .enqueue(&mut context);
