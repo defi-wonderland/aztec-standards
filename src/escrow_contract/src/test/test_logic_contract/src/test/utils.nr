@@ -1,5 +1,4 @@
 use crate::TestLogic;
-use escrow_contract::Escrow;
 use aztec::{
     protocol_types::{
         address::AztecAddress,
@@ -11,6 +10,7 @@ use aztec::{
         test_environment::TestEnvironment, txe_oracles as cheatcodes, utils::ContractDeployment,
     },
 };
+use escrow_contract::Escrow;
 use escrow_contract::library::logic::MasterSecretKeys;
 use nft::test::utils as nft_utils;
 use token::test::utils as token_utils;
