@@ -646,12 +646,13 @@ pub contract Token {
         max_notes: u32,
     ) -> u128 {
         let subtracted = private_balances.at(account).try_sub(amount, max_notes);
-        // Failing to subtract any amount means that the owner was unable to produce more notes that could be nullified.
-        assert(subtracted > 0, "Balance too low");
         if subtracted >= amount {
             // We have achieved our goal of nullifying notes that add up to more than amount, so we return the change.
             subtracted - amount
         } else {
+            // Failing to subtract any amount means that the owner was unable to produce more notes that could be nullified.
+            assert(subtracted > 0, "Balance too low");
+
             // try_sub failed to nullify enough notes to reach the target amount, so we compute the amount remaining
             // and try again.
             let remaining = amount - subtracted;
