@@ -17,7 +17,7 @@ pub contract Dripper {
     #[public]
     fn drip_to_public(token_address: AztecAddress, amount: u64) {
         let token = Token::at(token_address);
-        let msg_sender = context.msg_sender();
+        let msg_sender = context.msg_sender().unwrap();
         token.mint_to_public(msg_sender, amount as u128).call(&mut context);
     }
 
@@ -28,7 +28,7 @@ pub contract Dripper {
     #[private]
     fn drip_to_private(token_address: AztecAddress, amount: u64) {
         let token = Token::at(token_address);
-        let msg_sender = context.msg_sender();
+        let msg_sender = context.msg_sender().unwrap();
         token.mint_to_private(msg_sender, amount as u128).call(&mut context);
     }
 

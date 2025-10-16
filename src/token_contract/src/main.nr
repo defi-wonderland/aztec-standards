@@ -202,7 +202,7 @@ pub contract Token {
         );
 
         // Only the sender will be able to complete the partial note
-        let completer = context.msg_sender();
+        let completer = context.msg_sender().unwrap();
         let commitment =
             _initialize_transfer_commitment(&mut context, storage.private_balances, to, completer);
         commitment.to_field()
@@ -258,7 +258,7 @@ pub contract Token {
             INITIAL_TRANSFER_CALL_MAX_NOTES,
         );
 
-        let completer = context.msg_sender();
+        let completer = context.msg_sender().unwrap();
         PartialUintNote::from_field(commitment).complete_from_private(
             &mut context,
             completer,
@@ -359,7 +359,7 @@ pub contract Token {
 
         _decrease_public_balance(storage.public_balances, from, amount);
 
-        let completer = context.msg_sender();
+        let completer = context.msg_sender().unwrap();
         _increase_commitment_balance(
             &mut context,
             PartialUintNote::from_field(commitment),
@@ -450,7 +450,7 @@ pub contract Token {
     /// @param amount The amount of tokens to mint
     #[private]
     fn mint_to_private(to: AztecAddress, amount: u128) {
-        _validate_minter(context.msg_sender(), storage.minter.read());
+        _validate_minter(context.msg_sender().unwrap(), storage.minter.read());
 
         _mint_to_private(&mut context, storage.private_balances, to, amount);
     }
@@ -461,7 +461,7 @@ pub contract Token {
     /// @param amount The amount of tokens to mint
     #[public]
     fn mint_to_public(to: AztecAddress, amount: u128) {
-        _validate_minter(context.msg_sender(), storage.minter.read());
+        _validate_minter(context.msg_sender().unwrap(), storage.minter.read());
 
         _mint_to_public(storage.public_balances, storage.total_supply, to, amount);
     }
@@ -472,7 +472,7 @@ pub contract Token {
     /// @param amount The amount of tokens to mint
     #[public]
     fn mint_to_commitment(commitment: Field, amount: u128) {
-        let sender = context.msg_sender();
+        let sender = context.msg_sender().unwrap();
         _validate_minter(sender, storage.minter.read());
         let completer = sender;
         _increase_total_supply(storage.total_supply, amount);
@@ -775,7 +775,10 @@ pub contract Token {
         let upgrade_authority = storage.upgrade_authority.read();
 
         assert(!upgrade_authority.eq(AztecAddress::zero()), "upgrade authority not set");
-        assert(context.msg_sender().eq(upgrade_authority), "caller is not upgrade authority");
+        assert(
+            context.msg_sender().unwrap().eq(upgrade_authority),
+            "caller is not upgrade authority",
+        );
 
         ContractInstanceRegistry::at(CONTRACT_INSTANCE_REGISTRY_CONTRACT_ADDRESS)
             .update(ContractClassId::from_field(new_contract_class_id))
@@ -791,7 +794,7 @@ pub contract Token {
     /// @param from The address of the sender
     #[contract_library_method]
     fn _validate_from_private<let N: u32>(context: &mut PrivateContext, from: AztecAddress) {
-        if (!from.eq(context.msg_sender())) {
+        if (!from.eq(context.msg_sender().unwrap())) {
             assert_current_call_valid_authwit::<N>(context, from);
         }
     }
@@ -801,7 +804,7 @@ pub contract Token {
     /// @param from The address of the sender
     #[contract_library_method]
     unconstrained fn _validate_from_public(context: &mut PublicContext, from: AztecAddress) {
-        if (!from.eq(context.msg_sender())) {
+        if (!from.eq(context.msg_sender().unwrap())) {
             assert_current_call_valid_authwit_public(context, from);
         }
     }
