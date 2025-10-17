@@ -1,4 +1,4 @@
-mod test;
+pub mod test;
 pub mod library;
 pub mod types;
 
