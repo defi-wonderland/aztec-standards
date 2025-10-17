@@ -1,8 +1,7 @@
 use crate::NFT;
 use aztec::{
-    oracle::{execution::{get_block_number, get_contract_address}, storage::storage_read},
     protocol_types::{address::AztecAddress, storage::map::derive_storage_slot_in_map},
-    test::helpers::{test_environment::TestEnvironment, txe_oracles as cheatcodes},
+    test::helpers::test_environment::TestEnvironment,
 };
 
 pub unconstrained fn setup_with_minter(

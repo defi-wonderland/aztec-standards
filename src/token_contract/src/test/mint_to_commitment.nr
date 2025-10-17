@@ -1,6 +1,5 @@
 use crate::{test::utils, Token};
 use aztec::oracle::random::random;
-use uint_note::uint_note::PartialUintNote;
 
 #[test]
 unconstrained fn mint_to_commitment_success() {
@@ -9,7 +8,7 @@ unconstrained fn mint_to_commitment_success() {
 
     let commitment = env.call_private(
         minter,
-        Token::at(token_contract_address).initialize_transfer_commitment(minter, recipient, minter),
+        Token::at(token_contract_address).initialize_transfer_commitment(recipient, minter),
     );
 
     let mint_amount: u128 = 10_000;
@@ -30,11 +29,7 @@ unconstrained fn mint_to_private_failure_unauthorized() {
 
     let commitment = env.call_private(
         recipient,
-        Token::at(token_contract_address).initialize_transfer_commitment(
-            recipient,
-            recipient,
-            recipient,
-        ),
+        Token::at(token_contract_address).initialize_transfer_commitment(recipient, recipient),
     );
 
     let mint_amount: u128 = 10_000;
@@ -51,7 +46,7 @@ unconstrained fn mint_to_private_failure_balance_overflow() {
 
     let commitment = env.call_private(
         minter,
-        Token::at(token_contract_address).initialize_transfer_commitment(minter, recipient, minter),
+        Token::at(token_contract_address).initialize_transfer_commitment(recipient, minter),
     );
 
     let max_u128 = utils::max_u128();
@@ -77,7 +72,7 @@ unconstrained fn mint_to_private_failure_total_supply_overflow() {
 
     let commitment = env.call_private(
         minter,
-        Token::at(token_contract_address).initialize_transfer_commitment(minter, recipient, minter),
+        Token::at(token_contract_address).initialize_transfer_commitment(recipient, minter),
     );
 
     let mint_amount: u128 = 10_000;
@@ -91,7 +86,7 @@ unconstrained fn mint_to_private_failure_total_supply_overflow() {
 
     let another_commitment = env.call_private(
         minter,
-        Token::at(token_contract_address).initialize_transfer_commitment(minter, recipient, minter),
+        Token::at(token_contract_address).initialize_transfer_commitment(recipient, minter),
     );
 
     env.call_public(
@@ -126,7 +121,7 @@ unconstrained fn mint_to_private_failure_already_completed_commitment() {
 
     let commitment = env.call_private(
         minter,
-        Token::at(token_contract_address).initialize_transfer_commitment(minter, recipient, minter),
+        Token::at(token_contract_address).initialize_transfer_commitment(recipient, minter),
     );
 
     let mint_amount: u128 = 10_000;

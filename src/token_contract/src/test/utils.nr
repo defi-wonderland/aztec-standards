@@ -1,14 +1,7 @@
 use crate::Token;
 use aztec::{
-    note::{
-        constants::MAX_NOTES_PER_PAGE, note_getter::view_notes,
-        note_viewer_options::NoteViewerOptions,
-    },
-    oracle::{
-        execution::{get_block_number, get_contract_address},
-        random::random,
-        storage::storage_read,
-    },
+    note::{constants::MAX_NOTES_PER_PAGE, note_viewer_options::NoteViewerOptions},
+    oracle::random::random,
     protocol_types::{address::AztecAddress, storage::map::derive_storage_slot_in_map},
     state_vars::private_set::PrivateSet,
     test::helpers::test_environment::TestEnvironment,
@@ -124,8 +117,10 @@ pub unconstrained fn deploy_token_with_initial_supply(
         to,
         AztecAddress::zero(),
     );
-    let token_contract_address =
-        env.deploy("@token_contract/Token").with_public_initializer(to, initializer_call_interface);
+    let token_contract_address = env.deploy("@token_contract/Token").with_public_initializer(
+        owner,
+        initializer_call_interface,
+    );
 
     token_contract_address
 }
@@ -144,7 +139,7 @@ pub unconstrained fn deploy_token_with_minter(
         AztecAddress::zero(),
     );
     let token_contract_address = env.deploy("@token_contract/Token").with_public_initializer(
-        minter,
+        owner,
         initializer_call_interface,
     );
 
@@ -211,11 +206,7 @@ pub unconstrained fn mint_to_private(
     let note_randomness = random();
     let _ = OracleMock::mock("getRandomField").returns(note_randomness);
 
-    let from = recipient; // we are setting from to recipient because of TODO(#9887)
-    env.call_private(
-        caller,
-        Token::at(token_contract_address).mint_to_private(from, recipient, amount),
-    );
+    env.call_private(caller, Token::at(token_contract_address).mint_to_private(recipient, amount));
 }
 
 pub unconstrained fn transfer_in_private(
@@ -314,8 +305,6 @@ pub unconstrained fn _commitment_storage_read(
     target_contract_address: AztecAddress,
     commitment: Field,
 ) -> bool {
-    // store current contract address
-    let current_contract_address = get_contract_address();
     // set target contract address
     let value = env.public_context_at(target_contract_address, |context| {
         let value: bool = context.storage_read(commitment);

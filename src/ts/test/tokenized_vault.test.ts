@@ -71,10 +71,7 @@ describe('Tokenized Vault', () => {
     shares: number,
   ) {
     // Mint some assets to Alice
-    await asset.methods
-      .mint_to_private(account.getAddress(), account.getAddress(), mint)
-      .send({ from: alice.getAddress() })
-      .wait();
+    await asset.methods.mint_to_private(account.getAddress(), mint).send({ from: alice.getAddress() }).wait();
 
     // Alice deposits private assets, receives private shares
     await callVaultWithPrivateAuthWit(
@@ -177,14 +174,8 @@ describe('Tokenized Vault', () => {
 
     it('Private assets, Public shares: Alice deposits/withdraws, Bob issues/redeems', async () => {
       // Mint some assets to Alice and Bob for deposit/issue
-      await asset.methods
-        .mint_to_private(alice.getAddress(), alice.getAddress(), initialAmount)
-        .send({ from: alice.getAddress() })
-        .wait();
-      await asset.methods
-        .mint_to_private(alice.getAddress(), bob.getAddress(), initialAmount)
-        .send({ from: alice.getAddress() })
-        .wait();
+      await asset.methods.mint_to_private(alice.getAddress(), initialAmount).send({ from: alice.getAddress() }).wait();
+      await asset.methods.mint_to_private(bob.getAddress(), initialAmount).send({ from: alice.getAddress() }).wait();
 
       // Alice deposits private assets, receives public shares
       vault = vault.withWallet(alice);
@@ -311,14 +302,8 @@ describe('Tokenized Vault', () => {
 
     it('Private assets, Private shares: Alice deposits/withdraws, Bob issues/redeems', async () => {
       // Mint some assets to Alice and Bob for deposit/issue
-      await asset.methods
-        .mint_to_private(alice.getAddress(), alice.getAddress(), initialAmount)
-        .send({ from: alice.getAddress() })
-        .wait();
-      await asset.methods
-        .mint_to_private(alice.getAddress(), bob.getAddress(), initialAmount)
-        .send({ from: alice.getAddress() })
-        .wait();
+      await asset.methods.mint_to_private(alice.getAddress(), initialAmount).send({ from: alice.getAddress() }).wait();
+      await asset.methods.mint_to_private(bob.getAddress(), initialAmount).send({ from: alice.getAddress() }).wait();
 
       // Alice deposits private assets, receives private shares
       vault = vault.withWallet(alice);
@@ -380,10 +365,7 @@ describe('Tokenized Vault', () => {
 
     it('Exact methods, Mixed Assets, Private shares: Alice deposits/withdraws, Bob deposits/withdraws', async () => {
       // Mint some assets to Alice and Bob for deposit/issue
-      await asset.methods
-        .mint_to_private(alice.getAddress(), alice.getAddress(), initialAmount)
-        .send({ from: alice.getAddress() })
-        .wait();
+      await asset.methods.mint_to_private(alice.getAddress(), initialAmount).send({ from: alice.getAddress() }).wait();
       await asset.methods.mint_to_public(bob.getAddress(), initialAmount).send({ from: alice.getAddress() }).wait();
 
       // Alice deposits private assets, receives public shares
@@ -531,14 +513,8 @@ describe('Tokenized Vault', () => {
 
     it('Private assets, Public shares: Alice deposits/withdraws, Bob issues/redeems', async () => {
       // Mint some assets to Alice and Bob for deposit/issue
-      await asset.methods
-        .mint_to_private(alice.getAddress(), alice.getAddress(), initialAmount)
-        .send({ from: alice.getAddress() })
-        .wait();
-      await asset.methods
-        .mint_to_private(alice.getAddress(), bob.getAddress(), initialAmount)
-        .send({ from: alice.getAddress() })
-        .wait();
+      await asset.methods.mint_to_private(alice.getAddress(), initialAmount).send({ from: alice.getAddress() }).wait();
+      await asset.methods.mint_to_private(bob.getAddress(), initialAmount).send({ from: alice.getAddress() }).wait();
 
       // Alice deposits private assets, receives public shares
       const depositAction = vault.methods.deposit_private_to_public(
@@ -705,14 +681,8 @@ describe('Tokenized Vault', () => {
 
     it('Private assets, Private shares: Alice deposits/withdraws, Bob issues/redeems', async () => {
       // Mint some assets to Alice and Bob for deposit/issue
-      await asset.methods
-        .mint_to_private(alice.getAddress(), alice.getAddress(), initialAmount)
-        .send({ from: alice.getAddress() })
-        .wait();
-      await asset.methods
-        .mint_to_private(alice.getAddress(), bob.getAddress(), initialAmount)
-        .send({ from: alice.getAddress() })
-        .wait();
+      await asset.methods.mint_to_private(alice.getAddress(), initialAmount).send({ from: alice.getAddress() }).wait();
+      await asset.methods.mint_to_private(bob.getAddress(), initialAmount).send({ from: alice.getAddress() }).wait();
 
       // Alice deposits private assets, receives public shares
       const depositAction = vault.methods.deposit_private_to_private(
@@ -805,10 +775,7 @@ describe('Tokenized Vault', () => {
 
     it('Exact methods, Mixed Assets, Private shares: Alice deposits/withdraws, Bob deposits/withdraws', async () => {
       // Mint some assets to Alice and Bob for deposit/issue
-      await asset.methods
-        .mint_to_private(alice.getAddress(), alice.getAddress(), initialAmount)
-        .send({ from: alice.getAddress() })
-        .wait();
+      await asset.methods.mint_to_private(alice.getAddress(), initialAmount).send({ from: alice.getAddress() }).wait();
       await asset.methods.mint_to_public(bob.getAddress(), initialAmount).send({ from: alice.getAddress() }).wait();
 
       // Alice deposits private assets, receives public shares
@@ -974,10 +941,7 @@ describe('Tokenized Vault', () => {
 
     it('deposit_private_to_public', async () => {
       // Mint some assets to Alice
-      await asset.methods
-        .mint_to_private(alice.getAddress(), alice.getAddress(), initialAmount)
-        .send({ from: alice.getAddress() })
-        .wait();
+      await asset.methods.mint_to_private(alice.getAddress(), initialAmount).send({ from: alice.getAddress() }).wait();
 
       // Attempt depositing more assets than Alice actually has
       let transfer = asset.methods.transfer_private_to_public(alice.getAddress(), vault.address, initialAmount + 1, 0);
@@ -1004,10 +968,7 @@ describe('Tokenized Vault', () => {
 
     it('deposit_private_to_private', async () => {
       // Mint some assets to Alice
-      await asset.methods
-        .mint_to_private(alice.getAddress(), alice.getAddress(), initialAmount)
-        .send({ from: alice.getAddress() })
-        .wait();
+      await asset.methods.mint_to_private(alice.getAddress(), initialAmount).send({ from: alice.getAddress() }).wait();
 
       // Attempt depositing more assets than Alice actually has
       let sharesRequested = initialAmount + 1;
@@ -1092,10 +1053,7 @@ describe('Tokenized Vault', () => {
 
     it('deposit_private_to_private_exact', async () => {
       // Mint some assets to Alice
-      await asset.methods
-        .mint_to_private(alice.getAddress(), alice.getAddress(), initialAmount)
-        .send({ from: alice.getAddress() })
-        .wait();
+      await asset.methods.mint_to_private(alice.getAddress(), initialAmount).send({ from: alice.getAddress() }).wait();
 
       // Attempt depositing more assets than Alice actually has
       let sharesRequested = initialAmount + 1;
@@ -1218,10 +1176,7 @@ describe('Tokenized Vault', () => {
 
     it('issue_private_to_public_exact', async () => {
       // Mint some assets to Alice
-      await asset.methods
-        .mint_to_private(alice.getAddress(), alice.getAddress(), initialAmount)
-        .send({ from: alice.getAddress() })
-        .wait();
+      await asset.methods.mint_to_private(alice.getAddress(), initialAmount).send({ from: alice.getAddress() }).wait();
 
       // Attempt depositing more assets than Alice actually has
       let sharesRequested = initialAmount + 1;
@@ -1265,10 +1220,7 @@ describe('Tokenized Vault', () => {
 
     it('issue_private_to_private_exact', async () => {
       // Mint some assets to Alice
-      await asset.methods
-        .mint_to_private(alice.getAddress(), alice.getAddress(), initialAmount)
-        .send({ from: alice.getAddress() })
-        .wait();
+      await asset.methods.mint_to_private(alice.getAddress(), initialAmount).send({ from: alice.getAddress() }).wait();
 
       // Attempt depositing more assets than Alice actually has
       let sharesRequested = initialAmount + 1;
