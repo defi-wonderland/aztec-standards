@@ -35,7 +35,7 @@ The `NFT` contract implements an ERC-721-like non-fungible token with Aztec-spec
 
 The Escrow Standard contains two elements:
 - Escrow Contract: a minimal private contract designed to have keys with which authorized callers can spend private balances of tokens and NFTs compliants with AIP-20 and AIP-721, respectively.
-- Escrow Library: a set of contract library methods that standardizes and facilitates the management of Escrow contracts from another contract, a.k.a. the Logic contract. 
+- Logic Library: a set of contract library methods that standardizes and facilitates the management of Escrow contracts from another contract, a.k.a. the Logic contract. 
 
 📖 **[View detailed Escrow documentation](src/escrow_contract/README.md)**
 
