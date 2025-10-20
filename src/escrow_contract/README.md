@@ -1,12 +1,10 @@
 # Escrow Standard
 
-The `Token` contract implements an ERC-20-like token with Aztec-specific privacy extensions. It supports transfers and interactions through both private and public balances, offering full coverage of Aztec's confidentiality features.
+The Escrow Standard defines a minimal, reusable on-chain Escrow contract that safely holds private balances while delegating release logic, key distribution, and participant discovery to a separate Logic contract. 
 
-This implementation provides a robust foundation for fungible tokens on Aztec, enabling developers to build applications with flexible privacy controls and seamless interoperability between private and public states.
+Since encryption and nullification keys are needed to read and spend private balances, respectively, the Escrow contract must have keys. Logic contracts should implement a key- and escrow-sharing mechanism, for which a Logic library with helper functions is provided. 
 
-## AIP-20: Aztec Token Standard
-
-This contract follows the [AIP-20 Aztec Token Standard](https://forum.aztec.network/t/request-for-comments-aip-20-aztec-token-standard/7737). Feel free to review and discuss the specification on the Aztec forum.
+Logic contract implementations may vary greatly among use cases, but the basic patterns presented here, available in the logic library, should be used carefully, so that privacy is preserved. Examples of logic contracts can be found [here](https://github.com/defi-wonderland/aztec-escrow-extensions).
 
 ## Escrow Contract
 
