@@ -1150,7 +1150,12 @@ pub contract Token {
         // Initialize commitment that allows to refund excess assets to the sender in public
         // Take max_assets from the sender
         let asset_commitment = Token::at(storage.asset.read())
-            .transfer_private_to_public_with_commitment(from, context.this_address(), max_assets, _nonce)
+            .transfer_private_to_public_with_commitment(
+                from,
+                context.this_address(),
+                max_assets,
+                _nonce,
+            )
             .call(&mut context);
 
         // Validate max_assets in public and refund any excess to the sender with a commitment
@@ -1185,7 +1190,12 @@ pub contract Token {
         // Initialize commitment that allows to refund excess assets to the sender in public
         // Take max_assets from the sender
         let asset_commitment = Token::at(storage.asset.read())
-            .transfer_private_to_public_with_commitment(from, context.this_address(), max_assets, _nonce)
+            .transfer_private_to_public_with_commitment(
+                from,
+                context.this_address(),
+                max_assets,
+                _nonce,
+            )
             .call(&mut context);
 
         // Validate max_assets in public and refunds any excess to the sender with a commitment
