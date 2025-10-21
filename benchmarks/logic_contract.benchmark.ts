@@ -38,7 +38,7 @@ export default class LogicContractBenchmark extends Benchmark {
    * Creates PXE client, gets accounts, and deploys the contract.
    */
   async setup(): Promise<LogicBenchmarkContext> {
-    const { pxe } = await setupPXE();
+    const { pxe } = await setupPXE('bench-logic');
     const managers = await getInitialTestAccountsManagers(pxe);
     const accounts = await Promise.all(managers.map((acc) => acc.register()));
     const [deployer] = accounts;
