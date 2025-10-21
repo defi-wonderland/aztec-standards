@@ -1,9 +1,16 @@
 // aztec library
 use aztec::{
-    messages::logs::{event::to_encrypted_private_event_message, utils::prefix_with_tag},
-    oracle::get_contract_instance::get_contract_instance,
-    prelude::{AztecAddress, PrivateContext},
+    context::PrivateContext,
+    messages::logs::event::to_encrypted_private_event_message,
+    oracle::{
+        get_contract_instance::get_contract_instance,
+        notes::{
+            get_app_tag_as_sender, get_sender_for_tags,
+            increment_app_tagging_secret_index_as_sender,
+        },
+    },
     protocol_types::{
+        address::AztecAddress,
         constants::GENERATOR_INDEX__EVENT_COMMITMENT,
         contract_instance::ContractInstance,
         hash::poseidon2_hash_with_separator,
@@ -16,7 +23,7 @@ use std::embedded_curve_ops::{EmbeddedCurvePoint, EmbeddedCurveScalar, fixed_bas
 // escrow contract
 use crate::Escrow;
 // escrow details event
-use crate::types::escrow_details_event::EscrowDetailsLogContent;
+pub use crate::types::escrow_details_event::{EscrowDetailsLogContent, MasterSecretKeys};
 
 /** ==========================================================
  * =================== LOGIC LIBRARIES =======================
@@ -27,26 +34,19 @@ use crate::types::escrow_details_event::EscrowDetailsLogContent;
 /// @param context The private context
 /// @param escrow The address of the escrow
 /// @param escrow_class_id The contract class id of the escrow contract
-/// @param nsk_m Master Nullifier Secret Key
-/// @param ivsk_m Incoming Viewing Key
-/// @param ovsk_m Outgoing Viewing Key
-/// @param tsk_m Tagging Secret Key
+/// @param master_secret_keys The master secret keys
 #[contract_library_method]
 pub fn _check_escrow(
     context: &mut PrivateContext,
     escrow: AztecAddress,
     escrow_class_id: Field,
-    nsk_m: Field,
-    ivsk_m: Field,
-    ovsk_m: Field,
-    tsk_m: Field,
+    master_secret_keys: MasterSecretKeys,
 ) {
     // Get the escrow instance
     let escrow_instance: ContractInstance = get_contract_instance(escrow);
 
     // Compute the public keys from the secret keys
-    let computed_public_keys: PublicKeys =
-        _secret_keys_to_public_keys(nsk_m, ivsk_m, ovsk_m, tsk_m);
+    let computed_public_keys: PublicKeys = _secret_keys_to_public_keys(master_secret_keys);
 
     // Check the public keys are computed correctly
     assert_eq(computed_public_keys, escrow_instance.public_keys, "Escrow public keys mismatch");
@@ -71,23 +71,22 @@ pub fn _check_escrow(
 /// @param context The private context
 /// @param account The address of the account that will use the escrow
 /// @param escrow The address of the escrow
-/// @param nsk_m Master Nullifier Secret Key
-/// @param ivsk_m Incoming Viewing Key
-/// @param ovsk_m Outgoing Viewing Key
-/// @param tsk_m Tagging Secret Key
+/// @param master_secret_keys The master secret keys
 #[contract_library_method]
 pub fn _share_escrow(
     context: &mut PrivateContext,
     account: AztecAddress,
     escrow: AztecAddress,
-    nsk_m: Field,
-    ivsk_m: Field,
-    ovsk_m: Field,
-    tsk_m: Field,
+    master_secret_keys: MasterSecretKeys,
 ) {
-    let event_struct = EscrowDetailsLogContent { escrow, nsk_m, ivsk_m, ovsk_m, tsk_m };
+    // TODO: this function is a manual implementation of the private emission of the
+    //       EscrowDetailsLogContent event. logic.nr is not a contract, so cannot have an
+    //       event and the struct needs to be manually manipulated. Also, prefix_with_tag()
+    //       is not visible, so it also needed to be manually implemented.
+    //       This is ugly and requires a lot of attention when upgrading.
+    let event_struct = EscrowDetailsLogContent { escrow, master_secret_keys };
 
-    // Implementation from aztec-packages event_interface.nr in v1.2.1
+    // Implementation from aztec-packages event_interface.nr in v2.0.3
     let (ciphertext, randomness) = to_encrypted_private_event_message(event_struct, account);
     let serialized_event_with_randomness = [randomness].concat(event_struct.serialize());
     let event_commitment = poseidon2_hash_with_separator(
@@ -95,8 +94,23 @@ pub fn _share_escrow(
         GENERATOR_INDEX__EVENT_COMMITMENT,
     );
     context.push_nullifier(event_commitment);
-    let log_content = prefix_with_tag(ciphertext, context.msg_sender(), account);
-    context.emit_private_log(log_content, log_content.len());
+
+    // Implementation from aztec-packages prefix_with_tag, which is private since v2.0.3
+    let tag = unsafe {
+        let sender = get_sender_for_tags().expect(
+            f"Sender for tags is not set when emitting a private log. Set it by calling `set_sender_for_tags(...)`.",
+        );
+        increment_app_tagging_secret_index_as_sender(sender, account);
+        get_app_tag_as_sender(sender, account)
+    };
+
+    let mut padded_ciphertext: [Field; 18] = [0; 18];
+    padded_ciphertext[0] = tag;
+    for i in 0..ciphertext.len() {
+        padded_ciphertext[i + 1] = ciphertext[i];
+    }
+
+    context.emit_private_log(padded_ciphertext, ciphertext.len() as u32);
 }
 
 /// @notice Withdraws an amount of tokens from the provided escrow.
@@ -132,22 +146,18 @@ pub fn _withdraw_nft(
 }
 
 /// @notice Derives public keys from secret keys.
-/// @param nsk_m Master Nullifier Secret Key
-/// @param ivsk_m Incoming Viewing Key
-/// @param ovsk_m Outgoing Viewing Key
-/// @param tsk_m Tagging Secret Key
+/// @param master_secret_keys The master secret keys
 /// @return PublicKeys containing the derived public keys.
 #[contract_library_method]
-pub fn _secret_keys_to_public_keys(
-    nsk_m: Field,
-    ivsk_m: Field,
-    ovsk_m: Field,
-    tsk_m: Field,
-) -> PublicKeys {
-    let npk_m: EmbeddedCurvePoint = fixed_base_scalar_mul(EmbeddedCurveScalar::from_field(nsk_m));
-    let ivpk_m: EmbeddedCurvePoint = fixed_base_scalar_mul(EmbeddedCurveScalar::from_field(ivsk_m));
-    let ovpk_m: EmbeddedCurvePoint = fixed_base_scalar_mul(EmbeddedCurveScalar::from_field(ovsk_m));
-    let tpk_m: EmbeddedCurvePoint = fixed_base_scalar_mul(EmbeddedCurveScalar::from_field(tsk_m));
+pub fn _secret_keys_to_public_keys(master_secret_keys: MasterSecretKeys) -> PublicKeys {
+    let npk_m: EmbeddedCurvePoint =
+        fixed_base_scalar_mul(EmbeddedCurveScalar::from_field(master_secret_keys.nsk_m));
+    let ivpk_m: EmbeddedCurvePoint =
+        fixed_base_scalar_mul(EmbeddedCurveScalar::from_field(master_secret_keys.ivsk_m));
+    let ovpk_m: EmbeddedCurvePoint =
+        fixed_base_scalar_mul(EmbeddedCurveScalar::from_field(master_secret_keys.ovsk_m));
+    let tpk_m: EmbeddedCurvePoint =
+        fixed_base_scalar_mul(EmbeddedCurveScalar::from_field(master_secret_keys.tsk_m));
 
     PublicKeys {
         npk_m: NpkM { inner: npk_m },

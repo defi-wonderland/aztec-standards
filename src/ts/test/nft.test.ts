@@ -3,11 +3,11 @@ import {
   Fr,
   PXE,
   TxStatus,
-  getContractInstanceFromDeployParams,
   ContractDeployer,
   AccountWalletWithSecretKey,
   IntentAction,
   AztecAddress,
+  getContractInstanceFromInstantiationParams,
 } from '@aztec/aztec.js';
 import { setupPXE, deployNFTWithMinter, assertOwnsPrivateNFT, assertOwnsPublicNFT } from './utils.js';
 import { getInitialTestAccountsManagers } from '@aztec/accounts/testing';

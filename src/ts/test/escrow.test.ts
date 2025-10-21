@@ -93,24 +93,32 @@ describe('Escrow', () => {
 
     it('withdrawing tokens from account different than the logic contract should fail', async () => {
       await expect(
-        escrow.withWallet(bob).methods.withdraw(AztecAddress.ZERO, 0, AztecAddress.ZERO).send().wait(),
+        escrow
+          .withWallet(bob)
+          .methods.withdraw(AztecAddress.ZERO, 0, AztecAddress.ZERO)
+          .send({ from: bob.getAddress() })
+          .wait(),
       ).rejects.toThrow(/Assertion failed: Not Authorized/);
     });
 
     it('withdrawing nft from account different than the logic contract should fail', async () => {
       await expect(
-        escrow.withWallet(bob).methods.withdraw_nft(AztecAddress.ZERO, 0, AztecAddress.ZERO).send().wait(),
+        escrow
+          .withWallet(bob)
+          .methods.withdraw_nft(AztecAddress.ZERO, 0, AztecAddress.ZERO)
+          .send({ from: bob.getAddress() })
+          .wait(),
       ).rejects.toThrow(/Assertion failed: Not Authorized/);
     });
   });
 
   describe('withdraw', () => {
     beforeEach(async () => {
-      token = (await deployTokenWithMinter(alice, {})) as TokenContract;
+      token = (await deployTokenWithMinter(alice)) as TokenContract;
       await token
         .withWallet(alice)
         .methods.mint_to_private(alice.getAddress(), escrow.instance.address, AMOUNT)
-        .send()
+        .send({ from: alice.getAddress() })
         .wait();
     });
 
@@ -121,13 +129,13 @@ describe('Escrow', () => {
       const bobWithdrawTx = await escrow
         .withWallet(logicMock)
         .methods.withdraw(token.instance.address, AMOUNT, bob.getAddress())
-        .send()
+        .send({ from: logicMock.getAddress() })
         .wait();
 
       await expectTokenBalances(token, escrow.instance.address, wad(0), wad(0));
       await expectTokenBalances(token, bob.getAddress(), wad(0), AMOUNT);
 
-      const notes = await pxe.getNotes({ txHash: bobWithdrawTx.txHash });
+      const notes = await pxe.getNotes({ contractAddress: token.address, txHash: bobWithdrawTx.txHash });
       expect(notes.length).toBe(1);
       expectUintNote(notes[0], AMOUNT, bob.getAddress());
     });
@@ -141,16 +149,22 @@ describe('Escrow', () => {
       const bobWithdrawTx = await escrow
         .withWallet(logicMock)
         .methods.withdraw(token.instance.address, halfAmount, bob.getAddress())
-        .send()
+        .send({ from: logicMock.getAddress() })
         .wait();
 
       await expectTokenBalances(token, escrow.instance.address, wad(0), halfAmount);
       await expectTokenBalances(token, bob.getAddress(), wad(0), halfAmount);
 
-      const notes = await pxe.getNotes({ txHash: bobWithdrawTx.txHash });
+      const notes = await pxe.getNotes({ contractAddress: token.address, txHash: bobWithdrawTx.txHash });
       expect(notes.length).toBe(2);
-      expectUintNote(notes[0], halfAmount, escrow.instance.address);
-      expectUintNote(notes[1], halfAmount, bob.getAddress());
+      // PXE does not guarantee correct order
+      if (notes[0].note.items[0].equals(new Fr(escrow.instance.address.toBigInt()))) {
+        expectUintNote(notes[0], halfAmount, escrow.instance.address);
+        expectUintNote(notes[1], halfAmount, bob.getAddress());
+      } else {
+        expectUintNote(notes[1], halfAmount, escrow.instance.address);
+        expectUintNote(notes[0], halfAmount, bob.getAddress());
+      }
     });
 
     it('withdrawing more than the balance should fail', async () => {
@@ -158,7 +172,7 @@ describe('Escrow', () => {
         escrow
           .withWallet(logicMock)
           .methods.withdraw(token.instance.address, AMOUNT + 1n, bob.getAddress())
-          .send()
+          .send({ from: logicMock.getAddress() })
           .wait(),
       ).rejects.toThrow(/Assertion failed: Balance too low/);
     });
@@ -170,8 +184,12 @@ describe('Escrow', () => {
 
     beforeEach(async () => {
       tokenId = 1n;
-      nft = (await deployNFTWithMinter(alice, {})) as NFTContract;
-      await nft.withWallet(alice).methods.mint_to_private(escrow.instance.address, tokenId).send().wait();
+      nft = (await deployNFTWithMinter(alice)) as NFTContract;
+      await nft
+        .withWallet(alice)
+        .methods.mint_to_private(escrow.instance.address, tokenId)
+        .send({ from: alice.getAddress() })
+        .wait();
     });
 
     it('logic should be able to withdraw NFT correctly', async () => {
@@ -180,12 +198,12 @@ describe('Escrow', () => {
       const bobWithdrawTx = await escrow
         .withWallet(logicMock)
         .methods.withdraw_nft(nft.instance.address, tokenId, bob.getAddress())
-        .send()
+        .send({ from: logicMock.getAddress() })
         .wait();
 
       await assertOwnsPrivateNFT(nft, tokenId, bob.getAddress());
 
-      const notes = await pxe.getNotes({ txHash: bobWithdrawTx.txHash });
+      const notes = await pxe.getNotes({ contractAddress: nft.address, txHash: bobWithdrawTx.txHash });
       expect(notes.length).toBe(1);
       expectUintNote(notes[0], tokenId, bob.getAddress());
     });
@@ -195,7 +213,7 @@ describe('Escrow', () => {
         escrow
           .withWallet(logicMock)
           .methods.withdraw_nft(nft.instance.address, tokenId + 1n, bob.getAddress())
-          .send()
+          .send({ from: logicMock.getAddress() })
           .wait(),
       ).rejects.toThrow(/Assertion failed: nft not found in private to public/);
     });

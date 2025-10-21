@@ -7,18 +7,18 @@ use nft::{NFT, test::utils as nft_utils};
 
 #[test(should_fail_with = "Not Authorized")]
 unconstrained fn withdraw_unauthorized() {
-    let (env, escrow, _, nft, _, recipient, minter) =
+    let (mut env, escrow, _, nft, _, recipient, _minter) =
         logic_utils::set_escrow_with_token_and_nft(false, 1);
 
     // Mint some tokens to escrow
     let token_id: Field = 1;
-    env.impersonate(minter);
-    NFT::at(nft).mint_to_private(escrow, token_id).call(&mut env.private());
-    env.advance_block_by(1);
+    env.call_private(_minter, NFT::at(nft).mint_to_private(escrow, token_id));
+
     // Check the escrow received and can read the nft
-    nft_utils::assert_owns_private_nft(nft, escrow, token_id);
+    nft_utils::assert_owns_private_nft(env, nft, escrow, token_id);
 
-    let logic = logic_utils::deploy_logic(env, 1);
+    let logic = logic_utils::deploy_logic(&mut env, 1);
 
-    TestLogic::at(logic).withdraw_nft(escrow, recipient, nft, token_id).call(&mut env.private());
+    let caller = env.create_light_account();
+    env.call_private(caller, TestLogic::at(logic).withdraw_nft(escrow, recipient, nft, token_id));
 }
