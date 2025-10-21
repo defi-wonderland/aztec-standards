@@ -1,15 +1,27 @@
 use crate::test::utils;
 use crate::Token;
+use aztec::test::helpers::cheatcodes;
 
 // It is not possible to deserialize strings in Noir ATM, so name and symbol cannot be checked yet.
 
 #[test]
-unconstrained fn check_decimals() {
+unconstrained fn check_decimals_private() {
     // Setup without account contracts. We are not using authwits here, so dummy accounts are enough
-    let (env, token_contract_address, _, _, _) = utils::setup_with_minter(false);
+    let (env, token_contract_address, _, _) = utils::setup(false);
 
     // Check decimals
-    let result = env.view_public(Token::at(token_contract_address).decimals());
+    let result = env.view_public(Token::at(token_contract_address).private_get_decimals());
+
+    assert(result == 18);
+}
+
+#[test]
+unconstrained fn check_decimals_public() {
+    // Setup without account contracts. We are not using authwits here, so dummy accounts are enough
+    let (env, token_contract_address, _, _) = utils::setup(false);
+
+    // Check decimals
+    let result = env.view_public(Token::at(token_contract_address).public_get_decimals());
 
     assert(result == 18);
 }
