@@ -30,6 +30,21 @@ unconstrained fn transfer_private_on_behalf_of_other() {
 }
 
 #[test]
+unconstrained fn transfer_private_zero_amount() {
+    let (mut env, token_contract_address, owner, recipient) =
+        utils::setup_and_mint_to_private_without_minter(false);
+
+    env.call_private(
+        owner,
+        Token::at(token_contract_address).transfer_private_to_private(owner, recipient, 0, 0),
+    );
+
+    // Check balances
+    utils::check_private_balance(env, token_contract_address, owner, mint_amount);
+    utils::check_private_balance(env, token_contract_address, recipient, 0);
+}
+
+#[test]
 unconstrained fn transfer_private_multiple_notes_recursively() {
     // Setup with account contracts. Slower since we actually deploy them, but needed for authwits.
     let (mut env, token_contract_address, owner, recipient, minter) =

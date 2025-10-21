@@ -12,7 +12,7 @@ unconstrained fn withdraw_unauthorized() {
 
     // Mint some tokens to escrow
     let amount: u128 = token_utils::mint_amount;
-    env.call_private(minter, Token::at(token).mint_to_private(minter, escrow, amount));
+    env.call_private(minter, Token::at(token).mint_to_private(escrow, amount));
 
     // Check the escrow received and can read the tokens
     token_utils::check_private_balance(env, token, escrow, amount);
