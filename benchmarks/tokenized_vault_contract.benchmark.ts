@@ -58,7 +58,7 @@ export default class TokenContractBenchmark extends Benchmark {
       // 1 Note per benchmark test so that a single full Note is used in each.
       await assetContract
         .withWallet(deployer)
-        .methods.mint_to_private(deployer.getAddress(), deployer.getAddress(), amt(1))
+        .methods.mint_to_private(deployer.getAddress(), amt(1))
         .send({ from: deployer.getAddress() })
         .wait();
     }

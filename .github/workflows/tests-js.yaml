@@ -1,4 +1,4 @@
-name: Tests
+name: JS Tests
 
 on:
     push:
@@ -7,7 +7,7 @@ on:
     pull_request:
 
 concurrency:
-  group: pr-${{ github.head_ref }}
+  group: ${{ github.workflow }}-${{ github.ref_name }}
   cancel-in-progress: true
 
 jobs:
@@ -22,7 +22,7 @@ jobs:
       timeout-minutes: 60
 
       concurrency:
-        group: job-${{ github.head_ref }}-${{ matrix.os }}-${{ matrix.threads }}
+        group: job-${{ github.workflow }}-${{ github.ref_name }}-${{ matrix.os }}-${{ matrix.threads }}
         cancel-in-progress: false
 
       steps:
@@ -73,10 +73,6 @@ jobs:
         - name: Start PXE
           run: |
             VERSION=${{ steps.aztec-version.outputs.version }} aztec start --port 8081 --pxe --pxe.nodeUrl=http://localhost:8080/ --pxe.proverEnabled false &
-
-        - name: Run nr tests
-          run: |
-            script -e -c "aztec test --test-threads ${{ matrix.threads }}"
 
         - name: Run js tests
           run: script -e -c "BASE_PXE_URL=http://localhost NODE_NO_WARNINGS=1 node --experimental-vm-modules $(yarn bin jest) --no-cache --runInBand --config jest.integration.config.json"

@@ -87,7 +87,7 @@ export default class LogicContractBenchmark extends Benchmark {
     const tokenAmount = 100;
     await tokenContract
       .withWallet(deployer)
-      .methods.mint_to_private(deployer.getAddress(), escrowContract.address, tokenAmount)
+      .methods.mint_to_private(escrowContract.address, tokenAmount)
       .send({ from: deployer.getAddress() })
       .wait();
     const tokenId = 1;

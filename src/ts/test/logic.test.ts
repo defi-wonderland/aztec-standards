@@ -404,7 +404,7 @@ describe('Logic - Single PXE', () => {
 
       await token
         .withWallet(alice)
-        .methods.mint_to_private(escrow.instance.address, escrow.instance.address, AMOUNT)
+        .methods.mint_to_private(escrow.instance.address, AMOUNT)
         .send({ from: alice.getAddress() })
         .wait();
     });

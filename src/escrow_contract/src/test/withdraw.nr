@@ -23,7 +23,7 @@ unconstrained fn escrow_withdraw_success() {
     let amount: u128 = token_utils::mint_amount;
     env.call_private(
         minter,
-        Token::at(token_contract_address).mint_to_private(minter, escrow_contract_address, amount),
+        Token::at(token_contract_address).mint_to_private(escrow_contract_address, amount),
     );
 
     // Check the escrow received and can read the tokens
@@ -56,11 +56,7 @@ unconstrained fn escrow_withdraw_twice_success() {
     let total_amount: u128 = token_utils::mint_amount * 2;
     env.call_private(
         minter,
-        Token::at(token_contract_address).mint_to_private(
-            minter,
-            escrow_contract_address,
-            total_amount,
-        ),
+        Token::at(token_contract_address).mint_to_private(escrow_contract_address, total_amount),
     );
 
     // Check the escrow received and can read the tokens

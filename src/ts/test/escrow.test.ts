@@ -117,7 +117,7 @@ describe('Escrow', () => {
       token = (await deployTokenWithMinter(alice)) as TokenContract;
       await token
         .withWallet(alice)
-        .methods.mint_to_private(alice.getAddress(), escrow.instance.address, AMOUNT)
+        .methods.mint_to_private(escrow.instance.address, AMOUNT)
         .send({ from: alice.getAddress() })
         .wait();
     });
