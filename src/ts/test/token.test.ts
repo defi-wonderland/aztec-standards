@@ -8,7 +8,6 @@ import {
   Wallet,
   getContractInstanceFromInstantiationParams,
 } from '@aztec/aztec.js';
-import { decodeFromAbi } from '@aztec/stdlib/abi';
 import {
   AMOUNT,
   deployTokenWithMinter,
@@ -254,17 +253,24 @@ describe('Token - Single PXE', () => {
   }, 300_000);
 
   it('can transfer tokens between private balances', async () => {
-    // Mint 2 tokens privately to alice
+    // Mint 2*AMOUNT tokens privately to alice
     await token
       .withWallet(alice)
       .methods.mint_to_private(alice.getAddress(), AMOUNT * 2n)
       .send({ from: alice.getAddress() })
       .wait();
 
-    // Transfer 1 token from alice to bob's private balance
+    // Transfer AMOUNT token from alice to bob's private balance
     await token
       .withWallet(alice)
       .methods.transfer_private_to_private(alice.getAddress(), bob.getAddress(), AMOUNT, 0)
+      .send({ from: alice.getAddress() })
+      .wait();
+
+    // Transfer zero tokens from alice to bob's private balance
+    await token
+      .withWallet(alice)
+      .methods.transfer_private_to_private(alice.getAddress(), bob.getAddress(), 0, 0)
       .send({ from: alice.getAddress() })
       .wait();
 

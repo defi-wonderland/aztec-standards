@@ -1,7 +1,7 @@
 use crate::{test::{tokenized_vault::tokenized_vault_utils, utils::{self, mint_amount}}, Token};
 use aztec::test::helpers::authwit as authwit_cheatcodes;
 
-#[test(should_fail_with = "Assertion failed: Balance too low")]
+#[test(should_fail_with = "Trying to read from uninitialized PublicImmutable")]
 unconstrained fn withdraw_private_to_public_exact_without_asset() {
     let (env, vault_address, owner, recipient, _) = utils::setup_with_minter(false);
 
