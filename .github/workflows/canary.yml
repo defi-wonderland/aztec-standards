@@ -3,9 +3,8 @@ name: Canary Release
 on: workflow_dispatch
 
 jobs:
-  export:
-    name: Generate Canary Release
-    environment: Development
+  build:
+    name: Build and Prepare Artifacts
     runs-on: ubuntu-latest
 
     env:
@@ -113,7 +112,34 @@ jobs:
           cp README.md export/${{ env.PROJECT_NAME }}/
           cp LICENSE export/${{ env.PROJECT_NAME }}/
           cat package.json | jq 'del(.scripts, .jest, ."lint-staged", .packageManager, .devDependencies, .dependencies, .engines, .resolutions)' > export/${{ env.PROJECT_NAME }}/package.json
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: npm-package
+          path: export/${{ env.PROJECT_NAME }}
+          retention-days: 1
+
+  publish:
+    name: Publish to NPM
+    needs: [build]
+    environment: Development
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Install Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22.17.0"
+          registry-url: "https://registry.npmjs.org"
+
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: npm-package
+          path: package
+
       - name: Publish to NPM
-        run: cd export/${{ env.PROJECT_NAME }} && npm publish --access public --tag canary
+        run: cd package && npm publish --access public --tag canary
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
