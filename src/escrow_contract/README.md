@@ -98,6 +98,7 @@ pub fn _share_escrow(
 ### _withdraw
 ```rust
 /// @notice Withdraws an amount of tokens from the provided escrow.
+/// @param context The private context
 /// @param escrow The address of the escrow
 /// @param account The address of the account that will receive the tokens
 /// @param token The address of the token
@@ -115,6 +116,7 @@ pub fn _withdraw(
 ### _withdraw_nft
 ```rust
 /// @notice Withdraws an NFT from the provided escrow.
+/// @param context The private context
 /// @param escrow The address of the escrow
 /// @param account The address of the account that will receive the NFT
 /// @param nft The address of the NFT contract
