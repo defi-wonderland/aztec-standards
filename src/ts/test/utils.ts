@@ -40,9 +40,10 @@ const config = getPXEServiceConfig();
 const fullConfig = { ...config, l1Contracts };
 fullConfig.proverEnabled = false;
 
-export const setupPXE = async () => {
+export const setupPXE = async (suffix?: string) => {
+  const storeDir = suffix ? `store-${suffix}` : 'store';
   const store = await createStore('pxe', {
-    dataDirectory: 'store',
+    dataDirectory: storeDir,
     dataStoreMapSizeKB: 1e6,
   });
   const pxe = await createPXEService(node, fullConfig, { store });

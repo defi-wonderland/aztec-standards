@@ -4,33 +4,25 @@ import {
   type ContractFunctionInteraction,
   type PXE,
   getContractClassFromArtifact,
-  GrumpkinScalar,
 } from '@aztec/aztec.js';
-import { deriveKeys, PublicKeys } from '@aztec/stdlib/keys';
-import { parseUnits } from 'viem';
+import { deriveKeys } from '@aztec/stdlib/keys';
 import { getInitialTestAccountsManagers } from '@aztec/accounts/testing';
 
 // Import the new Benchmark base class and context
 import { Benchmark, BenchmarkContext } from '@defi-wonderland/aztec-benchmark';
 
-import { TokenContract } from '../artifacts/Token.js';
 import { EscrowContract, EscrowContractArtifact } from '../artifacts/Escrow.js';
-import { NFTContract } from '../artifacts/NFT.js';
 import { TestLogicContract } from '../artifacts/TestLogic.js';
 import { deployLogic, deployEscrowWithPublicKeysAndSalt, grumpkinScalarToFr } from '../src/ts/test/utils.js';
-import { deployTokenWithMinter, deployNFTWithMinter, setupPXE } from '../src/ts/test/utils.js';
+import { setupPXE } from '../src/ts/test/utils.js';
 
 // Extend the BenchmarkContext from the new package
 interface LogicBenchmarkContext extends BenchmarkContext {
   pxe: PXE;
   deployer: AccountWallet;
   accounts: AccountWallet[];
-  tokenContract: TokenContract;
-  nftContract: NFTContract;
   logicContract: TestLogicContract;
   escrowContract: EscrowContract;
-  tokenAmount: number;
-  tokenId: number;
   secretKeys: {
     nsk_m: Fr;
     ivsk_m: Fr;
@@ -46,7 +38,7 @@ export default class LogicContractBenchmark extends Benchmark {
    * Creates PXE client, gets accounts, and deploys the contract.
    */
   async setup(): Promise<LogicBenchmarkContext> {
-    const { pxe } = await setupPXE();
+    const { pxe } = await setupPXE('bench-logic');
     const managers = await getInitialTestAccountsManagers(pxe);
     const accounts = await Promise.all(managers.map((acc) => acc.register()));
     const [deployer] = accounts;
@@ -77,36 +69,12 @@ export default class LogicContractBenchmark extends Benchmark {
     const partialAddressEscrow = await escrowContract.partialAddress;
     await pxe.registerAccount(escrowSk, partialAddressEscrow);
 
-    // Deploy token and NFT contracts
-    const deployedTokenContract = await deployTokenWithMinter(deployer);
-    const tokenContract = await TokenContract.at(deployedTokenContract.address, deployer);
-    const deployedNFTContract = await deployNFTWithMinter(deployer);
-    const nftContract = await NFTContract.at(deployedNFTContract.address, deployer);
-
-    // Mint tokens and NFT to the escrow contract
-    const tokenAmount = 100;
-    await tokenContract
-      .withWallet(deployer)
-      .methods.mint_to_private(escrowContract.address, tokenAmount)
-      .send({ from: deployer.getAddress() })
-      .wait();
-    const tokenId = 1;
-    await nftContract
-      .withWallet(deployer)
-      .methods.mint_to_private(escrowContract.address, tokenId)
-      .send({ from: deployer.getAddress() })
-      .wait();
-
     return {
       pxe,
       deployer,
       accounts,
-      tokenContract,
-      nftContract,
       logicContract,
       escrowContract,
-      tokenAmount,
-      tokenId,
       secretKeys,
     };
   }
@@ -115,17 +83,7 @@ export default class LogicContractBenchmark extends Benchmark {
    * Returns the list of TokenContract methods to be benchmarked.
    */
   getMethods(context: LogicBenchmarkContext): ContractFunctionInteraction[] {
-    const {
-      accounts,
-      tokenContract,
-      nftContract,
-      escrowContract,
-      tokenAmount,
-      tokenId,
-      deployer,
-      logicContract,
-      secretKeys,
-    } = context;
+    const { accounts, escrowContract, deployer, logicContract, secretKeys } = context;
     const recipient = accounts[2].getAddress();
 
     const methods: ContractFunctionInteraction[] = [
@@ -135,14 +93,6 @@ export default class LogicContractBenchmark extends Benchmark {
       logicContract.withWallet(deployer).methods.check_escrow(escrowContract.address, secretKeys),
       // Share escrow
       logicContract.withWallet(deployer).methods.share_escrow(recipient, escrowContract.address, secretKeys),
-      // Full token withdrawal
-      logicContract
-        .withWallet(deployer)
-        .methods.withdraw(escrowContract.address, recipient, tokenContract.address, tokenAmount),
-      // NFT withdrawal
-      logicContract
-        .withWallet(deployer)
-        .methods.withdraw_nft(escrowContract.address, recipient, nftContract.address, tokenId),
     ];
 
     return methods.filter(Boolean);
