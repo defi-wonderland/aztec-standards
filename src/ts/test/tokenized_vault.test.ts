@@ -1129,7 +1129,7 @@ describe('Tokenized Vault', () => {
     }, 300_000);
   });
 
-  describe.only('Issue failures: incorrect amounts', () => {
+  describe('Issue failures: incorrect amounts', () => {
     beforeEach(async () => {
       vault = vault.withWallet(alice); // Only Alice interacts with the vault
     });
