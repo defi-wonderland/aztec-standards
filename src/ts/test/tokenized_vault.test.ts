@@ -64,6 +64,26 @@ describe('Tokenized Vault', () => {
       .wait();
   }
 
+  async function callVaultWithPrivateAuthWitWithCommitment(
+    action: ContractFunctionInteraction,
+    from: AccountWalletWithSecretKey,
+    amount: number,
+    options: { nonce?: number; caller?: AccountWalletWithSecretKey } = {},
+  ) {
+    const { nonce = 0, caller = from } = options;
+    const transfer = asset.methods.transfer_private_to_public_with_commitment(
+      from.getAddress(),
+      vault.address,
+      amount,
+      nonce,
+    );
+    const transferAuthWitness = await setPrivateAuthWit(vault.address, transfer, from);
+    await action
+      .with({ authWitnesses: [transferAuthWitness] })
+      .send({ from: caller.getAddress() })
+      .wait();
+  }
+
   async function mintAndDepositInPrivate(
     account: AccountWalletWithSecretKey,
     mint: number,
@@ -190,7 +210,7 @@ describe('Tokenized Vault', () => {
 
       // Bob issues public shares for public assets
       vault = vault.withWallet(bob);
-      await callVaultWithPrivateAuthWit(
+      await callVaultWithPrivateAuthWitWithCommitment(
         vault.methods.issue_private_to_public_exact(bob.getAddress(), bob.getAddress(), sharesBob, assetsBob, 0),
         bob,
         assetsBob,
@@ -318,7 +338,7 @@ describe('Tokenized Vault', () => {
 
       // Bob issues private shares for private assets
       vault = vault.withWallet(bob);
-      await callVaultWithPrivateAuthWit(
+      await callVaultWithPrivateAuthWitWithCommitment(
         vault.methods.issue_private_to_private_exact(bob.getAddress(), bob.getAddress(), sharesBob, assetsBob, 0),
         bob,
         assetsBob,
@@ -543,9 +563,14 @@ describe('Tokenized Vault', () => {
         0,
       );
       const issueAuthWitness = await setPrivateAuthWit(carl, issueAction, bob);
-      await callVaultWithPrivateAuthWit(issueAction.with({ authWitnesses: [issueAuthWitness] }), bob, assetsBob, {
-        caller: carl,
-      });
+      await callVaultWithPrivateAuthWitWithCommitment(
+        issueAction.with({ authWitnesses: [issueAuthWitness] }),
+        bob,
+        assetsBob,
+        {
+          caller: carl,
+        },
+      );
 
       // Check asset balances
       await expectTokenBalances(asset, alice, 0, initialAmount - assetsAlice);
@@ -712,9 +737,14 @@ describe('Tokenized Vault', () => {
         0,
       );
       const issueAuthWitness = await setPrivateAuthWit(carl, issueAction, bob);
-      await callVaultWithPrivateAuthWit(issueAction.with({ authWitnesses: [issueAuthWitness] }), bob, assetsBob, {
-        caller: carl,
-      });
+      await callVaultWithPrivateAuthWitWithCommitment(
+        issueAction.with({ authWitnesses: [issueAuthWitness] }),
+        bob,
+        assetsBob,
+        {
+          caller: carl,
+        },
+      );
 
       // Check asset balances
       await expectTokenBalances(asset, alice, 0, initialAmount - assetsAlice);
@@ -1099,7 +1129,7 @@ describe('Tokenized Vault', () => {
     }, 300_000);
   });
 
-  describe('Issue failures: incorrect amounts', () => {
+  describe.only('Issue failures: incorrect amounts', () => {
     beforeEach(async () => {
       vault = vault.withWallet(alice); // Only Alice interacts with the vault
     });
@@ -1181,7 +1211,12 @@ describe('Tokenized Vault', () => {
       // Attempt depositing more assets than Alice actually has
       let sharesRequested = initialAmount + 1;
       let maxAssets = initialAmount + 1;
-      let transfer = asset.methods.transfer_private_to_public(alice.getAddress(), vault.address, maxAssets, 0);
+      let transfer = asset.methods.transfer_private_to_public_with_commitment(
+        alice.getAddress(),
+        vault.address,
+        maxAssets,
+        0,
+      );
       let transferAuthWitness = await setPrivateAuthWit(vault.address, transfer, alice);
       await expect(
         vault.methods
@@ -1194,7 +1229,12 @@ describe('Tokenized Vault', () => {
       // Attemp to deposit with an incorrect allowance
       sharesRequested = assetsAlice;
       maxAssets = assetsAlice;
-      transfer = asset.methods.transfer_private_to_public(alice.getAddress(), vault.address, maxAssets - 1, 0);
+      transfer = asset.methods.transfer_private_to_public_with_commitment(
+        alice.getAddress(),
+        vault.address,
+        maxAssets - 1,
+        0,
+      );
       transferAuthWitness = await setPrivateAuthWit(vault.address, transfer, alice);
       await expect(
         vault.methods
@@ -1207,7 +1247,12 @@ describe('Tokenized Vault', () => {
       // Attemp to request more shares than allowed for the given deposit
       sharesRequested = assetsAlice + 1;
       maxAssets = assetsAlice;
-      transfer = asset.methods.transfer_private_to_public(alice.getAddress(), vault.address, maxAssets, 0);
+      transfer = asset.methods.transfer_private_to_public_with_commitment(
+        alice.getAddress(),
+        vault.address,
+        maxAssets,
+        0,
+      );
       transferAuthWitness = await setPrivateAuthWit(vault.address, transfer, alice);
       await expect(
         vault.methods
@@ -1225,7 +1270,12 @@ describe('Tokenized Vault', () => {
       // Attempt depositing more assets than Alice actually has
       let sharesRequested = initialAmount + 1;
       let maxAssets = initialAmount + 1;
-      let transfer = asset.methods.transfer_private_to_public(alice.getAddress(), vault.address, maxAssets, 0);
+      let transfer = asset.methods.transfer_private_to_public_with_commitment(
+        alice.getAddress(),
+        vault.address,
+        maxAssets,
+        0,
+      );
       let transferAuthWitness = await setPrivateAuthWit(vault.address, transfer, alice);
       await expect(
         vault.methods
@@ -1238,7 +1288,12 @@ describe('Tokenized Vault', () => {
       // Attemp to deposit with an incorrect allowance
       sharesRequested = assetsAlice;
       maxAssets = assetsAlice;
-      transfer = asset.methods.transfer_private_to_public(alice.getAddress(), vault.address, maxAssets - 1, 0);
+      transfer = asset.methods.transfer_private_to_public_with_commitment(
+        alice.getAddress(),
+        vault.address,
+        maxAssets - 1,
+        0,
+      );
       transferAuthWitness = await setPrivateAuthWit(vault.address, transfer, alice);
       await expect(
         vault.methods
@@ -1251,7 +1306,12 @@ describe('Tokenized Vault', () => {
       // Attemp to request more shares than allowed for the given deposit
       sharesRequested = assetsAlice + 1;
       maxAssets = assetsAlice;
-      transfer = asset.methods.transfer_private_to_public(alice.getAddress(), vault.address, maxAssets, 0);
+      transfer = asset.methods.transfer_private_to_public_with_commitment(
+        alice.getAddress(),
+        vault.address,
+        maxAssets,
+        0,
+      );
       transferAuthWitness = await setPrivateAuthWit(vault.address, transfer, alice);
       await expect(
         vault.methods

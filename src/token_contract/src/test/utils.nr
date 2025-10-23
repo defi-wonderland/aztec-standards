@@ -349,6 +349,23 @@ pub unconstrained fn authorize_transfer_public_to_public(
     );
 }
 
+/// @notice Sets private authwit for the `transfer_private_to_public_with_commitment` method. `caller` is also the recipient.
+pub unconstrained fn authorize_transfer_private_to_public_with_commitment(
+    token: AztecAddress,
+    caller: AztecAddress,
+    from: AztecAddress,
+    amount: u128,
+    nonce: Field,
+) {
+    let transfer_private_to_public_with_commitment_call_interface =
+        Token::at(token).transfer_private_to_public_with_commitment(from, caller, amount, nonce);
+    authwit_cheatcodes::add_private_authwit_from_call_interface(
+        from,
+        caller,
+        transfer_private_to_public_with_commitment_call_interface,
+    );
+}
+
 /// @notice Returns the u128 maximum value
 pub unconstrained fn max_u128() -> u128 {
     (0 as u128).wrapping_sub(1)

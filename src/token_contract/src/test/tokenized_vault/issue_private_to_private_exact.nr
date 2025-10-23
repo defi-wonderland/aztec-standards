@@ -32,7 +32,7 @@ unconstrained fn issue_private_to_private_exact_success() {
 
     // Deposit assets to get shares
     // Authorize the vault to use the caller's assets
-    utils::authorize_transfer_private_to_public(
+    utils::authorize_transfer_private_to_public_with_commitment(
         asset_address,
         vault_address,
         owner,
@@ -82,7 +82,7 @@ unconstrained fn issue_private_to_private_exact_after_yield() {
 
     // Deposit assets to get shares
     // Authorize the vault to use the caller's assets
-    utils::authorize_transfer_private_to_public(
+    utils::authorize_transfer_private_to_public_with_commitment(
         asset_address,
         vault_address,
         owner,
@@ -130,7 +130,7 @@ unconstrained fn issue_private_to_private_exact_too_many_assets() {
 
     // Deposit assets to get shares
     // Authorize the vault to use the caller's assets
-    utils::authorize_transfer_private_to_public(
+    utils::authorize_transfer_private_to_public_with_commitment(
         asset_address,
         vault_address,
         owner,
@@ -176,7 +176,7 @@ unconstrained fn issue_private_to_private_exact_request_too_many_shares() {
 
     // Deposit assets to get shares
     // Authorize the vault to use the caller's assets
-    utils::authorize_transfer_private_to_public(
+    utils::authorize_transfer_private_to_public_with_commitment(
         asset_address,
         vault_address,
         owner,
@@ -235,7 +235,7 @@ unconstrained fn issue_private_to_private_exact_on_behalf_of_wrong_caller() {
 
     // Deposit assets to get shares
     // Authorize the vault to use the caller's assets
-    utils::authorize_transfer_private_to_public(
+    utils::authorize_transfer_private_to_public_with_commitment(
         asset_address,
         vault_address,
         owner,
@@ -269,7 +269,7 @@ unconstrained fn issue_private_to_private_exact_on_behalf_of_other_success() {
 
     // Deposit assets to get shares
     // Authorize the vault to use the caller's assets
-    utils::authorize_transfer_private_to_public(
+    utils::authorize_transfer_private_to_public_with_commitment(
         asset_address,
         vault_address,
         owner,

@@ -94,14 +94,28 @@ export default class TokenContractBenchmark extends Benchmark {
     // 1. deposit_private_to_private
     // 2. deposit_private_to_public
     // 3. deposit_private_to_private_exact
-    // 4. issue_private_to_public_exact
-    // 5. issue_private_to_private_exact
     const authWitnesses: AuthWitness[] = [];
-    for (let i = 0; i < 5; i++) {
-      const nonce = 100 + i;
+    let nonce = 100;
+    for (let i = 0; i < 3; i++) {
       action = assetMethods.transfer_private_to_public(deployer.getAddress(), vaultContract.address, amt(1), nonce);
       const authWitness = await setPrivateAuthWit(vaultContract.address, action, deployer);
       authWitnesses.push(authWitness);
+      nonce += 1;
+    }
+    // Prepare private authwitness for the `transfer_private_to_public_with_commitment` method on the Asset contract to be used by the
+    // Tokenized Vault's following methods:
+    // 4. issue_private_to_public_exact
+    // 5. issue_private_to_private_exact
+    for (let i = 0; i < 2; i++) {
+      action = assetMethods.transfer_private_to_public_with_commitment(
+        deployer.getAddress(),
+        vaultContract.address,
+        amt(1),
+        nonce,
+      );
+      const authWitness = await setPrivateAuthWit(vaultContract.address, action, deployer);
+      authWitnesses.push(authWitness);
+      nonce += 1;
     }
 
     return { pxe, deployer, accounts, vaultContract, assetContract, authWitnesses };
