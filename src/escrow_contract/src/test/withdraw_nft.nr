@@ -4,38 +4,40 @@ use aztec::oracle::get_contract_instance::get_contract_instance;
 use aztec::protocol_types::{address::AztecAddress, traits::FromField};
 use nft::{NFT, test::utils as nft_utils};
 
+// TODO: Uncomment the test and remove the allow(dead_code) once the test environment supports custom salts
 // #[test]
-// unconstrained fn escrow_withdraw_nft_success() {
-//     let escrow_secret: Field = 123456;
-//     let (mut env, escrow_contract_address, _, nft_contract_address, _, recipient, minter) =
-//         escrow_utils::set_escrow_with_token_and_nft(false, escrow_secret);
+#[allow(dead_code)]
+unconstrained fn escrow_withdraw_nft_success() {
+    let escrow_secret: Field = 123456;
+    let (mut env, escrow_contract_address, _, nft_contract_address, _, recipient, minter) =
+        escrow_utils::set_escrow_with_token_and_nft(false, escrow_secret);
 
-//     let escrow_instance = get_contract_instance(escrow_contract_address);
-//     let logic_contract_address = AztecAddress::from_field(escrow_instance.salt);
+    let escrow_instance = get_contract_instance(escrow_contract_address);
+    let logic_contract_address = AztecAddress::from_field(escrow_instance.salt);
 
-//     // Mint some tokens to escrow
-//     let token_id: Field = 1;
-//     env.call_private(
-//         minter,
-//         NFT::at(nft_contract_address).mint_to_private(escrow_contract_address, token_id),
-//     );
+    // Mint some tokens to escrow
+    let token_id: Field = 1;
+    env.call_private(
+        minter,
+        NFT::at(nft_contract_address).mint_to_private(escrow_contract_address, token_id),
+    );
 
-//     // Check the escrow received and can read the nft
-//     nft_utils::assert_owns_private_nft(
-//         env,
-//         nft_contract_address,
-//         escrow_contract_address,
-//         token_id,
-//     );
+    // Check the escrow received and can read the nft
+    nft_utils::assert_owns_private_nft(
+        env,
+        nft_contract_address,
+        escrow_contract_address,
+        token_id,
+    );
 
-//     env.call_private(
-//         logic_contract_address,
-//         Escrow::at(escrow_contract_address).withdraw_nft(nft_contract_address, token_id, recipient),
-//     );
+    env.call_private(
+        logic_contract_address,
+        Escrow::at(escrow_contract_address).withdraw_nft(nft_contract_address, token_id, recipient),
+    );
 
-//     // Check recipient got tokens
-//     nft_utils::assert_owns_private_nft(env, nft_contract_address, recipient, token_id);
-// }
+    // Check recipient got tokens
+    nft_utils::assert_owns_private_nft(env, nft_contract_address, recipient, token_id);
+}
 
 #[test(should_fail_with = "Not Authorized")]
 unconstrained fn escrow_withdraw_nft_unauthorized() {

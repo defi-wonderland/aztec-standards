@@ -11,6 +11,7 @@ use token::{test::utils as token_utils, Token};
 // Because the escrow contract cannot be deployed with the salt that we want yet,
 // it defaults to address 0x1 which we don't know the secret of.
 // #[test]
+#[allow(dead_code)]
 unconstrained fn escrow_withdraw_success() {
     let escrow_secret: Field = 123456;
     let (mut env, escrow_contract_address, token_contract_address, _, _, recipient, minter) =
@@ -43,7 +44,9 @@ unconstrained fn escrow_withdraw_success() {
     token_utils::check_private_balance(env, token_contract_address, recipient, amount);
 }
 
+// TODO: Uncomment the test and remove the allow(dead_code) once the test environment supports custom salts
 // #[test]
+#[allow(dead_code)]
 unconstrained fn escrow_withdraw_twice_success() {
     let escrow_secret: Field = 123456;
     let (mut env, escrow_contract_address, token_contract_address, _, _, recipient, minter) =
