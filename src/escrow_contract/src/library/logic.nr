@@ -96,6 +96,9 @@ pub fn _share_escrow(
     context.push_nullifier(event_commitment);
 
     // Implementation from aztec-packages prefix_with_tag, which is private since v2.0.3
+    // Safety: we assume that the sender wants for the recipient to find the tagged note, and therefore that they will
+    // cooperate and use the correct tag. Usage of a bad tag will result in the recipient not being able to find the
+    // note automatically
     let tag = unsafe {
         let sender = get_sender_for_tags().expect(
             f"Sender for tags is not set when emitting a private log. Set it by calling `set_sender_for_tags(...)`.",

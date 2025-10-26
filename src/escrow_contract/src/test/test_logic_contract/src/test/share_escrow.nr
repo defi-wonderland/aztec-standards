@@ -35,8 +35,5 @@ unconstrained fn share_escrow_success() {
 
     // This will fail with "Escrow salt mismatch" because we cannot make
     // the escrow salt equal the logic contract address in test environment
-    env.call_private(
-        sender,
-        TestLogic::at(logic).share_escrow(recipient, escrow, msk),
-    );
+    env.call_private(sender, TestLogic::at(logic).share_escrow(recipient, escrow, msk));
 }
