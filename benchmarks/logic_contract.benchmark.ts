@@ -7,6 +7,7 @@ import {
 } from '@aztec/aztec.js';
 import { deriveKeys } from '@aztec/stdlib/keys';
 import { getInitialTestAccountsManagers } from '@aztec/accounts/testing';
+import { type AztecLmdbStore } from '@aztec/kv-store/lmdb';
 
 // Import the new Benchmark base class and context
 import { Benchmark, BenchmarkContext } from '@defi-wonderland/aztec-benchmark';
@@ -19,6 +20,7 @@ import { setupPXE } from '../src/ts/test/utils.js';
 // Extend the BenchmarkContext from the new package
 interface LogicBenchmarkContext extends BenchmarkContext {
   pxe: PXE;
+  store: AztecLmdbStore;
   deployer: AccountWallet;
   accounts: AccountWallet[];
   logicContract: TestLogicContract;
@@ -38,7 +40,7 @@ export default class LogicContractBenchmark extends Benchmark {
    * Creates PXE client, gets accounts, and deploys the contract.
    */
   async setup(): Promise<LogicBenchmarkContext> {
-    const { pxe } = await setupPXE('bench-logic');
+    const { pxe, store } = await setupPXE('bench-logic');
     const managers = await getInitialTestAccountsManagers(pxe);
     const accounts = await Promise.all(managers.map((acc) => acc.register()));
     const [deployer] = accounts;
@@ -71,6 +73,7 @@ export default class LogicContractBenchmark extends Benchmark {
 
     return {
       pxe,
+      store,
       deployer,
       accounts,
       logicContract,
@@ -96,5 +99,9 @@ export default class LogicContractBenchmark extends Benchmark {
     ];
 
     return methods.filter(Boolean);
+  }
+
+  async teardown(context: LogicBenchmarkContext): Promise<void> {
+    await context.store.delete();
   }
 }

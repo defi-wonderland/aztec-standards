@@ -1,5 +1,6 @@
 import { type AccountWallet, type ContractFunctionInteraction, type PXE } from '@aztec/aztec.js';
 import { getInitialTestAccountsManagers } from '@aztec/accounts/testing';
+import { type AztecLmdbStore } from '@aztec/kv-store/lmdb';
 
 // Import the new Benchmark base class and context
 import { Benchmark, BenchmarkContext } from '@defi-wonderland/aztec-benchmark';
@@ -10,6 +11,7 @@ import { deployNFTWithMinter, setupPXE } from '../src/ts/test/utils.js';
 // Extend the BenchmarkContext from the new package
 interface NFTBenchmarkContext extends BenchmarkContext {
   pxe: PXE;
+  store: AztecLmdbStore;
   deployer: AccountWallet;
   accounts: AccountWallet[];
   nftContract: NFTContract;
@@ -22,7 +24,7 @@ export default class NFTContractBenchmark extends Benchmark {
    * Creates PXE client, gets accounts, and deploys the contract.
    */
   async setup(): Promise<NFTBenchmarkContext> {
-    const { pxe } = await setupPXE();
+    const { pxe, store } = await setupPXE();
     const managers = await getInitialTestAccountsManagers(pxe);
     const accounts = await Promise.all(managers.map((acc) => acc.register()));
     const [deployer] = accounts;
@@ -31,7 +33,7 @@ export default class NFTContractBenchmark extends Benchmark {
       from: deployer.getAddress(),
     });
     const nftContract = await NFTContract.at(deployedBaseContract.address, deployer);
-    return { pxe, deployer, accounts, nftContract };
+    return { pxe, store, deployer, accounts, nftContract };
   }
 
   /**
@@ -61,5 +63,9 @@ export default class NFTContractBenchmark extends Benchmark {
     ];
 
     return methods.filter(Boolean);
+  }
+
+  async teardown(context: NFTBenchmarkContext): Promise<void> {
+    await context.store.delete();
   }
 }

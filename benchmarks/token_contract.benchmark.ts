@@ -1,8 +1,7 @@
 import { type AccountWallet, type ContractFunctionInteraction, type PXE } from '@aztec/aztec.js';
 import { getInitialTestAccountsManagers } from '@aztec/accounts/testing';
 import { parseUnits } from 'viem';
-import { decodeFromAbi } from '@aztec/stdlib/abi';
-import { Fr } from '@aztec/foundation/fields';
+import { type AztecLmdbStore } from '@aztec/kv-store/lmdb';
 
 // Import the new Benchmark base class and context
 import { Benchmark, BenchmarkContext } from '@defi-wonderland/aztec-benchmark';
@@ -13,6 +12,7 @@ import { deployTokenWithMinter, initializeTransferCommitment, setupPXE } from '.
 // Extend the BenchmarkContext from the new package
 interface TokenBenchmarkContext extends BenchmarkContext {
   pxe: PXE;
+  store: AztecLmdbStore;
   deployer: AccountWallet;
   accounts: AccountWallet[];
   tokenContract: TokenContract;
@@ -49,7 +49,7 @@ export default class TokenContractBenchmark extends Benchmark {
 
     const commitments = [commitment_1, commitment_2];
 
-    return { pxe, deployer, accounts, tokenContract, commitments };
+    return { pxe, store, deployer, accounts, tokenContract, commitments };
   }
 
   /**
@@ -84,5 +84,9 @@ export default class TokenContractBenchmark extends Benchmark {
     ];
 
     return methods.filter(Boolean);
+  }
+
+  async teardown(context: TokenBenchmarkContext): Promise<void> {
+    await context.store.delete();
   }
 }

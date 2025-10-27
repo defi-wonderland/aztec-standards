@@ -1,7 +1,7 @@
 import { Fr, type AccountWallet, type ContractFunctionInteraction, type PXE } from '@aztec/aztec.js';
 import { deriveKeys } from '@aztec/stdlib/keys';
-import { parseUnits } from 'viem';
 import { getInitialTestAccountsManagers } from '@aztec/accounts/testing';
+import { type AztecLmdbStore } from '@aztec/kv-store/lmdb';
 
 // Import the new Benchmark base class and context
 import { Benchmark, BenchmarkContext } from '@defi-wonderland/aztec-benchmark';
@@ -13,8 +13,9 @@ import { NFTContract } from '../artifacts/NFT.js';
 import { deployEscrow, deployTokenWithMinter, deployNFTWithMinter, setupPXE } from '../src/ts/test/utils.js';
 
 // Extend the BenchmarkContext from the new package
-interface TokenBenchmarkContext extends BenchmarkContext {
+interface ClawbackEscrowBenchmarkContext extends BenchmarkContext {
   pxe: PXE;
+  store: AztecLmdbStore;
   deployer: AccountWallet;
   accounts: AccountWallet[];
   tokenContract: TokenContract;
@@ -30,8 +31,8 @@ export default class TokenContractBenchmark extends Benchmark {
    * Sets up the benchmark environment for the TokenContract.
    * Creates PXE client, gets accounts, and deploys the contract.
    */
-  async setup(): Promise<TokenBenchmarkContext> {
-    const { pxe } = await setupPXE('bench-escrow');
+  async setup(): Promise<ClawbackEscrowBenchmarkContext> {
+    const { pxe, store } = await setupPXE('bench-escrow');
     const managers = await getInitialTestAccountsManagers(pxe);
     const accounts = await Promise.all(managers.map((acc) => acc.register()));
     const [deployer] = accounts;
@@ -65,13 +66,15 @@ export default class TokenContractBenchmark extends Benchmark {
       .send({ from: deployer.getAddress() })
       .wait();
 
-    return { pxe, deployer, accounts, tokenContract, nftContract, escrowContract, tokenAmount, tokenId };
+    return { pxe, store, deployer, accounts, tokenContract, nftContract, escrowContract, tokenAmount, tokenId };
   }
 
   /**
    * Returns the list of TokenContract methods to be benchmarked.
    */
-  getMethods(context: TokenBenchmarkContext): Array<NamedBenchmarkedInteraction | ContractFunctionInteraction> {
+  getMethods(
+    context: ClawbackEscrowBenchmarkContext,
+  ): Array<NamedBenchmarkedInteraction | ContractFunctionInteraction> {
     const { accounts, tokenContract, nftContract, escrowContract, tokenAmount, tokenId } = context;
     const logicMock = accounts[1];
     const recipient = accounts[2].getAddress();
@@ -92,5 +95,9 @@ export default class TokenContractBenchmark extends Benchmark {
     ];
 
     return methods.filter(Boolean);
+  }
+
+  async teardown(context: ClawbackEscrowBenchmarkContext): Promise<void> {
+    await context.store.delete();
   }
 }

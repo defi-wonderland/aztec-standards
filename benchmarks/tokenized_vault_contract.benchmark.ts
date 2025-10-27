@@ -8,6 +8,7 @@ import {
 } from '@aztec/aztec.js';
 import { parseUnits } from 'viem';
 import { getInitialTestAccountsManagers } from '@aztec/accounts/testing';
+import { type AztecLmdbStore } from '@aztec/kv-store/lmdb';
 
 // Import the new Benchmark base class and context
 import { Benchmark, BenchmarkContext } from '@defi-wonderland/aztec-benchmark';
@@ -18,6 +19,7 @@ import { deployVaultAndAssetWithMinter, setPrivateAuthWit, setPublicAuthWit, set
 // Extend the BenchmarkContext from the new package
 interface TokenBenchmarkContext extends BenchmarkContext {
   pxe: PXE;
+  store: AztecLmdbStore;
   deployer: AccountWallet;
   accounts: AccountWallet[];
   vaultContract: TokenContract;
@@ -39,7 +41,7 @@ export default class TokenContractBenchmark extends Benchmark {
    * Creates PXE client, gets accounts, and deploys the contract.
    */
   async setup(): Promise<TokenBenchmarkContext> {
-    const { pxe } = await setupPXE();
+    const { pxe, store } = await setupPXE();
     const managers = await getInitialTestAccountsManagers(pxe);
     const accounts = await Promise.all(managers.map((acc) => acc.register()));
     const [deployer] = accounts;
@@ -104,7 +106,7 @@ export default class TokenContractBenchmark extends Benchmark {
       authWitnesses.push(authWitness);
     }
 
-    return { pxe, deployer, accounts, vaultContract, assetContract, authWitnesses };
+    return { pxe, store, deployer, accounts, vaultContract, assetContract, authWitnesses };
   }
 
   /**
@@ -179,5 +181,9 @@ export default class TokenContractBenchmark extends Benchmark {
     ];
 
     return methods.filter(Boolean);
+  }
+
+  async teardown(context: TokenBenchmarkContext): Promise<void> {
+    await context.store.delete();
   }
 }
