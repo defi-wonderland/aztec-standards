@@ -12,6 +12,7 @@ import { type AztecLmdbStore } from '@aztec/kv-store/lmdb';
 
 // Import the new Benchmark base class and context
 import { Benchmark, BenchmarkContext } from '@defi-wonderland/aztec-benchmark';
+import type { NamedBenchmarkedInteraction } from '@defi-wonderland/aztec-benchmark/dist/types.js';
 
 import { TokenContract } from '../artifacts/Token.js';
 import { deployVaultAndAssetWithMinter, setPrivateAuthWit, setPublicAuthWit, setupPXE } from '../src/ts/test/utils.js';
@@ -112,7 +113,7 @@ export default class TokenContractBenchmark extends Benchmark {
   /**
    * Returns the list of TokenContract methods to be benchmarked.
    */
-  getMethods(context: TokenBenchmarkContext): ContractFunctionInteraction[] {
+  getMethods(context: TokenBenchmarkContext): Array<NamedBenchmarkedInteraction | ContractFunctionInteraction> {
     const { vaultContract, deployer, accounts, authWitnesses } = context;
     const alice = deployer;
     const bob = accounts[1];
@@ -122,62 +123,131 @@ export default class TokenContractBenchmark extends Benchmark {
     let publicNonce = 0;
     let privateNonce = 100;
 
-    const methods: ContractFunctionInteraction[] = [
+    const methods: Array<NamedBenchmarkedInteraction | ContractFunctionInteraction> = [
       // Deposit methods
-      vaultContract.withWallet(alice).methods.deposit_public_to_public(aliceAddress, bobAddress, amt(1), publicNonce++),
-      vaultContract
-        .withWallet(alice)
-        .methods.deposit_public_to_private(aliceAddress, bobAddress, amt(1), amt(1), publicNonce++),
-      vaultContract
-        .withWallet(alice)
-        .methods.deposit_private_to_private(aliceAddress, bobAddress, amt(1), amt(1), privateNonce++)
-        .with({ authWitnesses: [authWitnesses[0]] }),
-      vaultContract
-        .withWallet(alice)
-        .methods.deposit_private_to_public(aliceAddress, bobAddress, amt(1), privateNonce++)
-        .with({ authWitnesses: [authWitnesses[1]] }),
-      vaultContract
-        .withWallet(alice)
-        .methods.deposit_public_to_private_exact(aliceAddress, bobAddress, amt(1), amt(1), publicNonce++),
-      vaultContract
-        .withWallet(alice)
-        .methods.deposit_private_to_private_exact(aliceAddress, bobAddress, amt(1), amt(1), privateNonce++)
-        .with({ authWitnesses: [authWitnesses[2]] }),
+      {
+        name: 'deposit_public_to_public',
+        interaction: vaultContract
+          .withWallet(alice)
+          .methods.deposit_public_to_public(aliceAddress, bobAddress, amt(1), publicNonce++),
+      },
+      {
+        name: 'deposit_public_to_private',
+        interaction: vaultContract
+          .withWallet(alice)
+          .methods.deposit_public_to_private(aliceAddress, bobAddress, amt(1), amt(1), publicNonce++),
+      },
+      {
+        name: 'deposit_private_to_private',
+        interaction: vaultContract
+          .withWallet(alice)
+          .methods.deposit_private_to_private(aliceAddress, bobAddress, amt(1), amt(1), privateNonce++)
+          .with({ authWitnesses: [authWitnesses[0]] }),
+      },
+      {
+        name: 'deposit_private_to_public',
+        interaction: vaultContract
+          .withWallet(alice)
+          .methods.deposit_private_to_public(aliceAddress, bobAddress, amt(1), privateNonce++)
+          .with({ authWitnesses: [authWitnesses[1]] }),
+      },
+      {
+        name: 'deposit_public_to_private_exact',
+        interaction: vaultContract
+          .withWallet(alice)
+          .methods.deposit_public_to_private_exact(aliceAddress, bobAddress, amt(1), amt(1), publicNonce++),
+      },
+      {
+        name: 'deposit_private_to_private_exact',
+        interaction: vaultContract
+          .withWallet(alice)
+          .methods.deposit_private_to_private_exact(aliceAddress, bobAddress, amt(1), amt(1), privateNonce++)
+          .with({ authWitnesses: [authWitnesses[2]] }),
+      },
 
       // Issue methods
-      vaultContract
-        .withWallet(alice)
-        .methods.issue_public_to_public(aliceAddress, bobAddress, amt(1), amt(1), publicNonce++),
-      vaultContract
-        .withWallet(alice)
-        .methods.issue_public_to_private(aliceAddress, bobAddress, amt(1), amt(1), publicNonce++),
-      vaultContract
-        .withWallet(alice)
-        .methods.issue_private_to_public_exact(aliceAddress, bobAddress, amt(1), amt(1), privateNonce++)
-        .with({ authWitnesses: [authWitnesses[3]] }),
-      vaultContract
-        .withWallet(alice)
-        .methods.issue_private_to_private_exact(aliceAddress, bobAddress, amt(1), amt(1), privateNonce++)
-        .with({ authWitnesses: [authWitnesses[4]] }),
+      {
+        name: 'issue_public_to_public',
+        interaction: vaultContract
+          .withWallet(alice)
+          .methods.issue_public_to_public(aliceAddress, bobAddress, amt(1), amt(1), publicNonce++),
+      },
+      {
+        name: 'issue_public_to_private',
+        interaction: vaultContract
+          .withWallet(alice)
+          .methods.issue_public_to_private(aliceAddress, bobAddress, amt(1), amt(1), publicNonce++),
+      },
+      {
+        name: 'issue_private_to_public_exact',
+        interaction: vaultContract
+          .withWallet(alice)
+          .methods.issue_private_to_public_exact(aliceAddress, bobAddress, amt(1), amt(1), privateNonce++)
+          .with({ authWitnesses: [authWitnesses[3]] }),
+      },
+      {
+        name: 'issue_private_to_private_exact',
+        interaction: vaultContract
+          .withWallet(alice)
+          .methods.issue_private_to_private_exact(aliceAddress, bobAddress, amt(1), amt(1), privateNonce++)
+          .with({ authWitnesses: [authWitnesses[4]] }),
+      },
 
       // Withdraw methods
-      vaultContract.withWallet(bob).methods.withdraw_public_to_public(bobAddress, aliceAddress, amt(1), 0),
-      vaultContract.withWallet(bob).methods.withdraw_public_to_private(bobAddress, aliceAddress, amt(1), 0),
-      vaultContract.withWallet(bob).methods.withdraw_private_to_private(bobAddress, aliceAddress, amt(1), amt(1), 0),
-      vaultContract
-        .withWallet(bob)
-        .methods.withdraw_private_to_public_exact(bobAddress, aliceAddress, amt(1), amt(1), 0),
-      vaultContract
-        .withWallet(bob)
-        .methods.withdraw_private_to_private_exact(bobAddress, aliceAddress, amt(1), amt(1), 0),
+      {
+        name: 'withdraw_public_to_public',
+        interaction: vaultContract
+          .withWallet(bob)
+          .methods.withdraw_public_to_public(bobAddress, aliceAddress, amt(1), 0),
+      },
+      {
+        name: 'withdraw_public_to_private',
+        interaction: vaultContract
+          .withWallet(bob)
+          .methods.withdraw_public_to_private(bobAddress, aliceAddress, amt(1), 0),
+      },
+      {
+        name: 'withdraw_private_to_private',
+        interaction: vaultContract
+          .withWallet(bob)
+          .methods.withdraw_private_to_private(bobAddress, aliceAddress, amt(1), amt(1), 0),
+      },
+      {
+        name: 'withdraw_private_to_public_exact',
+        interaction: vaultContract
+          .withWallet(bob)
+          .methods.withdraw_private_to_public_exact(bobAddress, aliceAddress, amt(1), amt(1), 0),
+      },
+      {
+        name: 'withdraw_private_to_private_exact',
+        interaction: vaultContract
+          .withWallet(bob)
+          .methods.withdraw_private_to_private_exact(bobAddress, aliceAddress, amt(1), amt(1), 0),
+      },
 
       // Redeem methods
-      vaultContract.withWallet(bob).methods.redeem_public_to_public(bobAddress, aliceAddress, amt(1), 0),
-      vaultContract.withWallet(bob).methods.redeem_private_to_public(bobAddress, aliceAddress, amt(1), 0),
-      vaultContract
-        .withWallet(bob)
-        .methods.redeem_private_to_private_exact(bobAddress, aliceAddress, amt(1), amt(1), 0),
-      vaultContract.withWallet(bob).methods.redeem_public_to_private_exact(bobAddress, aliceAddress, amt(1), amt(1), 0),
+      {
+        name: 'redeem_public_to_public',
+        interaction: vaultContract.withWallet(bob).methods.redeem_public_to_public(bobAddress, aliceAddress, amt(1), 0),
+      },
+      {
+        name: 'redeem_private_to_public',
+        interaction: vaultContract
+          .withWallet(bob)
+          .methods.redeem_private_to_public(bobAddress, aliceAddress, amt(1), 0),
+      },
+      {
+        name: 'redeem_private_to_private_exact',
+        interaction: vaultContract
+          .withWallet(bob)
+          .methods.redeem_private_to_private_exact(bobAddress, aliceAddress, amt(1), amt(1), 0),
+      },
+      {
+        name: 'redeem_public_to_private_exact',
+        interaction: vaultContract
+          .withWallet(bob)
+          .methods.redeem_public_to_private_exact(bobAddress, aliceAddress, amt(1), amt(1), 0),
+      },
     ];
 
     return methods.filter(Boolean);

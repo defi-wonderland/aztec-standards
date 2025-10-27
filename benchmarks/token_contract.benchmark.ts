@@ -5,6 +5,7 @@ import { type AztecLmdbStore } from '@aztec/kv-store/lmdb';
 
 // Import the new Benchmark base class and context
 import { Benchmark, BenchmarkContext } from '@defi-wonderland/aztec-benchmark';
+import type { NamedBenchmarkedInteraction } from '@defi-wonderland/aztec-benchmark/dist/types.js';
 
 import { TokenContract } from '../artifacts/Token.js';
 import { deployTokenWithMinter, initializeTransferCommitment, setupPXE } from '../src/ts/test/utils.js';
@@ -55,32 +56,81 @@ export default class TokenContractBenchmark extends Benchmark {
   /**
    * Returns the list of TokenContract methods to be benchmarked.
    */
-  getMethods(context: TokenBenchmarkContext): ContractFunctionInteraction[] {
+  getMethods(context: TokenBenchmarkContext): Array<NamedBenchmarkedInteraction | ContractFunctionInteraction> {
     const { tokenContract, accounts, commitments } = context;
     const [alice, bob] = accounts;
     const owner = alice.getAddress();
 
-    const methods: ContractFunctionInteraction[] = [
+    const methods: Array<NamedBenchmarkedInteraction | ContractFunctionInteraction> = [
       // Mint methods
-      tokenContract.withWallet(alice).methods.mint_to_private(owner, amt(100)),
-      tokenContract.withWallet(alice).methods.mint_to_public(owner, amt(100)),
+      {
+        name: 'mint_to_private',
+        interaction: tokenContract.withWallet(alice).methods.mint_to_private(owner, amt(100)),
+      },
+      {
+        name: 'mint_to_public',
+        interaction: tokenContract.withWallet(alice).methods.mint_to_public(owner, amt(100)),
+      },
+
       // Transfer methods
-      tokenContract.withWallet(alice).methods.transfer_private_to_public(owner, bob.getAddress(), amt(10), 0),
-      tokenContract
-        .withWallet(alice)
-        .methods.transfer_private_to_public_with_commitment(owner, bob.getAddress(), amt(10), 0),
-      tokenContract.withWallet(alice).methods.transfer_private_to_private(owner, bob.getAddress(), amt(10), 0),
-      tokenContract.withWallet(alice).methods.transfer_public_to_private(owner, bob.getAddress(), amt(10), 0),
-      tokenContract.withWallet(alice).methods.transfer_public_to_public(owner, bob.getAddress(), amt(10), 0),
+      {
+        name: 'transfer_private_to_public',
+        interaction: tokenContract
+          .withWallet(alice)
+          .methods.transfer_private_to_public(owner, bob.getAddress(), amt(10), 0),
+      },
+      {
+        name: 'transfer_private_to_public_with_commitment',
+        interaction: tokenContract
+          .withWallet(alice)
+          .methods.transfer_private_to_public_with_commitment(owner, bob.getAddress(), amt(10), 0),
+      },
+      {
+        name: 'transfer_private_to_private',
+        interaction: tokenContract
+          .withWallet(alice)
+          .methods.transfer_private_to_private(owner, bob.getAddress(), amt(10), 0),
+      },
+      {
+        name: 'transfer_public_to_private',
+        interaction: tokenContract
+          .withWallet(alice)
+          .methods.transfer_public_to_private(owner, bob.getAddress(), amt(10), 0),
+      },
+      {
+        name: 'transfer_public_to_public',
+        interaction: tokenContract
+          .withWallet(alice)
+          .methods.transfer_public_to_public(owner, bob.getAddress(), amt(10), 0),
+      },
 
       // Burn methods
-      tokenContract.withWallet(alice).methods.burn_private(owner, amt(10), 0),
-      tokenContract.withWallet(alice).methods.burn_public(owner, amt(10), 0),
+      {
+        name: 'burn_private',
+        interaction: tokenContract.withWallet(alice).methods.burn_private(owner, amt(10), 0),
+      },
+      {
+        name: 'burn_public',
+        interaction: tokenContract.withWallet(alice).methods.burn_public(owner, amt(10), 0),
+      },
 
       // Partial notes methods
-      tokenContract.withWallet(alice).methods.initialize_transfer_commitment(bob.getAddress(), owner),
-      tokenContract.withWallet(alice).methods.transfer_private_to_commitment(owner, commitments[0], amt(10), 0),
-      tokenContract.withWallet(alice).methods.transfer_public_to_commitment(owner, commitments[1], amt(10), 0),
+      {
+        name: 'initialize_transfer_commitment',
+        interaction: tokenContract.withWallet(alice).methods.initialize_transfer_commitment(bob.getAddress(), owner),
+      },
+      {
+        name: 'transfer_private_to_commitment',
+        interaction: tokenContract
+          .withWallet(alice)
+          .methods.transfer_private_to_commitment(owner, commitments[0], amt(10), 0),
+      },
+      {
+        name: 'transfer_public_to_commitment',
+        interaction: tokenContract
+          .withWallet(alice)
+          .methods.transfer_public_to_commitment(owner, commitments[1], amt(10), 0),
+      },
     ];
 
     return methods.filter(Boolean);

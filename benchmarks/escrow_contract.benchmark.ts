@@ -81,17 +81,25 @@ export default class TokenContractBenchmark extends Benchmark {
     const halfAmount = 50;
 
     const methods: Array<NamedBenchmarkedInteraction | ContractFunctionInteraction> = [
-      // Partial token withdrawal (with change)
+      // Token withdrawal
       {
+        name: 'withdraw (partial)',
         interaction: escrowContract
           .withWallet(logicMock)
           .methods.withdraw(tokenContract.address, halfAmount, recipient),
-        name: '(partial) withdraw',
       },
-      // Full token withdrawal
-      escrowContract.withWallet(logicMock).methods.withdraw(tokenContract.address, halfAmount, recipient),
+      {
+        name: 'withdraw (full)',
+        interaction: escrowContract
+          .withWallet(logicMock)
+          .methods.withdraw(tokenContract.address, tokenAmount, recipient),
+      },
+
       // NFT withdrawal
-      escrowContract.withWallet(logicMock).methods.withdraw_nft(nftContract.address, tokenId, recipient),
+      {
+        name: 'withdraw NFT',
+        interaction: escrowContract.withWallet(logicMock).methods.withdraw_nft(nftContract.address, tokenId, recipient),
+      },
     ];
 
     return methods.filter(Boolean);

@@ -11,6 +11,7 @@ import { type AztecLmdbStore } from '@aztec/kv-store/lmdb';
 
 // Import the new Benchmark base class and context
 import { Benchmark, BenchmarkContext } from '@defi-wonderland/aztec-benchmark';
+import type { NamedBenchmarkedInteraction } from '@defi-wonderland/aztec-benchmark/dist/types.js';
 
 import { EscrowContract, EscrowContractArtifact } from '../artifacts/Escrow.js';
 import { TestLogicContract } from '../artifacts/TestLogic.js';
@@ -85,17 +86,30 @@ export default class LogicContractBenchmark extends Benchmark {
   /**
    * Returns the list of TokenContract methods to be benchmarked.
    */
-  getMethods(context: LogicBenchmarkContext): ContractFunctionInteraction[] {
+  getMethods(context: LogicBenchmarkContext): Array<NamedBenchmarkedInteraction | ContractFunctionInteraction> {
     const { accounts, escrowContract, deployer, logicContract, secretKeys } = context;
     const recipient = accounts[2].getAddress();
 
-    const methods: ContractFunctionInteraction[] = [
+    const methods: Array<NamedBenchmarkedInteraction | ContractFunctionInteraction> = [
       // Derive public keys from secret keys
-      logicContract.withWallet(deployer).methods.secret_keys_to_public_keys(secretKeys),
+      {
+        name: 'secret_keys_to_public_keys',
+        interaction: logicContract.withWallet(deployer).methods.secret_keys_to_public_keys(secretKeys),
+      },
+
       // Check escrow correctness
-      logicContract.withWallet(deployer).methods.check_escrow(escrowContract.address, secretKeys),
+      {
+        name: 'check_escrow',
+        interaction: logicContract.withWallet(deployer).methods.check_escrow(escrowContract.address, secretKeys),
+      },
+
       // Share escrow
-      logicContract.withWallet(deployer).methods.share_escrow(recipient, escrowContract.address, secretKeys),
+      {
+        name: 'share_escrow',
+        interaction: logicContract
+          .withWallet(deployer)
+          .methods.share_escrow(recipient, escrowContract.address, secretKeys),
+      },
     ];
 
     return methods.filter(Boolean);
