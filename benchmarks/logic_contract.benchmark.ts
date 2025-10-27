@@ -15,8 +15,7 @@ import type { NamedBenchmarkedInteraction } from '@defi-wonderland/aztec-benchma
 
 import { EscrowContract, EscrowContractArtifact } from '../artifacts/Escrow.js';
 import { TestLogicContract } from '../artifacts/TestLogic.js';
-import { deployLogic, deployEscrowWithPublicKeysAndSalt, grumpkinScalarToFr } from '../src/ts/test/utils.js';
-import { setupPXE } from '../src/ts/test/utils.js';
+import { deployLogic, deployEscrowWithPublicKeysAndSalt, grumpkinScalarToFr, setupPXE } from '../src/ts/test/utils.js';
 
 // Extend the BenchmarkContext from the new package
 interface LogicBenchmarkContext extends BenchmarkContext {
