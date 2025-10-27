@@ -49,6 +49,8 @@ pub contract Token {
     /// @param total_supply The total supply of the token
     /// @param public_balances The public balances of the token
     /// @param minter The account permissioned to mint the token
+    /// @param upgrade_authority The address with permission to upgrade the contract
+    /// @param asset The underlying asset for yield-bearing vault functionality
     #[storage]
     struct Storage<Context> {
         name: PublicImmutable<FieldCompressedString, Context>,
@@ -300,8 +302,8 @@ pub contract Token {
         commitment.to_field()
     }
 
-    /// @notice Recursively subtracts balance from commitment
-    /// @dev Used to subtract balances that exceed the max notes limit
+    /// @notice Recursively subtracts balance from private balance
+    /// @dev Used to subtract private balances that exceed the max notes limit
     /// @param account The address of the account to subtract the balance from
     /// @param amount The amount of tokens to subtract
     /// @return The change to return to the owner
@@ -435,6 +437,9 @@ pub contract Token {
      * ===================== UNCONSTRAINED =======================
      * ======================================================== */
 
+    /// @notice Returns the private balance of an account
+    /// @param owner The address to query
+    /// @return The private balance of the address
     #[utility]
     unconstrained fn balance_of_private(owner: AztecAddress) -> u128 {
         storage.private_balances.at(owner).balance_of()
@@ -444,8 +449,8 @@ pub contract Token {
     * ======================= MINTABLE ==========================
     * ======================================================== */
 
-    /// @notice Mints tokens to a commitment
-    /// @dev Mints tokens to a commitment and enqueues a public call to increase the total supply
+    /// @notice Mints tokens to a private balance
+    /// @dev Mints tokens to a private balance and enqueues a public call to increase the total supply
     /// @param to The address of the recipient
     /// @param amount The amount of tokens to mint
     #[private]
@@ -455,7 +460,7 @@ pub contract Token {
         _mint_to_private(&mut context, storage.private_balances, to, amount);
     }
 
-    /// @notice Mints tokens to a public balance
+    /// @notice Mints tokens to an address publicly
     /// @dev Increases the public balance of `to` by `amount` and the total supply
     /// @param to The address of the recipient
     /// @param amount The amount of tokens to mint
@@ -484,12 +489,17 @@ pub contract Token {
         );
     }
 
+    /// @notice Internal function to increase the total supply by `amount`
+    /// @param amount The amount to increase the total supply by
     #[public]
     #[internal]
     fn increase_total_supply_internal(amount: u128) {
         _increase_total_supply(storage.total_supply, amount);
     }
 
+    /// @notice Internal function to mint tokens to a public balance
+    /// @param to The address of the recipient
+    /// @param amount The amount of tokens to mint
     #[public]
     #[internal]
     fn mint_to_public_internal(to: AztecAddress, amount: u128) {
@@ -500,8 +510,8 @@ pub contract Token {
      * ======================= BURNABLE ==========================
      * ======================================================== */
 
-    /// @notice Burns tokens from a commitment
-    /// @dev Burns tokens from a commitment and enqueues a public call to update the total supply
+    /// @notice Burns tokens from a private balance
+    /// @dev Burns tokens from a private balance and enqueues a public call to update the total supply
     /// @param from The address of the sender
     /// @param amount The amount of tokens to burn
     /// @param _nonce The nonce used for authwitness
@@ -545,13 +555,20 @@ pub contract Token {
      * ================= TOKEN LIBRARIES =========================
      * ======================================================== */
 
-    /// Validates that the caller is the minter
+    /// @notice Validates that the caller is the minter
+    /// @param sender The address of the caller
+    /// @param minter The address of the authorized minter
     #[contract_library_method]
     fn _validate_minter(sender: AztecAddress, minter: AztecAddress) {
         assert(minter.eq(sender), "caller is not minter");
     }
 
-    /// Decreases the private balance of `account` by `amount` and emits a private balance note with the change to account
+    /// @notice Decreases the private balance of `account` by `amount` and emits a private balance note with the change to account
+    /// @param context The private context
+    /// @param private_balances The storage pointer to the private balances
+    /// @param account The address of the account to decrease the balance of
+    /// @param amount The amount of tokens to decrease the balance by
+    /// @param max_notes The maximum number of notes to process in a single call
     #[contract_library_method]
     fn _decrease_private_balance(
         context: &mut PrivateContext,
@@ -571,6 +588,7 @@ pub contract Token {
     }
 
     /// @notice Updates the given storage pointer `private_balances` to increase the private balance of `to` by `amount`
+    /// @param context The private context
     /// @param private_balances The storage pointer to the private balances
     /// @param to The address of the recipient
     /// @param amount The amount of tokens to increase the balance by
@@ -637,10 +655,13 @@ pub contract Token {
         commitment.complete(context, completer, amount);
     }
 
-    /// @notice Subtracts balance from commitment
-    /// @dev Subtracts amount from commitment and returns the change to the owner, recursively if necessary
+    /// @notice Subtracts balance from private balance
+    /// @dev Subtracts amount from private balance and returns the change to the owner, recursively if necessary
+    /// @param context The private context
+    /// @param private_balances The storage pointer to the private balances
     /// @param account The address of the account to subtract the balance from
     /// @param amount The amount of tokens to subtract
+    /// @param max_notes The maximum number of notes to process in a single call
     /// @return The change to return to the owner
     #[contract_library_method]
     fn _subtract_balance(
@@ -651,12 +672,13 @@ pub contract Token {
         max_notes: u32,
     ) -> u128 {
         let subtracted = private_balances.at(account).try_sub(amount, max_notes);
-        // Failing to subtract any amount means that the owner was unable to produce more notes that could be nullified.
-        assert(subtracted > 0, "Balance too low");
         if subtracted >= amount {
             // We have achieved our goal of nullifying notes that add up to more than amount, so we return the change.
             subtracted - amount
         } else {
+            // Failing to subtract any amount means that the owner was unable to produce more notes that could be nullified.
+            assert(subtracted > 0, "Balance too low");
+
             // try_sub failed to nullify enough notes to reach the target amount, so we compute the amount remaining
             // and try again.
             let remaining = amount - subtracted;
@@ -688,7 +710,6 @@ pub contract Token {
     /// @notice Initializes a transfer commitment to be used for transfers/mints
     /// @param context The context of the private call
     /// @param private_balances The storage pointer to the private balances
-    /// @param from The address of the sender
     /// @param to The address of the recipient
     /// @param completer The address used to compute the validity commitment
     /// @return The partial note that can be used to execute the transfer/mint
@@ -710,6 +731,11 @@ pub contract Token {
         commitment
     }
 
+    /// @notice Mints tokens to a public balance and increases the total supply
+    /// @param public_balances The storage pointer to the public balances
+    /// @param total_supply The storage pointer to the total supply
+    /// @param to The address of the recipient
+    /// @param amount The amount of tokens to mint
     #[contract_library_method]
     fn _mint_to_public(
         public_balances: Map<AztecAddress, PublicMutable<u128, &mut PublicContext>, &mut PublicContext>,
@@ -721,6 +747,11 @@ pub contract Token {
         _increase_total_supply(total_supply, amount);
     }
 
+    /// @notice Mints tokens to a private balance and enqueues a public call to increase the total supply
+    /// @param context The private context
+    /// @param private_balances The storage pointer to the private balances
+    /// @param to The address of the recipient
+    /// @param amount The amount of tokens to mint
     #[contract_library_method]
     fn _mint_to_private(
         context: &mut PrivateContext,
@@ -733,6 +764,11 @@ pub contract Token {
         Token::at(context.this_address()).increase_total_supply_internal(amount).enqueue(context);
     }
 
+    /// @notice Burns tokens from a public balance and decreases the total supply
+    /// @param public_balances The storage pointer to the public balances
+    /// @param total_supply The storage pointer to the total supply
+    /// @param from The address to burn tokens from
+    /// @param amount The amount of tokens to burn
     #[contract_library_method]
     fn _burn_public(
         public_balances: Map<AztecAddress, PublicMutable<u128, &mut PublicContext>, &mut PublicContext>,
@@ -744,6 +780,11 @@ pub contract Token {
         _decrease_total_supply(total_supply, amount);
     }
 
+    /// @notice Burns tokens from a private balance and enqueues a public call to decrease the total supply
+    /// @param context The private context
+    /// @param private_balances The storage pointer to the private balances
+    /// @param from The address to burn tokens from
+    /// @param amount The amount of tokens to burn
     #[contract_library_method]
     fn _burn_private(
         context: &mut PrivateContext,
@@ -839,7 +880,7 @@ pub contract Token {
 
     /// @notice Deposits the underlying asset from a public balance and receives shares to a private balance
     /// @dev The shares are calculated based on the ratio (total_supply + offset) / (total_assets + 1) minus any acceptable slippage.
-    ///      The ratio can only decrease or remain the same as time goes by. Any asset surplus is kept by the contract as yield.
+    ///      The ratio can only decrease or remain the same as time goes by. Any asset excess is kept by the contract as yield.
     /// @param from The address of the sender
     /// @param to The address of the recipient
     /// @param assets The amount of assets to deposit
@@ -871,7 +912,7 @@ pub contract Token {
 
     /// @notice Deposits the underlying asset from a private balance and receives shares to a private balance
     /// @dev The shares are calculated based on the ratio (total_supply + offset) / (total_assets + 1) minus any acceptable slippage.
-    ///      The ratio can only decrease or remain the same as time goes by. Any asset surplus is kept by the contract as yield.
+    ///      The ratio can only decrease or remain the same as time goes by. Any asset excess is kept by the contract as yield.
     /// @param from The address of the sender
     /// @param to The address of the recipient
     /// @param assets The amount of assets to deposit
@@ -1086,7 +1127,7 @@ pub contract Token {
             .transfer_public_to_public(from, context.this_address(), max_assets, _nonce)
             .enqueue(&mut context);
 
-        // Validate the amount of assets transferred and send back any surplus
+        // Validate the amount of assets transferred and send back any excess
         Token::at(context.this_address())
             .settle_issuance_from_public_internal(from, shares, max_assets)
             .enqueue(&mut context);
@@ -1124,7 +1165,7 @@ pub contract Token {
             .transfer_private_to_public(from, context.this_address(), max_assets, _nonce)
             .call(&mut context);
 
-        // Validate max_assets in public and refund any surplus to the sender with a commitment
+        // Validate max_assets in public and refund any excess to the sender with a commitment
         Token::at(context.this_address())
             .settle_issuance_from_private_with_commitment(asset_commitment, shares, max_assets)
             .enqueue(&mut context);
@@ -1163,7 +1204,7 @@ pub contract Token {
             .transfer_private_to_public(from, context.this_address(), max_assets, _nonce)
             .call(&mut context);
 
-        // Validate max_assets in public and refund any surplus to the sender with a commitment
+        // Validate max_assets in public and refunds any excess to the sender with a commitment
         Token::at(context.this_address())
             .settle_issuance_from_private_with_commitment(asset_commitment, shares, max_assets)
             .enqueue(&mut context);
@@ -1683,6 +1724,10 @@ pub contract Token {
      * ================== VAULT LIBRARIES ========================
      * ======================================================== */
 
+    /// @notice Returns the total amount of underlying assets held by the vault
+    /// @param context The public context
+    /// @param asset The storage pointer to the asset address
+    /// @return The total amount of assets held by the vault
     #[contract_library_method]
     unconstrained fn _total_assets(
         context: &mut PublicContext,
@@ -1693,6 +1738,12 @@ pub contract Token {
         total_assets
     }
 
+    /// @notice Converts an amount of assets to shares using the current exchange rate
+    /// @param assets The amount of assets to convert
+    /// @param total_assets The total amount of assets in the vault
+    /// @param total_supply The storage pointer to the total supply of shares
+    /// @param rounding The rounding direction (ROUND_UP or ROUND_DOWN)
+    /// @return The equivalent amount of shares
     #[contract_library_method]
     fn _convert_to_shares(
         assets: u128,
@@ -1711,6 +1762,12 @@ pub contract Token {
         shares
     }
 
+    /// @notice Converts an amount of shares to assets using the current exchange rate
+    /// @param shares The amount of shares to convert
+    /// @param total_assets The total amount of assets in the vault
+    /// @param total_supply The storage pointer to the total supply of shares
+    /// @param rounding The rounding direction (ROUND_UP or ROUND_DOWN)
+    /// @return The equivalent amount of assets
     #[contract_library_method]
     fn _convert_to_assets(
         shares: u128,
@@ -1733,6 +1790,7 @@ pub contract Token {
     /// While not fully preventing inflation attacks, analysis shows that offset=1 makes it non-profitable even if an attacker is able to capture value from multiple user deposits,
     /// as a result of the value being captured by the virtual shares (out of the attacker's donation) matching the attacker's expected gains.
     /// With a larger offset, the attack becomes orders of magnitude more expensive than it is profitable.
+    /// @return The offset value
     #[contract_library_method]
     fn offset() -> u128 {
         1
