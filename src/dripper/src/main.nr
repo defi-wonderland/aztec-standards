@@ -2,11 +2,11 @@ use aztec::macros::aztec;
 
 #[aztec]
 pub contract Dripper {
-    use aztec::macros::functions::{initializer, private, public};
+    use aztec::macros::functions::{external, initializer};
     use aztec::protocol_types::address::AztecAddress;
     use token::Token;
 
-    #[public]
+    #[external("public")]
     #[initializer]
     fn constructor() {}
 
@@ -14,7 +14,7 @@ pub contract Dripper {
     /// @dev Caller obtains `amount` tokens in their public balance
     /// @param token_address The address of the token contract
     /// @param amount The amount of tokens to mint (u64, converted to u128 internally)
-    #[public]
+    #[external("public")]
     fn drip_to_public(token_address: AztecAddress, amount: u64) {
         let token = Token::at(token_address);
         let msg_sender = context.msg_sender().unwrap();
@@ -25,7 +25,7 @@ pub contract Dripper {
     /// @dev Caller obtains `amount` tokens in their private balance
     /// @param token_address The address of the token contract
     /// @param amount The amount of tokens to mint (u64, converted to u128 internally)
-    #[private]
+    #[external("private")]
     fn drip_to_private(token_address: AztecAddress, amount: u64) {
         let token = Token::at(token_address);
         let msg_sender = context.msg_sender().unwrap();
