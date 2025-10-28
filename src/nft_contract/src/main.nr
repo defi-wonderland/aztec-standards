@@ -370,7 +370,6 @@ pub contract NFT {
 
         NFT::at(context.this_address()).set_nft_exists_internal(token_id, true).enqueue(&mut context);
         storage.private_nfts.at(to).insert(NFTNote::new(token_id, to)).emit(
-            &mut context,
             to,
             MessageDelivery.CONSTRAINED_ONCHAIN,
         );
@@ -494,7 +493,7 @@ pub contract NFT {
         token_id: Field,
     ) {
         let new_note = NFTNote::new(token_id, to);
-        private_nft_set.insert(new_note).emit(context, to, MessageDelivery.CONSTRAINED_ONCHAIN);
+        private_nft_set.insert(new_note).emit(to, MessageDelivery.CONSTRAINED_ONCHAIN);
     }
 
     /// @notice Removes the private token owner

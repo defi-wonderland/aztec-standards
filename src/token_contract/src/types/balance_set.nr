@@ -10,8 +10,8 @@ use aztec::{
     protocol_types::{address::AztecAddress, constants::MAX_NOTE_HASH_READ_REQUESTS_PER_CALL},
     state_vars::{PrivateSet, storage::HasStorageSlot},
 };
-use uint_note::uint_note::UintNote;
 use std::ops::Add;
+use uint_note::uint_note::UintNote;
 
 pub struct BalanceSet<Context> {
     pub set: PrivateSet<UintNote, Context>,
