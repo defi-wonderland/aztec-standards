@@ -3,54 +3,16 @@ import {
   Fr,
   PXE,
   TxStatus,
-  Contract,
   ContractDeployer,
   AccountWalletWithSecretKey,
   IntentAction,
   AztecAddress,
-  DeployOptions,
   getContractInstanceFromInstantiationParams,
 } from '@aztec/aztec.js';
-import { setupPXE } from './utils.js';
+import { setupPXE, deployNFTWithMinter, assertOwnsPrivateNFT, assertOwnsPublicNFT } from './utils.js';
 import { getInitialTestAccountsManagers } from '@aztec/accounts/testing';
 import { NFTContract, NFTContractArtifact } from '../../../artifacts/NFT.js';
 import { AztecLmdbStore } from '@aztec/kv-store/lmdb';
-
-// Deploy NFT contract with a minter
-async function deployNFTWithMinter(deployer: AccountWallet, options?: DeployOptions) {
-  const contract = await Contract.deploy(
-    deployer,
-    NFTContractArtifact,
-    ['TestNFT', 'TNFT', deployer.getAddress(), deployer.getAddress()],
-    'constructor_with_minter',
-  )
-    .send({
-      ...options,
-      from: deployer.getAddress(),
-    })
-    .deployed();
-  return contract;
-}
-
-// Check if an address owns a specific NFT in public state
-async function assertOwnsPublicNFT(
-  nft: NFTContract,
-  tokenId: bigint,
-  expectedOwner: AztecAddress,
-  caller?: AccountWallet,
-) {
-  const from = caller ? caller.getAddress() : expectedOwner;
-  const owner = await nft.methods.public_owner_of(tokenId).simulate({ from });
-  expect(owner.equals(expectedOwner)).toBe(true);
-}
-
-// Check if an address owns a specific NFT in private state
-async function assertOwnsPrivateNFT(nft: NFTContract, tokenId: bigint, owner: AztecAddress, caller?: AccountWallet) {
-  const from = caller ? caller.getAddress() : owner;
-  const [nfts, _] = await nft.methods.get_private_nfts(owner, 0).simulate({ from });
-  const hasNFT = nfts.some((id: bigint) => id === tokenId);
-  expect(hasNFT).toBe(true);
-}
 
 // Check if an NFT has been nullified (no longer owned) in private state
 async function assertPrivateNFTNullified(
