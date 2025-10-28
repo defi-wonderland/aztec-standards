@@ -8,11 +8,10 @@ use aztec::{
         retrieved_note::RetrievedNote,
     },
     protocol_types::{address::AztecAddress, constants::MAX_NOTE_HASH_READ_REQUESTS_PER_CALL},
-    state_vars::{private_set::PrivateSet, storage::HasStorageSlot},
+    state_vars::{PrivateSet, storage::HasStorageSlot},
 };
-
-use std::ops::Add;
 use uint_note::uint_note::UintNote;
+use std::ops::Add;
 
 pub struct BalanceSet<Context> {
     pub set: PrivateSet<UintNote, Context>,
@@ -39,10 +38,8 @@ impl BalanceSet<UtilityContext> {
 
     pub unconstrained fn balance_of_with_offset(self: Self, offset: u32) -> u128 {
         let mut balance = 0 as u128;
-        // docs:start:view_notes
         let mut options = NoteViewerOptions::new();
         let notes = self.set.view_notes(options.set_offset(offset));
-        // docs:end:view_notes
         for i in 0..options.limit {
             if i < notes.len() {
                 balance = balance + notes.get_unchecked(i).get_value();
@@ -58,22 +55,22 @@ impl BalanceSet<UtilityContext> {
 
 impl BalanceSet<&mut PrivateContext> {
     pub fn add(self: Self, owner: AztecAddress, addend: u128) -> OuterNoteEmission<UintNote> {
-        if addend == 0 as u128 {
-            OuterNoteEmission::new(Option::none())
+        let content = if addend == 0 as u128 {
+            Option::none()
         } else {
             // We fetch the nullifier public key hash from the registry / from our PXE
             let mut addend_note = UintNote::new(addend, owner);
 
-            // docs:start:insert
-            OuterNoteEmission::new(Option::some(self.set.insert(addend_note)))
-            // docs:end:insert
-        }
+            Option::some(self.set.insert(addend_note).content)
+        };
+
+        OuterNoteEmission::new(content, self.set.context)
     }
 
     pub fn sub(self: Self, owner: AztecAddress, amount: u128) -> OuterNoteEmission<UintNote> {
         let subtracted = self.try_sub(amount, MAX_NOTE_HASH_READ_REQUESTS_PER_CALL);
 
-        // try_sub may have substracted more or less than amount. We must ensure that we subtracted at least as much as
+        // try_sub may have subtracted more or less than amount. We must ensure that we subtracted at least as much as
         // we needed, and then create a new note for the owner for the change (if any).
         assert(subtracted >= amount, "Balance too low");
         self.add(owner, subtracted - amount)
