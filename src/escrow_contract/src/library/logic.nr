@@ -1,19 +1,11 @@
 // aztec library
 use aztec::{
     context::PrivateContext,
-    messages::logs::event::to_encrypted_private_event_message,
-    oracle::{
-        get_contract_instance::get_contract_instance,
-        notes::{
-            get_app_tag_as_sender, get_sender_for_tags,
-            increment_app_tagging_secret_index_as_sender,
-        },
-    },
+    event::event_interface::{emit_event_in_private, MessageDelivery},
+    oracle::get_contract_instance::get_contract_instance,
     protocol_types::{
         address::AztecAddress,
-        constants::GENERATOR_INDEX__EVENT_COMMITMENT,
         contract_instance::ContractInstance,
-        hash::poseidon2_hash_with_separator,
         public_keys::{IvpkM, NpkM, OvpkM, PublicKeys, TpkM},
         traits::{Serialize, ToField},
     },
@@ -79,38 +71,14 @@ pub fn _share_escrow(
     escrow: AztecAddress,
     master_secret_keys: MasterSecretKeys,
 ) {
-    // TODO: this function is a manual implementation of the private emission of the
-    //       EscrowDetailsLogContent event. logic.nr is not a contract, so cannot have an
-    //       event and the struct needs to be manually manipulated. Also, prefix_with_tag()
-    //       is not visible, so it also needed to be manually implemented.
-    //       This is ugly and requires a lot of attention when upgrading.
     let event_struct = EscrowDetailsLogContent { escrow, master_secret_keys };
 
-    // Implementation from aztec-packages event_interface.nr in v2.0.3
-    let (ciphertext, randomness) = to_encrypted_private_event_message(event_struct, account);
-    let serialized_event_with_randomness = [randomness].concat(event_struct.serialize());
-    let event_commitment = poseidon2_hash_with_separator(
-        serialized_event_with_randomness,
-        GENERATOR_INDEX__EVENT_COMMITMENT,
+    emit_event_in_private(
+        event_struct,
+        context,
+        account,
+        MessageDelivery.CONSTRAINED_ONCHAIN,
     );
-    context.push_nullifier(event_commitment);
-
-    // Implementation from aztec-packages prefix_with_tag, which is private since v2.0.3
-    let tag = unsafe {
-        let sender = get_sender_for_tags().expect(
-            f"Sender for tags is not set when emitting a private log. Set it by calling `set_sender_for_tags(...)`.",
-        );
-        increment_app_tagging_secret_index_as_sender(sender, account);
-        get_app_tag_as_sender(sender, account)
-    };
-
-    let mut padded_ciphertext: [Field; 18] = [0; 18];
-    padded_ciphertext[0] = tag;
-    for i in 0..ciphertext.len() {
-        padded_ciphertext[i + 1] = ciphertext[i];
-    }
-
-    context.emit_private_log(padded_ciphertext, ciphertext.len() as u32);
 }
 
 /// @notice Withdraws an amount of tokens from the provided escrow.
