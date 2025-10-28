@@ -26,7 +26,7 @@ interface ClawbackEscrowBenchmarkContext extends BenchmarkContext {
 }
 
 // Use export default class extending Benchmark
-export default class TokenContractBenchmark extends Benchmark {
+export default class ClawbackEscrowBenchmark extends Benchmark {
   /**
    * Sets up the benchmark environment for the TokenContract.
    * Creates PXE client, gets accounts, and deploys the contract.
@@ -78,7 +78,7 @@ export default class TokenContractBenchmark extends Benchmark {
     const { accounts, tokenContract, nftContract, escrowContract, tokenAmount, tokenId } = context;
     const logicMock = accounts[1];
     const recipient = accounts[2].getAddress();
-    const halfAmount = 50;
+    const halfAmount = tokenAmount / 2;
 
     const methods: Array<NamedBenchmarkedInteraction | ContractFunctionInteraction> = [
       // Token withdrawal
@@ -92,7 +92,7 @@ export default class TokenContractBenchmark extends Benchmark {
         name: 'withdraw (full)',
         interaction: escrowContract
           .withWallet(logicMock)
-          .methods.withdraw(tokenContract.address, tokenAmount, recipient),
+          .methods.withdraw(tokenContract.address, halfAmount, recipient),
       },
 
       // NFT withdrawal
