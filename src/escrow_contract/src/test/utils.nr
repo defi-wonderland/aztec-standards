@@ -1,4 +1,3 @@
-use crate::Escrow;
 use aztec::{
     protocol_types::address::AztecAddress,
     test::helpers::{

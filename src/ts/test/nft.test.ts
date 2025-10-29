@@ -52,11 +52,6 @@ describe('NFT - Single PXE', () => {
     ({ pxe, store, deployer, wallets } = await setupTestSuite());
 
     [alice, bob, carl] = wallets;
-
-    console.log({
-      alice: alice.getAddress(),
-      bob: bob.getAddress(),
-    });
   });
 
   beforeEach(async () => {
@@ -780,9 +775,6 @@ describe('NFT - Single PXE', () => {
     const symbol = await nft.methods.public_get_symbol().simulate({ from: alice.getAddress() });
     const nameStr = bigIntToAsciiString(name.value);
     const symbolStr = bigIntToAsciiString(symbol.value);
-
-    console.log('NFT Name:', nameStr);
-    console.log('NFT Symbol:', symbolStr);
 
     expect(nameStr).toBe('TestNFT');
     expect(symbolStr).toBe('TNFT');

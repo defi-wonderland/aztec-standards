@@ -4,13 +4,11 @@ use aztec::{
         address::AztecAddress,
         point::Point,
         public_keys::{IvpkM, NpkM, OvpkM, PublicKeys, TpkM},
-        traits::ToField,
     },
     test::helpers::{
         test_environment::TestEnvironment, txe_oracles as cheatcodes, utils::ContractDeployment,
     },
 };
-use escrow_contract::Escrow;
 use escrow_contract::library::logic::MasterSecretKeys;
 use nft::test::utils as nft_utils;
 use token::test::utils as token_utils;

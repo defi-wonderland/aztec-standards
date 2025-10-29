@@ -362,7 +362,7 @@ This contract also implements yield-bearing vault functionality when initialized
 
 > ⚠️ **WARNING — Private Balance Loss**
 >
-> any asset tokens transfered to the Tokenized Vault's private balance will be lost forever, as the contract doesn't have keys to spend a private balance nor any recovery mechanism. Yield must be sent to the Vault's public balance.
+> any asset tokens transferred to the Tokenized Vault's private balance will be lost forever, as the contract doesn't have keys to spend a private balance nor any recovery mechanism. Yield must be sent to the Vault's public balance.
 
 > ⚠️ **WARNING — Experimental Feature**
 >
@@ -381,7 +381,7 @@ Some Tokenized Vault private methods require both `assets` and `shares` amounts 
 **Exact Pattern** (e.g., deposit_public_to_private_exact): 
 - Enforces the exact exchange rate at public execution time.
 - A portion of the tokens is immediately transferred privately, allowing users to use them in other protocols, while any outstanding or surplus amount is settled privately during public execution via partial notes.
-- Best for volatile exchange rates and when slipage could cause significant losses.
+- Best for volatile exchange rates and when slippage could cause significant losses.
 - May be more expensive due to the additional settlement logic.
 
 ### Deposit Functions
