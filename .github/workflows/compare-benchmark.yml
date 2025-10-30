@@ -186,7 +186,7 @@ jobs:
       
       - name: Benchmark (PR)
         run: |
-          npx aztec-benchmark --suffix _pr --output-dir ${{ env.BENCH_DIR }} --contracts ${{ matrix.contract }}
+          npx --yes github:defi-wonderland/aztec-benchmark#feat/optionally-skip-benchmark --suffix _pr --output-dir ${{ env.BENCH_DIR }} --contracts ${{ matrix.contract }}
       
       - name: Upload benchmark artifacts (per contract)
         uses: actions/upload-artifact@v4
