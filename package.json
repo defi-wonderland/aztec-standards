@@ -31,10 +31,11 @@
     "@aztec/protocol-contracts": "2.1.0-rc.6",
     "@aztec/pxe": "2.1.0-rc.6",
     "@aztec/stdlib": "2.1.0-rc.6",
-    "@defi-wonderland/aztec-benchmark": "2.0.0",
+    "@defi-wonderland/aztec-benchmark": "github:defi-wonderland/aztec-benchmark#feat/optionally-skip-benchmark",
     "@types/node": "22.5.1"
   },
   "devDependencies": {
+    "@iarna/toml": "3.0.0",
     "@types/jest": "29.5.11",
     "@types/mocha": "10.0.6",
     "@types/node": "22.5.1",

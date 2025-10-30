@@ -16,15 +16,43 @@ env:
   BENCH_DIR: ./benchmarks
 
 jobs:
+  get_contracts:
+    runs-on: ubuntu-latest
+    outputs:
+      contracts: ${{ steps.extract.outputs.contracts }}
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22.17.0"
+      - name: Install deps (discovery)
+        run: yarn --frozen-lockfile
+      - name: Extract contracts from Nargo.toml [benchmark]
+        id: extract
+        shell: bash
+        run: |
+          CONTRACTS=$(node -e "
+            const fs = require('fs');
+            const TOML = require('@iarna/toml');
+            const raw = fs.readFileSync('./Nargo.toml', 'utf8');
+            const parsed = TOML.parse(raw);
+            const keys = Object.keys(parsed.benchmark || {});
+            process.stdout.write(JSON.stringify(keys));
+          ")
+          echo "contracts=$CONTRACTS" >> "$GITHUB_OUTPUT"
+
   benchmark:
+    needs: get_contracts
     strategy:
       matrix:
         os: [ubuntu-latest-m]
         threads: [12]
+        contract: ${{ fromJson(needs.get_contracts.outputs.contracts) }}
 
     runs-on: 
       labels: ${{ matrix.os }}
-    timeout-minutes: 60
+    timeout-minutes: 30
 
     steps:
       # ──────────────────────────────────────────────────────────────
@@ -89,7 +117,7 @@ jobs:
 
       - name: Benchmark (BASE)
         run: |
-          npx aztec-benchmark --suffix _base --output-dir ${{ env.BENCH_DIR }}
+          npx aztec-benchmark --suffix _base --output-dir ${{ env.BENCH_DIR }} --contracts ${{ matrix.contract }}
 
       # This is required to avoid the benchmark results being removed by the Checkout PR step
       - name: Store base benchmark results
@@ -155,15 +183,45 @@ jobs:
 
       - name: Codegen wrappers (PR)
         run: yarn codegen
+      
+      - name: Benchmark (PR)
+        run: |
+          npx aztec-benchmark --suffix _pr --output-dir ${{ env.BENCH_DIR }} --contracts ${{ matrix.contract }}
+      
+      - name: Upload benchmark artifacts (per contract)
+        uses: actions/upload-artifact@v4
+        with:
+          name: benchmarks-${{ matrix.contract }}
+          path: ${{ env.BENCH_DIR }}/*.json
+          if-no-files-found: error
+
+  diff:
+    needs: benchmark
+    runs-on: ubuntu-latest-m
+    env:
+      BENCH_DIR: ./benchmarks
+    steps:
+      - name: Checkout PR branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      - name: Download all benchmark artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: benchmarks-*
+          merge-multiple: true
+          path: ${{ env.BENCH_DIR }}
 
       # ──────────────────────────────────────────────────────────────
       # 3️⃣  DIFF &  COMMENT
       # ──────────────────────────────────────────────────────────────
       - name: Generate Markdown diff
-        uses: defi-wonderland/aztec-benchmark/action@main
+        uses: defi-wonderland/aztec-benchmark/action@feat/optionally-skip-benchmark
         with:
           base_suffix: '_base'
           current_suffix: '_pr'
+          only_report: true
 
       - name: Comment diff
         uses: peter-evans/create-or-update-comment@v4
