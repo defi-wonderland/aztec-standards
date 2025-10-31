@@ -1,22 +1,19 @@
-import {
-  createLogger,
-  Fr,
-  AztecAddress,
-  UniqueNote,
-  AccountWallet,
-  Contract,
-  DeployOptions,
-  createAztecNodeClient,
-  waitForPXE,
-  IntentAction,
-  Wallet,
-  AuthWitness,
-  ContractFunctionInteraction,
-} from '@aztec/aztec.js';
-import { decodeFromAbi } from '@aztec/stdlib/abi';
-import { getPXEServiceConfig } from '@aztec/pxe/config';
-import { createPXEService } from '@aztec/pxe/server';
-import { createStore } from '@aztec/kv-store/lmdb';
+import { Fr } from '@aztec/aztec.js/fields';
+import { UniqueNote } from '@aztec/aztec.js/note';
+import { createLogger } from '@aztec/aztec.js/log';
+import type { Wallet } from '@aztec/aztec.js/wallet';
+import { AztecAddress } from '@aztec/aztec.js/addresses';
+import { createAztecNodeClient, waitForNode } from '@aztec/aztec.js/node';
+import { registerInitialSandboxAccountsInWallet, TestWallet } from '@aztec/test-wallet/server';
+import type { ContractFunctionInteractionCallIntent } from '@aztec/aztec.js/authorization';
+import { AuthWitness, SetPublicAuthwitContractInteraction } from '@aztec/aztec.js/authorization';
+import { Contract, DeployOptions, ContractFunctionInteraction } from '@aztec/aztec.js/contracts';
+
+import type { PXE } from '@aztec/pxe/server';
+import { createStore } from '@aztec/kv-store/lmdb-v2';
+import { createPXE, getPXEConfig } from '@aztec/pxe/server';
+import type { AztecLMDBStoreV2 } from '@aztec/kv-store/lmdb-v2';
+
 import { TokenContract, TokenContractArtifact } from '../../../artifacts/Token.js';
 import { NFTContractArtifact } from '../../../artifacts/NFT.js';
 
@@ -24,23 +21,38 @@ export const logger = createLogger('aztec:aztec-standards');
 
 const { NODE_URL = 'http://localhost:8080' } = process.env;
 const node = createAztecNodeClient(NODE_URL);
+const { PXE_VERSION = '2' } = process.env;
+const pxeVersion = parseInt(PXE_VERSION);
 const l1Contracts = await node.getL1ContractAddresses();
-const config = getPXEServiceConfig();
+const config = getPXEConfig();
 const fullConfig = { ...config, l1Contracts };
 fullConfig.proverEnabled = false;
 
 export const setupPXE = async () => {
-  const store = await createStore('pxe', {
+  const store: AztecLMDBStoreV2 = await createStore('pxe', pxeVersion, {
     dataDirectory: 'store',
-    dataStoreMapSizeKB: 1e6,
+    dataStoreMapSizeKb: 1e6,
   });
-  const pxe = await createPXEService(node, fullConfig, { store });
-  await waitForPXE(pxe);
+  const pxe: PXE = await createPXE(node, fullConfig, { store });
+  await waitForNode(node);
   return { pxe, store };
 };
 
-// --- Token Utils ---
+export const setupTestSuite = async () => {
+  const { pxe, store } = await setupPXE();
+  const aztecNode = createAztecNodeClient(NODE_URL);
+  const wallet: TestWallet = await TestWallet.create(aztecNode);
+  const accounts: AztecAddress[] = await registerInitialSandboxAccountsInWallet(wallet);
 
+  return {
+    pxe,
+    store,
+    wallet,
+    accounts,
+  };
+};
+
+// --- Token Utils ---
 export const expectUintNote = (note: UniqueNote, amount: bigint, owner: AztecAddress) => {
   expect(note.note.items[0]).toEqual(new Fr(owner.toBigInt()));
   expect(note.note.items[2]).toEqual(new Fr(amount));
@@ -51,7 +63,7 @@ export const expectTokenBalances = async (
   address: AztecAddress | { getAddress: () => AztecAddress },
   publicBalance: bigint | number | Fr,
   privateBalance: bigint | number | Fr,
-  caller?: AccountWallet,
+  caller?: TestWallet,
 ) => {
   const aztecAddress = address instanceof AztecAddress ? address : address.getAddress();
   logger.info('checking balances for', aztecAddress.toString());
@@ -78,143 +90,153 @@ export const wad = (n: number = 1) => AMOUNT * BigInt(n);
 
 /**
  * Deploys the Token contract with a specified minter.
- * @param deployer - The wallet to deploy the contract with.
+ * @param wallet - The wallet to deploy the contract with.
+ * @param deployer - The account to deploy the contract with.
  * @returns A deployed contract instance.
  */
-export async function deployTokenWithMinter(deployer: Wallet, options?: DeployOptions) {
+export async function deployTokenWithMinter(wallet: Wallet, deployer: AztecAddress, options?: DeployOptions) {
   const contract = await Contract.deploy(
-    deployer,
+    wallet,
     TokenContractArtifact,
-    ['PrivateToken', 'PT', 18, deployer.getAddress(), AztecAddress.ZERO],
+    ['PrivateToken', 'PT', 18, deployer, AztecAddress.ZERO],
     'constructor_with_minter',
   )
-    .send({ ...options, from: deployer.getAddress() })
+    .send({ ...options, from: deployer })
     .deployed();
   return contract;
 }
 
-export async function deployTokenWithInitialSupply(deployer: AccountWallet) {
+/**
+ * Deploys the Token contract with a specified initial supply.
+ * @param wallet - The wallet to deploy the contract with.
+ * @param deployer - The account to deploy the contract with.
+ * @returns A deployed contract instance.
+ */
+export async function deployTokenWithInitialSupply(wallet: Wallet, deployer: AztecAddress, options?: DeployOptions) {
   const contract = await Contract.deploy(
-    deployer,
+    wallet,
     TokenContractArtifact,
-    ['PrivateToken', 'PT', 18, 0, deployer.getAddress(), deployer.getAddress()],
+    ['PrivateToken', 'PT', 18, 0, deployer, deployer],
     'constructor_with_initial_supply',
   )
-    .send({ from: deployer.getAddress() })
+    .send({ ...options, from: deployer })
     .deployed();
   return contract;
 }
 
 /**
  * Deploys the NFT contract with a specified minter.
- * @param deployer - The wallet to deploy the contract with.
+ * @param wallet - The wallet to deploy the contract with.
+ * @param deployer - The account to deploy the contract with.
  * @returns A deployed contract instance.
  */
-export async function deployNFTWithMinter(deployer: AccountWallet, options?: DeployOptions) {
+export async function deployNFTWithMinter(wallet: Wallet, deployer: AztecAddress, options?: DeployOptions) {
   const contract = await Contract.deploy(
-    deployer,
+    wallet,
     NFTContractArtifact,
-    ['NFT', 'NFT', deployer.getAddress(), deployer.getAddress()],
+    ['NFT', 'NFT', deployer, deployer],
     'constructor_with_minter',
   )
-    .send({ ...options, from: deployer.getAddress() })
+    .send({ ...options, from: deployer })
     .deployed();
   return contract;
 }
 
 /**
  * Deploys the Token contract with a specified minter.
- * @param deployer - The wallet to deploy the contract with.
+ * @param wallet - The wallet to deploy the contract with.
+ * @param deployer - The account to deploy the contract with.
  * @returns A deployed contract instance.
  */
-export async function deployVaultAndAssetWithMinter(deployer: AccountWallet): Promise<[Contract, Contract]> {
+export async function deployVaultAndAssetWithMinter(
+  wallet: Wallet,
+  deployer: AztecAddress,
+  options?: DeployOptions,
+): Promise<[Contract, Contract]> {
   const assetContract = await Contract.deploy(
-    deployer,
+    wallet,
     TokenContractArtifact,
-    ['PrivateToken', 'PT', 6, deployer.getAddress(), AztecAddress.ZERO],
+    ['PrivateToken', 'PT', 6, deployer, AztecAddress.ZERO],
     'constructor_with_minter',
   )
-    .send({ from: deployer.getAddress() })
+    .send({ ...options, from: deployer })
     .deployed();
 
   const vaultContract = await Contract.deploy(
-    deployer,
+    wallet,
     TokenContractArtifact,
     ['VaultToken', 'VT', 6, assetContract.address, AztecAddress.ZERO],
     'constructor_with_asset',
   )
-    .send({ from: deployer.getAddress() })
+    .send({ ...options, from: deployer })
     .deployed();
 
   return [vaultContract, assetContract];
 }
 
 export async function setPrivateAuthWit(
-  caller: AztecAddress | { getAddress: () => AztecAddress },
+  caller: AztecAddress,
   action: ContractFunctionInteraction,
-  account: AccountWallet,
+  wallet: Wallet,
 ): Promise<AuthWitness> {
-  const callerAddress = caller instanceof AztecAddress ? caller : caller.getAddress();
-
-  const intent: IntentAction = {
-    caller: callerAddress,
+  const intent: ContractFunctionInteractionCallIntent = {
+    caller: caller,
     action: action,
   };
-  return account.createAuthWit(intent);
+  return wallet.createAuthWit(caller, intent);
 }
 
-export async function setPublicAuthWit(
-  caller: AztecAddress | { getAddress: () => AztecAddress },
-  action: ContractFunctionInteraction,
-  account: AccountWallet,
-) {
-  const callerAddress = caller instanceof AztecAddress ? caller : caller.getAddress();
-
-  const intent: IntentAction = {
-    caller: callerAddress,
+export async function setPublicAuthWit(caller: AztecAddress, action: ContractFunctionInteraction, wallet: Wallet) {
+  const intent: ContractFunctionInteractionCallIntent = {
+    caller: caller,
     action: action,
   };
-  await account.createAuthWit(intent);
-  await (await account.setPublicAuthWit(intent, true)).send({ from: account.getAddress() }).wait();
+
+  await wallet.createAuthWit(caller, intent);
+
+  const setPublicAuthwitInteraction = await SetPublicAuthwitContractInteraction.create(wallet, caller, intent, true);
+
+  await setPublicAuthwitInteraction.send().wait();
 }
 
-/**
- * Initializes a transfer commitment
- * @param token - The token contract instance.
- * @param caller - The wallet that will interact with the token contract.
- * @param from - The address of the sender.
- * @param to - The address of the recipient.
- * @param completer - The address allowed to complete the partial note.
- * @returns Partial note commitment
- */
-export async function initializeTransferCommitment(
-  token: TokenContract,
-  caller: AccountWallet,
-  to: AztecAddress,
-  completer: AztecAddress,
-) {
-  // alice prepares partial note for bob
-  const fnAbi = TokenContract.artifact.functions.find((f) => f.name === 'initialize_transfer_commitment')!;
-  const fn_interaction = token.methods.initialize_transfer_commitment(to, completer);
+// TODO: adapt this function to the new API
+// /**
+//  * Initializes a transfer commitment
+//  * @param token - The token contract instance.
+//  * @param caller - The wallet that will interact with the token contract.
+//  * @param from - The address of the sender.
+//  * @param to - The address of the recipient.
+//  * @param completer - The address allowed to complete the partial note.
+//  * @returns Partial note commitment
+//  */
+// export async function initializeTransferCommitment(
+//   token: TokenContract,
+//   caller: AccountWallet,
+//   to: AztecAddress,
+//   completer: AztecAddress,
+// ) {
+//   // alice prepares partial note for bob
+//   const fnAbi = TokenContract.artifact.functions.find((f) => f.name === 'initialize_transfer_commitment')!;
+//   const fn_interaction = token.methods.initialize_transfer_commitment(to, completer);
 
-  // Build the request once
-  const req = await fn_interaction.create({ fee: { estimateGas: false } }); // set the same fee options you’ll use
+//   // Build the request once
+//   const req = await fn_interaction.create({ fee: { estimateGas: false } }); // set the same fee options you’ll use
 
-  // Simulate using the exact request
-  const sim = await caller.simulateTx(
-    req,
-    true /* simulatePublic */,
-    undefined /* skipTxValidation */,
-    true /* skipFeeEnforcement */,
-  );
-  const rawReturnValues = sim.getPrivateReturnValues().nested[0].values; // decode as needed
-  const commitment = decodeFromAbi(fnAbi.returnTypes, rawReturnValues as Fr[]);
+//   // Simulate using the exact request
+//   const sim = await caller.simulateTx(
+//     req,
+//     true /* simulatePublic */,
+//     undefined /* skipTxValidation */,
+//     true /* skipFeeEnforcement */,
+//   );
+//   const rawReturnValues = sim.getPrivateReturnValues().nested[0].values; // decode as needed
+//   const commitment = decodeFromAbi(fnAbi.returnTypes, rawReturnValues as Fr[]);
 
-  // Prove and send the exact same request
-  const prov = await caller.proveTx(req, sim.privateExecutionResult);
-  const tx = await prov.toTx();
-  const txHash = await caller.sendTx(tx);
-  await caller.getTxReceipt(txHash);
+//   // Prove and send the exact same request
+//   const prov = await caller.proveTx(req, sim.privateExecutionResult);
+//   const tx = await prov.toTx();
+//   const txHash = await caller.sendTx(tx);
+//   await caller.getTxReceipt(txHash);
 
-  return commitment as bigint;
-}
+//   return commitment as bigint;
+// }
