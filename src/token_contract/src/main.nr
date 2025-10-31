@@ -230,7 +230,7 @@ pub contract Token {
             INITIAL_TRANSFER_CALL_MAX_NOTES,
         );
 
-        _increase_private_balance(&mut context, storage.private_balances, to, amount);
+        _increase_private_balance(storage.private_balances, to, amount);
     }
 
     /// @notice Transfer tokens from private balance to the recipient's commitment (recipient must create a commitment first)
@@ -284,7 +284,7 @@ pub contract Token {
             &mut context,
         );
 
-        _increase_private_balance(&mut context, storage.private_balances, to, amount);
+        _increase_private_balance(storage.private_balances, to, amount);
     }
 
     /// @notice Initializes a transfer commitment to be used for transfers/mints
@@ -584,13 +584,11 @@ pub contract Token {
     }
 
     /// @notice Updates the given storage pointer `private_balances` to increase the private balance of `to` by `amount`
-    /// @param context The private context
     /// @param private_balances The storage pointer to the private balances
     /// @param to The address of the recipient
     /// @param amount The amount of tokens to increase the balance by
     #[contract_library_method]
     fn _increase_private_balance(
-        context: &mut PrivateContext,
         private_balances: Map<AztecAddress, BalanceSet<&mut PrivateContext>, &mut PrivateContext>,
         to: AztecAddress,
         amount: u128,
@@ -751,7 +749,7 @@ pub contract Token {
         to: AztecAddress,
         amount: u128,
     ) {
-        _increase_private_balance(context, private_balances, to, amount);
+        _increase_private_balance(private_balances, to, amount);
 
         Token::at(context.this_address()).increase_total_supply_internal(amount).enqueue(context);
     }
@@ -979,7 +977,7 @@ pub contract Token {
         _validate_from_private::<5>(&mut context, from);
 
         // Increase recipient's private balance with `min_shares`
-        _increase_private_balance(&mut context, storage.private_balances, to, min_shares);
+        _increase_private_balance(storage.private_balances, to, min_shares);
 
         // TODO (optimization): partial note logs and validity_commitment nullifier are not needed
         // Initialize commitment that allows to mint outstanding shares to the recipient in public
@@ -1026,7 +1024,7 @@ pub contract Token {
         _validate_from_private::<5>(&mut context, from);
 
         // Increase recipient's private balance with `min_shares`
-        _increase_private_balance(&mut context, storage.private_balances, to, min_shares);
+        _increase_private_balance(storage.private_balances, to, min_shares);
 
         // TODO (optimization): partial note logs and validity_commitment nullifier are not needed
         // Initialize commitment that allows to mint outstanding shares to the recipient in public

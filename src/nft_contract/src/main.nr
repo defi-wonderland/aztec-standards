@@ -138,7 +138,7 @@ pub contract NFT {
         _validate_from_private::<4>(&mut context, from);
 
         _remove_private_token_owner(storage.private_nfts.at(from), token_id);
-        _update_private_token_owner(&mut context, storage.private_nfts.at(to), to, token_id);
+        _update_private_token_owner(storage.private_nfts.at(to), to, token_id);
     }
 
     /// @notice Transfers token by id from private owner to the recipient commitment (recipient must create a commitment first)
@@ -181,7 +181,7 @@ pub contract NFT {
         NFT::at(context.this_address())
             .update_public_token_owner_internal(from, AztecAddress::zero(), token_id)
             .enqueue(&mut context);
-        _update_private_token_owner(&mut context, storage.private_nfts.at(to), to, token_id);
+        _update_private_token_owner(storage.private_nfts.at(to), to, token_id);
     }
 
     /// @notice Initializes a transfer commitment to be used for transfers
@@ -480,14 +480,12 @@ pub contract NFT {
     }
 
     /// @notice Updates the private token owner
-    /// @param context The context of the private call
     /// @param private_nft_set The private owner
     /// @param from The address of the sender
     /// @param to The address of the recipient
     /// @param token_id The id of the token to update
     #[contract_library_method]
     fn _update_private_token_owner(
-        context: &mut PrivateContext,
         private_nft_set: PrivateSet<NFTNote, &mut PrivateContext>,
         to: AztecAddress,
         token_id: Field,
