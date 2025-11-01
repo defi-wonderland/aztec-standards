@@ -63,11 +63,12 @@ export const expectTokenBalances = async (
   address: AztecAddress | { getAddress: () => AztecAddress },
   publicBalance: bigint | number | Fr,
   privateBalance: bigint | number | Fr,
-  caller?: TestWallet,
+  caller?: AztecAddress | { getAddress: () => AztecAddress },
 ) => {
   const aztecAddress = address instanceof AztecAddress ? address : address.getAddress();
   logger.info('checking balances for', aztecAddress.toString());
-  const t = caller ? token.withWallet(caller) : token;
+  // We can't use an account that is not in the wallet to simulate the balances, so we use the caller if provided.
+  const from = caller ? (caller instanceof AztecAddress ? caller : caller.getAddress()) : aztecAddress;
 
   // Helper to cast to bigint if not already
   const toBigInt = (val: bigint | number | Fr) => {
@@ -77,12 +78,8 @@ export const expectTokenBalances = async (
     throw new Error('Unsupported type for balance');
   };
 
-  expect(await t.methods.balance_of_public(aztecAddress).simulate({ from: aztecAddress })).toBe(
-    toBigInt(publicBalance),
-  );
-  expect(await t.methods.balance_of_private(aztecAddress).simulate({ from: aztecAddress })).toBe(
-    toBigInt(privateBalance),
-  );
+  expect(await token.methods.balance_of_public(aztecAddress).simulate({ from: from })).toBe(toBigInt(publicBalance));
+  expect(await token.methods.balance_of_private(aztecAddress).simulate({ from: from })).toBe(toBigInt(privateBalance));
 };
 
 export const AMOUNT = 1000n;
@@ -177,26 +174,31 @@ export async function deployVaultAndAssetWithMinter(
 export async function setPrivateAuthWit(
   caller: AztecAddress,
   action: ContractFunctionInteraction,
-  wallet: Wallet,
+  authorizer: AztecAddress,
+  wallet: TestWallet,
 ): Promise<AuthWitness> {
   const intent: ContractFunctionInteractionCallIntent = {
     caller: caller,
     action: action,
   };
-  return wallet.createAuthWit(caller, intent);
+  return wallet.createAuthWit(authorizer, intent);
 }
 
-export async function setPublicAuthWit(caller: AztecAddress, action: ContractFunctionInteraction, wallet: Wallet) {
-  const intent: ContractFunctionInteractionCallIntent = {
-    caller: caller,
-    action: action,
-  };
-
-  await wallet.createAuthWit(caller, intent);
-
-  const setPublicAuthwitInteraction = await SetPublicAuthwitContractInteraction.create(wallet, caller, intent, true);
-
-  await setPublicAuthwitInteraction.send().wait();
+export async function setPublicAuthWit(
+  caller: AztecAddress,
+  action: ContractFunctionInteraction,
+  authorizer: AztecAddress,
+  wallet: TestWallet,
+) {
+  const validateAction = await wallet.setPublicAuthWit(
+    authorizer,
+    {
+      caller: caller,
+      action: action,
+    },
+    true,
+  );
+  await validateAction.send().wait();
 }
 
 // TODO: adapt this function to the new API
