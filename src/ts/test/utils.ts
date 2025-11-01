@@ -4,8 +4,8 @@ import { createLogger } from '@aztec/aztec.js/log';
 import type { Wallet } from '@aztec/aztec.js/wallet';
 import { AztecAddress } from '@aztec/aztec.js/addresses';
 import { createAztecNodeClient, waitForNode } from '@aztec/aztec.js/node';
-import { registerInitialSandboxAccountsInWallet, TestWallet } from '@aztec/test-wallet/server';
 import type { ContractFunctionInteractionCallIntent } from '@aztec/aztec.js/authorization';
+import { registerInitialSandboxAccountsInWallet, TestWallet } from '@aztec/test-wallet/server';
 import { AuthWitness, SetPublicAuthwitContractInteraction } from '@aztec/aztec.js/authorization';
 import { Contract, DeployOptions, ContractFunctionInteraction } from '@aztec/aztec.js/contracts';
 
@@ -78,8 +78,8 @@ export const expectTokenBalances = async (
     throw new Error('Unsupported type for balance');
   };
 
-  expect(await token.methods.balance_of_public(aztecAddress).simulate({ from: from })).toBe(toBigInt(publicBalance));
-  expect(await token.methods.balance_of_private(aztecAddress).simulate({ from: from })).toBe(toBigInt(privateBalance));
+  expect(await token.methods.balance_of_public(aztecAddress).simulate({ from })).toBe(toBigInt(publicBalance));
+  expect(await token.methods.balance_of_private(aztecAddress).simulate({ from })).toBe(toBigInt(privateBalance));
 };
 
 export const AMOUNT = 1000n;

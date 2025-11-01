@@ -193,11 +193,7 @@ describe('Tokenized Vault', () => {
       // Bob redeems private shares for public assets
       // Bob should get 15 asset tokens back, 1 token remains in the vault
       const minAssets = assetsBob;
-      await vault
-        .withWallet(wallet)
-        .methods.redeem_public_to_private_exact(bob, bob, sharesBob, minAssets, 0)
-        .send({ from: bob })
-        .wait();
+      await vault.methods.redeem_public_to_private_exact(bob, bob, sharesBob, minAssets, 0).send({ from: bob }).wait();
 
       // Check asset balances
       await expectTokenBalances(asset, alice, 0, initialAmount + aliceEarnings);
