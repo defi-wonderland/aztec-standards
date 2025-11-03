@@ -12,7 +12,10 @@ pub contract Token {
         },
         context::{PrivateContext, PublicContext},
         macros::{functions::{external, initializer, internal, view}, storage::storage},
-        messages::message_delivery::MessageDelivery,
+        messages::{
+            encryption::{aes128::AES128, message_encryption::MessageEncryption},
+            message_delivery::MessageDelivery,
+        },
         protocol_types::{
             address::AztecAddress,
             constants::CONTRACT_INSTANCE_REGISTRY_CONTRACT_ADDRESS,
@@ -1784,5 +1787,15 @@ pub contract Token {
     #[contract_library_method]
     fn offset() -> u128 {
         1
+    }
+
+    #[external("utility")]
+    unconstrained fn decrypt_raw_log(
+        ciphertext: [Field; 17],
+        recipient: AztecAddress,
+    ) -> [Field; 14] {
+        let message_ciphertext = BoundedVec::from_array(ciphertext);
+        let plaintext = AES128::decrypt(message_ciphertext, recipient);
+        plaintext.storage()
     }
 }

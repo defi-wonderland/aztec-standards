@@ -15,7 +15,7 @@ import {
   deployTokenWithMinter,
   expectTokenBalances,
   expectUintNote,
-  // initializeTransferCommitment,
+  initializeTransferCommitment,
   wad,
 } from './utils.js';
 import type { PXE } from '@aztec/pxe/server';
@@ -40,9 +40,6 @@ describe('Token - Single PXE', () => {
     ({ pxe, store, wallet, accounts } = await setupTestSuite());
 
     [alice, bob, carl] = accounts;
-    console.log('alice', alice);
-    console.log('bob', bob);
-    console.log('carl', carl);
   });
 
   beforeEach(async () => {
@@ -333,46 +330,40 @@ describe('Token - Single PXE', () => {
   }, 300_000);
 
   // TODO: fix test when initializeTransferCommitment is fixed
-  // it('mint in public, prepare partial note and finalize it', async () => {
-  //   await token.withWallet(wallet);
+  it.only('mint in public, prepare partial note and finalize it', async () => {
+    // await token.withWallet(wallet);
 
-  //   await token.methods.mint_to_public(alice, AMOUNT).send({ from: alice }).wait();
+    await token.methods.mint_to_public(alice, AMOUNT).send({ from: alice }).wait();
 
-  //   // alice has tokens in public
-  //   expect(await token.methods.balance_of_public(alice).simulate({ from: alice })).toBe(
-  //     AMOUNT,
-  //   );
-  //   expect(await token.methods.balance_of_private(alice).simulate({ from: alice })).toBe(0n);
-  //   // bob has 0 tokens
-  //   expect(await token.methods.balance_of_private(bob).simulate({ from: alice })).toBe(0n);
-  //   expect(await token.methods.balance_of_private(bob).simulate({ from: alice })).toBe(0n);
+    // alice has tokens in public
+    expect(await token.methods.balance_of_public(alice).simulate({ from: alice })).toBe(AMOUNT);
+    expect(await token.methods.balance_of_private(alice).simulate({ from: alice })).toBe(0n);
+    // bob has 0 tokens
+    expect(await token.methods.balance_of_private(bob).simulate({ from: alice })).toBe(0n);
+    expect(await token.methods.balance_of_private(bob).simulate({ from: alice })).toBe(0n);
 
-  //   expect(await token.methods.total_supply().simulate({ from: alice })).toBe(AMOUNT);
+    expect(await token.methods.total_supply().simulate({ from: alice })).toBe(AMOUNT);
 
-  //   // alice prepares partial note for bob
-  //   const commitment = await initializeTransferCommitment(wallet, token, alice, bob, alice);
+    // alice prepares partial note for bob
+    const commitment = await initializeTransferCommitment(wallet, token, alice, bob, alice);
 
-  //   // alice still has tokens in public
-  //   expect(await token.methods.balance_of_public(alice).simulate({ from: alice })).toBe(
-  //     AMOUNT,
-  //   );
+    // alice still has tokens in public
+    expect(await token.methods.balance_of_public(alice).simulate({ from: alice })).toBe(AMOUNT);
 
-  //   // finalize partial note passing the commitment slot
-  //   await token
-  //     .withWallet(wallet)
-  //     .methods.transfer_public_to_commitment(alice, commitment as bigint, AMOUNT, 0)
-  //     .send({ from: alice })
-  //     .wait();
-  //   // alice now has no tokens
-  //   expect(await token.methods.balance_of_public(alice).simulate({ from: alice })).toBe(0n);
-  //   // bob has tokens in private
-  //   expect(await token.methods.balance_of_public(bob).simulate({ from: alice })).toBe(0n);
-  //   expect(await token.methods.balance_of_private(bob).simulate({ from: alice })).toBe(
-  //     AMOUNT,
-  //   );
-  //   // total supply is still the same
-  //   expect(await token.methods.total_supply().simulate({ from: alice })).toBe(AMOUNT);
-  // }, 300_000);
+    // finalize partial note passing the commitment slot
+    await token
+      .withWallet(wallet)
+      .methods.transfer_public_to_commitment(alice, commitment as bigint, AMOUNT, 0)
+      .send({ from: alice })
+      .wait();
+    // alice now has no tokens
+    expect(await token.methods.balance_of_public(alice).simulate({ from: alice })).toBe(0n);
+    // bob has tokens in private
+    expect(await token.methods.balance_of_public(bob).simulate({ from: alice })).toBe(0n);
+    expect(await token.methods.balance_of_private(bob).simulate({ from: alice })).toBe(AMOUNT);
+    // total supply is still the same
+    expect(await token.methods.total_supply().simulate({ from: alice })).toBe(AMOUNT);
+  }, 300_000);
 
   // TODO: Can't figure out why this is failing
   // Assertion failed: unauthorized 'true, authorized'
