@@ -1,4 +1,10 @@
-import { setupTestSuite } from './utils.js';
+import {
+  setupTestSuite,
+  deployNFTWithMinter,
+  assertOwnsPrivateNFT,
+  assertOwnsPublicNFT,
+  assertPrivateNFTNullified,
+} from './utils.js';
 
 import { Fr } from '@aztec/aztec.js/fields';
 import { type PXE } from '@aztec/pxe/server';
@@ -7,65 +13,10 @@ import { AztecAddress } from '@aztec/aztec.js/addresses';
 import { type TestWallet } from '@aztec/test-wallet/server';
 import { ContractDeployer } from '@aztec/aztec.js/deployment';
 import { type AztecLMDBStoreV2 } from '@aztec/kv-store/lmdb-v2';
-import { Contract, DeployOptions } from '@aztec/aztec.js/contracts';
+import { ContractFunctionInteractionCallIntent } from '@aztec/aztec.js/authorization';
 import { getContractInstanceFromInstantiationParams } from '@aztec/aztec.js/contracts';
 
 import { NFTContract, NFTContractArtifact } from '../../../artifacts/NFT.js';
-import { ContractFunctionInteractionCallIntent } from '@aztec/aztec.js/authorization';
-
-// Deploy NFT contract with a minter
-async function deployNFTWithMinter(wallet: TestWallet, deployer: AztecAddress, options?: DeployOptions) {
-  const contract = await Contract.deploy(
-    wallet,
-    NFTContractArtifact,
-    ['TestNFT', 'TNFT', deployer, deployer],
-    'constructor_with_minter',
-  )
-    .send({
-      ...options,
-      from: deployer,
-    })
-    .deployed();
-  return contract;
-}
-
-// Check if an address owns a specific NFT in public state
-async function assertOwnsPublicNFT(
-  nft: NFTContract,
-  tokenId: bigint,
-  expectedOwner: AztecAddress,
-  caller?: AztecAddress | { getAddress: () => AztecAddress },
-) {
-  const from = caller ? (caller instanceof AztecAddress ? caller : caller.getAddress()) : expectedOwner;
-  const owner = await nft.methods.public_owner_of(tokenId).simulate({ from });
-  expect(owner.equals(expectedOwner)).toBe(true);
-}
-
-// Check if an address owns a specific NFT in private state
-async function assertOwnsPrivateNFT(
-  nft: NFTContract,
-  tokenId: bigint,
-  owner: AztecAddress,
-  caller?: AztecAddress | { getAddress: () => AztecAddress },
-) {
-  const from = caller ? (caller instanceof AztecAddress ? caller : caller.getAddress()) : owner;
-  const [nfts, _] = await nft.methods.get_private_nfts(owner, 0).simulate({ from });
-  const hasNFT = nfts.some((id: bigint) => id === tokenId);
-  expect(hasNFT).toBe(true);
-}
-
-// Check if an NFT has been nullified (no longer owned) in private state
-async function assertPrivateNFTNullified(
-  nft: NFTContract,
-  tokenId: bigint,
-  owner: AztecAddress,
-  caller?: AztecAddress | { getAddress: () => AztecAddress },
-) {
-  const from = caller ? (caller instanceof AztecAddress ? caller : caller.getAddress()) : owner;
-  const [nfts, _] = await nft.methods.get_private_nfts(owner, 0).simulate({ from });
-  const hasNFT = nfts.some((id: bigint) => id === tokenId);
-  expect(hasNFT).toBe(false);
-}
 
 describe('NFT - Single PXE', () => {
   let pxe: PXE;

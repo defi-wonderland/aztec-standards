@@ -1,13 +1,24 @@
-import { Fr } from '@aztec/aztec.js/fields';
 import { UniqueNote } from '@aztec/aztec.js/note';
 import { createLogger } from '@aztec/aztec.js/log';
 import { type Wallet } from '@aztec/aztec.js/wallet';
 import { AztecAddress } from '@aztec/aztec.js/addresses';
-import { deriveMasterIncomingViewingSecretKey } from '@aztec/stdlib/keys';
+import { Fr, type GrumpkinScalar } from '@aztec/aztec.js/fields';
 import { createAztecNodeClient, waitForNode } from '@aztec/aztec.js/node';
-import { registerInitialSandboxAccountsInWallet, TestWallet } from '@aztec/test-wallet/server';
-import { Contract, DeployOptions, ContractFunctionInteraction } from '@aztec/aztec.js/contracts';
+import { deriveMasterIncomingViewingSecretKey, PublicKeys } from '@aztec/stdlib/keys';
+import { registerInitialSandboxAccountsInWallet, type TestWallet } from '@aztec/test-wallet/server';
+import {
+  Contract,
+  DeployOptions,
+  ContractFunctionInteraction,
+  getContractClassFromArtifact,
+} from '@aztec/aztec.js/contracts';
 import { AuthWitness, type ContractFunctionInteractionCallIntent } from '@aztec/aztec.js/authorization';
+import { getDefaultInitializer } from '@aztec/stdlib/abi';
+import {
+  computeInitializationHash,
+  computeSaltedInitializationHash,
+  computeContractAddressFromInstance,
+} from '@aztec/stdlib/contract';
 import {
   INITIAL_TEST_SECRET_KEYS,
   INITIAL_TEST_ACCOUNT_SALTS,
@@ -20,7 +31,9 @@ import { createPXE, getPXEConfig } from '@aztec/pxe/server';
 import { type AztecLMDBStoreV2 } from '@aztec/kv-store/lmdb-v2';
 
 import { TokenContract, TokenContractArtifact } from '../../../artifacts/Token.js';
-import { NFTContractArtifact } from '../../../artifacts/NFT.js';
+import { NFTContract, NFTContractArtifact } from '../../../artifacts/NFT.js';
+import { TestLogicContractArtifact, TestLogicContract } from '../../../artifacts/TestLogic.js';
+import { EscrowContractArtifact, EscrowContract } from '../../../artifacts/Escrow.js';
 
 export const logger = createLogger('aztec:aztec-standards');
 
@@ -38,9 +51,10 @@ fullConfig.proverEnabled = false;
  * Setup the PXE and the store
  * @returns The PXE and the store
  */
-export const setupPXE = async () => {
+export const setupPXE = async (suffix?: string) => {
+  const storeDir = suffix ? `store-${suffix}` : 'store';
   const store: AztecLMDBStoreV2 = await createStore('pxe', pxeVersion, {
-    dataDirectory: 'store',
+    dataDirectory: storeDir,
     dataStoreMapSizeKb: 1e6,
   });
   const pxe: PXE = await createPXE(node, fullConfig, { store });
@@ -92,10 +106,10 @@ export const expectTokenBalances = async (
   privateBalance: bigint | number | Fr,
   caller?: AztecAddress | { getAddress: () => AztecAddress },
 ) => {
-  const aztecAddress = address instanceof AztecAddress ? address : address.getAddress();
+  const aztecAddress = address instanceof AztecAddress ? address : address;
   logger.info('checking balances for', aztecAddress.toString());
   // We can't use an account that is not in the wallet to simulate the balances, so we use the caller if provided.
-  const from = caller ? (caller instanceof AztecAddress ? caller : caller.getAddress()) : aztecAddress;
+  const from = caller ? (caller instanceof AztecAddress ? caller : caller) : aztecAddress;
 
   // Helper to cast to bigint if not already
   const toBigInt = (val: bigint | number | Fr) => {
@@ -148,23 +162,63 @@ export async function deployTokenWithInitialSupply(wallet: Wallet, deployer: Azt
   return contract;
 }
 
-/**
- * Deploys the NFT contract with a specified minter.
- * @param wallet - The wallet to deploy the contract with.
- * @param deployer - The account to deploy the contract with.
- * @returns A deployed contract instance.
- */
-export async function deployNFTWithMinter(wallet: Wallet, deployer: AztecAddress, options?: DeployOptions) {
+// --- NFT Utils ---
+
+// Check if an address owns a specific NFT in public state
+export async function assertOwnsPublicNFT(
+  nft: NFTContract,
+  tokenId: bigint,
+  expectedOwner: AztecAddress,
+  caller?: AztecAddress | { getAddress: () => AztecAddress },
+) {
+  const from = caller ? (caller instanceof AztecAddress ? caller : caller.getAddress()) : expectedOwner;
+  const owner = await nft.methods.public_owner_of(tokenId).simulate({ from });
+  expect(owner.equals(expectedOwner)).toBe(true);
+}
+
+// Check if an address owns a specific NFT in private state
+export async function assertOwnsPrivateNFT(
+  nft: NFTContract,
+  tokenId: bigint,
+  owner: AztecAddress,
+  caller?: AztecAddress | { getAddress: () => AztecAddress },
+) {
+  const from = caller ? (caller instanceof AztecAddress ? caller : caller.getAddress()) : owner;
+  const [nfts, _] = await nft.methods.get_private_nfts(owner, 0).simulate({ from });
+  const hasNFT = nfts.some((id: bigint) => id === tokenId);
+  expect(hasNFT).toBe(true);
+}
+
+// Check if an NFT has been nullified (no longer owned) in private state
+export async function assertPrivateNFTNullified(
+  nft: NFTContract,
+  tokenId: bigint,
+  owner: AztecAddress,
+  caller?: AztecAddress | { getAddress: () => AztecAddress },
+) {
+  const from = caller ? (caller instanceof AztecAddress ? caller : caller.getAddress()) : owner;
+  const [nfts, _] = await nft.methods.get_private_nfts(owner, 0).simulate({ from });
+  const hasNFT = nfts.some((id: bigint) => id === tokenId);
+  expect(hasNFT).toBe(false);
+}
+
+// Deploy NFT contract with a minter
+export async function deployNFTWithMinter(wallet: TestWallet, deployer: AztecAddress, options?: DeployOptions) {
   const contract = await Contract.deploy(
     wallet,
     NFTContractArtifact,
-    ['NFT', 'NFT', deployer, deployer],
+    ['TestNFT', 'TNFT', deployer, deployer],
     'constructor_with_minter',
   )
-    .send({ ...options, from: deployer })
+    .send({
+      ...options,
+      from: deployer,
+    })
     .deployed();
   return contract;
 }
+
+// --- Tokenized Vault Utils ---
 
 /**
  * Deploys the Token contract with a specified minter.
@@ -197,6 +251,30 @@ export async function deployVaultAndAssetWithMinter(
 
   return [vaultContract, assetContract];
 }
+
+// --- Escrow Utils ---
+
+/**
+ * Deploys the Escrow contract.
+ * @param publicKeys - The public keys to use for the contract.
+ * @param deployer - The wallet to deploy the contract with.
+ * @param salt - The salt to use for the contract address. If not provided, a random salt will be used.
+ * @returns A deployed contract instance.
+ */
+export async function deployEscrow(
+  publicKeys: PublicKeys,
+  deployer: AccountWallet,
+  salt: Fr = Fr.random(),
+  args: unknown[] = [],
+  constructor?: string,
+): Promise<EscrowContract> {
+  const contract = await Contract.deployWithPublicKeys(publicKeys, deployer, EscrowContractArtifact, args, constructor)
+    .send({ contractAddressSalt: salt, universalDeploy: true, from: deployer })
+    .deployed();
+  return contract as EscrowContract;
+}
+
+// --- General Utils ---
 
 export async function setPrivateAuthWit(
   caller: AztecAddress,
@@ -269,3 +347,87 @@ export async function setPublicAuthWit(
 
 //   return commitment as bigint;
 // }
+
+// --- Logic Contract Utils ---
+
+/**
+ * Deploys the Logic contract.
+ * @param deployer - The wallet to deploy the contract with.
+ * @param escrowClassId - The class id of the escrow contract.
+ * @returns A deployed contract instance.
+ */
+export async function deployLogic(wallet: Wallet, deployer: AztecAddress, escrowClassId: Fr) {
+  const contract = await Contract.deploy(wallet, TestLogicContractArtifact, [escrowClassId], 'constructor')
+    .send({ from: deployer })
+    .deployed();
+  return contract as TestLogicContract;
+}
+
+/**
+ * Deploys the Escrow contract.
+ * @param publicKeys - The public keys to use for the contract.
+ * @param deployer - The wallet to deploy the contract with.
+ * @param salt - The salt to use for the contract address. If not provided, a random salt will be used.
+ * @returns A deployed contract instance.
+ */
+export async function deployEscrowWithPublicKeysAndSalt(
+  publicKeys: PublicKeys,
+  wallet: Wallet,
+  deployer: AztecAddress,
+  salt: Fr = Fr.random(),
+  args: unknown[] = [],
+  constructor?: string,
+): Promise<EscrowContract> {
+  const contract = await Contract.deployWithPublicKeys(publicKeys, wallet, EscrowContractArtifact, args, constructor)
+    .send({ contractAddressSalt: salt, universalDeploy: true, from: deployer })
+    .deployed();
+  return contract as EscrowContract;
+}
+
+/**
+ * Predicts the contract address for a given artifact and constructor arguments.
+ * @param artifact - The contract artifact.
+ * @param constructorArgs - The arguments to pass to the constructor.
+ * @param deployer - The address of the deployer.
+ * @param salt - The salt to use for the contract address. If not provided, a random salt will be used.
+ * @param publicKeys - The public keys to use for the contract.
+ * @returns The predicted contract address.
+ */
+export async function deriveContractAddress(
+  artifact: any,
+  constructorArgs: any,
+  deployer: AztecAddress = AztecAddress.ZERO,
+  salt: Fr = Fr.random(),
+  publicKeys: PublicKeys,
+) {
+  if (!publicKeys) {
+    publicKeys = await PublicKeys.random();
+  }
+
+  const contractClass = await getContractClassFromArtifact(artifact);
+  const contractClassId = contractClass.id;
+  const constructorArtifact = getDefaultInitializer(artifact);
+  const initializationHash = await computeInitializationHash(constructorArtifact, constructorArgs);
+  const saltedInitializationHash = await computeSaltedInitializationHash({
+    initializationHash,
+    salt,
+    deployer,
+  });
+
+  const address = await computeContractAddressFromInstance({
+    originalContractClassId: contractClassId,
+    saltedInitializationHash: saltedInitializationHash,
+    publicKeys: publicKeys,
+  });
+
+  return { address, initializationHash, saltedInitializationHash };
+}
+
+/**
+ * Converts a GrumpkinScalar to an Fr.
+ * @param scalar - The GrumpkinScalar to convert.
+ * @returns The converted Fr.
+ */
+export function grumpkinScalarToFr(scalar: GrumpkinScalar) {
+  return new Fr(scalar.toBigInt());
+}
