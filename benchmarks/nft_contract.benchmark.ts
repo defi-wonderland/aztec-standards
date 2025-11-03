@@ -1,17 +1,20 @@
-import { type AccountWallet, type ContractFunctionInteraction, type PXE } from '@aztec/aztec.js';
-import { getInitialTestAccountsManagers } from '@aztec/accounts/testing';
+import type { PXE } from '@aztec/pxe/server';
+import type { Wallet } from '@aztec/aztec.js/wallet';
+import { AztecAddress } from '@aztec/aztec.js/addresses';
+import type { ContractFunctionInteractionCallIntent } from '@aztec/aztec.js/authorization';
 
 // Import the new Benchmark base class and context
 import { Benchmark, BenchmarkContext } from '@defi-wonderland/aztec-benchmark';
 
 import { NFTContract } from '../artifacts/NFT.js';
-import { deployNFTWithMinter, setupPXE } from '../src/ts/test/utils.js';
+import { deployNFTWithMinter, setupTestSuite } from '../src/ts/test/utils.js';
 
 // Extend the BenchmarkContext from the new package
 interface NFTBenchmarkContext extends BenchmarkContext {
   pxe: PXE;
-  deployer: AccountWallet;
-  accounts: AccountWallet[];
+  wallet: Wallet;
+  deployer: AztecAddress;
+  accounts: AztecAddress[];
   nftContract: NFTContract;
 }
 
@@ -22,42 +25,64 @@ export default class NFTContractBenchmark extends Benchmark {
    * Creates PXE client, gets accounts, and deploys the contract.
    */
   async setup(): Promise<NFTBenchmarkContext> {
-    const { pxe } = await setupPXE();
-    const managers = await getInitialTestAccountsManagers(pxe);
-    const accounts = await Promise.all(managers.map((acc) => acc.register()));
+    const { pxe, wallet, accounts } = await setupTestSuite();
     const [deployer] = accounts;
-    const deployedBaseContract = await deployNFTWithMinter(deployer, {
+    const deployedBaseContract = await deployNFTWithMinter(wallet, deployer, {
       universalDeploy: true,
-      from: deployer.getAddress(),
+      from: deployer,
     });
-    const nftContract = await NFTContract.at(deployedBaseContract.address, deployer);
-    return { pxe, deployer, accounts, nftContract };
+    const nftContract = await NFTContract.at(deployedBaseContract.address, wallet);
+    return { pxe, wallet, deployer, accounts, nftContract };
   }
 
   /**
    * Returns the list of NFTContract methods to be benchmarked.
    */
-  getMethods(context: NFTBenchmarkContext): ContractFunctionInteraction[] {
-    const { nftContract, accounts } = context;
+  getMethods(context: NFTBenchmarkContext): ContractFunctionInteractionCallIntent[] {
+    const { nftContract, accounts, wallet } = context;
     const [alice] = accounts;
-    const owner = alice.getAddress();
-    const methods: ContractFunctionInteraction[] = [
+    const owner = alice;
+    const methods: ContractFunctionInteractionCallIntent[] = [
       // Mint methods
-      nftContract.withWallet(alice).methods.mint_to_private(owner, 1),
-      nftContract.withWallet(alice).methods.mint_to_public(owner, 2),
+      {
+        caller: alice,
+        action: nftContract.withWallet(wallet).methods.mint_to_private(owner, 1),
+      },
+      {
+        caller: alice,
+        action: nftContract.withWallet(wallet).methods.mint_to_public(owner, 2),
+      },
 
       // Transfer methods
-      nftContract.withWallet(alice).methods.transfer_private_to_public(owner, owner, 1, 0),
-      nftContract.withWallet(alice).methods.transfer_public_to_private(owner, owner, 1, 0),
-      nftContract.withWallet(alice).methods.transfer_private_to_private(owner, owner, 1, 0),
-      nftContract.withWallet(alice).methods.transfer_public_to_public(owner, owner, 2, 0),
+      {
+        caller: alice,
+        action: nftContract.withWallet(wallet).methods.transfer_private_to_public(owner, owner, 1, 0),
+      },
+      {
+        caller: alice,
+        action: nftContract.withWallet(wallet).methods.transfer_public_to_private(owner, owner, 1, 0),
+      },
+      {
+        caller: alice,
+        action: nftContract.withWallet(wallet).methods.transfer_private_to_private(owner, owner, 1, 0),
+      },
+      {
+        caller: alice,
+        action: nftContract.withWallet(wallet).methods.transfer_public_to_public(owner, owner, 2, 0),
+      },
 
       // NOTE: don't have enough private NFT's to burn_private
       // nftContract.withWallet(alice).methods.transfer_private_to_public_with_commitment(owner, owner, 1, 0),
 
       // Burn methods
-      nftContract.withWallet(alice).methods.burn_private(owner, 1, 0),
-      nftContract.withWallet(alice).methods.burn_public(owner, 2, 0),
+      {
+        caller: alice,
+        action: nftContract.withWallet(wallet).methods.burn_private(owner, 1, 0),
+      },
+      {
+        caller: alice,
+        action: nftContract.withWallet(wallet).methods.burn_public(owner, 2, 0),
+      },
     ];
 
     return methods.filter(Boolean);
