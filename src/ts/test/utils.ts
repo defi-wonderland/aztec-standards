@@ -3,11 +3,17 @@ import { UniqueNote } from '@aztec/aztec.js/note';
 import { createLogger } from '@aztec/aztec.js/log';
 import type { Wallet } from '@aztec/aztec.js/wallet';
 import { AztecAddress } from '@aztec/aztec.js/addresses';
+import { deriveMasterIncomingViewingSecretKey } from '@aztec/stdlib/keys';
 import { createAztecNodeClient, waitForNode } from '@aztec/aztec.js/node';
 import type { ContractFunctionInteractionCallIntent } from '@aztec/aztec.js/authorization';
 import { registerInitialSandboxAccountsInWallet, TestWallet } from '@aztec/test-wallet/server';
 import { AuthWitness, SetPublicAuthwitContractInteraction } from '@aztec/aztec.js/authorization';
 import { Contract, DeployOptions, ContractFunctionInteraction } from '@aztec/aztec.js/contracts';
+import {
+  INITIAL_TEST_SECRET_KEYS,
+  INITIAL_TEST_ACCOUNT_SALTS,
+  INITIAL_TEST_ENCRYPTION_KEYS,
+} from '@aztec/accounts/testing';
 
 import type { PXE } from '@aztec/pxe/server';
 import { createStore } from '@aztec/kv-store/lmdb-v2';
@@ -28,6 +34,10 @@ const config = getPXEConfig();
 const fullConfig = { ...config, l1Contracts };
 fullConfig.proverEnabled = false;
 
+/**
+ * Setup the PXE and the store
+ * @returns The PXE and the store
+ */
 export const setupPXE = async () => {
   const store: AztecLMDBStoreV2 = await createStore('pxe', pxeVersion, {
     dataDirectory: 'store',
@@ -38,6 +48,10 @@ export const setupPXE = async () => {
   return { pxe, store };
 };
 
+/**
+ * Setup the PXE, the store and the wallet
+ * @returns The PXE, the store, the wallet and the accounts
+ */
 export const setupTestSuite = async () => {
   const { pxe, store } = await setupPXE();
   const aztecNode = createAztecNodeClient(NODE_URL);
@@ -51,6 +65,20 @@ export const setupTestSuite = async () => {
     accounts,
   };
 };
+
+/**
+ * Add test accounts to the wallet, which is by default 3
+ * Use before calling registerInitialSandboxAccountsInWallet
+ * @param count - The number of accounts to add to the wallet.
+ */
+export function addTestAccounts(count: number) {
+  for (let i = 0; i < count; i++) {
+    const secret = Fr.random();
+    INITIAL_TEST_SECRET_KEYS.push(secret);
+    INITIAL_TEST_ENCRYPTION_KEYS.push(deriveMasterIncomingViewingSecretKey(secret));
+    INITIAL_TEST_ACCOUNT_SALTS.push(Fr.ZERO);
+  }
+}
 
 // --- Token Utils ---
 export const expectUintNote = (note: UniqueNote, amount: bigint, owner: AztecAddress) => {

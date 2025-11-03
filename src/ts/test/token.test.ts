@@ -40,9 +40,6 @@ describe('Token - Single PXE', () => {
     ({ pxe, store, wallet, accounts } = await setupTestSuite());
 
     [alice, bob, carl] = accounts;
-    console.log('alice', alice);
-    console.log('bob', bob);
-    console.log('carl', carl);
   });
 
   beforeEach(async () => {
