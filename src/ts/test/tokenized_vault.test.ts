@@ -6,11 +6,11 @@ import {
   expectTokenBalances,
 } from './utils.js';
 
-import type { PXE } from '@aztec/pxe/server';
+import { type PXE } from '@aztec/pxe/server';
 import { AztecAddress } from '@aztec/aztec.js/addresses';
-import type { TestWallet } from '@aztec/test-wallet/server';
-import type { AztecLMDBStoreV2 } from '@aztec/kv-store/lmdb-v2';
-import type { ContractFunctionInteraction } from '@aztec/aztec.js/contracts';
+import { type TestWallet } from '@aztec/test-wallet/server';
+import { type AztecLMDBStoreV2 } from '@aztec/kv-store/lmdb-v2';
+import { type ContractFunctionInteraction } from '@aztec/aztec.js/contracts';
 
 import { TokenContract } from '../../../artifacts/Token.js';
 

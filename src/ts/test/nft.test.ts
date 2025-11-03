@@ -1,12 +1,12 @@
 import { setupTestSuite } from './utils.js';
 
 import { Fr } from '@aztec/aztec.js/fields';
-import type { PXE } from '@aztec/pxe/server';
+import { type PXE } from '@aztec/pxe/server';
 import { TxStatus } from '@aztec/aztec.js/tx';
 import { AztecAddress } from '@aztec/aztec.js/addresses';
-import type { TestWallet } from '@aztec/test-wallet/server';
+import { type TestWallet } from '@aztec/test-wallet/server';
 import { ContractDeployer } from '@aztec/aztec.js/deployment';
-import type { AztecLMDBStoreV2 } from '@aztec/kv-store/lmdb-v2';
+import { type AztecLMDBStoreV2 } from '@aztec/kv-store/lmdb-v2';
 import { Contract, DeployOptions } from '@aztec/aztec.js/contracts';
 import { getContractInstanceFromInstantiationParams } from '@aztec/aztec.js/contracts';
 

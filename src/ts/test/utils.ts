@@ -1,24 +1,23 @@
 import { Fr } from '@aztec/aztec.js/fields';
 import { UniqueNote } from '@aztec/aztec.js/note';
 import { createLogger } from '@aztec/aztec.js/log';
-import type { Wallet } from '@aztec/aztec.js/wallet';
+import { type Wallet } from '@aztec/aztec.js/wallet';
 import { AztecAddress } from '@aztec/aztec.js/addresses';
 import { deriveMasterIncomingViewingSecretKey } from '@aztec/stdlib/keys';
 import { createAztecNodeClient, waitForNode } from '@aztec/aztec.js/node';
-import type { ContractFunctionInteractionCallIntent } from '@aztec/aztec.js/authorization';
 import { registerInitialSandboxAccountsInWallet, TestWallet } from '@aztec/test-wallet/server';
-import { AuthWitness, SetPublicAuthwitContractInteraction } from '@aztec/aztec.js/authorization';
 import { Contract, DeployOptions, ContractFunctionInteraction } from '@aztec/aztec.js/contracts';
+import { AuthWitness, type ContractFunctionInteractionCallIntent } from '@aztec/aztec.js/authorization';
 import {
   INITIAL_TEST_SECRET_KEYS,
   INITIAL_TEST_ACCOUNT_SALTS,
   INITIAL_TEST_ENCRYPTION_KEYS,
 } from '@aztec/accounts/testing';
 
-import type { PXE } from '@aztec/pxe/server';
+import { type PXE } from '@aztec/pxe/server';
 import { createStore } from '@aztec/kv-store/lmdb-v2';
 import { createPXE, getPXEConfig } from '@aztec/pxe/server';
-import type { AztecLMDBStoreV2 } from '@aztec/kv-store/lmdb-v2';
+import { type AztecLMDBStoreV2 } from '@aztec/kv-store/lmdb-v2';
 
 import { TokenContract, TokenContractArtifact } from '../../../artifacts/Token.js';
 import { NFTContractArtifact } from '../../../artifacts/NFT.js';
@@ -27,6 +26,7 @@ export const logger = createLogger('aztec:aztec-standards');
 
 const { NODE_URL = 'http://localhost:8080' } = process.env;
 const node = createAztecNodeClient(NODE_URL);
+await waitForNode(node);
 const { PXE_VERSION = '2' } = process.env;
 const pxeVersion = parseInt(PXE_VERSION);
 const l1Contracts = await node.getL1ContractAddresses();
@@ -44,7 +44,6 @@ export const setupPXE = async () => {
     dataStoreMapSizeKb: 1e6,
   });
   const pxe: PXE = await createPXE(node, fullConfig, { store });
-  await waitForNode(node);
   return { pxe, store };
 };
 
