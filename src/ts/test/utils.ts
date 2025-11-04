@@ -1,11 +1,15 @@
 import { UniqueNote } from '@aztec/aztec.js/note';
 import { createLogger } from '@aztec/aztec.js/log';
-import { type Wallet } from '@aztec/aztec.js/wallet';
 import { AztecAddress } from '@aztec/aztec.js/addresses';
-import { Fr, type GrumpkinScalar } from '@aztec/aztec.js/fields';
+import { deriveEcdhSharedSecret } from '@aztec/stdlib/logs';
+import { type Wallet, AccountManager } from '@aztec/aztec.js/wallet';
+import { Fr, type GrumpkinScalar, Point } from '@aztec/aztec.js/fields';
 import { createAztecNodeClient, waitForNode } from '@aztec/aztec.js/node';
-import { deriveMasterIncomingViewingSecretKey, PublicKeys } from '@aztec/stdlib/keys';
+import { PRIVATE_LOG_CIPHERTEXT_LEN, GeneratorIndex } from '@aztec/constants';
+import { Aes128, poseidon2HashWithSeparator } from '@aztec/foundation/crypto';
 import { registerInitialSandboxAccountsInWallet, TestWallet } from '@aztec/test-wallet/server';
+import { deriveMasterIncomingViewingSecretKey, PublicKeys, computeAddressSecret } from '@aztec/stdlib/keys';
+
 import {
   Contract,
   DeployOptions,
@@ -15,6 +19,7 @@ import {
 import { AuthWitness, type ContractFunctionInteractionCallIntent } from '@aztec/aztec.js/authorization';
 import { getDefaultInitializer } from '@aztec/stdlib/abi';
 import {
+  CompleteAddress,
   computeInitializationHash,
   computeSaltedInitializationHash,
   computeContractAddressFromInstance,
@@ -309,47 +314,42 @@ export async function setPublicAuthWit(
   await validateAction.send().wait();
 }
 
-// TODO: adapt this function to the new API
-// /**
-//  * Initializes a transfer commitment
-//  * @param token - The token contract instance.
-//  * @param caller - The wallet that will interact with the token contract.
-//  * @param from - The address of the sender.
-//  * @param to - The address of the recipient.
-//  * @param completer - The address allowed to complete the partial note.
-//  * @returns Partial note commitment
-//  */
-// export async function initializeTransferCommitment(
-//   token: TokenContract,
-//   caller: AccountWallet,
-//   to: AztecAddress,
-//   completer: AztecAddress,
-// ) {
-//   // alice prepares partial note for bob
-//   const fnAbi = TokenContract.artifact.functions.find((f) => f.name === 'initialize_transfer_commitment')!;
-//   const fn_interaction = token.methods.initialize_transfer_commitment(to, completer);
+/**
+ * Initializes a transfer commitment
+ * @param token - The token contract instance.
+ * @param caller - The wallet that will interact with the token contract.
+ * @param from - The address of the sender.
+ * @param to - The address of the recipient.
+ * @param completer - The address allowed to complete the partial note.
+ * @returns Partial note commitment
+ */
+export async function initializeTransferCommitment(
+  token: TokenContract,
+  caller: AztecAddress,
+  to: AccountManager,
+  completer: AztecAddress,
+) {
+  // Workaround because we could not get the commitment from the simulation, so we decrypt the private log instead
+  // alice prepares partial note for bob
+  const tx = await token.methods.initialize_transfer_commitment(to.address, completer).send({ from: caller }).wait();
+  const txEffect = await node.getTxEffect(tx.txHash);
+  if (!txEffect?.data.privateLogs) {
+    throw new Error('No private logs found');
+  }
+  const privateLogs = txEffect?.data.privateLogs;
 
-//   // Build the request once
-//   const req = await fn_interaction.create({ fee: { estimateGas: false } }); // set the same fee options you’ll use
+  const toSK = to.getSecretKey();
+  const toIvskM = deriveMasterIncomingViewingSecretKey(toSK);
 
-//   // Simulate using the exact request
-//   const sim = await caller.simulateTx(
-//     req,
-//     true /* simulatePublic */,
-//     undefined /* skipTxValidation */,
-//     true /* skipFeeEnforcement */,
-//   );
-//   const rawReturnValues = sim.getPrivateReturnValues().nested[0].values; // decode as needed
-//   const commitment = decodeFromAbi(fnAbi.returnTypes, rawReturnValues as Fr[]);
+  const decryptedRawLog = await decryptRawPrivateLog(
+    privateLogs[0].fields.slice(1),
+    await to.getCompleteAddress(),
+    toIvskM,
+  );
 
-//   // Prove and send the exact same request
-//   const prov = await caller.proveTx(req, sim.privateExecutionResult);
-//   const tx = await prov.toTx();
-//   const txHash = await caller.sendTx(tx);
-//   await caller.getTxReceipt(txHash);
-
-//   return commitment as bigint;
-// }
+  // The commitment is the third field in the decrypted raw log
+  return decryptedRawLog[2].toBigInt();
+}
 
 // --- Logic Contract Utils ---
 
@@ -433,4 +433,144 @@ export async function deriveContractAddress(
  */
 export function grumpkinScalarToFr(scalar: GrumpkinScalar) {
   return new Fr(scalar.toBigInt());
+}
+
+// Private Log Utils ---
+
+// Constants from Noir code
+const EPH_PK_X_SIZE_IN_FIELDS = 1;
+const EPH_PK_SIGN_BYTE_SIZE_IN_BYTES = 1;
+const HEADER_CIPHERTEXT_SIZE_IN_BYTES = 16;
+const MESSAGE_CIPHERTEXT_LEN = PRIVATE_LOG_CIPHERTEXT_LEN; // 17
+
+/**
+ * Converts fields to bytes (31 bytes per field for ciphertext encoding)
+ */
+function fieldsToBytes(fields: Fr[]): Buffer {
+  const bytes: number[] = [];
+  for (const field of fields) {
+    const fieldBytes = field.toBuffer();
+    // Each field stores 31 bytes (not 32) in ciphertext encoding
+    // We need to extract the last 31 bytes (big-endian, so skip the first byte)
+    for (let i = 1; i < 32; i++) {
+      bytes.push(fieldBytes[i]);
+    }
+  }
+  return Buffer.from(bytes);
+}
+
+/**
+ * Converts bytes to fields (32 bytes per field for plaintext)
+ */
+function bytesToFields(bytes: Buffer): Fr[] {
+  const fields: Fr[] = [];
+  // Each field is 32 bytes
+  for (let i = 0; i < bytes.length; i += 32) {
+    const fieldBytes = bytes.slice(i, i + 32);
+    fields.push(Fr.fromBuffer(fieldBytes));
+  }
+  return fields;
+}
+
+/**
+ * Derives AES symmetric key and IV from ECDH shared secret using Poseidon2
+ */
+async function deriveAesSymmetricKeyAndIv(
+  sharedSecret: Point,
+  index: number,
+): Promise<{ key: Uint8Array; iv: Uint8Array }> {
+  // Generate two random 256-bit values using Poseidon2 with different separators
+  const kShift = index << 8;
+  const separator1 = kShift + GeneratorIndex.SYMMETRIC_KEY;
+  const separator2 = kShift + GeneratorIndex.SYMMETRIC_KEY_2;
+
+  const rand1 = await poseidon2HashWithSeparator([sharedSecret.x, sharedSecret.y], separator1);
+  const rand2 = await poseidon2HashWithSeparator([sharedSecret.x, sharedSecret.y], separator2);
+
+  const rand1Bytes = rand1.toBuffer();
+  const rand2Bytes = rand2.toBuffer();
+
+  // Extract the last 16 bytes from each (little end of big-endian representation)
+  const key = new Uint8Array(16);
+  const iv = new Uint8Array(16);
+
+  for (let i = 0; i < 16; i++) {
+    // Take bytes from the "little end" of the be-bytes arrays
+    key[i] = rand1Bytes[31 - i];
+    iv[i] = rand2Bytes[31 - i];
+  }
+
+  return { key, iv };
+}
+
+/**
+ * Decrypts a raw log ciphertext.
+ *
+ * This function decrypts an encrypted message using AES-128-CBC, following the same
+ * algorithm as the Noir `decrypt_raw_log` function.
+ *
+ * @param ciphertext - Array of 17 fields representing the encrypted message
+ * @param recipientCompleteAddress - Complete address of the recipient (needed for address secret computation)
+ * @param recipientIvskM - The incoming viewing secret key of the recipient
+ * @returns Array of decrypted fields
+ */
+export async function decryptRawPrivateLog(
+  ciphertext: Fr[],
+  recipientCompleteAddress: CompleteAddress,
+  recipientIvskM: GrumpkinScalar,
+): Promise<Fr[]> {
+  if (ciphertext.length !== MESSAGE_CIPHERTEXT_LEN) {
+    throw new Error(`Ciphertext must be ${MESSAGE_CIPHERTEXT_LEN} fields, got ${ciphertext.length}`);
+  }
+
+  // Extract ephemeral public key x-coordinate (first field)
+  const ephPkX = ciphertext[0];
+
+  // Get ciphertext without ephemeral public key x-coordinate
+  const ciphertextWithoutEphPkX = ciphertext.slice(EPH_PK_X_SIZE_IN_FIELDS);
+
+  // Convert fields to bytes (31 bytes per field)
+  const ciphertextBytes = fieldsToBytes(ciphertextWithoutEphPkX);
+
+  // Extract ephemeral public key sign (first byte)
+  const ephPkSignByte = ciphertextBytes[0];
+  const ephPkSign = ephPkSignByte !== 0;
+
+  // Reconstruct ephemeral public key from x-coordinate and sign
+  const ephPk = await Point.fromXAndSign(ephPkX, ephPkSign);
+
+  // Derive shared secret
+  // The shared secret is computed as: addressSecret * ephPk
+  // where addressSecret = preaddress + ivskM (with proper sign handling)
+  const preaddress = await recipientCompleteAddress.getPreaddress();
+  const addressSecret = await computeAddressSecret(preaddress, recipientIvskM);
+  const sharedSecret = await deriveEcdhSharedSecret(addressSecret, ephPk);
+
+  // Derive symmetric keys for header and body
+  const headerKeyIv = await deriveAesSymmetricKeyAndIv(sharedSecret, 1);
+  const bodyKeyIv = await deriveAesSymmetricKeyAndIv(sharedSecret, 0);
+
+  // Extract and decrypt header ciphertext
+  const headerStart = EPH_PK_SIGN_BYTE_SIZE_IN_BYTES;
+  const headerCiphertext = new Uint8Array(
+    ciphertextBytes.slice(headerStart, headerStart + HEADER_CIPHERTEXT_SIZE_IN_BYTES),
+  );
+
+  const aes128 = new Aes128();
+  const headerPlaintext = await aes128.decryptBufferCBC(headerCiphertext, headerKeyIv.iv, headerKeyIv.key);
+
+  // Extract ciphertext length from header (2 bytes, big-endian)
+  const ciphertextLength = (headerPlaintext[0] << 8) | headerPlaintext[1];
+
+  // Extract and decrypt main ciphertext
+  const ciphertextStart = headerStart + HEADER_CIPHERTEXT_SIZE_IN_BYTES;
+  const ciphertextWithPadding = new Uint8Array(ciphertextBytes.slice(ciphertextStart));
+  const actualCiphertext = ciphertextWithPadding.slice(0, ciphertextLength);
+
+  const plaintextBytes = await aes128.decryptBufferCBC(actualCiphertext, bodyKeyIv.iv, bodyKeyIv.key);
+
+  // Convert plaintext bytes back to fields (32 bytes per field)
+  const plaintextFields = bytesToFields(plaintextBytes);
+
+  return plaintextFields;
 }
