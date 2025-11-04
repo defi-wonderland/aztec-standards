@@ -49,6 +49,7 @@ fullConfig.proverEnabled = false;
 
 /**
  * Setup the PXE and the store
+ * @param suffix - optional - The suffix to use for the store directory.
  * @returns The PXE and the store
  */
 export const setupPXE = async (suffix?: string) => {
@@ -63,10 +64,11 @@ export const setupPXE = async (suffix?: string) => {
 
 /**
  * Setup the PXE, the store and the wallet
+ * @param suffix - optional - The suffix to use for the store directory.
  * @returns The PXE, the store, the wallet and the accounts
  */
-export const setupTestSuite = async () => {
-  const { pxe, store } = await setupPXE();
+export const setupTestSuite = async (suffix?: string) => {
+  const { pxe, store } = await setupPXE(suffix);
   const aztecNode = createAztecNodeClient(NODE_URL);
   const wallet: TestWallet = await TestWallet.create(aztecNode);
   const accounts: AztecAddress[] = await registerInitialSandboxAccountsInWallet(wallet);
