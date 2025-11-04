@@ -331,9 +331,11 @@ describe('Token - Single PXE', () => {
 
   // TODO: fix test when initializeTransferCommitment is fixed
   it.only('mint in public, prepare partial note and finalize it', async () => {
-    // await token.withWallet(wallet);
-
     await token.methods.mint_to_public(alice, AMOUNT).send({ from: alice }).wait();
+
+    const accountManager = await wallet.createAccount();
+    // We override the bob address with the account manager address
+    const bob = accountManager.address;
 
     // alice has tokens in public
     expect(await token.methods.balance_of_public(alice).simulate({ from: alice })).toBe(AMOUNT);
@@ -345,7 +347,7 @@ describe('Token - Single PXE', () => {
     expect(await token.methods.total_supply().simulate({ from: alice })).toBe(AMOUNT);
 
     // alice prepares partial note for bob
-    const commitment = await initializeTransferCommitment(wallet, token, alice, bob, alice);
+    const commitment = await initializeTransferCommitment(wallet, token, alice, bob, alice, accountManager);
 
     // alice still has tokens in public
     expect(await token.methods.balance_of_public(alice).simulate({ from: alice })).toBe(AMOUNT);
@@ -353,7 +355,7 @@ describe('Token - Single PXE', () => {
     // finalize partial note passing the commitment slot
     await token
       .withWallet(wallet)
-      .methods.transfer_public_to_commitment(alice, commitment as bigint, AMOUNT, 0)
+      .methods.transfer_public_to_commitment(alice, commitment, AMOUNT, 0)
       .send({ from: alice })
       .wait();
     // alice now has no tokens
