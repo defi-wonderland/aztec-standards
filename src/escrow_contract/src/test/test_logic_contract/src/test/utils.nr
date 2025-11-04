@@ -1,7 +1,9 @@
 use crate::TestLogic;
 use aztec::{
+    oracle::random::random,
     protocol_types::{
         address::AztecAddress,
+        contract_instance::ContractInstance,
         point::Point,
         public_keys::{IvpkM, NpkM, OvpkM, PublicKeys, TpkM},
         traits::ToField,
@@ -120,4 +122,10 @@ pub unconstrained fn deploy_escrow_with_secret(
         ContractDeployment { env: *env, path: "@escrow_contract/Escrow", secret: escrow_secret };
 
     deployer.without_initializer()
+}
+
+// oracle::get_contract_instance::get_contract_instance,
+pub unconstrained fn get_escrow_instance() -> ContractInstance {
+    let escrow_instance = cheatcodes::deploy("@escrow_contract/Escrow", "", &[], random());
+    escrow_instance
 }

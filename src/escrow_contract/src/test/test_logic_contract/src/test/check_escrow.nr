@@ -1,8 +1,8 @@
 use crate::test::utils as logic_utils;
 use crate::TestLogic;
 use aztec::{
-    oracle::get_contract_instance::get_contract_instance, protocol_types::traits::ToField,
-    test::helpers::test_environment::TestEnvironment,
+    protocol_types::traits::ToField,
+    test::helpers::{test_environment::TestEnvironment, txe_oracles},
 };
 
 // TODO: Testing that check_escrow succeeds is not possible given that custom salt is not supported yet in the test environment,
@@ -20,7 +20,7 @@ unconstrained fn check_escrow_public_keys_mismatch() {
 
     let escrow = logic_utils::deploy_escrow_with_secret(&mut env, secret);
 
-    let escrow_instance = get_contract_instance(escrow);
+    let escrow_instance = logic_utils::get_escrow_instance();
 
     let escrow_class_id = escrow_instance.contract_class_id.to_field();
 
@@ -40,7 +40,7 @@ unconstrained fn check_escrow_class_id_mismatch() {
 
     let escrow = logic_utils::deploy_escrow_with_secret(&mut env, secret);
 
-    let escrow_instance = get_contract_instance(escrow);
+    let escrow_instance = logic_utils::get_escrow_instance();
 
     let escrow_class_id = escrow_instance.contract_class_id.to_field();
 
@@ -61,7 +61,7 @@ unconstrained fn check_escrow_salt_mismatch() {
 
     let escrow = logic_utils::deploy_escrow_with_secret(&mut env, secret);
 
-    let escrow_instance = get_contract_instance(escrow);
+    let escrow_instance = logic_utils::get_escrow_instance();
 
     let escrow_class_id = escrow_instance.contract_class_id.to_field();
 
