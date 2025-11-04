@@ -33,7 +33,7 @@
     "@aztec/pxe": "3.0.0-devnet.2",
     "@aztec/stdlib": "3.0.0-devnet.2",
     "@aztec/test-wallet": "3.0.0-devnet.2",
-    "@defi-wonderland/aztec-benchmark": "2.0.0",
+    "@defi-wonderland/aztec-benchmark": "3.0.0-devnet.2",
     "@types/node": "22.5.1"
   },
   "devDependencies": {
