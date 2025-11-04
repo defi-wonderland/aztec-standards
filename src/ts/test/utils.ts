@@ -5,7 +5,7 @@ import { AztecAddress } from '@aztec/aztec.js/addresses';
 import { Fr, type GrumpkinScalar } from '@aztec/aztec.js/fields';
 import { createAztecNodeClient, waitForNode } from '@aztec/aztec.js/node';
 import { deriveMasterIncomingViewingSecretKey, PublicKeys } from '@aztec/stdlib/keys';
-import { registerInitialSandboxAccountsInWallet, type TestWallet } from '@aztec/test-wallet/server';
+import { registerInitialSandboxAccountsInWallet, TestWallet } from '@aztec/test-wallet/server';
 import {
   Contract,
   DeployOptions,
@@ -101,15 +101,15 @@ export const expectUintNote = (note: UniqueNote, amount: bigint, owner: AztecAdd
 
 export const expectTokenBalances = async (
   token: TokenContract,
-  address: AztecAddress | { getAddress: () => AztecAddress },
+  address: AztecAddress,
   publicBalance: bigint | number | Fr,
   privateBalance: bigint | number | Fr,
-  caller?: AztecAddress | { getAddress: () => AztecAddress },
+  caller?: AztecAddress,
 ) => {
   const aztecAddress = address instanceof AztecAddress ? address : address;
   logger.info('checking balances for', aztecAddress.toString());
   // We can't use an account that is not in the wallet to simulate the balances, so we use the caller if provided.
-  const from = caller ? (caller instanceof AztecAddress ? caller : caller) : aztecAddress;
+  const from = caller ? caller : aztecAddress;
 
   // Helper to cast to bigint if not already
   const toBigInt = (val: bigint | number | Fr) => {
@@ -169,9 +169,9 @@ export async function assertOwnsPublicNFT(
   nft: NFTContract,
   tokenId: bigint,
   expectedOwner: AztecAddress,
-  caller?: AztecAddress | { getAddress: () => AztecAddress },
+  caller?: AztecAddress,
 ) {
-  const from = caller ? (caller instanceof AztecAddress ? caller : caller.getAddress()) : expectedOwner;
+  const from = caller ? (caller instanceof AztecAddress ? caller : caller) : expectedOwner;
   const owner = await nft.methods.public_owner_of(tokenId).simulate({ from });
   expect(owner.equals(expectedOwner)).toBe(true);
 }
@@ -181,9 +181,9 @@ export async function assertOwnsPrivateNFT(
   nft: NFTContract,
   tokenId: bigint,
   owner: AztecAddress,
-  caller?: AztecAddress | { getAddress: () => AztecAddress },
+  caller?: AztecAddress,
 ) {
-  const from = caller ? (caller instanceof AztecAddress ? caller : caller.getAddress()) : owner;
+  const from = caller ? (caller instanceof AztecAddress ? caller : caller) : owner;
   const [nfts, _] = await nft.methods.get_private_nfts(owner, 0).simulate({ from });
   const hasNFT = nfts.some((id: bigint) => id === tokenId);
   expect(hasNFT).toBe(true);
@@ -194,9 +194,9 @@ export async function assertPrivateNFTNullified(
   nft: NFTContract,
   tokenId: bigint,
   owner: AztecAddress,
-  caller?: AztecAddress | { getAddress: () => AztecAddress },
+  caller?: AztecAddress,
 ) {
-  const from = caller ? (caller instanceof AztecAddress ? caller : caller.getAddress()) : owner;
+  const from = caller ? (caller instanceof AztecAddress ? caller : caller) : owner;
   const [nfts, _] = await nft.methods.get_private_nfts(owner, 0).simulate({ from });
   const hasNFT = nfts.some((id: bigint) => id === tokenId);
   expect(hasNFT).toBe(false);
@@ -263,12 +263,13 @@ export async function deployVaultAndAssetWithMinter(
  */
 export async function deployEscrow(
   publicKeys: PublicKeys,
-  deployer: AccountWallet,
+  wallet: Wallet,
+  deployer: AztecAddress,
   salt: Fr = Fr.random(),
   args: unknown[] = [],
   constructor?: string,
 ): Promise<EscrowContract> {
-  const contract = await Contract.deployWithPublicKeys(publicKeys, deployer, EscrowContractArtifact, args, constructor)
+  const contract = await Contract.deployWithPublicKeys(publicKeys, wallet, EscrowContractArtifact, args, constructor)
     .send({ contractAddressSalt: salt, universalDeploy: true, from: deployer })
     .deployed();
   return contract as EscrowContract;

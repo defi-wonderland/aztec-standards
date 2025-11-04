@@ -1,12 +1,12 @@
-import { ContractDeployer } from '@aztec/aztec.js/deployment';
 import { Fr } from '@aztec/aztec.js/fields';
-import { AztecAddress } from '@aztec/aztec.js/addresses';
 import { TxStatus } from '@aztec/aztec.js/tx';
+import { AztecAddress } from '@aztec/aztec.js/addresses';
 import { type TestWallet } from '@aztec/test-wallet/server';
-import { type ContractFunctionInteractionCallIntent } from '@aztec/aztec.js/authorization';
+import { ContractDeployer } from '@aztec/aztec.js/deployment';
 import { SetPublicAuthwitContractInteraction } from '@aztec/aztec.js/authorization';
-
+import { type ContractFunctionInteractionCallIntent } from '@aztec/aztec.js/authorization';
 import { getContractInstanceFromInstantiationParams } from '@aztec/aztec.js/contracts';
+
 import {
   setupTestSuite,
   AMOUNT,
@@ -16,6 +16,7 @@ import {
   // initializeTransferCommitment,
   wad,
 } from './utils.js';
+
 import { type PXE } from '@aztec/pxe/server';
 import { type AztecLMDBStoreV2 } from '@aztec/kv-store/lmdb-v2';
 import { TokenContractArtifact, TokenContract } from '../../../artifacts/Token.js';
