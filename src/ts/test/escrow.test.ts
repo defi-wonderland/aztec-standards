@@ -71,23 +71,6 @@ describe('Escrow', () => {
   });
 
   describe('authorization', () => {
-    // TODO: check if this is even possible. Even though the escrow contract has private keys, it does not mean it can sign
-    // txs as it does not have an account implementation.
-    it.skip('withdrawing tokens from self should fail', async () => {
-      await expect(
-        escrow.methods.withdraw(AztecAddress.ZERO, 0, AztecAddress.ZERO).simulate({ from: escrow.instance.address }),
-      ).rejects.toThrow(/Assertion failed: Not Authorized/);
-    });
-
-    // TODO: same as above.
-    it.skip('withdrawing nft from self should fail', async () => {
-      await expect(
-        escrow.methods
-          .withdraw_nft(AztecAddress.ZERO, 0, AztecAddress.ZERO)
-          .simulate({ from: escrow.instance.address }),
-      ).rejects.toThrow(/Assertion failed: Not Authorized/);
-    });
-
     it('withdrawing tokens from account different than the logic contract should fail', async () => {
       await expect(
         escrow.withWallet(wallet).methods.withdraw(AztecAddress.ZERO, 0, AztecAddress.ZERO).send({ from: bob }).wait(),
