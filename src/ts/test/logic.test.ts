@@ -1,15 +1,22 @@
+import { type PXE } from '@aztec/pxe/server';
 import { TxStatus } from '@aztec/aztec.js/tx';
 import { deriveKeys } from '@aztec/stdlib/keys';
 import { PublicKeys } from '@aztec/aztec.js/keys';
 import { AztecAddress } from '@aztec/aztec.js/addresses';
 import { type TestWallet } from '@aztec/test-wallet/server';
 import { ContractDeployer } from '@aztec/aztec.js/deployment';
+import { type AztecLMDBStoreV2 } from '@aztec/kv-store/lmdb-v2';
 import { Fr, type GrumpkinScalar } from '@aztec/aztec.js/fields';
 import {
   Contract,
   getContractInstanceFromInstantiationParams,
   getContractClassFromArtifact,
 } from '@aztec/aztec.js/contracts';
+
+import { TestLogicContractArtifact, TestLogicContract, EscrowDetailsLogContent } from '../../../artifacts/TestLogic.js';
+import { EscrowContractArtifact, EscrowContract } from '../../../artifacts/Escrow.js';
+import { TokenContract } from '../../../artifacts/Token.js';
+import { NFTContract } from '../../../artifacts/NFT.js';
 
 import {
   setupTestSuite,
@@ -20,16 +27,11 @@ import {
   deployNFTWithMinter,
   expectUintNote,
   assertOwnsPrivateNFT,
+  deployLogic,
+  deployEscrowWithPublicKeysAndSalt,
+  grumpkinScalarToFr,
+  deriveContractAddress,
 } from './utils.js';
-
-import { type PXE } from '@aztec/pxe/server';
-import { type AztecLMDBStoreV2 } from '@aztec/kv-store/lmdb-v2';
-
-import { TestLogicContractArtifact, TestLogicContract, EscrowDetailsLogContent } from '../../../artifacts/TestLogic.js';
-import { EscrowContractArtifact, EscrowContract } from '../../../artifacts/Escrow.js';
-import { TokenContract } from '../../../artifacts/Token.js';
-import { NFTContract } from '../../../artifacts/NFT.js';
-import { deployLogic, deployEscrowWithPublicKeysAndSalt, grumpkinScalarToFr, deriveContractAddress } from './utils.js';
 
 describe('Logic - Single PXE', () => {
   let pxe: PXE;
