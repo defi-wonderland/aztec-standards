@@ -1,22 +1,24 @@
-import { type AccountWallet, type ContractFunctionInteraction, type PXE } from '@aztec/aztec.js';
-import { getInitialTestAccountsManagers } from '@aztec/accounts/testing';
+import type { PXE } from '@aztec/pxe/server';
+import type { Wallet } from '@aztec/aztec.js/wallet';
+import { AztecAddress } from '@aztec/aztec.js/addresses';
+import type { ContractFunctionInteractionCallIntent } from '@aztec/aztec.js/authorization';
+
 import { parseUnits } from 'viem';
-import { decodeFromAbi } from '@aztec/stdlib/abi';
-import { Fr } from '@aztec/foundation/fields';
 
 // Import the new Benchmark base class and context
 import { Benchmark, BenchmarkContext } from '@defi-wonderland/aztec-benchmark';
 
 import { TokenContract } from '../artifacts/Token.js';
-import { deployTokenWithMinter, initializeTransferCommitment, setupPXE } from '../src/ts/test/utils.js';
+import { deployTokenWithMinter, /* initializeTransferCommitment, */ setupTestSuite } from '../src/ts/test/utils.js';
 
 // Extend the BenchmarkContext from the new package
 interface TokenBenchmarkContext extends BenchmarkContext {
   pxe: PXE;
-  deployer: AccountWallet;
-  accounts: AccountWallet[];
+  wallet: Wallet;
+  deployer: AztecAddress;
+  accounts: AztecAddress[];
   tokenContract: TokenContract;
-  commitments: bigint[];
+  // commitments: bigint[];
 }
 
 // --- Helper Functions ---
@@ -34,53 +36,79 @@ export default class TokenContractBenchmark extends Benchmark {
    */
 
   async setup(): Promise<TokenBenchmarkContext> {
-    const { pxe, store } = await setupPXE();
-    const managers = await getInitialTestAccountsManagers(pxe);
-    const accounts = await Promise.all(managers.map((acc) => acc.register()));
-    const [deployer] = accounts;
-    const deployedBaseContract = await deployTokenWithMinter(deployer);
-    const tokenContract = await TokenContract.at(deployedBaseContract.address, deployer);
+    const { pxe, wallet, accounts } = await setupTestSuite();
+    const [deployer, alice, bob] = accounts;
+    const deployedBaseContract = await deployTokenWithMinter(wallet, deployer);
+    const tokenContract = await TokenContract.at(deployedBaseContract.address, wallet);
 
     // Initialize partial notes
-    const [alice, bob] = accounts;
-    const owner = alice.getAddress();
-    const commitment_1 = await initializeTransferCommitment(tokenContract, alice, bob.getAddress(), owner);
-    const commitment_2 = await initializeTransferCommitment(tokenContract, alice, bob.getAddress(), owner);
+    const owner = alice;
+    // TODO: fix this when initializeTransferCommitment is fixed
+    // const commitment_1 = await initializeTransferCommitment(tokenContract, alice, bob, owner);
+    // const commitment_2 = await initializeTransferCommitment(tokenContract, alice, bob, owner);
 
-    const commitments = [commitment_1, commitment_2];
+    // const commitments = [commitment_1, commitment_2];
 
-    return { pxe, deployer, accounts, tokenContract, commitments };
+    return { pxe, wallet, deployer, accounts, tokenContract /* commitments */ };
   }
 
   /**
    * Returns the list of TokenContract methods to be benchmarked.
    */
-  getMethods(context: TokenBenchmarkContext): ContractFunctionInteraction[] {
-    const { tokenContract, accounts, commitments } = context;
+  getMethods(context: TokenBenchmarkContext): ContractFunctionInteractionCallIntent[] {
+    const { tokenContract, accounts, wallet /* commitments */ } = context;
     const [alice, bob] = accounts;
-    const owner = alice.getAddress();
+    const owner = alice;
 
-    const methods: ContractFunctionInteraction[] = [
+    const methods: ContractFunctionInteractionCallIntent[] = [
       // Mint methods
-      tokenContract.withWallet(alice).methods.mint_to_private(owner, amt(100)),
-      tokenContract.withWallet(alice).methods.mint_to_public(owner, amt(100)),
+      {
+        caller: alice,
+        action: tokenContract.withWallet(wallet).methods.mint_to_private(owner, amt(100)),
+      },
+      {
+        caller: alice,
+        action: tokenContract.withWallet(wallet).methods.mint_to_public(owner, amt(100)),
+      },
       // Transfer methods
-      tokenContract.withWallet(alice).methods.transfer_private_to_public(owner, bob.getAddress(), amt(10), 0),
-      tokenContract
-        .withWallet(alice)
-        .methods.transfer_private_to_public_with_commitment(owner, bob.getAddress(), amt(10), 0),
-      tokenContract.withWallet(alice).methods.transfer_private_to_private(owner, bob.getAddress(), amt(10), 0),
-      tokenContract.withWallet(alice).methods.transfer_public_to_private(owner, bob.getAddress(), amt(10), 0),
-      tokenContract.withWallet(alice).methods.transfer_public_to_public(owner, bob.getAddress(), amt(10), 0),
+      {
+        caller: alice,
+        action: tokenContract.withWallet(wallet).methods.transfer_private_to_public(owner, bob, amt(10), 0),
+      },
+      {
+        caller: alice,
+        action: tokenContract
+          .withWallet(wallet)
+          .methods.transfer_private_to_public_with_commitment(owner, bob, amt(10), 0),
+      },
+      {
+        caller: alice,
+        action: tokenContract.withWallet(wallet).methods.transfer_private_to_private(owner, bob, amt(10), 0),
+      },
+      {
+        caller: alice,
+        action: tokenContract.withWallet(wallet).methods.transfer_public_to_private(owner, bob, amt(10), 0),
+      },
+      {
+        caller: alice,
+        action: tokenContract.withWallet(wallet).methods.transfer_public_to_public(owner, bob, amt(10), 0),
+      },
 
       // Burn methods
-      tokenContract.withWallet(alice).methods.burn_private(owner, amt(10), 0),
-      tokenContract.withWallet(alice).methods.burn_public(owner, amt(10), 0),
+      {
+        caller: alice,
+        action: tokenContract.withWallet(wallet).methods.burn_private(owner, amt(10), 0),
+      },
+      {
+        caller: alice,
+        action: tokenContract.withWallet(wallet).methods.burn_public(owner, amt(10), 0),
+      },
 
       // Partial notes methods
-      tokenContract.withWallet(alice).methods.initialize_transfer_commitment(bob.getAddress(), owner),
-      tokenContract.withWallet(alice).methods.transfer_private_to_commitment(owner, commitments[0], amt(10), 0),
-      tokenContract.withWallet(alice).methods.transfer_public_to_commitment(owner, commitments[1], amt(10), 0),
+      // tokenContract.withWallet(alice).methods.initialize_transfer_commitment(bob, owner),
+      // TODO: fix this when initializeTransferCommitment is fixed
+      // tokenContract.withWallet(alice).methods.transfer_private_to_commitment(owner, commitments[0], amt(10), 0),
+      // tokenContract.withWallet(alice).methods.transfer_public_to_commitment(owner, commitments[1], amt(10), 0),
     ];
 
     return methods.filter(Boolean);

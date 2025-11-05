@@ -8,6 +8,7 @@ codegenCache.json
 .env
 benchmarks/*.json
 store
+store-*
 .cursor/*
 !.cursor/rules/
 !.cursor/rules/**
