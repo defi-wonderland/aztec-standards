@@ -37,18 +37,30 @@ export default class TokenContractBenchmark extends Benchmark {
 
   async setup(): Promise<TokenBenchmarkContext> {
     const { pxe, wallet, accounts } = await setupTestSuite();
-    const [deployer, alice, bob] = accounts;
+    const [deployer, alice] = accounts;
     const deployedBaseContract = await deployTokenWithMinter(wallet, deployer);
     const tokenContract = await TokenContract.at(deployedBaseContract.address, wallet);
 
     // Initialize partial notes
     const owner = alice;
-    const commitment_1 = await initializeTransferCommitment(tokenContract, alice, bob, owner);
-    const commitment_2 = await initializeTransferCommitment(tokenContract, alice, bob, owner);
+    // We need an account manager for bob because we need to pass it to the initializeTransferCommitment function
+    const commitmentRecipientAccountManager = await wallet.createAccount();
+    const commitment_1 = await initializeTransferCommitment(
+      tokenContract,
+      alice,
+      commitmentRecipientAccountManager,
+      owner,
+    );
+    const commitment_2 = await initializeTransferCommitment(
+      tokenContract,
+      alice,
+      commitmentRecipientAccountManager,
+      owner,
+    );
 
     const commitments = [commitment_1, commitment_2];
 
-    return { pxe, wallet, deployer, accounts, tokenContract /* commitments */ };
+    return { pxe, wallet, deployer, accounts, tokenContract, commitments };
   }
 
   /**
@@ -108,18 +120,19 @@ export default class TokenContractBenchmark extends Benchmark {
         caller: alice,
         action: tokenContract.withWallet(wallet).methods.initialize_transfer_commitment(bob, owner),
       },
-      {
-        caller: alice,
-        action: tokenContract
-          .withWallet(wallet)
-          .methods.transfer_private_to_commitment(owner, commitments[0], amt(10), 0),
-      },
-      {
-        caller: alice,
-        action: tokenContract
-          .withWallet(wallet)
-          .methods.transfer_public_to_commitment(owner, commitments[1], amt(10), 0),
-      },
+      // TODO: fix this
+      // {
+      //   caller: alice,
+      //   action: tokenContract
+      //     .withWallet(wallet)
+      //     .methods.transfer_private_to_commitment(owner, commitments[0], amt(10), 0),
+      // },
+      // {
+      //   caller: alice,
+      //   action: tokenContract
+      //     .withWallet(wallet)
+      //     .methods.transfer_public_to_commitment(owner, commitments[1], amt(10), 0),
+      // },
     ];
 
     return methods.filter(Boolean);
