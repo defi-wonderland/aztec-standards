@@ -37,13 +37,14 @@ export default class TokenContractBenchmark extends Benchmark {
 
   async setup(): Promise<TokenBenchmarkContext> {
     const { pxe, wallet, accounts } = await setupTestSuite();
-    const [deployer, alice] = accounts;
+    const [deployer] = accounts;
     const deployedBaseContract = await deployTokenWithMinter(wallet, deployer);
     const tokenContract = await TokenContract.at(deployedBaseContract.address, wallet);
 
     // Initialize partial notes
+    const [alice] = accounts;
     const owner = alice;
-    // We need an account manager for bob because we need to pass it to the initializeTransferCommitment function
+    // We need an account manager to decrypt the private logs in the initializeTransferCommitment function
     const commitmentRecipientAccountManager = await wallet.createAccount();
     const commitment_1 = await initializeTransferCommitment(
       tokenContract,
@@ -120,19 +121,18 @@ export default class TokenContractBenchmark extends Benchmark {
         caller: alice,
         action: tokenContract.withWallet(wallet).methods.initialize_transfer_commitment(bob, owner),
       },
-      // TODO: fix this
-      // {
-      //   caller: alice,
-      //   action: tokenContract
-      //     .withWallet(wallet)
-      //     .methods.transfer_private_to_commitment(owner, commitments[0], amt(10), 0),
-      // },
-      // {
-      //   caller: alice,
-      //   action: tokenContract
-      //     .withWallet(wallet)
-      //     .methods.transfer_public_to_commitment(owner, commitments[1], amt(10), 0),
-      // },
+      {
+        caller: alice,
+        action: tokenContract
+          .withWallet(wallet)
+          .methods.transfer_private_to_commitment(owner, commitments[0], amt(10), 0),
+      },
+      {
+        caller: alice,
+        action: tokenContract
+          .withWallet(wallet)
+          .methods.transfer_public_to_commitment(owner, commitments[1], amt(10), 0),
+      },
     ];
 
     return methods.filter(Boolean);
