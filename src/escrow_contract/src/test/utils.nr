@@ -1,6 +1,7 @@
 use crate::Escrow;
 use aztec::{
-    protocol_types::address::AztecAddress,
+    oracle::random::random,
+    protocol_types::{address::AztecAddress, traits::ToField},
     test::helpers::{
         test_environment::TestEnvironment, txe_oracles as cheatcodes, utils::ContractDeployment,
     },
@@ -40,4 +41,9 @@ pub unconstrained fn deploy_escrow_with_secret(
         ContractDeployment { env: *env, path: "@escrow_contract/Escrow", secret: escrow_secret };
 
     _escrow_contract.without_initializer()
+}
+
+pub unconstrained fn get_escrow_class_id() -> Field {
+    let escrow_instance = cheatcodes::deploy("@escrow_contract/Escrow", "", &[], random());
+    escrow_instance.contract_class_id.to_field()
 }
