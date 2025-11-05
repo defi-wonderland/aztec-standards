@@ -20,9 +20,7 @@ unconstrained fn check_escrow_public_keys_mismatch() {
 
     let escrow = logic_utils::deploy_escrow_with_secret(&mut env, secret);
 
-    let escrow_instance = logic_utils::get_escrow_instance();
-
-    let escrow_class_id = escrow_instance.contract_class_id.to_field();
+    let escrow_class_id = logic_utils::get_escrow_class_id();
 
     let logic = logic_utils::deploy_logic(&mut env, escrow_class_id);
 
@@ -40,9 +38,7 @@ unconstrained fn check_escrow_class_id_mismatch() {
 
     let escrow = logic_utils::deploy_escrow_with_secret(&mut env, secret);
 
-    let escrow_instance = logic_utils::get_escrow_instance();
-
-    let escrow_class_id = escrow_instance.contract_class_id.to_field();
+    let escrow_class_id = logic_utils::get_escrow_class_id();
 
     // We deploy with a different class id, so the test should fail
     let logic = logic_utils::deploy_logic(&mut env, escrow_class_id + 1);
@@ -61,9 +57,7 @@ unconstrained fn check_escrow_salt_mismatch() {
 
     let escrow = logic_utils::deploy_escrow_with_secret(&mut env, secret);
 
-    let escrow_instance = logic_utils::get_escrow_instance();
-
-    let escrow_class_id = escrow_instance.contract_class_id.to_field();
+    let escrow_class_id = logic_utils::get_escrow_class_id();
 
     let logic = logic_utils::deploy_logic(&mut env, escrow_class_id);
 
