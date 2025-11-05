@@ -4,6 +4,7 @@ use aztec::{
     protocol_types::traits::ToField,
     test::helpers::{test_environment::TestEnvironment, txe_oracles},
 };
+use escrow_contract::test::utils as escrow_utils;
 
 // TODO: Testing that check_escrow succeeds is not possible given that custom salt is not supported yet in the test environment,
 // it will always revert with "Escrow salt should be equal to the this address"
@@ -18,9 +19,9 @@ unconstrained fn check_escrow_public_keys_mismatch() {
     let secret = 1;
     let (_, _, _, incorrect_msk) = logic_utils::get_test_vector();
 
-    let escrow = logic_utils::deploy_escrow_with_secret(&mut env, secret);
+    let escrow = escrow_utils::deploy_escrow_with_secret(&mut env, secret);
 
-    let escrow_class_id = logic_utils::get_escrow_class_id();
+    let escrow_class_id = escrow_utils::get_escrow_class_id();
 
     let logic = logic_utils::deploy_logic(&mut env, escrow_class_id);
 
@@ -36,9 +37,9 @@ unconstrained fn check_escrow_class_id_mismatch() {
     let secret = 1;
     let (_, msk, _, _) = logic_utils::get_test_vector();
 
-    let escrow = logic_utils::deploy_escrow_with_secret(&mut env, secret);
+    let escrow = escrow_utils::deploy_escrow_with_secret(&mut env, secret);
 
-    let escrow_class_id = logic_utils::get_escrow_class_id();
+    let escrow_class_id = escrow_utils::get_escrow_class_id();
 
     // We deploy with a different class id, so the test should fail
     let logic = logic_utils::deploy_logic(&mut env, escrow_class_id + 1);
@@ -55,9 +56,9 @@ unconstrained fn check_escrow_salt_mismatch() {
     let secret = 1;
     let (_, msk, _, _) = logic_utils::get_test_vector();
 
-    let escrow = logic_utils::deploy_escrow_with_secret(&mut env, secret);
+    let escrow = escrow_utils::deploy_escrow_with_secret(&mut env, secret);
 
-    let escrow_class_id = logic_utils::get_escrow_class_id();
+    let escrow_class_id = escrow_utils::get_escrow_class_id();
 
     let logic = logic_utils::deploy_logic(&mut env, escrow_class_id);
 

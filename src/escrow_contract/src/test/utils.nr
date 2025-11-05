@@ -36,7 +36,11 @@ pub unconstrained fn deploy_escrow_with_secret(
     // This registers the public keys with the test environment so the escrow can decrypt notes
     let _escrow_account = cheatcodes::add_account(escrow_secret);
 
-    // Deploy the Escrow contract using escrow_secret as the salt
+    // Deploy the Escrow contract using escrow_secret as the secret
+    // In v1.2.1, deploy_with_public_keys accepted a secret
+    // In v2.0.3, we manually create ContractDeployment with a secret
+    // TODO: The salt will be stored in the contract instance and checked by _assert_msg_sender
+    //       The test extracts logic_contract_address from escrow_instance.salt
     let _escrow_contract =
         ContractDeployment { env: *env, path: "@escrow_contract/Escrow", secret: escrow_secret };
 
