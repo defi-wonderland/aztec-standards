@@ -315,6 +315,7 @@ pub unconstrained fn _commitment_storage_read(
 
 /// @notice Sets private authwit for the `transfer_private_to_public` method. `caller` is also the recipient.
 pub unconstrained fn authorize_transfer_private_to_public(
+    env: TestEnvironment,
     token: AztecAddress,
     caller: AztecAddress,
     from: AztecAddress,
@@ -324,6 +325,7 @@ pub unconstrained fn authorize_transfer_private_to_public(
     let transfer_private_to_public_call_interface =
         Token::at(token).transfer_private_to_public(from, caller, amount, nonce);
     authwit_cheatcodes::add_private_authwit_from_call_interface(
+        env,
         from,
         caller,
         transfer_private_to_public_call_interface,

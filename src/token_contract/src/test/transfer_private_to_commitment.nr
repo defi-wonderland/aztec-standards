@@ -53,6 +53,7 @@ unconstrained fn transfer_private_to_commitment_on_behalf_of_other() {
         .transfer_private_to_commitment(owner, commitment, transfer_amount, 0);
 
     authwit_cheatcodes::add_private_authwit_from_call_interface(
+        env,
         owner,
         recipient,
         transfer_to_commitment_call_interface,

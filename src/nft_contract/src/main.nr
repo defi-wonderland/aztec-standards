@@ -15,7 +15,7 @@ pub contract NFT {
             functions::{initializer, internal, private, public, utility, view},
             storage::storage,
         },
-        messages::logs::note::encode_and_encrypt_note,
+        messages::message_delivery::MessageDelivery,
         note::{
             constants::MAX_NOTES_PER_PAGE, note_getter_options::NoteGetterOptions,
             note_interface::NoteProperties, note_viewer_options::NoteViewerOptions,
@@ -119,7 +119,7 @@ pub contract NFT {
         NFT::at(context.this_address())
             .update_public_token_owner_from_zero_internal(to, token_id)
             .enqueue(&mut context);
-        let completer = context.msg_sender();
+        let completer = context.msg_sender().unwrap();
         let commitment =
             _initialize_transfer_commitment(&mut context, storage.private_nfts, to, completer);
         commitment.commitment()
@@ -243,7 +243,7 @@ pub contract NFT {
         _validate_public_token_owner(storage.public_owners, from, token_id);
 
         _update_public_token_owner(storage.public_owners, AztecAddress::zero(), token_id);
-        let completer = context.msg_sender();
+        let completer = context.msg_sender().unwrap();
         _transfer_token_to_commitment(&mut context, commitment.to_field(), token_id, completer);
     }
 
@@ -369,13 +369,14 @@ pub contract NFT {
     #[private]
     fn mint_to_private(to: AztecAddress, token_id: Field) {
         assert(token_id != 0, "zero token ID not supported");
-        _validate_minter(context.msg_sender(), storage.minter.read());
+        _validate_minter(context.msg_sender().unwrap(), storage.minter.read());
 
         NFT::at(context.this_address()).set_nft_exists_internal(token_id, true).enqueue(&mut context);
-        storage.private_nfts.at(to).insert(NFTNote::new(token_id, to)).emit(encode_and_encrypt_note(
+        storage.private_nfts.at(to).insert(NFTNote::new(token_id, to)).emit(
             &mut context,
             to,
-        ));
+            MessageDelivery.CONSTRAINED_ONCHAIN,
+        );
     }
 
     /// @notice Mints a token to a public address
@@ -385,7 +386,7 @@ pub contract NFT {
     #[public]
     fn mint_to_public(to: AztecAddress, token_id: Field) {
         assert(token_id != 0, "zero token ID not supported");
-        _validate_minter(context.msg_sender(), storage.minter.read());
+        _validate_minter(context.msg_sender().unwrap(), storage.minter.read());
         assert(!storage.nft_exists.at(token_id).read(), "token already exists");
 
         storage.nft_exists.at(token_id).write(true);
@@ -438,7 +439,10 @@ pub contract NFT {
         let upgrade_authority = storage.upgrade_authority.read();
 
         assert(!upgrade_authority.eq(AztecAddress::zero()), "upgrade authority not set");
-        assert(context.msg_sender().eq(upgrade_authority), "caller is not upgrade authority");
+        assert(
+            context.msg_sender().unwrap().eq(upgrade_authority),
+            "caller is not upgrade authority",
+        );
 
         ContractInstanceRegistry::at(CONTRACT_INSTANCE_REGISTRY_CONTRACT_ADDRESS)
             .update(ContractClassId::from_field(new_contract_class_id))
@@ -493,7 +497,7 @@ pub contract NFT {
         token_id: Field,
     ) {
         let new_note = NFTNote::new(token_id, to);
-        private_nft_set.insert(new_note).emit(encode_and_encrypt_note(context, to));
+        private_nft_set.insert(new_note).emit(context, to, MessageDelivery.CONSTRAINED_ONCHAIN);
     }
 
     /// @notice Removes the private token owner
@@ -575,7 +579,7 @@ pub contract NFT {
     /// @param from The address of the sender
     #[contract_library_method]
     fn _validate_from_private<let N: u32>(context: &mut PrivateContext, from: AztecAddress) {
-        if (!from.eq(context.msg_sender())) {
+        if (!from.eq(context.msg_sender().unwrap())) {
             assert_current_call_valid_authwit::<N>(context, from);
         }
     }
@@ -585,7 +589,7 @@ pub contract NFT {
     /// @param from The address of the sender
     #[contract_library_method]
     unconstrained fn _validate_from_public(context: &mut PublicContext, from: AztecAddress) {
-        if (!from.eq(context.msg_sender())) {
+        if (!from.eq(context.msg_sender().unwrap())) {
             assert_current_call_valid_authwit_public(context, from);
         }
     }
