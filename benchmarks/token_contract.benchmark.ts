@@ -9,7 +9,7 @@ import { parseUnits } from 'viem';
 import { Benchmark, BenchmarkContext } from '@defi-wonderland/aztec-benchmark';
 
 import { TokenContract } from '../artifacts/Token.js';
-import { deployTokenWithMinter, /* initializeTransferCommitment, */ setupTestSuite } from '../src/ts/test/utils.js';
+import { deployTokenWithMinter, initializeTransferCommitment, setupTestSuite } from '../src/ts/test/utils.js';
 
 // Extend the BenchmarkContext from the new package
 interface TokenBenchmarkContext extends BenchmarkContext {
@@ -18,7 +18,7 @@ interface TokenBenchmarkContext extends BenchmarkContext {
   deployer: AztecAddress;
   accounts: AztecAddress[];
   tokenContract: TokenContract;
-  // commitments: bigint[];
+  commitments: bigint[];
 }
 
 // --- Helper Functions ---
@@ -43,11 +43,10 @@ export default class TokenContractBenchmark extends Benchmark {
 
     // Initialize partial notes
     const owner = alice;
-    // TODO: fix this when initializeTransferCommitment is fixed
-    // const commitment_1 = await initializeTransferCommitment(tokenContract, alice, bob, owner);
-    // const commitment_2 = await initializeTransferCommitment(tokenContract, alice, bob, owner);
+    const commitment_1 = await initializeTransferCommitment(tokenContract, alice, bob, owner);
+    const commitment_2 = await initializeTransferCommitment(tokenContract, alice, bob, owner);
 
-    // const commitments = [commitment_1, commitment_2];
+    const commitments = [commitment_1, commitment_2];
 
     return { pxe, wallet, deployer, accounts, tokenContract /* commitments */ };
   }
@@ -56,7 +55,7 @@ export default class TokenContractBenchmark extends Benchmark {
    * Returns the list of TokenContract methods to be benchmarked.
    */
   getMethods(context: TokenBenchmarkContext): ContractFunctionInteractionCallIntent[] {
-    const { tokenContract, accounts, wallet /* commitments */ } = context;
+    const { tokenContract, accounts, wallet, commitments } = context;
     const [alice, bob] = accounts;
     const owner = alice;
 
@@ -105,10 +104,22 @@ export default class TokenContractBenchmark extends Benchmark {
       },
 
       // Partial notes methods
-      // tokenContract.withWallet(alice).methods.initialize_transfer_commitment(bob, owner),
-      // TODO: fix this when initializeTransferCommitment is fixed
-      // tokenContract.withWallet(alice).methods.transfer_private_to_commitment(owner, commitments[0], amt(10), 0),
-      // tokenContract.withWallet(alice).methods.transfer_public_to_commitment(owner, commitments[1], amt(10), 0),
+      {
+        caller: alice,
+        action: tokenContract.withWallet(wallet).methods.initialize_transfer_commitment(bob, owner),
+      },
+      {
+        caller: alice,
+        action: tokenContract
+          .withWallet(wallet)
+          .methods.transfer_private_to_commitment(owner, commitments[0], amt(10), 0),
+      },
+      {
+        caller: alice,
+        action: tokenContract
+          .withWallet(wallet)
+          .methods.transfer_public_to_commitment(owner, commitments[1], amt(10), 0),
+      },
     ];
 
     return methods.filter(Boolean);
