@@ -176,11 +176,12 @@ export async function assertOwnsPublicNFT(
   nft: NFTContract,
   tokenId: bigint,
   expectedOwner: AztecAddress,
+  expectToBeTrue: boolean,
   caller?: AztecAddress,
 ) {
   const from = caller ? (caller instanceof AztecAddress ? caller : caller) : expectedOwner;
   const owner = await nft.methods.public_owner_of(tokenId).simulate({ from });
-  expect(owner.equals(expectedOwner)).toBe(true);
+  expect(owner.equals(expectedOwner)).toBe(expectToBeTrue);
 }
 
 // Check if an address owns a specific NFT in private state
@@ -188,25 +189,13 @@ export async function assertOwnsPrivateNFT(
   nft: NFTContract,
   tokenId: bigint,
   owner: AztecAddress,
+  expectToBeTrue: boolean,
   caller?: AztecAddress,
 ) {
   const from = caller ? (caller instanceof AztecAddress ? caller : caller) : owner;
   const [nfts, _] = await nft.methods.get_private_nfts(owner, 0).simulate({ from });
   const hasNFT = nfts.some((id: bigint) => id === tokenId);
-  expect(hasNFT).toBe(true);
-}
-
-// Check if an NFT has been nullified (no longer owned) in private state
-export async function assertPrivateNFTNullified(
-  nft: NFTContract,
-  tokenId: bigint,
-  owner: AztecAddress,
-  caller?: AztecAddress,
-) {
-  const from = caller ? (caller instanceof AztecAddress ? caller : caller) : owner;
-  const [nfts, _] = await nft.methods.get_private_nfts(owner, 0).simulate({ from });
-  const hasNFT = nfts.some((id: bigint) => id === tokenId);
-  expect(hasNFT).toBe(false);
+  expect(hasNFT).toBe(expectToBeTrue);
 }
 
 // Deploy NFT contract with a minter
@@ -264,8 +253,11 @@ export async function deployVaultAndAssetWithMinter(
 /**
  * Deploys the Escrow contract.
  * @param publicKeys - The public keys to use for the contract.
- * @param deployer - The wallet to deploy the contract with.
+ * @param wallet - The wallet to deploy the contract with.
+ * @param deployer - The address to deploy the contract with.
  * @param salt - The salt to use for the contract address. If not provided, a random salt will be used.
+ * @param args - The arguments to pass to the constructor.
+ * @param constructor - The constructor to use for the contract.
  * @returns A deployed contract instance.
  */
 export async function deployEscrow(
@@ -318,7 +310,6 @@ export async function setPublicAuthWit(
  * Initializes a transfer commitment
  * @param token - The token contract instance.
  * @param caller - The wallet that will interact with the token contract.
- * @param from - The address of the sender.
  * @param to - The address of the recipient.
  * @param completer - The address allowed to complete the partial note.
  * @returns Partial note commitment
@@ -330,8 +321,42 @@ export async function initializeTransferCommitment(
   completer: AztecAddress,
 ) {
   // Workaround because we could not get the commitment from the simulation, so we decrypt the private log instead
-  // alice prepares partial note for bob
   const tx = await token.methods.initialize_transfer_commitment(to.address, completer).send({ from: caller }).wait();
+  const txEffect = await node.getTxEffect(tx.txHash);
+  if (!txEffect?.data.privateLogs) {
+    throw new Error('No private logs found');
+  }
+  const privateLogs = txEffect?.data.privateLogs;
+
+  const toSK = to.getSecretKey();
+  const toIvskM = deriveMasterIncomingViewingSecretKey(toSK);
+
+  const decryptedRawLog = await decryptRawPrivateLog(
+    privateLogs[0].fields.slice(1),
+    await to.getCompleteAddress(),
+    toIvskM,
+  );
+
+  // The commitment is the third field in the decrypted raw log
+  return decryptedRawLog[2].toBigInt();
+}
+
+/**
+ * Initializes a transfer commitment for an NFT
+ * @param nft - The token contract instance.
+ * @param caller - The wallet that will interact with the token contract.
+ * @param to - The address of the recipient.
+ * @param completer - The address allowed to complete the partial note.
+ * @returns Partial note commitment
+ */
+export async function initializeTransferCommitmentNFT(
+  nft: NFTContract,
+  caller: AztecAddress,
+  to: AccountManager,
+  completer: AztecAddress,
+) {
+  // Workaround because we could not get the commitment from the simulation, so we decrypt the private log instead
+  const tx = await nft.methods.initialize_transfer_commitment(to.address, completer).send({ from: caller }).wait();
   const txEffect = await node.getTxEffect(tx.txHash);
   if (!txEffect?.data.privateLogs) {
     throw new Error('No private logs found');
@@ -355,7 +380,8 @@ export async function initializeTransferCommitment(
 
 /**
  * Deploys the Logic contract.
- * @param deployer - The wallet to deploy the contract with.
+ * @param wallet - The wallet to deploy the contract with.
+ * @param deployer - The address to deploy the contract with.
  * @param escrowClassId - The class id of the escrow contract.
  * @returns A deployed contract instance.
  */
@@ -369,8 +395,11 @@ export async function deployLogic(wallet: Wallet, deployer: AztecAddress, escrow
 /**
  * Deploys the Escrow contract.
  * @param publicKeys - The public keys to use for the contract.
+ * @param wallet - The wallet to deploy the contract with.
  * @param deployer - The wallet to deploy the contract with.
  * @param salt - The salt to use for the contract address. If not provided, a random salt will be used.
+ * @param args - The arguments to pass to the constructor.
+ * @param constructor - The constructor to use for the contract.
  * @returns A deployed contract instance.
  */
 export async function deployEscrowWithPublicKeysAndSalt(

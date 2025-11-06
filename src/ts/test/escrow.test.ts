@@ -166,7 +166,8 @@ describe('Escrow', () => {
     });
 
     it('logic should be able to withdraw NFT correctly', async () => {
-      await assertOwnsPrivateNFT(nft, tokenId, escrow.instance.address, bob);
+      await assertOwnsPrivateNFT(nft, tokenId, escrow.instance.address, true, bob);
+      await assertOwnsPrivateNFT(nft, tokenId, bob, false);
 
       await escrow
         .withWallet(wallet)
@@ -174,7 +175,8 @@ describe('Escrow', () => {
         .send({ from: logicMock })
         .wait();
 
-      await assertOwnsPrivateNFT(nft, tokenId, bob);
+      await assertOwnsPrivateNFT(nft, tokenId, escrow.instance.address, false, bob);
+      await assertOwnsPrivateNFT(nft, tokenId, bob, true);
 
       const notes = await wallet.getNotes({ contractAddress: nft.address, scopes: [bob] });
       expect(notes.length).toBe(1);

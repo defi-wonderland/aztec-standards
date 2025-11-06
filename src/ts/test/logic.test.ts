@@ -473,8 +473,8 @@ describe('Logic - Single PXE', () => {
       // Bob needs to sync his private state to see the escrow details
       await nft.withWallet(wallet).methods.sync_private_state().simulate({ from: bob });
 
-      await assertOwnsPrivateNFT(nft, tokenId, escrow.instance.address);
-      // await assertOwnsPrivateNFT(nft, tokenId, bob, false);
+      await assertOwnsPrivateNFT(nft, tokenId, escrow.instance.address, true);
+      await assertOwnsPrivateNFT(nft, tokenId, bob, false);
 
       await logic
         .withWallet(wallet)
@@ -484,8 +484,8 @@ describe('Logic - Single PXE', () => {
 
       await nft.withWallet(wallet).methods.sync_private_state().simulate({ from: bob });
 
-      // await assertOwnsPrivateNFT(nft, tokenId, escrow.instance.address, false);
-      await assertOwnsPrivateNFT(nft, tokenId, bob);
+      await assertOwnsPrivateNFT(nft, tokenId, escrow.instance.address, false);
+      await assertOwnsPrivateNFT(nft, tokenId, bob, true);
 
       const notes = await wallet.getNotes({ contractAddress: nft.address, scopes: [bob] });
       expect(notes.length).toBe(1);
