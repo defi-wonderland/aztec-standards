@@ -86,20 +86,6 @@ export const setupTestSuite = async (suffix?: string) => {
   };
 };
 
-/**
- * Add test accounts to the wallet, which is by default 3
- * Use before calling registerInitialSandboxAccountsInWallet
- * @param count - The number of accounts to add to the wallet.
- */
-export function addTestAccounts(count: number) {
-  for (let i = 0; i < count; i++) {
-    const secret = Fr.random();
-    INITIAL_TEST_SECRET_KEYS.push(secret);
-    INITIAL_TEST_ENCRYPTION_KEYS.push(deriveMasterIncomingViewingSecretKey(secret));
-    INITIAL_TEST_ACCOUNT_SALTS.push(Fr.ZERO);
-  }
-}
-
 // --- Token Utils ---
 export const expectUintNote = (note: UniqueNote, amount: bigint, owner: AztecAddress) => {
   expect(note.note.items[0]).toEqual(new Fr(owner.toBigInt()));
