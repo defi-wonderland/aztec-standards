@@ -1,13 +1,9 @@
 use crate::{test::{tokenized_vault::tokenized_vault_utils, utils::{self, mint_amount}}, Token};
 use aztec::test::helpers::authwit as authwit_cheatcodes;
 
-#[test(should_fail_with = "Assertion failed: Balance too low")]
+#[test(should_fail_with = "No contract instance found for address 0x0000000000000000000000000000000000000000000000000000000000000000")]
 unconstrained fn withdraw_private_to_private_exact_without_asset() {
-    // Setup without account contracts. We are not using authwits here, so dummy accounts are enough
-    let (_, asset_address, owner, recipient) =
-        utils::setup_and_mint_to_public_without_minter(false);
-
-    let (env, vault_address, _, _, minter) = utils::setup_with_minter(false);
+    let (env, vault_address, owner, recipient, _) = utils::setup_with_minter(false);
 
     // Withdrawal should fail because the PublicImmutable asset was not initialized
     env.call_private(
@@ -149,9 +145,6 @@ unconstrained fn withdraw_private_to_private_exact_request_fewer_assets() {
     utils::check_public_balance(env, asset_address, vault_address, 1);
 }
 
-// TODO: this test should fail because the ivsk is currently needed for emitting a note, but the vault contract doesn't have one.
-// However, tests written in noir execute enqueued public call immediately instead of at the end of private execution.
-// #[test(should_fail_with = "No public key registered for address")]
 #[test(should_fail_with = "Assertion failed: attempt to subtract with overflow")]
 unconstrained fn withdraw_private_to_private_exact_request_too_many_assets() {
     // Setup with asset token
@@ -241,6 +234,7 @@ unconstrained fn withdraw_private_to_private_exact_on_behalf_of_wrong_caller() {
             0,
         );
     authwit_cheatcodes::add_private_authwit_from_call_interface(
+        env,
         deposit_recipient,
         owner,
         withdraw_private_to_private_exact_call_interface,
@@ -287,6 +281,7 @@ unconstrained fn withdraw_private_to_private_exact_on_behalf_of_other_success() 
             0,
         );
     authwit_cheatcodes::add_private_authwit_from_call_interface(
+        env,
         deposit_recipient,
         recipient,
         withdraw_private_to_private_exact_call_interface,

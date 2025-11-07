@@ -1,13 +1,9 @@
 use crate::{test::utils::{self, mint_amount}, Token};
 use aztec::test::helpers::authwit as authwit_cheatcodes;
 
-#[test(should_fail_with = "Artifact not found when enriching public simulation error. Contract address: 0x0000000000000000000000000000000000000000000000000000000000000000.")]
+#[test(should_fail_with = "Contract execution has reverted: No bytecode found, or limit encountered for max calls to unique contract class IDs. Contract address: 0x0000000000000000000000000000000000000000000000000000000000000000.")]
 unconstrained fn issue_public_to_private_without_asset() {
-    // Setup without account contracts. We are not using authwits here, so dummy accounts are enough
-    let (_, asset_address, owner, recipient) =
-        utils::setup_and_mint_to_public_without_minter(false);
-
-    let (env, vault_address, _, _, minter) = utils::setup_with_minter(false);
+    let (env, vault_address, owner, recipient, _) = utils::setup_with_minter(false);
 
     // Issue should fail because the PublicImmutable asset was not initialized
     env.call_private(
@@ -288,6 +284,7 @@ unconstrained fn issue_public_to_private_on_behalf_of_other_success() {
         0,
     );
     authwit_cheatcodes::add_private_authwit_from_call_interface(
+        env,
         owner,
         recipient,
         issue_public_to_private_call_interface,

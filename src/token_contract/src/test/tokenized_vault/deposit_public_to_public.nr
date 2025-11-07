@@ -3,28 +3,12 @@ use aztec::test::helpers::authwit as authwit_cheatcodes;
 
 #[test(should_fail_with = "Trying to read from uninitialized PublicImmutable")]
 unconstrained fn deposit_public_to_public_without_asset() {
-    // Setup without account contracts. We are not using authwits here, so dummy accounts are enough
-    let (_, asset_address, owner, recipient) =
-        utils::setup_and_mint_to_public_without_minter(false);
-
-    let (env, vault_address, _, _, minter) = utils::setup_with_minter(false);
-
-    // Deposit assets to get shares
-    // Authorize the vault to use the caller's assets
-    let deposit_amount: u128 = mint_amount;
-    utils::authorize_transfer_public_to_public(
-        env,
-        asset_address,
-        vault_address,
-        owner,
-        deposit_amount,
-        0,
-    );
+    let (env, vault_address, owner, recipient, _) = utils::setup_with_minter(false);
 
     // Deposit should fail because the PublicImmutable asset was not initialized
     env.call_public(
         owner,
-        Token::at(vault_address).deposit_public_to_public(owner, recipient, deposit_amount, 0),
+        Token::at(vault_address).deposit_public_to_public(owner, recipient, mint_amount, 0),
     );
 }
 

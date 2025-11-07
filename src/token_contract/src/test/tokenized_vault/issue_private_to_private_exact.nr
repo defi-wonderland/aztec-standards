@@ -3,11 +3,7 @@ use aztec::test::helpers::authwit as authwit_cheatcodes;
 
 #[test(should_fail_with = "No contract instance found for address 0x0000000000000000000000000000000000000000000000000000000000000000")]
 unconstrained fn issue_private_to_private_exact_without_asset() {
-    // Setup without account contracts. We are not using authwits here, so dummy accounts are enough
-    let (_, asset_address, owner, recipient) =
-        utils::setup_and_mint_to_public_without_minter(false);
-
-    let (env, vault_address, _, _, minter) = utils::setup_with_minter(true);
+    let (env, vault_address, owner, recipient, _) = utils::setup_with_minter(true);
 
     // Issue should fail because the PublicImmutable asset was not initialized
     env.call_private(
@@ -29,11 +25,12 @@ unconstrained fn issue_private_to_private_exact_success() {
 
     // Mint some asset tokens to owner
     let deposit_amount: u128 = mint_amount;
-    env.call_private(owner, Token::at(asset_address).mint_to_private(owner, owner, deposit_amount));
+    env.call_private(owner, Token::at(asset_address).mint_to_private(owner, deposit_amount));
 
     // Deposit assets to get shares
     // Authorize the vault to use the caller's assets
     utils::authorize_transfer_private_to_public(
+        env,
         asset_address,
         vault_address,
         owner,
@@ -79,11 +76,12 @@ unconstrained fn issue_private_to_private_exact_after_yield() {
 
     // Mint some asset tokens to owner
     let deposit_amount: u128 = mint_amount;
-    env.call_private(owner, Token::at(asset_address).mint_to_private(owner, owner, deposit_amount));
+    env.call_private(owner, Token::at(asset_address).mint_to_private(owner, deposit_amount));
 
     // Deposit assets to get shares
     // Authorize the vault to use the caller's assets
     utils::authorize_transfer_private_to_public(
+        env,
         asset_address,
         vault_address,
         owner,
@@ -117,9 +115,6 @@ unconstrained fn issue_private_to_private_exact_after_yield() {
     utils::check_public_balance(env, asset_address, vault_address, max_assets + yield_amount);
 }
 
-// TODO: Test is incorrectly failing due to an issue that affects the discovery of partial notes.
-// When a partial note is initialized and completed and also a note is added, the partial note is not found.
-// #[test(should_fail_with = "A partial note's completion log did not result in any notes being found - this should never happen")]
 #[test]
 unconstrained fn issue_private_to_private_exact_too_many_assets() {
     // Setup with asset token
@@ -127,11 +122,12 @@ unconstrained fn issue_private_to_private_exact_too_many_assets() {
 
     // Mint some asset tokens to owner
     let max_deposit: u128 = mint_amount;
-    env.call_private(owner, Token::at(asset_address).mint_to_private(owner, owner, max_deposit));
+    env.call_private(owner, Token::at(asset_address).mint_to_private(owner, max_deposit));
 
     // Deposit assets to get shares
     // Authorize the vault to use the caller's assets
     utils::authorize_transfer_private_to_public(
+        env,
         asset_address,
         vault_address,
         owner,
@@ -173,11 +169,12 @@ unconstrained fn issue_private_to_private_exact_request_too_many_shares() {
 
     // Mint some asset tokens to owner
     let deposit_amount: u128 = mint_amount;
-    env.call_private(owner, Token::at(asset_address).mint_to_private(owner, owner, deposit_amount));
+    env.call_private(owner, Token::at(asset_address).mint_to_private(owner, deposit_amount));
 
     // Deposit assets to get shares
     // Authorize the vault to use the caller's assets
     utils::authorize_transfer_private_to_public(
+        env,
         asset_address,
         vault_address,
         owner,
@@ -208,7 +205,7 @@ unconstrained fn issue_private_to_private_exact_without_asset_approval() {
 
     // Mint some asset tokens to owner
     let deposit_amount: u128 = mint_amount;
-    env.call_private(owner, Token::at(asset_address).mint_to_private(owner, owner, deposit_amount));
+    env.call_private(owner, Token::at(asset_address).mint_to_private(owner, deposit_amount));
 
     // Issue shares
     // At the first deposit 1 share = 1 asset
@@ -232,11 +229,12 @@ unconstrained fn issue_private_to_private_exact_on_behalf_of_wrong_caller() {
 
     // Mint some asset tokens to owner
     let deposit_amount: u128 = mint_amount;
-    env.call_private(owner, Token::at(asset_address).mint_to_private(owner, owner, deposit_amount));
+    env.call_private(owner, Token::at(asset_address).mint_to_private(owner, deposit_amount));
 
     // Deposit assets to get shares
     // Authorize the vault to use the caller's assets
     utils::authorize_transfer_private_to_public(
+        env,
         asset_address,
         vault_address,
         owner,
@@ -266,11 +264,12 @@ unconstrained fn issue_private_to_private_exact_on_behalf_of_other_success() {
 
     // Mint some asset tokens to owner
     let deposit_amount: u128 = mint_amount;
-    env.call_private(owner, Token::at(asset_address).mint_to_private(owner, owner, deposit_amount));
+    env.call_private(owner, Token::at(asset_address).mint_to_private(owner, deposit_amount));
 
     // Deposit assets to get shares
     // Authorize the vault to use the caller's assets
     utils::authorize_transfer_private_to_public(
+        env,
         asset_address,
         vault_address,
         owner,
@@ -285,6 +284,7 @@ unconstrained fn issue_private_to_private_exact_on_behalf_of_other_success() {
     let issue_private_to_private_exact_call_interface = Token::at(vault_address)
         .issue_private_to_private_exact(owner, recipient, requested_shares, max_assets, 0);
     authwit_cheatcodes::add_private_authwit_from_call_interface(
+        env,
         owner,
         recipient,
         issue_private_to_private_exact_call_interface,

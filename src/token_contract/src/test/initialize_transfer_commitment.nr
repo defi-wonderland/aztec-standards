@@ -11,7 +11,7 @@ unconstrained fn initialize_transfer_commitment() {
     // Transfer tokens
     let commitment = env.call_private(
         owner,
-        Token::at(token_contract_address).initialize_transfer_commitment(owner, recipient, owner),
+        Token::at(token_contract_address).initialize_transfer_commitment(recipient, owner),
     );
 
     let validity_commitment =
@@ -36,7 +36,6 @@ unconstrained fn initialize_transfer_commitment_and_complete_with_incorrect_comp
     let commitment = env.call_private(
         owner,
         Token::at(token_contract_address).initialize_transfer_commitment(
-            owner,
             recipient,
             random_completer,
         ),

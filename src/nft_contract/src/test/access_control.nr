@@ -1,10 +1,5 @@
 use crate::NFT;
 use crate::test::utils;
-use aztec::{
-    oracle::{execution::get_block_number, storage::storage_read},
-    protocol_types::address::AztecAddress,
-    test::helpers::txe_oracles as cheatcodes,
-};
 
 #[test]
 unconstrained fn nft_minter_is_set() {

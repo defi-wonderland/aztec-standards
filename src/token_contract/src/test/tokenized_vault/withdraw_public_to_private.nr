@@ -3,11 +3,7 @@ use aztec::test::helpers::authwit as authwit_cheatcodes;
 
 #[test(should_fail_with = "No contract instance found for address 0x0000000000000000000000000000000000000000000000000000000000000000")]
 unconstrained fn withdraw_public_to_private_without_asset() {
-    // Setup without account contracts. We are not using authwits here, so dummy accounts are enough
-    let (_, asset_address, owner, recipient) =
-        utils::setup_and_mint_to_public_without_minter(false);
-
-    let (env, vault_address, _, _, minter) = utils::setup_with_minter(false);
+    let (env, vault_address, owner, recipient, _) = utils::setup_with_minter(false);
 
     // Withdrawal should fail because the PublicImmutable asset was not initialized
     env.call_private(
@@ -151,6 +147,7 @@ unconstrained fn withdraw_public_to_private_on_behalf_of_wrong_caller() {
     let withdraw_public_to_private_call_interface = Token::at(vault_address)
         .withdraw_public_to_private(deposit_recipient, recipient, deposit_amount, 0);
     authwit_cheatcodes::add_private_authwit_from_call_interface(
+        env,
         deposit_recipient,
         owner,
         withdraw_public_to_private_call_interface,
@@ -189,6 +186,7 @@ unconstrained fn withdraw_public_to_private_on_behalf_of_other_success() {
     let withdraw_public_to_private_call_interface = Token::at(vault_address)
         .withdraw_public_to_private(deposit_recipient, recipient, deposit_amount, 0);
     authwit_cheatcodes::add_private_authwit_from_call_interface(
+        env,
         deposit_recipient,
         recipient,
         withdraw_public_to_private_call_interface,

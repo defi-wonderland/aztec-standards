@@ -10,6 +10,7 @@ concurrency:
 permissions:
   contents: read
   pull-requests: write
+  issues: write
 
 env:
   BENCH_DIR: ./benchmarks
@@ -23,7 +24,7 @@ jobs:
 
     runs-on: 
       labels: ${{ matrix.os }}
-    timeout-minutes: 30
+    timeout-minutes: 60
 
     steps:
       # ──────────────────────────────────────────────────────────────
@@ -145,6 +146,11 @@ jobs:
           VERSION=${{ steps.prver.outputs.ver }} aztec \
             start --port 8081 --pxe --pxe.nodeUrl=http://localhost:8080/ \
             --pxe.proverEnabled false &
+
+      # This is a temporary hack to fix a problem with v3 releases.
+      - name: Manually tag the aztec version as `latest`
+        run: |
+          docker tag aztecprotocol/aztec:${{ steps.prver.outputs.ver }} aztecprotocol/aztec:latest
 
       - name: Install deps (PR)
         run: yarn --frozen-lockfile

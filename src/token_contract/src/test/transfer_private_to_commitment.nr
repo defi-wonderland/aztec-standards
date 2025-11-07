@@ -13,7 +13,7 @@ unconstrained fn transfer_private_to_commitment() {
     // Prepare commitment
     let commitment = env.call_private(
         owner,
-        Token::at(token_contract_address).initialize_transfer_commitment(owner, recipient, owner),
+        Token::at(token_contract_address).initialize_transfer_commitment(recipient, owner),
     );
 
     // Transfer tokens
@@ -46,17 +46,14 @@ unconstrained fn transfer_private_to_commitment_on_behalf_of_other() {
     // Prepare commitment
     let commitment = env.call_private(
         owner,
-        Token::at(token_contract_address).initialize_transfer_commitment(
-            owner,
-            recipient,
-            recipient,
-        ),
+        Token::at(token_contract_address).initialize_transfer_commitment(recipient, recipient),
     );
 
     let transfer_to_commitment_call_interface = Token::at(token_contract_address)
         .transfer_private_to_commitment(owner, commitment, transfer_amount, 0);
 
     authwit_cheatcodes::add_private_authwit_from_call_interface(
+        env,
         owner,
         recipient,
         transfer_to_commitment_call_interface,
@@ -70,7 +67,7 @@ unconstrained fn transfer_private_to_commitment_on_behalf_of_other() {
     utils::check_private_balance(env, token_contract_address, recipient, transfer_amount);
 }
 
-#[test(should_fail_with = "Invalid partial note or completer")]
+#[test(should_fail_with = "Nullifier witness not found for nullifier")]
 unconstrained fn transfer_private_to_commitment_wrong_completer() {
     let (env, token_contract_address, owner, recipient) =
         utils::setup_and_mint_to_private_without_minter(false);
@@ -80,11 +77,7 @@ unconstrained fn transfer_private_to_commitment_wrong_completer() {
 
     let commitment = env.call_private(
         owner,
-        Token::at(token_contract_address).initialize_transfer_commitment(
-            owner,
-            recipient,
-            recipient,
-        ),
+        Token::at(token_contract_address).initialize_transfer_commitment(recipient, recipient),
     );
 
     // Transfer tokens

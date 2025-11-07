@@ -15,7 +15,7 @@ unconstrained fn nft_transfer_private_to_commitment_success() {
     // Prepare commitment
     let commitment = env.call_private(
         owner,
-        NFT::at(nft_contract_address).initialize_transfer_commitment(owner, recipient, owner),
+        NFT::at(nft_contract_address).initialize_transfer_commitment(recipient, owner),
     );
 
     // Verify commitment is stored
@@ -47,7 +47,7 @@ unconstrained fn nft_transfer_private_to_commitment_authorized_success() {
     // Prepare commitment
     let commitment = env.call_private(
         owner,
-        NFT::at(nft_contract_address).initialize_transfer_commitment(owner, recipient, owner),
+        NFT::at(nft_contract_address).initialize_transfer_commitment(recipient, owner),
     );
 
     // Verify commitment is stored
@@ -63,6 +63,7 @@ unconstrained fn nft_transfer_private_to_commitment_authorized_success() {
 
     // Add authorization witness from owner to recipient
     authwit_cheatcodes::add_private_authwit_from_call_interface(
+        env,
         owner,
         recipient,
         transfer_call_interface,
@@ -87,7 +88,7 @@ unconstrained fn nft_transfer_private_to_commitment_non_existent_fail() {
     // Prepare commitment as recipient
     let commitment = env.call_private(
         recipient,
-        NFT::at(nft_contract_address).initialize_transfer_commitment(owner, recipient, recipient),
+        NFT::at(nft_contract_address).initialize_transfer_commitment(recipient, recipient),
     );
 
     // Attempt to transfer non-existent NFT
@@ -112,7 +113,7 @@ unconstrained fn nft_transfer_private_to_commitment_unauthorized_fail() {
     // Prepare commitment as recipient
     let commitment = env.call_private(
         recipient,
-        NFT::at(nft_contract_address).initialize_transfer_commitment(owner, recipient, recipient),
+        NFT::at(nft_contract_address).initialize_transfer_commitment(recipient, recipient),
     );
 
     // Create transfer interface with non-zero nonce
@@ -137,7 +138,7 @@ unconstrained fn nft_transfer_private_to_commitment_wrong_authwit_fail() {
     // Prepare commitment as recipient
     let commitment: Field = env.call_private(
         recipient,
-        NFT::at(nft_contract_address).initialize_transfer_commitment(owner, recipient, recipient),
+        NFT::at(nft_contract_address).initialize_transfer_commitment(recipient, recipient),
     );
 
     // Create transfer interface with non-zero nonce
@@ -150,6 +151,7 @@ unconstrained fn nft_transfer_private_to_commitment_wrong_authwit_fail() {
 
     // Add authorization witness but to the wrong address (owner instead of recipient)
     authwit_cheatcodes::add_private_authwit_from_call_interface(
+        env,
         owner,
         owner, // Wrong address - should be recipient
         transfer_call_interface,
@@ -169,7 +171,7 @@ unconstrained fn nft_transfer_private_to_commitment_public_nft_fail() {
     // Prepare commitment as recipient
     let commitment = env.call_private(
         recipient,
-        NFT::at(nft_contract_address).initialize_transfer_commitment(owner, recipient, recipient),
+        NFT::at(nft_contract_address).initialize_transfer_commitment(recipient, recipient),
     );
 
     // Verify NFT is in public state

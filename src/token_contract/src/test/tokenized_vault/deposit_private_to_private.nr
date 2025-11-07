@@ -1,15 +1,9 @@
 use crate::{test::utils::{self, mint_amount}, Token};
 use aztec::test::helpers::authwit as authwit_cheatcodes;
 
-// #[test(should_fail_with = "Artifact not found when enriching public simulation error. Contract address: 0x0000000000000000000000000000000000000000000000000000000000000000.")]
-// TODO(https://defi-wonderland.slack.com/archives/C086S2Y2925/p1751922367349379): private --> public execution flow is broken in noir tests. While this should fail in private context, the public context error is currently thrown.
-// #[test(should_fail_with = "Trying to read from uninitialized PublicImmutable")]
-#[test(should_fail_with = "Failed to sync block: Unable to insert values into tree NullifierTree")]
+#[test(should_fail_with = "No contract instance found for address 0x0000000000000000000000000000000000000000000000000000000000000000")]
 unconstrained fn deposit_private_to_private_without_asset() {
-    // Setup without account contracts. We are not using authwits here, so dummy accounts are enough
-    let (_, asset_address, owner, recipient) = utils::setup_and_mint_to_public_without_minter(true);
-
-    let (env, vault_address, _, _, minter) = utils::setup_with_minter(true);
+    let (env, vault_address, owner, recipient, _) = utils::setup_with_minter(true);
 
     // Deposit should fail because the PublicImmutable asset was not initialized
     env.call_private(
@@ -31,11 +25,12 @@ unconstrained fn deposit_private_to_private_success() {
 
     // Mint some asset tokens to owner
     let deposit_amount: u128 = mint_amount;
-    env.call_private(owner, Token::at(asset_address).mint_to_private(owner, owner, deposit_amount));
+    env.call_private(owner, Token::at(asset_address).mint_to_private(owner, deposit_amount));
 
     // Deposit assets to get shares
     // Authorize the vault to use the caller's assets
     utils::authorize_transfer_private_to_public(
+        env,
         asset_address,
         vault_address,
         owner,
@@ -80,11 +75,12 @@ unconstrained fn deposit_private_to_private_after_yield() {
 
     // Mint some asset tokens to owner
     let deposit_amount: u128 = mint_amount;
-    env.call_private(owner, Token::at(asset_address).mint_to_private(owner, owner, deposit_amount));
+    env.call_private(owner, Token::at(asset_address).mint_to_private(owner, deposit_amount));
 
     // Deposit assets to get shares
     // Authorize the vault to use the caller's assets
     utils::authorize_transfer_private_to_public(
+        env,
         asset_address,
         vault_address,
         owner,
@@ -129,11 +125,12 @@ unconstrained fn deposit_private_to_private_request_fewer_shares() {
 
     // Mint some asset tokens to owner
     let deposit_amount: u128 = mint_amount;
-    env.call_private(owner, Token::at(asset_address).mint_to_private(owner, owner, deposit_amount));
+    env.call_private(owner, Token::at(asset_address).mint_to_private(owner, deposit_amount));
 
     // Deposit assets to get shares
     // Authorize the vault to use the caller's assets
     utils::authorize_transfer_private_to_public(
+        env,
         asset_address,
         vault_address,
         owner,
@@ -174,11 +171,12 @@ unconstrained fn deposit_private_to_private_request_too_many_shares() {
 
     // Mint some asset tokens to owner
     let deposit_amount: u128 = mint_amount;
-    env.call_private(owner, Token::at(asset_address).mint_to_private(owner, owner, deposit_amount));
+    env.call_private(owner, Token::at(asset_address).mint_to_private(owner, deposit_amount));
 
     // Deposit assets to get shares
     // Authorize the vault to use the caller's assets
     utils::authorize_transfer_private_to_public(
+        env,
         asset_address,
         vault_address,
         owner,
@@ -209,7 +207,7 @@ unconstrained fn deposit_private_to_private_without_asset_approval() {
 
     // Mint some asset tokens to owner
     let deposit_amount: u128 = mint_amount;
-    env.call_private(owner, Token::at(asset_address).mint_to_private(owner, owner, deposit_amount));
+    env.call_private(owner, Token::at(asset_address).mint_to_private(owner, deposit_amount));
 
     // Deposit
     // At the first deposit 1 share = 1 asset
@@ -234,11 +232,12 @@ unconstrained fn deposit_private_to_private_on_behalf_of_wrong_caller() {
 
     // Mint some asset tokens to owner
     let deposit_amount: u128 = mint_amount;
-    env.call_private(owner, Token::at(asset_address).mint_to_private(owner, owner, deposit_amount));
+    env.call_private(owner, Token::at(asset_address).mint_to_private(owner, deposit_amount));
 
     // Deposit assets to get shares
     // Authorize the vault to use the caller's assets
     utils::authorize_transfer_private_to_public(
+        env,
         asset_address,
         vault_address,
         owner,
@@ -268,11 +267,12 @@ unconstrained fn deposit_private_to_private_on_behalf_of_other_success() {
 
     // Mint some asset tokens to owner
     let deposit_amount: u128 = mint_amount;
-    env.call_private(owner, Token::at(asset_address).mint_to_private(owner, owner, deposit_amount));
+    env.call_private(owner, Token::at(asset_address).mint_to_private(owner, deposit_amount));
 
     // Deposit assets to get shares
     // Authorize the vault to use the caller's assets
     utils::authorize_transfer_private_to_public(
+        env,
         asset_address,
         vault_address,
         owner,
@@ -286,6 +286,7 @@ unconstrained fn deposit_private_to_private_on_behalf_of_other_success() {
     let deposit_private_to_private_call_interface = Token::at(vault_address)
         .deposit_private_to_private(owner, recipient, deposit_amount, shares, 0);
     authwit_cheatcodes::add_private_authwit_from_call_interface(
+        env,
         owner,
         recipient,
         deposit_private_to_private_call_interface,

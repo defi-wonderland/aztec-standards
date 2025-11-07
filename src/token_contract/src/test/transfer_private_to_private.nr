@@ -13,6 +13,7 @@ unconstrained fn transfer_private_on_behalf_of_other() {
     let transfer_private_from_call_interface = Token::at(token_contract_address)
         .transfer_private_to_private(owner, recipient, transfer_amount, 1);
     authwit_cheatcodes::add_private_authwit_from_call_interface(
+        env,
         owner,
         recipient,
         transfer_private_from_call_interface,
@@ -27,6 +28,21 @@ unconstrained fn transfer_private_on_behalf_of_other() {
         mint_amount - transfer_amount,
     );
     utils::check_private_balance(env, token_contract_address, recipient, transfer_amount);
+}
+
+#[test]
+unconstrained fn transfer_private_zero_amount() {
+    let (mut env, token_contract_address, owner, recipient) =
+        utils::setup_and_mint_to_private_without_minter(false);
+
+    env.call_private(
+        owner,
+        Token::at(token_contract_address).transfer_private_to_private(owner, recipient, 0, 0),
+    );
+
+    // Check balances
+    utils::check_private_balance(env, token_contract_address, owner, mint_amount);
+    utils::check_private_balance(env, token_contract_address, recipient, 0);
 }
 
 #[test]
@@ -91,6 +107,7 @@ unconstrained fn transfer_private_failure_on_behalf_of_more_than_balance() {
     let transfer_private_from_call_interface = Token::at(token_contract_address)
         .transfer_private_to_private(owner, recipient, transfer_amount, 1);
     authwit_cheatcodes::add_private_authwit_from_call_interface(
+        env,
         owner,
         recipient,
         transfer_private_from_call_interface,
@@ -123,6 +140,7 @@ unconstrained fn transfer_private_failure_on_behalf_of_other_wrong_caller() {
     let transfer_private_from_call_interface = Token::at(token_contract_address)
         .transfer_private_to_private(owner, recipient, transfer_amount, 1);
     authwit_cheatcodes::add_private_authwit_from_call_interface(
+        env,
         owner,
         owner,
         transfer_private_from_call_interface,

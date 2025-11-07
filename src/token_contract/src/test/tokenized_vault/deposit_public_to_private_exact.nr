@@ -1,15 +1,9 @@
 use crate::{test::utils::{self, mint_amount}, Token};
 use aztec::test::helpers::authwit as authwit_cheatcodes;
 
-// #[test(should_fail_with = "Artifact not found when enriching public simulation error. Contract address: 0x0000000000000000000000000000000000000000000000000000000000000000.")]
-// TODO(https://defi-wonderland.slack.com/archives/C086S2Y2925/p1751922367349379): private --> public execution flow is broken in noir tests. While this should fail in private context, the public context error is currently thrown.
 #[test(should_fail_with = "Trying to read from uninitialized PublicImmutable")]
 unconstrained fn deposit_public_to_private_exact_without_asset() {
-    // Setup without account contracts. We are not using authwits here, so dummy accounts are enough
-    let (_, asset_address, owner, recipient) =
-        utils::setup_and_mint_to_public_without_minter(false);
-
-    let (env, vault_address, _, _, minter) = utils::setup_with_minter(false);
+    let (env, vault_address, owner, recipient, _) = utils::setup_with_minter(false);
 
     // Deposit should fail because the PublicImmutable asset was not initialized
     env.call_private(
@@ -124,10 +118,6 @@ unconstrained fn deposit_public_to_private_exact_after_yield() {
     );
 }
 
-// #[test]
-// TODO: Test is incorrectly failing due to an issue that affects the discovery of partial notes.
-// When a partial note is initialized and completed and also a note is added, the partial note is not found.
-// #[test(should_fail_with = "A partial note's completion log did not result in any notes being found - this should never happen")]
 #[test]
 unconstrained fn deposit_public_to_private_exact_request_fewer_shares() {
     // Setup with asset token
@@ -291,6 +281,7 @@ unconstrained fn deposit_public_to_private_exact_on_behalf_of_other_success() {
     let deposit_public_to_private_exact_call_interface = Token::at(vault_address)
         .deposit_public_to_private_exact(owner, recipient, deposit_amount, min_shares, 0);
     authwit_cheatcodes::add_private_authwit_from_call_interface(
+        env,
         owner,
         recipient,
         deposit_public_to_private_exact_call_interface,

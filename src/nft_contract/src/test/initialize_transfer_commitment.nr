@@ -11,7 +11,7 @@ unconstrained fn nft_initialize_transfer_commitment_success() {
     // Initialize transfer commitment
     let commitment = env.call_private(
         owner,
-        NFT::at(nft_contract_address).initialize_transfer_commitment(owner, recipient, owner),
+        NFT::at(nft_contract_address).initialize_transfer_commitment(recipient, owner),
     );
 
     // Verify commitment is stored
@@ -22,13 +22,13 @@ unconstrained fn nft_initialize_transfer_commitment_success() {
 unconstrained fn nft_initialize_transfer_commitment_by_recipient_success() {
     // Setup with NFT in private state
     let token_id = 10000;
-    let (env, nft_contract_address, owner, _, recipient) =
+    let (env, nft_contract_address, _, _, recipient) =
         utils::setup_and_mint_to_private(false, token_id);
 
     // Initialize transfer commitment as recipient
     let commitment = env.call_private(
         recipient,
-        NFT::at(nft_contract_address).initialize_transfer_commitment(owner, recipient, recipient),
+        NFT::at(nft_contract_address).initialize_transfer_commitment(recipient, recipient),
     );
 
     // Verify commitment is stored
@@ -45,7 +45,7 @@ unconstrained fn nft_initialize_transfer_commitment_self_success() {
     // Initialize transfer commitment to self
     let commitment = env.call_private(
         owner,
-        NFT::at(nft_contract_address).initialize_transfer_commitment(owner, owner, owner),
+        NFT::at(nft_contract_address).initialize_transfer_commitment(owner, owner),
     );
 
     // Verify commitment is stored
@@ -56,13 +56,13 @@ unconstrained fn nft_initialize_transfer_commitment_self_success() {
 unconstrained fn nft_initialize_transfer_commitment_by_third_party_success() {
     // Setup with NFT in private state
     let token_id = 10000;
-    let (env, nft_contract_address, owner, minter, recipient) =
+    let (env, nft_contract_address, _, minter, recipient) =
         utils::setup_and_mint_to_private(false, token_id);
 
     // Initialize transfer commitment as minter (third party)
     let commitment = env.call_private(
         minter,
-        NFT::at(nft_contract_address).initialize_transfer_commitment(owner, recipient, minter),
+        NFT::at(nft_contract_address).initialize_transfer_commitment(recipient, minter),
     );
 
     // Verify commitment is stored

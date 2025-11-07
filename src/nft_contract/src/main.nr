@@ -1,5 +1,5 @@
-mod types;
-mod test;
+pub mod types;
+pub mod test;
 
 use aztec::macros::aztec;
 
@@ -11,11 +11,8 @@ pub contract NFT {
             assert_current_call_valid_authwit, assert_current_call_valid_authwit_public,
         },
         context::{PrivateContext, PublicContext},
-        macros::{
-            functions::{initializer, internal, private, public, utility, view},
-            storage::storage,
-        },
-        messages::logs::note::encode_and_encrypt_note,
+        macros::{functions::{external, initializer, internal, view}, storage::storage},
+        messages::message_delivery::MessageDelivery,
         note::{
             constants::MAX_NOTES_PER_PAGE, note_getter_options::NoteGetterOptions,
             note_interface::NoteProperties, note_viewer_options::NoteViewerOptions,
@@ -60,7 +57,7 @@ pub contract NFT {
     /// @param name The name of the NFT
     /// @param symbol The symbol of the NFT
     /// @param minter The address of the minter
-    #[public]
+    #[external("public")]
     #[initializer]
     fn constructor_with_minter(
         name: str<31>,
@@ -84,7 +81,7 @@ pub contract NFT {
     /// @param to The address of the recipient
     /// @param token_id The id of the token to transfer
     /// @param _nonce The nonce used for authwitness
-    #[private]
+    #[external("private")]
     fn transfer_private_to_public(
         from: AztecAddress,
         to: AztecAddress,
@@ -106,7 +103,7 @@ pub contract NFT {
     /// @param token_id The id of the token to transfer
     /// @param _nonce The nonce used for authwitness
     /// @return commitment The partial nft note utilized for the transfer commitment (privacy entrance)
-    #[private]
+    #[external("private")]
     fn transfer_private_to_public_with_commitment(
         from: AztecAddress,
         to: AztecAddress,
@@ -119,7 +116,7 @@ pub contract NFT {
         NFT::at(context.this_address())
             .update_public_token_owner_from_zero_internal(to, token_id)
             .enqueue(&mut context);
-        let completer = context.msg_sender();
+        let completer = context.msg_sender().unwrap();
         let commitment =
             _initialize_transfer_commitment(&mut context, storage.private_nfts, to, completer);
         commitment.commitment()
@@ -131,7 +128,7 @@ pub contract NFT {
     /// @param to The address of the recipient
     /// @param token_id The id of the token to transfer
     /// @param _nonce The nonce used for authwitness
-    #[private]
+    #[external("private")]
     fn transfer_private_to_private(
         from: AztecAddress,
         to: AztecAddress,
@@ -141,7 +138,7 @@ pub contract NFT {
         _validate_from_private::<4>(&mut context, from);
 
         _remove_private_token_owner(storage.private_nfts.at(from), token_id);
-        _update_private_token_owner(&mut context, storage.private_nfts.at(to), to, token_id);
+        _update_private_token_owner(storage.private_nfts.at(to), to, token_id);
     }
 
     /// @notice Transfers token by id from private owner to the recipient commitment (recipient must create a commitment first)
@@ -150,7 +147,7 @@ pub contract NFT {
     /// @param token_id The id of the token to transfer
     /// @param commitment The commitment to use for the transfer
     /// @param _nonce The nonce used for authwitness
-    #[private]
+    #[external("private")]
     fn transfer_private_to_commitment(
         from: AztecAddress,
         token_id: Field,
@@ -172,7 +169,7 @@ pub contract NFT {
     /// @param to The address of the recipient
     /// @param token_id The id of the token to transfer
     /// @param _nonce The nonce used for authwitness
-    #[private]
+    #[external("private")]
     fn transfer_public_to_private(
         from: AztecAddress,
         to: AztecAddress,
@@ -184,20 +181,16 @@ pub contract NFT {
         NFT::at(context.this_address())
             .update_public_token_owner_internal(from, AztecAddress::zero(), token_id)
             .enqueue(&mut context);
-        _update_private_token_owner(&mut context, storage.private_nfts.at(to), to, token_id);
+        _update_private_token_owner(storage.private_nfts.at(to), to, token_id);
     }
 
     /// @notice Initializes a transfer commitment to be used for transfers
     /// @dev Returns a partial nft note that can be used to execute transfers
-    /// @param from The address of the sender
     /// @param to The address of the recipient
+    /// @param completer The address allowed to complete the partial note
     /// @return commitment The partial nft note utilized for the transfer commitment (privacy entrance)
-    #[private]
-    fn initialize_transfer_commitment(
-        from: AztecAddress,
-        to: AztecAddress,
-        completer: AztecAddress,
-    ) -> Field {
+    #[external("private")]
+    fn initialize_transfer_commitment(to: AztecAddress, completer: AztecAddress) -> Field {
         let commitment =
             _initialize_transfer_commitment(&mut context, storage.private_nfts, to, completer);
         commitment.commitment()
@@ -213,7 +206,7 @@ pub contract NFT {
     /// @param to The address of the recipient
     /// @param token_id The id of the token to transfer
     /// @param _nonce The nonce used for authwitness
-    #[public]
+    #[external("public")]
     fn transfer_public_to_public(
         from: AztecAddress,
         to: AztecAddress,
@@ -232,7 +225,7 @@ pub contract NFT {
     /// @param token_id The id of the token to transfer
     /// @param commitment The commitment to use for the transfer
     /// @param _nonce The nonce used for authwitness
-    #[public]
+    #[external("public")]
     fn transfer_public_to_commitment(
         from: AztecAddress,
         token_id: Field,
@@ -243,13 +236,13 @@ pub contract NFT {
         _validate_public_token_owner(storage.public_owners, from, token_id);
 
         _update_public_token_owner(storage.public_owners, AztecAddress::zero(), token_id);
-        let completer = context.msg_sender();
+        let completer = context.msg_sender().unwrap();
         _transfer_token_to_commitment(&mut context, commitment.to_field(), token_id, completer);
     }
 
     /// @notice Stores a commitment in storage
     /// @param commitment The commitment to store
-    #[public]
+    #[external("public")]
     #[internal]
     fn store_commitment_in_storage_internal(commitment: PartialNFTNote) {
         _store_commitment_in_storage(&mut context, commitment);
@@ -259,7 +252,7 @@ pub contract NFT {
     /// @param commitment The commitment to transfer
     /// @param token_id The id of the token to transfer
     /// @param completer The address that is authorized to complete this commitment
-    #[public]
+    #[external("public")]
     #[internal]
     fn transfer_token_to_commitment_internal(
         commitment: Field,
@@ -273,7 +266,7 @@ pub contract NFT {
     /// @param from The address of the sender
     /// @param to The address of the recipient
     /// @param token_id The id of the token to update
-    #[public]
+    #[external("public")]
     #[internal]
     fn update_public_token_owner_internal(from: AztecAddress, to: AztecAddress, token_id: Field) {
         _validate_public_token_owner(storage.public_owners, from, token_id);
@@ -283,7 +276,7 @@ pub contract NFT {
     /// @notice Initializes the public token owner from zero address
     /// @param token_id The id of the token to update
     /// @param exists The new exists value
-    #[public]
+    #[external("public")]
     #[internal]
     fn update_public_token_owner_from_zero_internal(to: AztecAddress, token_id: Field) {
         _update_public_token_owner(storage.public_owners, to, token_id);
@@ -293,7 +286,7 @@ pub contract NFT {
     /// @dev Asserts token does not exist when setting `exists` to true (minting) and that token exist when setting `exists` to false (burning)
     /// @param token_id The id of the token to set
     /// @param exists The new exists value
-    #[public]
+    #[external("public")]
     #[internal]
     fn set_nft_exists_internal(token_id: Field, exists: bool) {
         if exists {
@@ -309,21 +302,21 @@ pub contract NFT {
      * ======================================================== */
 
     /// @return name The name of the NFT collection
-    #[public]
+    #[external("public")]
     #[view]
     fn public_get_name() -> pub FieldCompressedString {
         storage.name.read()
     }
 
     /// @return symbol The symbol of the NFT collection
-    #[public]
+    #[external("public")]
     #[view]
     fn public_get_symbol() -> pub FieldCompressedString {
         storage.symbol.read()
     }
 
     /// @return owner The owner of a token by id
-    #[public]
+    #[external("public")]
     #[view]
     fn public_owner_of(token_id: Field) -> pub AztecAddress {
         storage.public_owners.at(token_id).read()
@@ -340,7 +333,7 @@ pub contract NFT {
     /// @param page_index The index of the page to start getting notes from
     /// @return owned_nft_ids An array of token IDs owned by `owner`
     /// @return page_limit_reached A flag indicating whether a page limit was reached
-    #[utility]
+    #[external("utility")]
     unconstrained fn get_private_nfts(
         owner: AztecAddress,
         page_index: u32,
@@ -366,26 +359,26 @@ pub contract NFT {
     /// @dev Asserts that the caller is an authorized minter
     /// @param to The address of the recipient
     /// @param token_id The id of the token to mint
-    #[private]
+    #[external("private")]
     fn mint_to_private(to: AztecAddress, token_id: Field) {
         assert(token_id != 0, "zero token ID not supported");
-        _validate_minter(context.msg_sender(), storage.minter.read());
+        _validate_minter(context.msg_sender().unwrap(), storage.minter.read());
 
         NFT::at(context.this_address()).set_nft_exists_internal(token_id, true).enqueue(&mut context);
-        storage.private_nfts.at(to).insert(NFTNote::new(token_id, to)).emit(encode_and_encrypt_note(
-            &mut context,
+        storage.private_nfts.at(to).insert(NFTNote::new(token_id, to)).emit(
             to,
-        ));
+            MessageDelivery.CONSTRAINED_ONCHAIN,
+        );
     }
 
     /// @notice Mints a token to a public address
     /// @dev Asserts that the caller is an authorized minter
     /// @param to The address of the recipient
     /// @param token_id The id of the token to mint
-    #[public]
+    #[external("public")]
     fn mint_to_public(to: AztecAddress, token_id: Field) {
         assert(token_id != 0, "zero token ID not supported");
-        _validate_minter(context.msg_sender(), storage.minter.read());
+        _validate_minter(context.msg_sender().unwrap(), storage.minter.read());
         assert(!storage.nft_exists.at(token_id).read(), "token already exists");
 
         storage.nft_exists.at(token_id).write(true);
@@ -401,7 +394,7 @@ pub contract NFT {
     /// @param from The address of the owner
     /// @param token_id The id of the token to burn
     /// @param _nonce The nonce used for authwitness
-    #[private]
+    #[external("private")]
     fn burn_private(from: AztecAddress, token_id: Field, _nonce: Field) {
         _validate_from_private::<3>(&mut context, from);
 
@@ -416,7 +409,7 @@ pub contract NFT {
     /// @param from The address of the owner
     /// @param token_id The id of the token to burn
     /// @param _nonce The nonce used for authwitness
-    #[public]
+    #[external("public")]
     fn burn_public(from: AztecAddress, token_id: Field, _nonce: Field) {
         _validate_from_public(&mut context, from);
 
@@ -433,12 +426,15 @@ pub contract NFT {
     /// @dev The upgrade authority must be set
     /// @dev The upgrade will only be effective after the upgrade delay has passed
     /// @param new_contract_class_id The new contract class id
-    #[public]
+    #[external("public")]
     fn upgrade_contract(new_contract_class_id: Field) {
         let upgrade_authority = storage.upgrade_authority.read();
 
         assert(!upgrade_authority.eq(AztecAddress::zero()), "upgrade authority not set");
-        assert(context.msg_sender().eq(upgrade_authority), "caller is not upgrade authority");
+        assert(
+            context.msg_sender().unwrap().eq(upgrade_authority),
+            "caller is not upgrade authority",
+        );
 
         ContractInstanceRegistry::at(CONTRACT_INSTANCE_REGISTRY_CONTRACT_ADDRESS)
             .update(ContractClassId::from_field(new_contract_class_id))
@@ -480,20 +476,18 @@ pub contract NFT {
     }
 
     /// @notice Updates the private token owner
-    /// @param context The context of the private call
     /// @param private_nft_set The private owner
     /// @param from The address of the sender
     /// @param to The address of the recipient
     /// @param token_id The id of the token to update
     #[contract_library_method]
     fn _update_private_token_owner(
-        context: &mut PrivateContext,
         private_nft_set: PrivateSet<NFTNote, &mut PrivateContext>,
         to: AztecAddress,
         token_id: Field,
     ) {
         let new_note = NFTNote::new(token_id, to);
-        private_nft_set.insert(new_note).emit(encode_and_encrypt_note(context, to));
+        private_nft_set.insert(new_note).emit(to, MessageDelivery.CONSTRAINED_ONCHAIN);
     }
 
     /// @notice Removes the private token owner
@@ -575,7 +569,7 @@ pub contract NFT {
     /// @param from The address of the sender
     #[contract_library_method]
     fn _validate_from_private<let N: u32>(context: &mut PrivateContext, from: AztecAddress) {
-        if (!from.eq(context.msg_sender())) {
+        if (!from.eq(context.msg_sender().unwrap())) {
             assert_current_call_valid_authwit::<N>(context, from);
         }
     }
@@ -585,7 +579,7 @@ pub contract NFT {
     /// @param from The address of the sender
     #[contract_library_method]
     unconstrained fn _validate_from_public(context: &mut PublicContext, from: AztecAddress) {
-        if (!from.eq(context.msg_sender())) {
+        if (!from.eq(context.msg_sender().unwrap())) {
             assert_current_call_valid_authwit_public(context, from);
         }
     }

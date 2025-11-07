@@ -1,13 +1,9 @@
 use crate::{test::{tokenized_vault::tokenized_vault_utils, utils::{self, mint_amount}}, Token};
 use aztec::test::helpers::authwit as authwit_cheatcodes;
 
-#[test(should_fail_with = "Assertion failed: Balance too low")]
+#[test(should_fail_with = "Trying to read from uninitialized PublicImmutable")]
 unconstrained fn withdraw_private_to_public_exact_without_asset() {
-    // Setup without account contracts. We are not using authwits here, so dummy accounts are enough
-    let (_, asset_address, owner, recipient) =
-        utils::setup_and_mint_to_public_without_minter(false);
-
-    let (env, vault_address, _, _, minter) = utils::setup_with_minter(false);
+    let (env, vault_address, owner, recipient, _) = utils::setup_with_minter(false);
 
     // Withdrawal should fail because the PublicImmutable asset was not initialized
     env.call_private(
@@ -238,6 +234,7 @@ unconstrained fn withdraw_private_to_public_exact_on_behalf_of_wrong_caller() {
             0,
         );
     authwit_cheatcodes::add_private_authwit_from_call_interface(
+        env,
         deposit_recipient,
         owner,
         withdraw_private_to_public_exact_call_interface,
@@ -284,6 +281,7 @@ unconstrained fn withdraw_private_to_public_exact_on_behalf_of_other_success() {
             0,
         );
     authwit_cheatcodes::add_private_authwit_from_call_interface(
+        env,
         deposit_recipient,
         recipient,
         withdraw_private_to_public_exact_call_interface,
