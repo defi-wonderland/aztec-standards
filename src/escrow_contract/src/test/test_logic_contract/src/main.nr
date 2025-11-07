@@ -7,10 +7,7 @@ contract TestLogic {
     // aztec library
     use aztec::{
         macros::{events::event, functions::{external, initializer}, storage::storage},
-        oracle::get_contract_instance::get_contract_instance,
-        protocol_types::{
-            address::AztecAddress, contract_instance::ContractInstance, public_keys::PublicKeys,
-        },
+        protocol_types::{address::AztecAddress, public_keys::PublicKeys},
         state_vars::public_immutable::PublicImmutable,
     };
     use escrow_contract::library::logic::{
@@ -21,9 +18,11 @@ contract TestLogic {
     /// @notice Data privately emitted to an account that will use the escrow
     /// @dev We declare the event struct here to expose it in the abi as macro event cannot be declared in libraries, only in contracts
     /// @dev See to library/logic.nr _share_escrow function for the event emission implementation
+    /// @dev #[allow(dead_code)] added because is used because EscrowDetailsLogContent is defined for logging but not directly instantiated.
     /// @param escrow The address of the escrow
     /// @param master_secret_keys The master secret keys
     #[event]
+    #[allow(dead_code)]
     struct EscrowDetailsLogContent {
         escrow: AztecAddress,
         master_secret_keys: MasterSecretKeys,

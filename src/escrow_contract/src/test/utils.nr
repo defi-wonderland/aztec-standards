@@ -1,4 +1,3 @@
-use crate::Escrow;
 use aztec::{
     oracle::random::random,
     protocol_types::{address::AztecAddress, traits::ToField},

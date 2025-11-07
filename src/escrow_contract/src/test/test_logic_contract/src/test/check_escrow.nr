@@ -1,9 +1,6 @@
 use crate::test::utils as logic_utils;
 use crate::TestLogic;
-use aztec::{
-    protocol_types::traits::ToField,
-    test::helpers::{test_environment::TestEnvironment, txe_oracles},
-};
+use aztec::test::helpers::test_environment::TestEnvironment;
 use escrow_contract::test::utils as escrow_utils;
 
 // TODO: Testing that check_escrow succeeds is not possible given that custom salt is not supported yet in the test environment,

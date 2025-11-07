@@ -4,7 +4,6 @@ use aztec::{
         address::AztecAddress,
         point::Point,
         public_keys::{IvpkM, NpkM, OvpkM, PublicKeys, TpkM},
-        traits::ToField,
     },
     test::helpers::test_environment::TestEnvironment,
 };
