@@ -24,11 +24,6 @@ import {
   computeSaltedInitializationHash,
   computeContractAddressFromInstance,
 } from '@aztec/stdlib/contract';
-import {
-  INITIAL_TEST_SECRET_KEYS,
-  INITIAL_TEST_ACCOUNT_SALTS,
-  INITIAL_TEST_ENCRYPTION_KEYS,
-} from '@aztec/accounts/testing';
 
 import { type PXE } from '@aztec/pxe/server';
 import { createStore } from '@aztec/kv-store/lmdb-v2';
