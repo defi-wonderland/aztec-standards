@@ -6,11 +6,8 @@ use aztec::macros::aztec;
 contract TestLogic {
     // aztec library
     use aztec::{
-        macros::{events::event, functions::{initializer, private, public}, storage::storage},
-        oracle::get_contract_instance::get_contract_instance,
-        protocol_types::{
-            address::AztecAddress, contract_instance::ContractInstance, public_keys::PublicKeys,
-        },
+        macros::{events::event, functions::{external, initializer}, storage::storage},
+        protocol_types::{address::AztecAddress, public_keys::PublicKeys},
         state_vars::public_immutable::PublicImmutable,
     };
     use escrow_contract::library::logic::{
@@ -21,9 +18,11 @@ contract TestLogic {
     /// @notice Data privately emitted to an account that will use the escrow
     /// @dev We declare the event struct here to expose it in the abi as macro event cannot be declared in libraries, only in contracts
     /// @dev See to library/logic.nr _share_escrow function for the event emission implementation
+    /// @dev #[allow(dead_code)] added because is used because EscrowDetailsLogContent is defined for logging but not directly instantiated.
     /// @param escrow The address of the escrow
     /// @param master_secret_keys The master secret keys
     #[event]
+    #[allow(dead_code)]
     struct EscrowDetailsLogContent {
         escrow: AztecAddress,
         master_secret_keys: MasterSecretKeys,
@@ -37,7 +36,7 @@ contract TestLogic {
 
     /// @dev Initialize the contract
     /// @param escrow_class_id The contract class id of the escrow contract
-    #[public]
+    #[external("public")]
     #[initializer]
     fn constructor(escrow_class_id: Field) {
         storage.escrow_class_id.initialize(escrow_class_id);
@@ -47,7 +46,7 @@ contract TestLogic {
     /// @dev Reverts if the data is not correct.
     /// @param escrow The address of the escrow
     /// @param master_secret_keys The master secret keys
-    #[private]
+    #[external("private")]
     fn check_escrow(escrow: AztecAddress, master_secret_keys: MasterSecretKeys) {
         _check_escrow(
             &mut context,
@@ -62,7 +61,7 @@ contract TestLogic {
     /// @param account The address of the account that will receive the escrow details
     /// @param escrow The address of the escrow
     /// @param master_secret_keys The master secret keys
-    #[private]
+    #[external("private")]
     fn share_escrow(
         account: AztecAddress,
         escrow: AztecAddress,
@@ -76,7 +75,7 @@ contract TestLogic {
     /// @param account The address of the account that will receive the tokens
     /// @param token The address of the token
     /// @param amount The amount of tokens to withdraw from the escrow
-    #[private]
+    #[external("private")]
     fn withdraw(escrow: AztecAddress, account: AztecAddress, token: AztecAddress, amount: u128) {
         _withdraw(&mut context, escrow, account, token, amount);
     }
@@ -86,7 +85,7 @@ contract TestLogic {
     /// @param account The address of the account that will receive the NFT
     /// @param nft The address of the NFT contract
     /// @param token_id The id of the token to withdraw from the escrow
-    #[private]
+    #[external("private")]
     fn withdraw_nft(
         escrow: AztecAddress,
         account: AztecAddress,
@@ -99,7 +98,7 @@ contract TestLogic {
     /// @notice Derives public keys from secret keys.
     /// @param master_secret_keys The master secret keys
     /// @return PublicKeys containing the derived public keys.
-    #[private]
+    #[external("private")]
     fn secret_keys_to_public_keys(master_secret_keys: MasterSecretKeys) -> PublicKeys {
         _secret_keys_to_public_keys(master_secret_keys)
     }

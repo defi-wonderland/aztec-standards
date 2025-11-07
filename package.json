@@ -1,6 +1,6 @@
 {
   "name": "@defi-wonderland/aztec-standards",
-  "version": "2.1.0-rc.6",
+  "version": "3.0.0-devnet.2",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/defi-wonderland/aztec-standards.git"
@@ -10,7 +10,7 @@
   "type": "module",
   "scripts": {
     "postinstall": "husky",
-    "clean": "rm -rf ./artifacts ./target",
+    "clean": "rm -rf ./artifacts ./target codegenCache.json",
     "codegen": "aztec codegen target --outdir artifacts --force",
     "compile": "aztec-nargo compile && aztec-postprocess-contract",
     "start:pxe": "docker compose -p sandbox -f ~/.aztec/docker-compose.sandbox.yml -f docker-compose.override.yml up",
@@ -19,19 +19,21 @@
     "test:nr": "aztec test",
     "lint:prettier": "prettier '**/*.{js,ts}' --write",
     "bench": "NODE_NO_WARNINGS=1 aztec-benchmark --suffix _base",
-    "ccc": "yarn clean && yarn compile && yarn codegen"
+    "ccc": "yarn clean && yarn compile && yarn codegen",
+    "generate-release-artifacts": "tsc artifacts/*.ts --outDir dist/ --skipLibCheck --target es2020 --module nodenext --moduleResolution nodenext --resolveJsonModule --declaration"
   },
   "lint-staged": {
     "*.ts": "prettier --write -u"
   },
   "dependencies": {
-    "@aztec/accounts": "2.1.0-rc.6",
-    "@aztec/aztec.js": "2.1.0-rc.6",
-    "@aztec/noir-contracts.js": "2.1.0-rc.6",
-    "@aztec/protocol-contracts": "2.1.0-rc.6",
-    "@aztec/pxe": "2.1.0-rc.6",
-    "@aztec/stdlib": "2.1.0-rc.6",
-    "@defi-wonderland/aztec-benchmark": "2.0.0",
+    "@aztec/accounts": "3.0.0-devnet.2",
+    "@aztec/aztec.js": "3.0.0-devnet.2",
+    "@aztec/noir-contracts.js": "3.0.0-devnet.2",
+    "@aztec/protocol-contracts": "3.0.0-devnet.2",
+    "@aztec/pxe": "3.0.0-devnet.2",
+    "@aztec/stdlib": "3.0.0-devnet.2",
+    "@aztec/test-wallet": "3.0.0-devnet.2",
+    "@defi-wonderland/aztec-benchmark": "3.0.0-devnet.2",
     "@types/node": "22.5.1"
   },
   "devDependencies": {
@@ -50,7 +52,7 @@
     "testTimeout": 200000
   },
   "config": {
-    "aztecVersion": "2.1.0-rc.6"
+    "aztecVersion": "3.0.0-devnet.2"
   },
   "packageManager": "yarn@1.22.22+sha512.a6b2f7906b721bba3d67d4aff083df04dad64c399707841b7acf00f6b133b7ac24255f2652fa22ae3534329dc6180534e98d17432037ff6fd140556e2bb3137e"
 }

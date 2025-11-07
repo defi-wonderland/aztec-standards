@@ -281,6 +281,7 @@ unconstrained fn deposit_public_to_private_exact_on_behalf_of_other_success() {
     let deposit_public_to_private_exact_call_interface = Token::at(vault_address)
         .deposit_public_to_private_exact(owner, recipient, deposit_amount, min_shares, 0);
     authwit_cheatcodes::add_private_authwit_from_call_interface(
+        env,
         owner,
         recipient,
         deposit_public_to_private_exact_call_interface,

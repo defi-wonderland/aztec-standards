@@ -1,13 +1,14 @@
 // aztec library
 use aztec::{
     context::PrivateContext,
-    event::event_interface::{emit_event_in_private, MessageDelivery},
+    event::event_emission::emit_event_in_private,
+    messages::message_delivery::MessageDelivery,
     oracle::get_contract_instance::get_contract_instance,
     protocol_types::{
         address::AztecAddress,
         contract_instance::ContractInstance,
         public_keys::{IvpkM, NpkM, OvpkM, PublicKeys, TpkM},
-        traits::{Serialize, ToField},
+        traits::ToField,
     },
 };
 // standard library

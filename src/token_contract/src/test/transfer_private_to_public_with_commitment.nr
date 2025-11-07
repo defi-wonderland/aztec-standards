@@ -70,6 +70,7 @@ unconstrained fn transfer_private_to_public_with_commitment_on_behalf_of_other()
         .transfer_private_to_public_with_commitment(owner, recipient, transfer_amount, 0);
 
     authwit_cheatcodes::add_private_authwit_from_call_interface(
+        env,
         owner,
         recipient,
         transfer_private_to_public_commitment_call_interface,

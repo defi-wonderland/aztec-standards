@@ -1,26 +1,33 @@
-import {
-  Fr,
-  type AccountWallet,
-  type ContractFunctionInteraction,
-  type PXE,
-  getContractClassFromArtifact,
-} from '@aztec/aztec.js';
+// Import Aztec dependencies
+import { Fr } from '@aztec/aztec.js/fields';
+import type { PXE } from '@aztec/pxe/server';
 import { deriveKeys } from '@aztec/stdlib/keys';
-import { getInitialTestAccountsManagers } from '@aztec/accounts/testing';
+import type { Wallet } from '@aztec/aztec.js/wallet';
+import { AztecAddress } from '@aztec/aztec.js/addresses';
+import { getContractClassFromArtifact } from '@aztec/aztec.js/contracts';
+import type { ContractFunctionInteractionCallIntent } from '@aztec/aztec.js/authorization';
 
 // Import the new Benchmark base class and context
 import { Benchmark, BenchmarkContext } from '@defi-wonderland/aztec-benchmark';
 
+// Import artifacts
 import { EscrowContract, EscrowContractArtifact } from '../artifacts/Escrow.js';
 import { TestLogicContract } from '../artifacts/TestLogic.js';
-import { deployLogic, deployEscrowWithPublicKeysAndSalt, grumpkinScalarToFr } from '../src/ts/test/utils.js';
-import { setupPXE } from '../src/ts/test/utils.js';
+
+// Import test utilities
+import {
+  setupTestSuite,
+  deployLogic,
+  deployEscrowWithPublicKeysAndSalt,
+  grumpkinScalarToFr,
+} from '../src/ts/test/utils.js';
 
 // Extend the BenchmarkContext from the new package
 interface LogicBenchmarkContext extends BenchmarkContext {
   pxe: PXE;
-  deployer: AccountWallet;
-  accounts: AccountWallet[];
+  wallet: Wallet;
+  deployer: AztecAddress;
+  accounts: AztecAddress[];
   logicContract: TestLogicContract;
   escrowContract: EscrowContract;
   secretKeys: {
@@ -38,18 +45,13 @@ export default class LogicContractBenchmark extends Benchmark {
    * Creates PXE client, gets accounts, and deploys the contract.
    */
   async setup(): Promise<LogicBenchmarkContext> {
-    const { pxe } = await setupPXE('bench-logic');
-    const managers = await getInitialTestAccountsManagers(pxe);
-    const accounts = await Promise.all(managers.map((acc) => acc.register()));
+    const { pxe, wallet, accounts } = await setupTestSuite('bench-logic');
     const [deployer] = accounts;
 
-    const logicSk = Fr.random();
     const escrowClassId = (await getContractClassFromArtifact(EscrowContractArtifact)).id;
 
     // Deploy logic contract
-    const logicContract = (await deployLogic(deployer, escrowClassId)) as TestLogicContract;
-    const partialAddressLogic = await logicContract.partialAddress;
-    await pxe.registerAccount(logicSk, partialAddressLogic);
+    const logicContract = (await deployLogic(wallet, deployer, escrowClassId)) as TestLogicContract;
 
     // Setup escrow
     const escrowSk = Fr.random();
@@ -63,14 +65,14 @@ export default class LogicContractBenchmark extends Benchmark {
     const escrowSalt = new Fr(logicContract.instance.address.toBigInt());
     const escrowContract = (await deployEscrowWithPublicKeysAndSalt(
       escrowKeys.publicKeys,
+      wallet,
       deployer,
       escrowSalt,
     )) as EscrowContract;
-    const partialAddressEscrow = await escrowContract.partialAddress;
-    await pxe.registerAccount(escrowSk, partialAddressEscrow);
 
     return {
       pxe,
+      wallet,
       deployer,
       accounts,
       logicContract,
@@ -82,17 +84,26 @@ export default class LogicContractBenchmark extends Benchmark {
   /**
    * Returns the list of TokenContract methods to be benchmarked.
    */
-  getMethods(context: LogicBenchmarkContext): ContractFunctionInteraction[] {
-    const { accounts, escrowContract, deployer, logicContract, secretKeys } = context;
-    const recipient = accounts[2].getAddress();
+  getMethods(context: LogicBenchmarkContext): ContractFunctionInteractionCallIntent[] {
+    const { accounts, escrowContract, deployer, logicContract, secretKeys, wallet } = context;
+    const recipient = accounts[2];
 
-    const methods: ContractFunctionInteraction[] = [
+    const methods: ContractFunctionInteractionCallIntent[] = [
       // Derive public keys from secret keys
-      logicContract.withWallet(deployer).methods.secret_keys_to_public_keys(secretKeys),
+      {
+        caller: deployer,
+        action: logicContract.withWallet(wallet).methods.secret_keys_to_public_keys(secretKeys),
+      },
       // Check escrow correctness
-      logicContract.withWallet(deployer).methods.check_escrow(escrowContract.address, secretKeys),
+      {
+        caller: deployer,
+        action: logicContract.withWallet(wallet).methods.check_escrow(escrowContract.address, secretKeys),
+      },
       // Share escrow
-      logicContract.withWallet(deployer).methods.share_escrow(recipient, escrowContract.address, secretKeys),
+      {
+        caller: deployer,
+        action: logicContract.withWallet(wallet).methods.share_escrow(recipient, escrowContract.address, secretKeys),
+      },
     ];
 
     return methods.filter(Boolean);
