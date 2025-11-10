@@ -81,7 +81,7 @@ jobs:
       # This is a temporary hack to fix a problem with v3 releases.
       - name: Manually tag the aztec version as `latest`
         run: |
-          docker tag aztecprotocol/aztec:${{ steps.prver.outputs.ver }} aztecprotocol/aztec:latest
+          docker tag aztecprotocol/aztec:${{ steps.basever.outputs.ver }} aztecprotocol/aztec:latest
 
       - name: Install deps (BASE)
         run: yarn --frozen-lockfile
