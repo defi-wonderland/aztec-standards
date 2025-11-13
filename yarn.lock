@@ -1459,7 +1459,7 @@
   dependencies:
     "@jridgewell/trace-mapping" "0.3.9"
 
-"@defi-wonderland/aztec-benchmark@3.0.0-nightly.20251111":
+"@defi-wonderland/aztec-benchmark@3.0.0-devnet.2":
   version "3.0.0-devnet.2"
   resolved "https://registry.yarnpkg.com/@defi-wonderland/aztec-benchmark/-/aztec-benchmark-3.0.0-devnet.2.tgz#7e2e9e83562d0270e5e361d083acaac520cec878"
   integrity sha512-vCkP+eGacLMCuHZIb/pbOF2kvdKT7baIOggrO1y7Dk239w+1Qh9Yxp1oHf00mcNOqSdF+Dtr30m0TjJvQazHxQ==
