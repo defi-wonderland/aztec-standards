@@ -25,11 +25,9 @@ pub contract Escrow {
     /// @param recipient The address of the recipient
     #[external("private")]
     fn withdraw(token: AztecAddress, amount: u128, recipient: AztecAddress) {
-        _assert_msg_sender(&mut context);
+        _assert_msg_sender(&mut self.context);
 
-        Token::at(token)
-            .transfer_private_to_private(context.this_address(), recipient, amount, 0)
-            .call(&mut context);
+        self.call(Token::at(token).transfer_private_to_private(self.address, recipient, amount, 0));
     }
 
     /// @notice Withdraws a token of a given ID from the escrow's private balance to
@@ -40,11 +38,9 @@ pub contract Escrow {
     /// @param recipient The address of the recipient
     #[external("private")]
     fn withdraw_nft(nft: AztecAddress, token_id: Field, recipient: AztecAddress) {
-        _assert_msg_sender(&mut context);
+        _assert_msg_sender(&mut self.context);
 
-        NFT::at(nft)
-            .transfer_private_to_private(context.this_address(), recipient, token_id, 0)
-            .call(&mut context);
+        self.call(NFT::at(nft).transfer_private_to_private(self.address, recipient, token_id, 0));
     }
 
     /// @notice Asserts that the caller is the one encoded into the contract instance salt
