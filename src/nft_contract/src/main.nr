@@ -91,9 +91,10 @@ pub contract NFT {
         _validate_from_private::<4>(self.context, from);
 
         _remove_private_token_owner(self.storage.private_nfts.at(from), token_id);
-        self.enqueue(
-            NFT::at(self.address).update_public_token_owner_from_zero_internal(to, token_id)
-        );
+        self.enqueue(NFT::at(self.address).update_public_token_owner_from_zero_internal(
+            to,
+            token_id,
+        ));
     }
 
     /// @notice Transfers token by id from private owner to a public owner with a commitment
@@ -113,9 +114,10 @@ pub contract NFT {
         _validate_from_private::<4>(self.context, from);
 
         _remove_private_token_owner(self.storage.private_nfts.at(from), token_id);
-        self.enqueue(
-            NFT::at(self.address).update_public_token_owner_from_zero_internal(to, token_id)
-        );
+        self.enqueue(NFT::at(self.address).update_public_token_owner_from_zero_internal(
+            to,
+            token_id,
+        ));
         let completer = self.msg_sender().unwrap();
         let commitment = _initialize_transfer_commitment(
             self.context,
@@ -163,10 +165,11 @@ pub contract NFT {
 
         _remove_private_token_owner(self.storage.private_nfts.at(from), token_id);
         let completer = from;
-        self.enqueue(
-            NFT::at(self.address)
-                .transfer_token_to_commitment_internal(commitment.to_field(), token_id, completer)
-        );
+        self.enqueue(NFT::at(self.address).transfer_token_to_commitment_internal(
+            commitment.to_field(),
+            token_id,
+            completer,
+        ));
     }
 
     /// @notice Transfers token by id from public owner to private owner
@@ -184,10 +187,11 @@ pub contract NFT {
     ) {
         _validate_from_private::<4>(self.context, from);
 
-        self.enqueue(
-            NFT::at(self.address)
-                .update_public_token_owner_internal(from, AztecAddress::zero(), token_id)
-        );
+        self.enqueue(NFT::at(self.address).update_public_token_owner_internal(
+            from,
+            AztecAddress::zero(),
+            token_id,
+        ));
         _update_private_token_owner(self.storage.private_nfts.at(to), to, token_id);
     }
 
@@ -249,12 +253,7 @@ pub contract NFT {
 
         _update_public_token_owner(self.storage.public_owners, AztecAddress::zero(), token_id);
         let completer = self.msg_sender().unwrap();
-        _transfer_token_to_commitment(
-            self.context,
-            commitment.to_field(),
-            token_id,
-            completer,
-        );
+        _transfer_token_to_commitment(self.context, commitment.to_field(), token_id, completer);
     }
 
     /// @notice Stores a commitment in storage
@@ -448,10 +447,9 @@ pub contract NFT {
         assert(!upgrade_authority.eq(AztecAddress::zero()), "upgrade authority not set");
         assert(self.msg_sender().unwrap().eq(upgrade_authority), "caller is not upgrade authority");
 
-        self.call(
-            ContractInstanceRegistry::at(CONTRACT_INSTANCE_REGISTRY_CONTRACT_ADDRESS)
-                .update(ContractClassId::from_field(new_contract_class_id))
-        );
+        self.call(ContractInstanceRegistry::at(CONTRACT_INSTANCE_REGISTRY_CONTRACT_ADDRESS).update(
+            ContractClassId::from_field(new_contract_class_id),
+        ));
     }
 
     /** ==========================================================
