@@ -161,7 +161,7 @@ pub contract Token {
             INITIAL_TRANSFER_CALL_MAX_NOTES,
         );
 
-        self.enqueue(Token::at(self.address).increase_public_balance_internal(to, amount));
+        self.enqueue_self.increase_public_balance_internal(to, amount);
     }
 
     /// @notice Transfer tokens from private balance to public balance and initializes a commitment
@@ -189,7 +189,7 @@ pub contract Token {
             INITIAL_TRANSFER_CALL_MAX_NOTES,
         );
 
-        self.enqueue(Token::at(self.address).increase_public_balance_internal(to, amount));
+        self.enqueue_self.increase_public_balance_internal(to, amount);
 
         // Only the sender will be able to complete the partial note
         let completer = self.msg_sender().unwrap();
@@ -275,7 +275,7 @@ pub contract Token {
     ) {
         _validate_from_private::<4>(self.context, from);
 
-        self.enqueue(Token::at(self.address).decrease_public_balance_internal(from, amount));
+        self.enqueue_self.decrease_public_balance_internal(from, amount);
 
         _increase_private_balance(self.storage.private_balances, to, amount);
     }
@@ -522,7 +522,7 @@ pub contract Token {
         _validate_from_private::<3>(self.context, from);
 
         _burn_private(self.context, self.storage.private_balances, from, amount);
-        self.enqueue(Token::at(self.address).decrease_total_supply_internal(amount));
+        self.enqueue_self.decrease_total_supply_internal(amount);
     }
 
     /// @notice Burns tokens from a public balance
@@ -890,7 +890,7 @@ pub contract Token {
         _validate_from_private::<5>(self.context, from);
 
         // Validate in public that `assets` is sufficient for the requested shares
-        self.enqueue(Token::at(self.address).validate_deposit_rate_internal(assets, shares));
+        self.enqueue_self.validate_deposit_rate_internal(assets, shares);
 
         // Mint shares in private
         self.internal._mint_to_private(to, shares);
@@ -923,7 +923,7 @@ pub contract Token {
         _validate_from_private::<5>(self.context, from);
 
         // Validate in public that `assets` is sufficient for the requested shares
-        self.enqueue(Token::at(self.address).validate_deposit_rate_internal(assets, shares));
+        self.enqueue_self.validate_deposit_rate_internal(assets, shares);
 
         // Mint shares in private
         self.internal._mint_to_private(to, shares);
@@ -952,7 +952,7 @@ pub contract Token {
         _validate_from_private::<4>(self.context, from);
 
         // Calculate and mint shares to the recipient in public
-        self.enqueue(Token::at(self.address).issue_from_assets_internal(to, assets));
+        self.enqueue_self.issue_from_assets_internal(to, assets);
 
         // Take the assets from the sender
         self.call(Token::at(self.storage.asset.read()).transfer_private_to_public(
@@ -996,11 +996,11 @@ pub contract Token {
 
         // Mint any outstanding shares without revealing the recipient and updates the shares total supply
         // Reverts if min_shares is greater than allowed
-        self.enqueue(Token::at(self.address).settle_deposit_to_private_with_commitment_internal(
+        self.enqueue_self.settle_deposit_to_private_with_commitment_internal(
             partial_note.to_field(),
             assets,
             min_shares,
-        ));
+        );
 
         // Take the assets from the sender
         self.enqueue(Token::at(self.storage.asset.read()).transfer_public_to_public(
@@ -1044,11 +1044,11 @@ pub contract Token {
 
         // Mint any outstanding shares without revealing the recipient and updates the shares total supply
         // Reverts if min_shares is greater than allowed
-        self.enqueue(Token::at(self.address).settle_deposit_to_private_with_commitment_internal(
+        self.enqueue_self.settle_deposit_to_private_with_commitment_internal(
             partial_note.to_field(),
             assets,
             min_shares,
-        ));
+        );
 
         // Take the assets from the sender
         self.call(Token::at(self.storage.asset.read()).transfer_private_to_public(
@@ -1135,11 +1135,7 @@ pub contract Token {
         ));
 
         // Validate the amount of assets transferred and send back any excess
-        self.enqueue(Token::at(self.address).settle_issuance_from_public_internal(
-            from,
-            shares,
-            max_assets,
-        ));
+        self.enqueue_self.settle_issuance_from_public_internal(from, shares, max_assets);
 
         // Mint shares to the recipient
         self.internal._mint_to_private(to, shares);
@@ -1177,14 +1173,14 @@ pub contract Token {
         ));
 
         // Validate max_assets in public and refund any excess to the sender with a commitment
-        self.enqueue(Token::at(self.address).settle_issuance_from_private_with_commitment(
+        self.enqueue_self.settle_issuance_from_private_with_commitment(
             asset_commitment,
             shares,
             max_assets,
-        ));
+        );
 
         // Mint shares to recipient in public
-        self.enqueue(Token::at(self.address).mint_to_public_internal(to, shares));
+        self.enqueue_self.mint_to_public_internal(to, shares);
     }
 
     /// @notice Issues exactly the requested shares to a private balance and receives the underlying asset from a private balance
@@ -1220,11 +1216,11 @@ pub contract Token {
         ));
 
         // Validate max_assets in public and refunds any excess to the sender with a commitment
-        self.enqueue(Token::at(self.address).settle_issuance_from_private_with_commitment(
+        self.enqueue_self.settle_issuance_from_private_with_commitment(
             asset_commitment,
             shares,
             max_assets,
-        ));
+        );
 
         // Mint shares to recipient in private
         self.internal._mint_to_private(to, shares);
@@ -1282,7 +1278,7 @@ pub contract Token {
         _validate_from_private::<4>(self.context, from);
 
         // Calculate and burn the sender's shares
-        self.enqueue(Token::at(self.address).redeem_from_assets_internal(from, assets));
+        self.enqueue_self.redeem_from_assets_internal(from, assets);
 
         // Transfer the assets to the recipient in private
         self.call(Token::at(self.storage.asset.read()).transfer_public_to_private(
@@ -1312,11 +1308,11 @@ pub contract Token {
         _validate_from_private::<5>(self.context, from);
 
         // Validate that the shares-assets ratio is correct
-        self.enqueue(Token::at(self.address).validate_withdrawal_rate_internal(assets, shares));
+        self.enqueue_self.validate_withdrawal_rate_internal(assets, shares);
 
         // Burn shares from the sender in private
         _burn_private(self.context, self.storage.private_balances, from, shares);
-        self.enqueue(Token::at(self.address).decrease_total_supply_internal(shares));
+        self.enqueue_self.decrease_total_supply_internal(shares);
 
         // Transfer the assets to the recipient in private
         self.call(Token::at(self.storage.asset.read()).transfer_public_to_private(
@@ -1368,11 +1364,11 @@ pub contract Token {
         // Burn the correct amount of shares
         // Any excess amount of shares is sent back to the sender via commitment
         // Reverts if the amount of shares required is greater than max_shares
-        self.enqueue(Token::at(self.address).settle_withdrawal_with_commitment_internal(
+        self.enqueue_self.settle_withdrawal_with_commitment_internal(
             partial_note.to_field(),
             assets,
             max_shares,
-        ));
+        );
 
         // Transfer the assets to the sender
         self.enqueue(Token::at(self.storage.asset.read()).transfer_public_to_public(
@@ -1424,11 +1420,11 @@ pub contract Token {
         // Burn the correct amount of shares
         // Any excess amount of shares is sent back to the sender via commitment
         // Reverts if the amount of shares required is greater than max_shares
-        self.enqueue(Token::at(self.address).settle_withdrawal_with_commitment_internal(
+        self.enqueue_self.settle_withdrawal_with_commitment_internal(
             partial_note.to_field(),
             assets,
             max_shares,
-        ));
+        );
 
         // Transfer the assets to the recipient in private
         self.call(Token::at(self.storage.asset.read()).transfer_public_to_private(
@@ -1482,11 +1478,11 @@ pub contract Token {
         _validate_from_private::<4>(self.context, from);
 
         // Burn shares and redeem public assets
-        self.enqueue(Token::at(self.address).settle_redemption_to_public_internal(to, shares));
+        self.enqueue_self.settle_redemption_to_public_internal(to, shares);
 
         // Burn shares from the sender in private
         _burn_private(self.context, self.storage.private_balances, from, shares);
-        self.enqueue(Token::at(self.address).decrease_total_supply_internal(shares));
+        self.enqueue_self.decrease_total_supply_internal(shares);
     }
 
     /// @notice Redeems an amount of the shares from a private balance to a private balance
@@ -1515,11 +1511,11 @@ pub contract Token {
 
         // Transfers any outstanding assets without revealing the recipient
         // Reverts if min_assets is greater than allowed
-        self.enqueue(Token::at(self.address).settle_redemption_to_private_with_commitment(
+        self.enqueue_self.settle_redemption_to_private_with_commitment(
             asset_commitment,
             shares,
             min_assets,
-        ));
+        );
 
         // Transfer min_assets to the recipient
         self.call(Token::at(self.storage.asset.read()).transfer_public_to_private(
@@ -1531,7 +1527,7 @@ pub contract Token {
 
         // Burn shares from the sender in private
         _burn_private(self.context, self.storage.private_balances, from, shares);
-        self.enqueue(Token::at(self.address).decrease_total_supply_internal(shares));
+        self.enqueue_self.decrease_total_supply_internal(shares);
     }
 
     /// @notice Redeems an amount of the shares from a public balance to a private balance
@@ -1560,11 +1556,11 @@ pub contract Token {
 
         // Transfers any outstanding assets without revealing the recipient
         // Reverts if min_assets is greater than allowed
-        self.enqueue(Token::at(self.address).settle_redemption_to_private_with_commitment(
+        self.enqueue_self.settle_redemption_to_private_with_commitment(
             asset_commitment,
             shares,
             min_assets,
-        ));
+        );
 
         // Transfer min_assets to the recipient
         self.call(Token::at(self.storage.asset.read()).transfer_public_to_private(
@@ -1575,7 +1571,7 @@ pub contract Token {
         ));
 
         // Burn the shares being redeemed
-        self.enqueue(Token::at(self.address).burn_public_internal(from, shares));
+        self.enqueue_self.burn_public_internal(from, shares);
     }
 
     /** ==========================================================
