@@ -76,7 +76,7 @@ unconstrained fn public_transfer_on_behalf_of_other() {
     utils::check_public_balance(env, token_contract_address, recipient, transfer_amount);
 }
 
-#[test(should_fail_with = "attempt to subtract with overflow 'public_balances.at(from).read() - amount'")]
+#[test(should_fail_with = "attempt to subtract with overflow 'self.storage.public_balances.at(from).read() - amount'")]
 unconstrained fn public_transfer_failure_more_than_balance() {
     // Setup without account contracts. We are not using authwits here, so dummy accounts are enough
     let (mut env, token_contract_address, owner, recipient) =
@@ -102,7 +102,7 @@ unconstrained fn public_transfer_failure_on_behalf_of_other_without_approval() {
     env.call_public(recipient, public_transfer_private_to_private_call_interface);
 }
 
-#[test(should_fail_with = "attempt to subtract with overflow 'public_balances.at(from).read() - amount'")]
+#[test(should_fail_with = "attempt to subtract with overflow 'self.storage.public_balances.at(from).read() - amount'")]
 unconstrained fn public_transfer_failure_on_behalf_of_other_more_than_balance() {
     // Setup with account contracts. Slower since we actually deploy them, but needed for authwits.
     let (mut env, token_contract_address, owner, recipient) =

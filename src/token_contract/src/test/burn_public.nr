@@ -62,7 +62,7 @@ unconstrained fn burn_public_on_behalf_of_other() {
     );
 }
 
-#[test(should_fail_with = "attempt to subtract with overflow 'public_balances.at(from).read() - amount'")]
+#[test(should_fail_with = "attempt to subtract with overflow 'self.storage.public_balances.at(from).read() - amount'")]
 unconstrained fn burn_public_failure_more_than_balance() {
     let (mut env, token_contract_address, owner, _) =
         utils::setup_and_mint_to_public_without_minter(false);
