@@ -106,12 +106,7 @@ pub contract Token {
         self.storage.symbol.initialize(FieldCompressedString::from_string(symbol));
         self.storage.decimals.initialize(decimals);
 
-        _mint_to_public(
-            self.storage.public_balances,
-            self.storage.total_supply,
-            to,
-            initial_supply,
-        );
+        self.internal._mint_to_public(to, initial_supply);
 
         self.storage.upgrade_authority.initialize(upgrade_authority);
     }
@@ -475,12 +470,7 @@ pub contract Token {
     fn mint_to_public(to: AztecAddress, amount: u128) {
         _validate_minter(self.msg_sender().unwrap(), self.storage.minter.read());
 
-        _mint_to_public(
-            self.storage.public_balances,
-            self.storage.total_supply,
-            to,
-            amount,
-        );
+        self.internal._mint_to_public(to, amount);
     }
 
     /// @notice Finalizes a mint to a commitment
@@ -515,12 +505,7 @@ pub contract Token {
     #[external("public")]
     #[only_self]
     fn mint_to_public_internal(to: AztecAddress, amount: u128) {
-        _mint_to_public(
-            self.storage.public_balances,
-            self.storage.total_supply,
-            to,
-            amount,
-        );
+        self.internal._mint_to_public(to, amount);
     }
 
     /** ==========================================================
@@ -755,15 +740,10 @@ pub contract Token {
     /// @param total_supply The storage pointer to the total supply
     /// @param to The address of the recipient
     /// @param amount The amount of tokens to mint
-    #[contract_library_method]
-    fn _mint_to_public(
-        public_balances: Map<AztecAddress, PublicMutable<u128, PublicContext>, PublicContext>,
-        total_supply: PublicMutable<u128, PublicContext>,
-        to: AztecAddress,
-        amount: u128,
-    ) {
-        _increase_public_balance(public_balances, to, amount);
-        _increase_total_supply(total_supply, amount);
+    #[internal("public")]
+    fn _mint_to_public(to: AztecAddress, amount: u128) {
+        _increase_public_balance(self.storage.public_balances, to, amount);
+        _increase_total_supply(self.storage.total_supply, amount);
     }
 
     /// @notice Mints tokens to a private balance and enqueues a public call to increase the total supply
@@ -888,12 +868,7 @@ pub contract Token {
         ));
 
         // Mint shares to the recipient
-        _mint_to_public(
-            self.storage.public_balances,
-            self.storage.total_supply,
-            to,
-            shares,
-        );
+        self.internal._mint_to_public(to, shares);
     }
 
     /// @notice Deposits the underlying asset from a public balance and receives shares to a private balance
@@ -1130,12 +1105,7 @@ pub contract Token {
         }
 
         // Mint shares to the recipient
-        _mint_to_public(
-            self.storage.public_balances,
-            self.storage.total_supply,
-            to,
-            shares,
-        );
+        self.internal._mint_to_public(to, shares);
     }
 
     /// @notice Issues exactly the requested shares to a private balance and receives the underlying asset from a public balance
@@ -1670,12 +1640,7 @@ pub contract Token {
         let shares =
             _convert_to_shares(assets, total_assets, self.storage.total_supply, ROUND_DOWN);
 
-        _mint_to_public(
-            self.storage.public_balances,
-            self.storage.total_supply,
-            to,
-            shares,
-        );
+        self.internal._mint_to_public(to, shares);
     }
 
     /// @notice Validates that the requested shares amount is valid for the deposited assets
