@@ -270,16 +270,7 @@ pub contract Token {
     #[external("private")]
     #[only_self]
     fn recurse_subtract_balance_internal(account: AztecAddress, amount: u128) -> u128 {
-        let (change, remaining) =
-            self.internal._subtract_balance(account, amount, RECURSIVE_TRANSFER_CALL_MAX_NOTES);
-        if remaining > 0 {
-            // Recursively call to handle the remaining amount
-            let recursive_change = self.call(Token::at(self.address)
-                .recurse_subtract_balance_internal(account, remaining));
-            change + recursive_change
-        } else {
-            change
-        }
+        self.internal._subtract_balance(account, amount, RECURSIVE_TRANSFER_CALL_MAX_NOTES)
     }
 
     /** ==========================================================
@@ -299,7 +290,7 @@ pub contract Token {
         amount: u128,
         _nonce: Field,
     ) {
-        _validate_from_public(self.context, from);
+        self.internal._validate_from_public(from);
 
         self.internal._decrease_public_balance(from, amount);
         self.internal._increase_public_balance(to, amount);
@@ -320,7 +311,7 @@ pub contract Token {
         amount: u128,
         _nonce: Field,
     ) {
-        _validate_from_public(self.context, from);
+        self.internal._validate_from_public(from);
 
         self.internal._decrease_public_balance(from, amount);
 
@@ -491,7 +482,7 @@ pub contract Token {
     /// @param _nonce The nonce used for authwitness
     #[external("public")]
     fn burn_public(from: AztecAddress, amount: u128, _nonce: Field) {
-        _validate_from_public(self.context, from);
+        self.internal._validate_from_public(from);
 
         self.internal._burn_public(from, amount);
     }
@@ -534,7 +525,7 @@ pub contract Token {
     #[internal("private")]
     fn _decrease_private_balance(account: AztecAddress, amount: u128, max_notes: u32) {
         // Subtracts `amount` from the private balance of `account`
-        let (change, _remaining) = self.internal._subtract_balance(account, amount, max_notes);
+        let change = self.internal._subtract_balance(account, amount, max_notes);
         // Increases `change` to the private balance of `account`, and emits a private balance note to account
         self.storage.private_balances.at(account).add(account, change).emit(
             account,
@@ -603,19 +594,20 @@ pub contract Token {
     /// @param max_notes The maximum number of notes to process in a single call
     /// @return The change to return to the owner
     #[internal("private")]
-    fn _subtract_balance(account: AztecAddress, amount: u128, max_notes: u32) -> (u128, u128) {
+    fn _subtract_balance(account: AztecAddress, amount: u128, max_notes: u32) -> u128 {
         let subtracted = self.storage.private_balances.at(account).try_sub(amount, max_notes);
         if subtracted >= amount {
             // We have achieved our goal of nullifying notes that add up to more than amount, so we return the change.
-            (subtracted - amount, 0)
+            subtracted - amount
         } else {
             // Failing to subtract any amount means that the owner was unable to produce more notes that could be nullified.
             assert(subtracted > 0, "Balance too low");
 
             // try_sub failed to nullify enough notes to reach the target amount, so we compute the amount remaining
-            // and return it for the caller to handle recursively.
+            // and try again.
             let remaining = amount - subtracted;
-            (0, remaining)
+
+            self.call_self.recurse_subtract_balance_internal(account, remaining)
         }
     }
 
@@ -740,10 +732,10 @@ pub contract Token {
     /// @notice Validates that the caller possesses authwit from the `from` address or the caller is the `from` address
     /// @param context The context of the public call
     /// @param from The address of the sender
-    #[contract_library_method]
-    unconstrained fn _validate_from_public(context: PublicContext, from: AztecAddress) {
-        if (!from.eq(context.msg_sender().unwrap())) {
-            assert_current_call_valid_authwit_public(context, from);
+    #[internal("public")]
+    fn _validate_from_public(from: AztecAddress) {
+        if (!from.eq(self.msg_sender().unwrap())) {
+            assert_current_call_valid_authwit_public(self.context, from);
         }
     }
 
@@ -760,10 +752,10 @@ pub contract Token {
     /// @param _nonce The nonce used for authwitness
     #[external("public")]
     fn deposit_public_to_public(from: AztecAddress, to: AztecAddress, assets: u128, _nonce: Field) {
-        _validate_from_public(self.context, from);
+        self.internal._validate_from_public(from);
 
         // Calculate shares to mint
-        let total_assets = _total_assets(self.context, self.storage.asset);
+        let total_assets = self.internal._total_assets();
         let shares =
             _convert_to_shares(assets, total_assets, self.storage.total_supply, ROUND_DOWN);
 
@@ -976,10 +968,10 @@ pub contract Token {
         max_assets: u128,
         _nonce: Field,
     ) {
-        _validate_from_public(self.context, from);
+        self.internal._validate_from_public(from);
 
         // Calculate assets required
-        let total_assets = _total_assets(self.context, self.storage.asset);
+        let total_assets = self.internal._total_assets();
         let assets = _convert_to_assets(shares, total_assets, self.storage.total_supply, ROUND_UP);
 
         // Take the assets from the sender
@@ -1138,10 +1130,10 @@ pub contract Token {
         assets: u128,
         _nonce: Field,
     ) {
-        _validate_from_public(self.context, from);
+        self.internal._validate_from_public(from);
 
         // Calculate shares to burn
-        let total_assets = _total_assets(self.context, self.storage.asset);
+        let total_assets = self.internal._total_assets();
         let shares = _convert_to_shares(assets, total_assets, self.storage.total_supply, ROUND_UP);
 
         // Transfer the assets to the recipient
@@ -1315,10 +1307,10 @@ pub contract Token {
     /// @param _nonce The nonce used for authwitness
     #[external("public")]
     fn redeem_public_to_public(from: AztecAddress, to: AztecAddress, shares: u128, _nonce: Field) {
-        _validate_from_public(self.context, from);
+        self.internal._validate_from_public(from);
 
         // Calculate assets to redeem
-        let total_assets = _total_assets(self.context, self.storage.asset);
+        let total_assets = self.internal._total_assets();
         let assets =
             _convert_to_assets(shares, total_assets, self.storage.total_supply, ROUND_DOWN);
 
@@ -1450,7 +1442,7 @@ pub contract Token {
     #[external("public")]
     #[only_self]
     fn redeem_from_assets_internal(from: AztecAddress, assets: u128) {
-        let total_assets = _total_assets(self.context, self.storage.asset);
+        let total_assets = self.internal._total_assets();
         let shares = _convert_to_shares(assets, total_assets, self.storage.total_supply, ROUND_UP);
 
         self.internal._burn_public(from, shares);
@@ -1462,7 +1454,7 @@ pub contract Token {
     #[external("public")]
     #[only_self]
     fn validate_withdrawal_rate_internal(assets: u128, shares: u128) {
-        let total_assets = _total_assets(self.context, self.storage.asset);
+        let total_assets = self.internal._total_assets();
         let min_shares =
             _convert_to_shares(assets, total_assets, self.storage.total_supply, ROUND_UP);
 
@@ -1475,7 +1467,7 @@ pub contract Token {
     #[external("public")]
     #[only_self]
     fn settle_redemption_to_public_internal(to: AztecAddress, shares: u128) {
-        let total_assets = _total_assets(self.context, self.storage.asset);
+        let total_assets = self.internal._total_assets();
         let assets =
             _convert_to_assets(shares, total_assets, self.storage.total_supply, ROUND_DOWN);
 
@@ -1493,7 +1485,7 @@ pub contract Token {
     #[external("public")]
     #[only_self]
     fn issue_from_assets_internal(to: AztecAddress, assets: u128) {
-        let total_assets = _total_assets(self.context, self.storage.asset);
+        let total_assets = self.internal._total_assets();
         let shares =
             _convert_to_shares(assets, total_assets, self.storage.total_supply, ROUND_DOWN);
 
@@ -1506,7 +1498,7 @@ pub contract Token {
     #[external("public")]
     #[only_self]
     fn validate_deposit_rate_internal(assets: u128, shares: u128) {
-        let total_assets = _total_assets(self.context, self.storage.asset);
+        let total_assets = self.internal._total_assets();
         let max_shares =
             _convert_to_shares(assets, total_assets, self.storage.total_supply, ROUND_DOWN);
 
@@ -1524,7 +1516,7 @@ pub contract Token {
         assets: u128,
         max_shares: u128,
     ) {
-        let total_assets = _total_assets(self.context, self.storage.asset);
+        let total_assets = self.internal._total_assets();
         let shares = _convert_to_shares(assets, total_assets, self.storage.total_supply, ROUND_UP);
 
         let surplus = max_shares - shares; // Reverts with underflow if invalid
@@ -1550,7 +1542,7 @@ pub contract Token {
         assets: u128,
         min_shares: u128,
     ) {
-        let total_assets = _total_assets(self.context, self.storage.asset);
+        let total_assets = self.internal._total_assets();
         let max_shares =
             _convert_to_shares(assets, total_assets, self.storage.total_supply, ROUND_DOWN);
 
@@ -1577,7 +1569,7 @@ pub contract Token {
         shares: u128,
         max_assets: u128,
     ) {
-        let total_assets = _total_assets(self.context, self.storage.asset);
+        let total_assets = self.internal._total_assets();
         let assets = _convert_to_assets(
             shares,
             total_assets - max_assets,
@@ -1607,7 +1599,7 @@ pub contract Token {
         shares: u128,
         min_assets: u128,
     ) {
-        let total_assets = _total_assets(self.context, self.storage.asset);
+        let total_assets = self.internal._total_assets();
         let assets =
             _convert_to_assets(shares, total_assets, self.storage.total_supply, ROUND_DOWN);
 
@@ -1627,7 +1619,7 @@ pub contract Token {
     #[external("public")]
     #[only_self]
     fn settle_issuance_from_public_internal(from: AztecAddress, shares: u128, max_assets: u128) {
-        let total_assets = _total_assets(self.context, self.storage.asset);
+        let total_assets = self.internal._total_assets();
         let assets = _convert_to_assets(
             shares,
             total_assets - max_assets,
@@ -1654,13 +1646,10 @@ pub contract Token {
     /// @param context The public context
     /// @param asset The storage pointer to the asset address
     /// @return The total amount of assets held by the vault
-    #[contract_library_method]
-    unconstrained fn _total_assets(
-        context: PublicContext,
-        asset: PublicImmutable<AztecAddress, PublicContext>,
-    ) -> u128 {
+    #[internal("public")]
+    fn _total_assets() -> u128 {
         let total_assets =
-            Token::at(asset.read()).balance_of_public(context.this_address()).view(context);
+            self.view(Token::at(self.storage.asset.read()).balance_of_public(self.address));
         total_assets
     }
 
