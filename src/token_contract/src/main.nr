@@ -11,7 +11,7 @@ pub contract Token {
             assert_current_call_valid_authwit, assert_current_call_valid_authwit_public,
         },
         context::{PrivateContext, PublicContext},
-        macros::{functions::{external, initializer, only_self, view}, storage::storage},
+        macros::{functions::{external, initializer, internal, only_self, view}, storage::storage},
         messages::message_delivery::MessageDelivery,
         protocol_types::{
             address::AztecAddress,
@@ -318,7 +318,9 @@ pub contract Token {
         );
         if remaining > 0 {
             // Recursively call to handle the remaining amount
-            self.call(Token::at(self.address).recurse_subtract_balance_internal(account, remaining))
+            let recursive_change = self.call(Token::at(self.address)
+                .recurse_subtract_balance_internal(account, remaining));
+            change + recursive_change
         } else {
             change
         }
@@ -462,8 +464,7 @@ pub contract Token {
     fn mint_to_private(to: AztecAddress, amount: u128) {
         _validate_minter(self.msg_sender().unwrap(), self.storage.minter.read());
 
-        _mint_to_private(self.context, self.storage.private_balances, to, amount);
-        self.enqueue(Token::at(self.address).increase_total_supply_internal(amount));
+        self.internal._mint_to_private(to, amount);
     }
 
     /// @notice Mints tokens to an address publicly
@@ -770,15 +771,10 @@ pub contract Token {
     /// @param private_balances The storage pointer to the private balances
     /// @param to The address of the recipient
     /// @param amount The amount of tokens to mint
-    #[contract_library_method]
-    fn _mint_to_private(
-        _context: &mut PrivateContext,
-        private_balances: Map<AztecAddress, BalanceSet<&mut PrivateContext>, &mut PrivateContext>,
-        to: AztecAddress,
-        amount: u128,
-    ) {
-        _increase_private_balance(private_balances, to, amount);
-        // Note: Caller should handle enqueueing increase_total_supply_internal if needed
+    #[internal("private")]
+    fn _mint_to_private(to: AztecAddress, amount: u128) {
+        _increase_private_balance(self.storage.private_balances, to, amount);
+        self.enqueue_self.increase_total_supply_internal(amount);
     }
 
     /// @notice Burns tokens from a public balance and decreases the total supply
@@ -922,8 +918,7 @@ pub contract Token {
         self.enqueue(Token::at(self.address).validate_deposit_rate_internal(assets, shares));
 
         // Mint shares in private
-        _mint_to_private(self.context, self.storage.private_balances, to, shares);
-        self.enqueue(Token::at(self.address).increase_total_supply_internal(shares));
+        self.internal._mint_to_private(to, shares);
 
         // Take the assets from the sender
         self.enqueue(Token::at(self.storage.asset.read()).transfer_public_to_public(
@@ -956,7 +951,7 @@ pub contract Token {
         self.enqueue(Token::at(self.address).validate_deposit_rate_internal(assets, shares));
 
         // Mint shares in private
-        _mint_to_private(self.context, self.storage.private_balances, to, shares);
+        self.internal._mint_to_private(to, shares);
 
         // Take the assets from the sender
         self.call(Token::at(self.storage.asset.read()).transfer_private_to_public(
@@ -1177,8 +1172,7 @@ pub contract Token {
         ));
 
         // Mint shares to the recipient
-        _mint_to_private(self.context, self.storage.private_balances, to, shares);
-        self.enqueue(Token::at(self.address).increase_total_supply_internal(shares));
+        self.internal._mint_to_private(to, shares);
     }
 
     /// @notice Issues exactly the requested shares to a public balance and receives the underlying asset from a private balance
@@ -1263,8 +1257,7 @@ pub contract Token {
         ));
 
         // Mint shares to recipient in private
-        _mint_to_private(self.context, self.storage.private_balances, to, shares);
-        self.enqueue(Token::at(self.address).increase_total_supply_internal(shares));
+        self.internal._mint_to_private(to, shares);
     }
 
     /* ====================== WITHDRAW ======================== */
@@ -1353,6 +1346,7 @@ pub contract Token {
 
         // Burn shares from the sender in private
         _burn_private(self.context, self.storage.private_balances, from, shares);
+        self.enqueue(Token::at(self.address).decrease_total_supply_internal(shares));
 
         // Transfer the assets to the recipient in private
         self.call(Token::at(self.storage.asset.read()).transfer_public_to_private(
@@ -1522,6 +1516,7 @@ pub contract Token {
 
         // Burn shares from the sender in private
         _burn_private(self.context, self.storage.private_balances, from, shares);
+        self.enqueue(Token::at(self.address).decrease_total_supply_internal(shares));
     }
 
     /// @notice Redeems an amount of the shares from a private balance to a private balance
@@ -1566,6 +1561,7 @@ pub contract Token {
 
         // Burn shares from the sender in private
         _burn_private(self.context, self.storage.private_balances, from, shares);
+        self.enqueue(Token::at(self.address).decrease_total_supply_internal(shares));
     }
 
     /// @notice Redeems an amount of the shares from a public balance to a private balance
