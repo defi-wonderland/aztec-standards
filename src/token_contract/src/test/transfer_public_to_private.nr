@@ -33,7 +33,7 @@ unconstrained fn transfer_public_to_private_success() {
     utils::check_private_balance(env, token_contract_address, recipient, transfer_amount);
 }
 
-#[test(should_fail_with = "Assertion failed: attempt to subtract with overflow 'public_balances.at(from).read() - amount'")]
+#[test(should_fail_with = "Assertion failed: attempt to subtract with overflow 'self.storage.public_balances.at(from).read() - amount'")]
 unconstrained fn transfer_public_to_private_not_enough_balance() {
     let (mut env, token_contract_address, sender, recipient) =
         utils::setup_and_mint_to_public_without_minter(false);

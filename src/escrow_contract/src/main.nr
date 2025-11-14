@@ -47,9 +47,6 @@ pub contract Escrow {
     fn _assert_msg_sender() {
         let msg_sender = self.msg_sender().unwrap();
         let escrow_instance: ContractInstance = get_contract_instance(self.address);
-        assert(
-            AztecAddress::from_field(escrow_instance.salt) == msg_sender,
-            "Not Authorized",
-        );
+        assert(AztecAddress::from_field(escrow_instance.salt) == msg_sender, "Not Authorized");
     }
 }
