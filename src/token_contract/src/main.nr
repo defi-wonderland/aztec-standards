@@ -153,13 +153,7 @@ pub contract Token {
     ) {
         _validate_from_private::<4>(self.context, from);
 
-        _decrease_private_balance(
-            self.context,
-            self.storage.private_balances,
-            from,
-            amount,
-            INITIAL_TRANSFER_CALL_MAX_NOTES,
-        );
+        self.internal._decrease_private_balance(from, amount, INITIAL_TRANSFER_CALL_MAX_NOTES);
 
         self.enqueue_self.increase_public_balance_internal(to, amount);
     }
@@ -181,24 +175,13 @@ pub contract Token {
     ) -> Field {
         _validate_from_private::<4>(self.context, from);
 
-        _decrease_private_balance(
-            self.context,
-            self.storage.private_balances,
-            from,
-            amount,
-            INITIAL_TRANSFER_CALL_MAX_NOTES,
-        );
+        self.internal._decrease_private_balance(from, amount, INITIAL_TRANSFER_CALL_MAX_NOTES);
 
         self.enqueue_self.increase_public_balance_internal(to, amount);
 
         // Only the sender will be able to complete the partial note
         let completer = self.msg_sender().unwrap();
-        let commitment = _initialize_transfer_commitment(
-            self.context,
-            self.storage.private_balances,
-            to,
-            completer,
-        );
+        let commitment = self.internal._initialize_transfer_commitment(to, completer);
         commitment.to_field()
     }
 
@@ -217,15 +200,9 @@ pub contract Token {
     ) {
         _validate_from_private::<4>(self.context, from);
 
-        _decrease_private_balance(
-            self.context,
-            self.storage.private_balances,
-            from,
-            amount,
-            INITIAL_TRANSFER_CALL_MAX_NOTES,
-        );
+        self.internal._decrease_private_balance(from, amount, INITIAL_TRANSFER_CALL_MAX_NOTES);
 
-        _increase_private_balance(self.storage.private_balances, to, amount);
+        self.internal._increase_private_balance(to, amount);
     }
 
     /// @notice Transfer tokens from private balance to the recipient's commitment (recipient must create a commitment first)
@@ -244,13 +221,7 @@ pub contract Token {
     ) {
         _validate_from_private::<4>(self.context, from);
 
-        _decrease_private_balance(
-            self.context,
-            self.storage.private_balances,
-            from,
-            amount,
-            INITIAL_TRANSFER_CALL_MAX_NOTES,
-        );
+        self.internal._decrease_private_balance(from, amount, INITIAL_TRANSFER_CALL_MAX_NOTES);
 
         let completer = self.msg_sender().unwrap();
         PartialUintNote::from_field(commitment).complete_from_private(
@@ -277,7 +248,7 @@ pub contract Token {
 
         self.enqueue_self.decrease_public_balance_internal(from, amount);
 
-        _increase_private_balance(self.storage.private_balances, to, amount);
+        self.internal._increase_private_balance(to, amount);
     }
 
     /// @notice Initializes a transfer commitment to be used for transfers/mints
@@ -287,12 +258,7 @@ pub contract Token {
     /// @return commitment The partial note initialized for the transfer/mint commitment
     #[external("private")]
     fn initialize_transfer_commitment(to: AztecAddress, completer: AztecAddress) -> Field {
-        let commitment = _initialize_transfer_commitment(
-            self.context,
-            self.storage.private_balances,
-            to,
-            completer,
-        );
+        let commitment = self.internal._initialize_transfer_commitment(to, completer);
         commitment.to_field()
     }
 
@@ -304,13 +270,8 @@ pub contract Token {
     #[external("private")]
     #[only_self]
     fn recurse_subtract_balance_internal(account: AztecAddress, amount: u128) -> u128 {
-        let (change, remaining) = _subtract_balance(
-            self.context,
-            self.storage.private_balances,
-            account,
-            amount,
-            RECURSIVE_TRANSFER_CALL_MAX_NOTES,
-        );
+        let (change, remaining) =
+            self.internal._subtract_balance(account, amount, RECURSIVE_TRANSFER_CALL_MAX_NOTES);
         if remaining > 0 {
             // Recursively call to handle the remaining amount
             let recursive_change = self.call(Token::at(self.address)
@@ -340,8 +301,8 @@ pub contract Token {
     ) {
         _validate_from_public(self.context, from);
 
-        _decrease_public_balance(self.storage.public_balances, from, amount);
-        _increase_public_balance(self.storage.public_balances, to, amount);
+        self.internal._decrease_public_balance(from, amount);
+        self.internal._increase_public_balance(to, amount);
     }
 
     /// @notice Finalizes a transfer of token `amount` from public balance of `from` to a commitment of `to`
@@ -361,11 +322,10 @@ pub contract Token {
     ) {
         _validate_from_public(self.context, from);
 
-        _decrease_public_balance(self.storage.public_balances, from, amount);
+        self.internal._decrease_public_balance(from, amount);
 
         let completer = self.msg_sender().unwrap();
-        _increase_commitment_balance(
-            self.context,
+        self.internal._increase_commitment_balance(
             PartialUintNote::from_field(commitment),
             completer,
             amount,
@@ -378,7 +338,7 @@ pub contract Token {
     #[external("public")]
     #[only_self]
     fn increase_public_balance_internal(to: AztecAddress, amount: u128) {
-        _increase_public_balance(self.storage.public_balances, to, amount);
+        self.internal._increase_public_balance(to, amount);
     }
 
     /// @notice Decreases the public balance of `from` by `amount`
@@ -387,7 +347,7 @@ pub contract Token {
     #[external("public")]
     #[only_self]
     fn decrease_public_balance_internal(from: AztecAddress, amount: u128) {
-        _decrease_public_balance(self.storage.public_balances, from, amount);
+        self.internal._decrease_public_balance(from, amount);
     }
 
     /** ==========================================================
@@ -482,9 +442,8 @@ pub contract Token {
         let sender = self.msg_sender().unwrap();
         _validate_minter(sender, self.storage.minter.read());
         let completer = sender;
-        _increase_total_supply(self.storage.total_supply, amount);
-        _increase_commitment_balance(
-            self.context,
+        self.internal._increase_total_supply(amount);
+        self.internal._increase_commitment_balance(
             PartialUintNote::from_field(commitment),
             completer,
             amount,
@@ -496,7 +455,7 @@ pub contract Token {
     #[external("public")]
     #[only_self]
     fn increase_total_supply_internal(amount: u128) {
-        _increase_total_supply(self.storage.total_supply, amount);
+        self.internal._increase_total_supply(amount);
     }
 
     /// @notice Internal function to mint tokens to a public balance
@@ -521,7 +480,7 @@ pub contract Token {
     fn burn_private(from: AztecAddress, amount: u128, _nonce: Field) {
         _validate_from_private::<3>(self.context, from);
 
-        _burn_private(self.context, self.storage.private_balances, from, amount);
+        self.internal._burn_private(from, amount);
         self.enqueue_self.decrease_total_supply_internal(amount);
     }
 
@@ -534,12 +493,7 @@ pub contract Token {
     fn burn_public(from: AztecAddress, amount: u128, _nonce: Field) {
         _validate_from_public(self.context, from);
 
-        _burn_public(
-            self.storage.public_balances,
-            self.storage.total_supply,
-            from,
-            amount,
-        );
+        self.internal._burn_public(from, amount);
     }
 
     /// @notice Decreases the total supply by `amount`
@@ -547,7 +501,7 @@ pub contract Token {
     #[external("public")]
     #[only_self]
     fn decrease_total_supply_internal(amount: u128) {
-        _decrease_total_supply(self.storage.total_supply, amount);
+        self.internal._decrease_total_supply(amount);
     }
 
     /// @notice Burns tokens from a public balance without validation
@@ -556,12 +510,7 @@ pub contract Token {
     #[external("public")]
     #[only_self]
     fn burn_public_internal(from: AztecAddress, amount: u128) {
-        _burn_public(
-            self.storage.public_balances,
-            self.storage.total_supply,
-            from,
-            amount,
-        );
+        self.internal._burn_public(from, amount);
     }
 
     /** ==========================================================
@@ -582,19 +531,12 @@ pub contract Token {
     /// @param account The address of the account to decrease the balance of
     /// @param amount The amount of tokens to decrease the balance by
     /// @param max_notes The maximum number of notes to process in a single call
-    #[contract_library_method]
-    fn _decrease_private_balance(
-        context: &mut PrivateContext,
-        private_balances: Map<AztecAddress, BalanceSet<&mut PrivateContext>, &mut PrivateContext>,
-        account: AztecAddress,
-        amount: u128,
-        max_notes: u32,
-    ) {
+    #[internal("private")]
+    fn _decrease_private_balance(account: AztecAddress, amount: u128, max_notes: u32) {
         // Subtracts `amount` from the private balance of `account`
-        let (change, _remaining) =
-            _subtract_balance(context, private_balances, account, amount, max_notes);
+        let (change, _remaining) = self.internal._subtract_balance(account, amount, max_notes);
         // Increases `change` to the private balance of `account`, and emits a private balance note to account
-        private_balances.at(account).add(account, change).emit(
+        self.storage.private_balances.at(account).add(account, change).emit(
             account,
             MessageDelivery.CONSTRAINED_ONCHAIN,
         );
@@ -604,46 +546,37 @@ pub contract Token {
     /// @param private_balances The storage pointer to the private balances
     /// @param to The address of the recipient
     /// @param amount The amount of tokens to increase the balance by
-    #[contract_library_method]
-    fn _increase_private_balance(
-        private_balances: Map<AztecAddress, BalanceSet<&mut PrivateContext>, &mut PrivateContext>,
-        to: AztecAddress,
-        amount: u128,
-    ) {
+    #[internal("private")]
+    fn _increase_private_balance(to: AztecAddress, amount: u128) {
         // Increases `amount` to the private balance of `to`, and emits a private balance note to `to` from `from`
-        private_balances.at(to).add(to, amount).emit(to, MessageDelivery.CONSTRAINED_ONCHAIN);
+        self.storage.private_balances.at(to).add(to, amount).emit(
+            to,
+            MessageDelivery.CONSTRAINED_ONCHAIN,
+        );
     }
 
     /// @notice Updates the given storage pointer `public_balances` to increase the public balance of `to` by `amount`
     /// @param public_balances The storage pointer to the public balances
     /// @param to The address of the recipient
     /// @param amount The amount of tokens to increase the balance by
-    #[contract_library_method]
-    fn _increase_public_balance(
-        public_balances: Map<AztecAddress, PublicMutable<u128, PublicContext>, PublicContext>,
-        to: AztecAddress,
-        amount: u128,
-    ) {
+    #[internal("public")]
+    fn _increase_public_balance(to: AztecAddress, amount: u128) {
         // Read the current public balance of `to`, add `amount` to it,
-        let new_balance = public_balances.at(to).read() + amount;
+        let new_balance = self.storage.public_balances.at(to).read() + amount;
         // write the result back to the storage
-        public_balances.at(to).write(new_balance);
+        self.storage.public_balances.at(to).write(new_balance);
     }
 
     /// @notice Updates the given storage pointer `public_balances` to decrease the public balance of `from` by `amount`
     /// @param public_balances The storage pointer to the public balances
     /// @param from The address of the account to decrease the balance of
     /// @param amount The amount of tokens to decrease the balance by
-    #[contract_library_method]
-    fn _decrease_public_balance(
-        public_balances: Map<AztecAddress, PublicMutable<u128, PublicContext>, PublicContext>,
-        from: AztecAddress,
-        amount: u128,
-    ) {
+    #[internal("public")]
+    fn _decrease_public_balance(from: AztecAddress, amount: u128) {
         // read the current public balance of `from`, subtract `amount`
-        let new_balance = public_balances.at(from).read() - amount;
+        let new_balance = self.storage.public_balances.at(from).read() - amount;
         // update the public balance of `from` with the new balance
-        public_balances.at(from).write(new_balance);
+        self.storage.public_balances.at(from).write(new_balance);
     }
 
     /// @notice Completes a partial note
@@ -652,14 +585,13 @@ pub contract Token {
     /// @param commitment The partial note representing the commitment (privacy entrance)
     /// @param completer The address used to compute the validity commitment
     /// @param amount The amount of tokens to increase the balance of the commitment by
-    #[contract_library_method]
+    #[internal("public")]
     fn _increase_commitment_balance(
-        context: PublicContext,
         commitment: PartialUintNote,
         completer: AztecAddress,
         amount: u128,
     ) {
-        commitment.complete(context, completer, amount);
+        commitment.complete(self.context, completer, amount);
     }
 
     /// @notice Subtracts balance from private balance
@@ -670,15 +602,9 @@ pub contract Token {
     /// @param amount The amount of tokens to subtract
     /// @param max_notes The maximum number of notes to process in a single call
     /// @return The change to return to the owner
-    #[contract_library_method]
-    fn _subtract_balance(
-        _context: &mut PrivateContext,
-        private_balances: Map<AztecAddress, BalanceSet<&mut PrivateContext>, &mut PrivateContext>,
-        account: AztecAddress,
-        amount: u128,
-        max_notes: u32,
-    ) -> (u128, u128) {
-        let subtracted = private_balances.at(account).try_sub(amount, max_notes);
+    #[internal("private")]
+    fn _subtract_balance(account: AztecAddress, amount: u128, max_notes: u32) -> (u128, u128) {
+        let subtracted = self.storage.private_balances.at(account).try_sub(amount, max_notes);
         if subtracted >= amount {
             // We have achieved our goal of nullifying notes that add up to more than amount, so we return the change.
             (subtracted - amount, 0)
@@ -696,19 +622,19 @@ pub contract Token {
     /// @notice Increases the given storage pointer `total_supply` by `amount`
     /// @param total_supply The storage pointer to the total supply
     /// @param amount The amount of tokens to increase the total supply by
-    #[contract_library_method]
-    fn _increase_total_supply(total_supply: PublicMutable<u128, PublicContext>, amount: u128) {
-        let new_supply = total_supply.read() + amount;
-        total_supply.write(new_supply);
+    #[internal("public")]
+    fn _increase_total_supply(amount: u128) {
+        let new_supply = self.storage.total_supply.read() + amount;
+        self.storage.total_supply.write(new_supply);
     }
 
     /// @notice Decreases the given storage pointer `total_supply` by `amount`
     /// @param total_supply The storage pointer to the total supply
     /// @param amount The amount to decrease the total supply by
-    #[contract_library_method]
-    fn _decrease_total_supply(total_supply: PublicMutable<u128, PublicContext>, amount: u128) {
-        let new_supply = total_supply.read() - amount;
-        total_supply.write(new_supply);
+    #[internal("public")]
+    fn _decrease_total_supply(amount: u128) {
+        let new_supply = self.storage.total_supply.read() - amount;
+        self.storage.total_supply.write(new_supply);
     }
 
     /// @notice Initializes a transfer commitment to be used for transfers/mints
@@ -717,17 +643,15 @@ pub contract Token {
     /// @param to The address of the recipient
     /// @param completer The address used to compute the validity commitment
     /// @return The partial note that can be used to execute the transfer/mint
-    #[contract_library_method]
+    #[internal("private")]
     fn _initialize_transfer_commitment(
-        context: &mut PrivateContext,
-        private_balances: Map<AztecAddress, BalanceSet<&mut PrivateContext>, &mut PrivateContext>,
         to: AztecAddress,
         completer: AztecAddress,
     ) -> PartialUintNote {
         let commitment = UintNote::partial(
             to,
-            private_balances.at(to).set.storage_slot,
-            context,
+            self.storage.private_balances.at(to).set.storage_slot,
+            self.context,
             to,
             completer,
         );
@@ -742,8 +666,8 @@ pub contract Token {
     /// @param amount The amount of tokens to mint
     #[internal("public")]
     fn _mint_to_public(to: AztecAddress, amount: u128) {
-        _increase_public_balance(self.storage.public_balances, to, amount);
-        _increase_total_supply(self.storage.total_supply, amount);
+        self.internal._increase_public_balance(to, amount);
+        self.internal._increase_total_supply(amount);
     }
 
     /// @notice Mints tokens to a private balance and enqueues a public call to increase the total supply
@@ -753,7 +677,7 @@ pub contract Token {
     /// @param amount The amount of tokens to mint
     #[internal("private")]
     fn _mint_to_private(to: AztecAddress, amount: u128) {
-        _increase_private_balance(self.storage.private_balances, to, amount);
+        self.internal._increase_private_balance(to, amount);
         self.enqueue_self.increase_total_supply_internal(amount);
     }
 
@@ -762,15 +686,10 @@ pub contract Token {
     /// @param total_supply The storage pointer to the total supply
     /// @param from The address to burn tokens from
     /// @param amount The amount of tokens to burn
-    #[contract_library_method]
-    fn _burn_public(
-        public_balances: Map<AztecAddress, PublicMutable<u128, PublicContext>, PublicContext>,
-        total_supply: PublicMutable<u128, PublicContext>,
-        from: AztecAddress,
-        amount: u128,
-    ) {
-        _decrease_public_balance(public_balances, from, amount);
-        _decrease_total_supply(total_supply, amount);
+    #[internal("public")]
+    fn _burn_public(from: AztecAddress, amount: u128) {
+        self.internal._decrease_public_balance(from, amount);
+        self.internal._decrease_total_supply(amount);
     }
 
     /// @notice Burns tokens from a private balance and enqueues a public call to decrease the total supply
@@ -778,21 +697,10 @@ pub contract Token {
     /// @param private_balances The storage pointer to the private balances
     /// @param from The address to burn tokens from
     /// @param amount The amount of tokens to burn
-    #[contract_library_method]
-    fn _burn_private(
-        context: &mut PrivateContext,
-        private_balances: Map<AztecAddress, BalanceSet<&mut PrivateContext>, &mut PrivateContext>,
-        from: AztecAddress,
-        amount: u128,
-    ) {
-        _decrease_private_balance(
-            context,
-            private_balances,
-            from,
-            amount,
-            INITIAL_TRANSFER_CALL_MAX_NOTES,
-        );
-        // Note: Caller should handle enqueueing decrease_total_supply_internal if needed
+    #[internal("private")]
+    fn _burn_private(from: AztecAddress, amount: u128) {
+        self.internal._decrease_private_balance(from, amount, INITIAL_TRANSFER_CALL_MAX_NOTES);
+        self.enqueue_self.decrease_total_supply_internal(amount);
     }
 
     /** ==========================================================
@@ -983,16 +891,11 @@ pub contract Token {
         _validate_from_private::<5>(self.context, from);
 
         // Increase recipient's private balance with `min_shares`
-        _increase_private_balance(self.storage.private_balances, to, min_shares);
+        self.internal._increase_private_balance(to, min_shares);
 
         // TODO (optimization): partial note logs and validity_commitment nullifier are not needed
         // Initialize commitment that allows to mint outstanding shares to the recipient in public
-        let partial_note = _initialize_transfer_commitment(
-            self.context,
-            self.storage.private_balances,
-            to,
-            self.address,
-        );
+        let partial_note = self.internal._initialize_transfer_commitment(to, self.address);
 
         // Mint any outstanding shares without revealing the recipient and updates the shares total supply
         // Reverts if min_shares is greater than allowed
@@ -1031,16 +934,11 @@ pub contract Token {
         _validate_from_private::<5>(self.context, from);
 
         // Increase recipient's private balance with `min_shares`
-        _increase_private_balance(self.storage.private_balances, to, min_shares);
+        self.internal._increase_private_balance(to, min_shares);
 
         // TODO (optimization): partial note logs and validity_commitment nullifier are not needed
         // Initialize commitment that allows to mint outstanding shares to the recipient in public
-        let partial_note = _initialize_transfer_commitment(
-            self.context,
-            self.storage.private_balances,
-            to,
-            self.address,
-        );
+        let partial_note = self.internal._initialize_transfer_commitment(to, self.address);
 
         // Mint any outstanding shares without revealing the recipient and updates the shares total supply
         // Reverts if min_shares is greater than allowed
@@ -1255,12 +1153,7 @@ pub contract Token {
         ));
 
         // Burn the sender's shares
-        _burn_public(
-            self.storage.public_balances,
-            self.storage.total_supply,
-            from,
-            shares,
-        );
+        self.internal._burn_public(from, shares);
     }
 
     /// @notice Withdraws an amount of the underlying asset from a public balance to a private balance
@@ -1311,7 +1204,7 @@ pub contract Token {
         self.enqueue_self.validate_withdrawal_rate_internal(assets, shares);
 
         // Burn shares from the sender in private
-        _burn_private(self.context, self.storage.private_balances, from, shares);
+        self.internal._burn_private(from, shares);
         self.enqueue_self.decrease_total_supply_internal(shares);
 
         // Transfer the assets to the recipient in private
@@ -1345,21 +1238,10 @@ pub contract Token {
 
         // TODO (optimization): partial note logs and validity_commitment nullifier are not needed
         // Initialize commitment that allows to refund excess shares to the sender in public
-        let partial_note = _initialize_transfer_commitment(
-            self.context,
-            self.storage.private_balances,
-            from,
-            self.address,
-        );
+        let partial_note = self.internal._initialize_transfer_commitment(from, self.address);
 
         // Burn shares from the sender in private
-        _decrease_private_balance(
-            self.context,
-            self.storage.private_balances,
-            from,
-            max_shares,
-            INITIAL_TRANSFER_CALL_MAX_NOTES,
-        );
+        self.internal._decrease_private_balance(from, max_shares, INITIAL_TRANSFER_CALL_MAX_NOTES);
 
         // Burn the correct amount of shares
         // Any excess amount of shares is sent back to the sender via commitment
@@ -1401,21 +1283,10 @@ pub contract Token {
 
         // TODO (optimization): partial note logs and validity_commitment nullifier are not needed
         // Initialize commitment that allows to refund excess shares to the sender in public
-        let partial_note = _initialize_transfer_commitment(
-            self.context,
-            self.storage.private_balances,
-            from,
-            self.address,
-        );
+        let partial_note = self.internal._initialize_transfer_commitment(from, self.address);
 
         // Burn shares from the sender in private
-        _decrease_private_balance(
-            self.context,
-            self.storage.private_balances,
-            from,
-            max_shares,
-            INITIAL_TRANSFER_CALL_MAX_NOTES,
-        );
+        self.internal._decrease_private_balance(from, max_shares, INITIAL_TRANSFER_CALL_MAX_NOTES);
 
         // Burn the correct amount of shares
         // Any excess amount of shares is sent back to the sender via commitment
@@ -1460,12 +1331,7 @@ pub contract Token {
         ));
 
         // Burn the sender's shares
-        _burn_public(
-            self.storage.public_balances,
-            self.storage.total_supply,
-            from,
-            shares,
-        );
+        self.internal._burn_public(from, shares);
     }
 
     /// @notice Redeems an amount of the shares from a private balance to a public balance
@@ -1481,7 +1347,7 @@ pub contract Token {
         self.enqueue_self.settle_redemption_to_public_internal(to, shares);
 
         // Burn shares from the sender in private
-        _burn_private(self.context, self.storage.private_balances, from, shares);
+        self.internal._burn_private(from, shares);
         self.enqueue_self.decrease_total_supply_internal(shares);
     }
 
@@ -1526,7 +1392,7 @@ pub contract Token {
         ));
 
         // Burn shares from the sender in private
-        _burn_private(self.context, self.storage.private_balances, from, shares);
+        self.internal._burn_private(from, shares);
         self.enqueue_self.decrease_total_supply_internal(shares);
     }
 
@@ -1587,12 +1453,7 @@ pub contract Token {
         let total_assets = _total_assets(self.context, self.storage.asset);
         let shares = _convert_to_shares(assets, total_assets, self.storage.total_supply, ROUND_UP);
 
-        _burn_public(
-            self.storage.public_balances,
-            self.storage.total_supply,
-            from,
-            shares,
-        );
+        self.internal._burn_public(from, shares);
     }
 
     /// @notice Validates that the requested shares amount is valid for the given assets
@@ -1668,15 +1529,14 @@ pub contract Token {
 
         let surplus = max_shares - shares; // Reverts with underflow if invalid
         if surplus > 0 {
-            _increase_commitment_balance(
-                self.context,
+            self.internal._increase_commitment_balance(
                 PartialUintNote::from_field(commitment),
                 self.address,
                 surplus,
             );
         }
 
-        _decrease_total_supply(self.storage.total_supply, shares);
+        self.internal._decrease_total_supply(shares);
     }
 
     /// @notice Increases shares total supply and issues outstanding shares via commitment
@@ -1696,15 +1556,14 @@ pub contract Token {
 
         let outstanding_shares = max_shares - min_shares; // Reverts with underflow if invalid
         if outstanding_shares > 0 {
-            _increase_commitment_balance(
-                self.context,
+            self.internal._increase_commitment_balance(
                 PartialUintNote::from_field(commitment),
                 self.address,
                 outstanding_shares,
             );
         }
 
-        _increase_total_supply(self.storage.total_supply, max_shares);
+        self.internal._increase_total_supply(max_shares);
     }
 
     /// @notice Refunds excess assets to the sender via commitment while validating the shares amount requested
