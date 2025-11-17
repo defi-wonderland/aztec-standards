@@ -52,7 +52,7 @@ jobs:
       - name: Install dependencies
         run: |
           yarn --frozen-lockfile
-          yarn add @defi-wonderland/aztec-standards@canary
+      #    yarn add @defi-wonderland/aztec-standards@canary
 
       - name: Compile
         run: yarn compile
