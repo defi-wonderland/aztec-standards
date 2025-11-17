@@ -5,7 +5,7 @@ on: workflow_dispatch
 jobs:
   export:
     name: Generate Canary Release
-    environment: Development
+    # environment: Development
     runs-on: ubuntu-latest
 
     env:
@@ -43,6 +43,11 @@ jobs:
         run: |
           VERSION=${AZTEC_VERSION} aztec-up
       
+      # This is a temporary hack to fix a problem with v3 releases.
+      - name: Manually tag the aztec version as `latest`
+        run: |
+          docker tag aztecprotocol/aztec:${{ steps.aztec-version.outputs.version }} aztecprotocol/aztec:latest
+
       # Install dependencies AND the current canary version of the package we're releasing now.
       - name: Install dependencies
         run: |
@@ -51,6 +56,9 @@ jobs:
 
       - name: Compile
         run: yarn compile
+
+      - name: Log Token artifact
+        run: aztec inspect-contract ./target/token_contract-Token.json
 
       - name: Codegen
         run: aztec codegen target --outdir artifacts
@@ -113,7 +121,7 @@ jobs:
           cp README.md export/${{ env.PROJECT_NAME }}/
           cp LICENSE export/${{ env.PROJECT_NAME }}/
           cat package.json | jq 'del(.scripts, .jest, ."lint-staged", .packageManager, .devDependencies, .dependencies, .engines, .resolutions)' > export/${{ env.PROJECT_NAME }}/package.json
-      - name: Publish to NPM
-        run: cd export/${{ env.PROJECT_NAME }} && npm publish --access public --tag canary
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      # - name: Publish to NPM
+      #   run: cd export/${{ env.PROJECT_NAME }} && npm publish --access public --tag canary
+      #   env:
+      #     NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
