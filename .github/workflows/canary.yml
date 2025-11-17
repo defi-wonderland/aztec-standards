@@ -46,7 +46,7 @@ jobs:
       # This is a temporary hack to fix a problem with v3 releases.
       - name: Manually tag the aztec version as `latest`
         run: |
-          docker tag aztecprotocol/aztec:${{ steps.aztec-version.outputs.version }} aztecprotocol/aztec:latest
+          docker tag aztecprotocol/aztec:${{ steps.aztec-version.outputs.AZTEC_VERSION }} aztecprotocol/aztec:latest
 
       # Install dependencies AND the current canary version of the package we're releasing now.
       - name: Install dependencies
