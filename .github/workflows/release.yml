@@ -64,6 +64,12 @@ jobs:
       - name: Set Aztec version
         run: |
           VERSION=${{ steps.aztec-version.outputs.AZTEC_VERSION }} aztec-up
+
+      # This is a temporary hack to fix a problem with v3 releases.
+      - name: Manually tag the aztec version as `latest`
+        run: |
+          docker tag aztecprotocol/aztec:${{ steps.aztec-version.outputs.version }} aztecprotocol/aztec:latest
+
       - name: Install dependencies
         run: |
           yarn --frozen-lockfile
