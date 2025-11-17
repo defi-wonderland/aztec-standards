@@ -29,7 +29,7 @@ jobs:
         id: aztec-version
         run: |
           AZTEC_VERSION=$(node -p "require('./package.json').config.aztecVersion")
-          echo "AZTEC_VERSION=$AZTEC_VERSION" >> "$GITHUB_OUTPUT"
+          echo "version=$AZTEC_VERSION" >> "$GITHUB_OUTPUT"
           echo "Aztec version is $AZTEC_VERSION"
 
       - name: Install Aztec CLI
@@ -41,12 +41,12 @@ jobs:
 
       - name: Set Aztec version
         run: |
-          VERSION=${AZTEC_VERSION} aztec-up
+          VERSION=${{ steps.aztec-version.outputs.version }} aztec-up
       
       # This is a temporary hack to fix a problem with v3 releases.
       - name: Manually tag the aztec version as `latest`
         run: |
-          docker tag aztecprotocol/aztec:${{ steps.aztec-version.outputs.AZTEC_VERSION }} aztecprotocol/aztec:latest
+          docker tag aztecprotocol/aztec:${{ steps.aztec-version.outputs.version }} aztecprotocol/aztec:latest
 
       # Install dependencies AND the current canary version of the package we're releasing now.
       - name: Install dependencies
