@@ -5,7 +5,7 @@ on: workflow_dispatch
 jobs:
   export:
     name: Generate Canary Release
-    # environment: Development
+    environment: Development
     runs-on: ubuntu-latest
 
     env:
@@ -101,6 +101,6 @@ jobs:
 
           cat package.json | jq 'del(.scripts, .jest, ."lint-staged", .packageManager, .devDependencies, .dependencies, .engines, .resolutions)' > export/${{ env.PROJECT_NAME }}/package.json
       - name: Publish to NPM
-        run: cd export/${{ env.PROJECT_NAME }} && npm publish --access public --tag canary --dry-run
-        # env:
-          # NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: cd export/${{ env.PROJECT_NAME }} && npm publish --access public --tag canary
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
