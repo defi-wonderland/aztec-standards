@@ -13,7 +13,7 @@ jobs:
     name: Release
     # environment: Production
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main'
+    # if: github.ref == 'refs/heads/main'
     permissions:
       contents: write  # Required to create and push tags
 
