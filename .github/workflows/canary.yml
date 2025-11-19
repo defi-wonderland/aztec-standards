@@ -65,6 +65,13 @@ jobs:
       - name: Update version
         run: yarn version --new-version "0.0.0-${GITHUB_SHA::8}" --no-git-tag-version
 
+      - name: Inspect contracts
+        run: |
+          for f in target/*.json; do
+            [ -f "$f" ] || continue
+            aztec inspect-contract "$f"
+          done
+
       # TODO: We do several things here:
       # 1. Create artifacts directory
       # 2. Copy compiled JS artifacts to artifacts/
