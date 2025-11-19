@@ -11,9 +11,9 @@ on:
 jobs:
   release:
     name: Release
-    # environment: Production
+    environment: Production
     runs-on: ubuntu-latest
-    # if: github.ref == 'refs/heads/main'
+    if: github.ref == 'refs/heads/main'
     permissions:
       contents: write  # Required to create and push tags
 
@@ -116,18 +116,18 @@ jobs:
 
       - name: Publish to NPM
         run: cd export/${{ env.PROJECT_NAME }} && npm publish --access public --tag latest --dry-run
-        # env:
-        #   NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
-      # - name: Create GitHub Release Tag (adds 'v' prefix to input)
-      #   run: |
-      #     TAG_NAME="v${{ github.event.inputs.version }}"
-      #     # Check if tag already exists
-      #     if git ls-remote --tags origin | grep -q "refs/tags/${TAG_NAME}$"; then
-      #       echo "::error::Tag ${TAG_NAME} already exists. Please use a different version."
-      #       exit 1
-      #     fi
-      #     git tag "${TAG_NAME}"
-      #     git push origin "${TAG_NAME}"
-      #   env:
-      #     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Create GitHub Release Tag (adds 'v' prefix to input)
+        run: |
+          TAG_NAME="v${{ github.event.inputs.version }}"
+          # Check if tag already exists
+          if git ls-remote --tags origin | grep -q "refs/tags/${TAG_NAME}$"; then
+            echo "::error::Tag ${TAG_NAME} already exists. Please use a different version."
+            exit 1
+          fi
+          git tag "${TAG_NAME}"
+          git push origin "${TAG_NAME}"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
