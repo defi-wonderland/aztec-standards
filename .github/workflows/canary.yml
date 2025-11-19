@@ -29,7 +29,7 @@ jobs:
         id: aztec-version
         run: |
           AZTEC_VERSION=$(node -p "require('./package.json').config.aztecVersion")
-          echo "AZTEC_VERSION=$AZTEC_VERSION" >> "$GITHUB_OUTPUT"
+          echo "version=$AZTEC_VERSION" >> "$GITHUB_OUTPUT"
           echo "Aztec version is $AZTEC_VERSION"
 
       - name: Install Aztec CLI
@@ -41,13 +41,15 @@ jobs:
 
       - name: Set Aztec version
         run: |
-          VERSION=${AZTEC_VERSION} aztec-up
+          VERSION=${{ steps.aztec-version.outputs.version }} aztec-up
       
-      # Install dependencies AND the current canary version of the package we're releasing now.
-      - name: Install dependencies
+      # This is a temporary hack to fix a problem with v3 releases.
+      - name: Manually tag the aztec version as `latest`
         run: |
-          yarn --frozen-lockfile
-          yarn add @defi-wonderland/aztec-standards@canary
+          docker tag aztecprotocol/aztec:${{ steps.aztec-version.outputs.version }} aztecprotocol/aztec:latest
+
+      - name: Install dependencies
+        run: yarn --frozen-lockfile
 
       - name: Compile
         run: yarn compile
@@ -63,55 +65,40 @@ jobs:
       - name: Update version
         run: yarn version --new-version "0.0.0-${GITHUB_SHA::8}" --no-git-tag-version
 
+      - name: Inspect contracts
+        run: |
+          for f in target/*.json; do
+            [ -f "$f" ] || continue
+            aztec inspect-contract "$f"
+          done
+
       # TODO: We do several things here:
-      # 1. Create current and historical directories
-      # 2. Copy historical versions from existing package to /historical
-      # 3. Move this version's artifacts and circuits to historical/ as well.
-      # 4. Move this version's artifacts and circuits to current/
-      # 5. Copy deployments.json to current/
-      # 6. README.md, and LICENSE to current/
-      # 7. Trim info from package.json
+      # 1. Create artifacts directory
+      # 2. Copy compiled JS artifacts to artifacts/
+      # 3. Copy compiled Noir contracts (target/) to package root
+      # 4. Copy deployments.json to package root (if exists)
+      # 5. Copy README.md and LICENSE to package root
+      # 6. Create trimmed package.json
       - name: Prepare files for release
         run: |
-          VERSION="0.0.0-${GITHUB_SHA::8}"
-          mkdir -p export/${{ env.PROJECT_NAME }}/current/artifacts
-          mkdir -p export/${{ env.PROJECT_NAME }}/historical
-          
-          # This snippet copies the contents of the nested directory artifacts/artifacts
-          # and moves them up one level to artifacts/. Then it removes the now empty nested directory.
-          # After we run this once, this won't be needed anymore.
-          if [ -d "node_modules/${{ env.PROJECT_NAME }}/historical" ]; then
-            # First copy all historical versions
-            cp -r node_modules/${{ env.PROJECT_NAME }}/historical/** export/${{ env.PROJECT_NAME }}/historical/
-            
-            # Fix structure for each historical version
-            for version_dir in export/${{ env.PROJECT_NAME }}/historical/*/; do
-              if [ -d "${version_dir}artifacts/artifacts" ]; then
-                echo "Fixing double-nested artifacts structure in ${version_dir}"
-                # Move contents up one level
-                mv "${version_dir}artifacts/artifacts"/* "${version_dir}artifacts/"
-                # Remove empty nested directory
-                rm -rf "${version_dir}artifacts/artifacts"
-              fi
-            done
-          else
-            echo "No historical directory found, skipping copy"
-          fi
+          mkdir -p export/${{ env.PROJECT_NAME }}/artifacts
 
-          # Copy the compiled JS files and target directory to current/
-          cp -r dist/artifacts/* export/${{ env.PROJECT_NAME }}/current/artifacts/
-          cp -r target export/${{ env.PROJECT_NAME }}/current/
+          # Copy the compiled JS files to artifacts/
+          cp -r dist/artifacts/* export/${{ env.PROJECT_NAME }}/artifacts/
+
+          # Copy compiled Noir contracts to package root
+          cp -r target export/${{ env.PROJECT_NAME }}/
 
           # Copy deployments.json if it exists
           if [ -f "src/deployments.json" ]; then
-            cp src/deployments.json export/${{ env.PROJECT_NAME }}/current/
+            cp src/deployments.json export/${{ env.PROJECT_NAME }}/
           else
             echo "src/deployments.json not found, skipping copy"
           fi
-          
-          cp -r export/${{ env.PROJECT_NAME }}/current export/${{ env.PROJECT_NAME }}/historical/$VERSION
+                    
           cp README.md export/${{ env.PROJECT_NAME }}/
           cp LICENSE export/${{ env.PROJECT_NAME }}/
+
           cat package.json | jq 'del(.scripts, .jest, ."lint-staged", .packageManager, .devDependencies, .dependencies, .engines, .resolutions)' > export/${{ env.PROJECT_NAME }}/package.json
       - name: Publish to NPM
         run: cd export/${{ env.PROJECT_NAME }} && npm publish --access public --tag canary
