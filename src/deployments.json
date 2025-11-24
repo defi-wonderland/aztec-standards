@@ -3,29 +3,29 @@
         {
             "name": "WETH",
             "symbol": "WETH",
-            "address": "0x26d6674f54a2514526b930b00b1b9ad56435d77508fd7374c190dc509fe7c8a9",
+            "address": "0x2925b0b7212440baaace46ab05821ed589fad263fb5ff2243dd65eaaab84ab34",
             "decimals": 18,
-            "minter": "0x0c8912beccec01f90f1aba1fc04c8021acfc57bb311d12f06f155fcf2b6376c6",
+            "minter": "0x1dd712303e81139c9ad77f15cd3a88a87946c5f821b78350bb9238122d9fe997",
             "upgrade_authority": "0x0000000000000000000000000000000000000000000000000000000000000000"
         },
         {
             "name": "DAI",
             "symbol": "DAI",
-            "address": "0x17747692669ed10664fbcc8fa2b42abdb316a68faa26847880e660e7fc8fa1bc",
+            "address": "0x264f3d1dbe34e6428d5e958bb379bd290548ece1a2cd0a419127f4d9a16d2917",
             "decimals": 9,
-            "minter": "0x0c8912beccec01f90f1aba1fc04c8021acfc57bb311d12f06f155fcf2b6376c6",
+            "minter": "0x1dd712303e81139c9ad77f15cd3a88a87946c5f821b78350bb9238122d9fe997",
             "upgrade_authority": "0x0000000000000000000000000000000000000000000000000000000000000000"
         },
         {
             "name": "USDC",
             "symbol": "USDC",
-            "address": "0x2bedb585a75c905640ba2233865e0f3c9cb92375c2851920ba03834587debeb5",
+            "address": "0x1d298948a788dee4992efad5300fc9520da043d0f18e925a2e8fc2bf7b83ee99",
             "decimals": 6,
-            "minter": "0x0c8912beccec01f90f1aba1fc04c8021acfc57bb311d12f06f155fcf2b6376c6",
+            "minter": "0x1dd712303e81139c9ad77f15cd3a88a87946c5f821b78350bb9238122d9fe997",
             "upgrade_authority": "0x0000000000000000000000000000000000000000000000000000000000000000"
         }
     ],
     "dripper": {
-        "address": "0x0c8912beccec01f90f1aba1fc04c8021acfc57bb311d12f06f155fcf2b6376c6"
+        "address": "0x1dd712303e81139c9ad77f15cd3a88a87946c5f821b78350bb9238122d9fe997"
     }
 }
