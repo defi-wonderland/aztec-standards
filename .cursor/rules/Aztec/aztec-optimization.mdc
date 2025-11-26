@@ -1,27 +1,175 @@
 ---
 description: Aztec gas and performance optimization guidelines
 globs: **/*.nr
-version: 1.0.0
+version: 2.0.0
 ---
 
 # Aztec Optimization Guidelines
 
 ## Note Efficiency
-- Set appropriate max notes limits (2 for initial, 8 for recursive typically)
+
+### Note Limits
+```noir
+global INITIAL_TRANSFER_CALL_MAX_NOTES: u32 = 2;      // Optimal for gas in initial calls
+global RECURSIVE_TRANSFER_CALL_MAX_NOTES: u32 = 8;    // For recursive/complex operations
+```
+
+### Note Selection Strategy
 - Sort notes by value descending for optimal selection
-- Use recursive patterns for handling many notes
-- Minimize note reads with preprocess_notes_min_sum
-- Batch operations where possible to reduce note overhead
+- Use `NoteGetterOptions` for efficient filtering
+- Minimize note reads with appropriate limits
+
+```noir
+use aztec::note::note_getter_options::NoteGetterOptions;
+
+let options = NoteGetterOptions::new()
+    .select(NFTNote::properties().token_id, Comparator.EQ, token_id)
+    .set_limit(1);
+
+let notes = private_set.pop_notes(options);
+```
+
+### Recursive Patterns for Many Notes
+```noir
+// Initial call with small note limit
+#[external("private")]
+fn transfer_private_to_private(from: AztecAddress, to: AztecAddress, amount: u128, _nonce: Field) {
+    _decrease_private_balance(context, storage.private_balances, from, amount,
+        INITIAL_TRANSFER_CALL_MAX_NOTES);
+}
+
+// Recursive internal with larger limit
+#[external("private")]
+#[internal]
+fn recurse_subtract_balance_internal(from: AztecAddress, amount: u128) {
+    _decrease_private_balance(context, storage.private_balances, from, amount,
+        RECURSIVE_TRANSFER_CALL_MAX_NOTES);
+}
+```
 
 ## Storage Optimization
-- Use PublicImmutable for deployment-time constants (name, symbol, decimals)
-- Use PublicMutable for changing state (balances, total_supply)
-- Pack related data into single storage slots where possible
-- Use Map<AztecAddress, Type> for address-indexed storage
-- Prefer PrivateSet for private note collections
+
+### Storage Type Selection
+```noir
+#[storage]
+struct Storage<Context> {
+    // PublicImmutable: Deployment-time constants (never change)
+    name: PublicImmutable<FieldCompressedString, Context>,
+    symbol: PublicImmutable<FieldCompressedString, Context>,
+    decimals: PublicImmutable<u8, Context>,
+    minter: PublicImmutable<AztecAddress, Context>,
+
+    // PublicMutable: Changing public state
+    total_supply: PublicMutable<u128, Context>,
+    public_balances: Map<AztecAddress, PublicMutable<u128, Context>, Context>,
+
+    // Private collections: User-specific encrypted data
+    private_balances: Map<AztecAddress, BalanceSet<Context>, Context>,
+    private_nfts: Map<AztecAddress, PrivateSet<NFTNote, Context>, Context>,
+}
+```
+
+### BalanceSet for Efficient Private Balances
+- Custom type in `types/balance_set.nr` for efficient note management
+- Handles multi-note operations with automatic optimization
+- Supports `add()`, `try_sub()`, and note retrieval
+
+```noir
+use crate::types::balance_set::BalanceSet;
+
+// In storage
+private_balances: Map<AztecAddress, BalanceSet<Context>, Context>,
+
+// Usage
+private_balances.at(account).add(account, amount).emit(account, MessageDelivery.CONSTRAINED_ONCHAIN);
+let change = private_balances.at(account).try_sub(amount, max_notes);
+```
+
+### String Storage
+- Use `FieldCompressedString` for names/symbols (max 31 characters)
+- Efficient single-field storage for short strings
+
+```noir
+use compressed_string::FieldCompressedString;
+
+storage.name.initialize(FieldCompressedString::from_string("TokenName"));
+let name = storage.name.read();
+```
+
+### Storage Slot Derivation
+```noir
+use aztec::protocol_types::storage::map::derive_storage_slot_in_map;
+
+let base_slot = Contract::storage_layout().private_balances.slot;
+let user_slot = derive_storage_slot_in_map(base_slot, user_address);
+```
 
 ## Function Optimization
-- Extract common logic to #[contract_library_method] functions
-- Use internal function variants to avoid redundant validation
-- Minimize context switches between private and public
+
+### Library Methods for Reuse
+- Extract common logic to `#[contract_library_method]` functions
+- Accept storage pointers as parameters for flexibility
+- Prefix with underscore: `_increase_balance`, `_validate_minter`
+
+```noir
+#[contract_library_method]
+fn _increase_public_balance(
+    public_balances: Map<AztecAddress, PublicMutable<u128, &mut PublicContext>, &mut PublicContext>,
+    to: AztecAddress,
+    amount: u128,
+) {
+    let new_balance = public_balances.at(to).read() + amount;
+    public_balances.at(to).write(new_balance);
+}
+```
+
+### Internal Functions to Avoid Redundant Validation
+- Use `#[internal]` for functions called by contract itself
+- Skip re-validation when caller is trusted (the contract)
+- Suffix with `_internal`: `increase_public_balance_internal`
+
+```noir
+#[external("public")]
+#[internal]
+fn increase_public_balance_internal(to: AztecAddress, amount: u128) {
+    // No validation needed - only callable by this contract
+    _increase_public_balance(storage.public_balances, to, amount);
+}
+```
+
+### Minimize Context Switches
 - Batch public calls when transitioning from private
+- Use `.enqueue()` to chain public calls efficiently
+
+```noir
+#[external("private")]
+fn transfer_private_to_public(from: AztecAddress, to: AztecAddress, amount: u128, _nonce: Field) {
+    _validate_from_private::<4>(&mut context, from);
+    _decrease_private_balance(context, storage.private_balances, from, amount, 2);
+
+    // Single enqueued public call
+    Token::at(context.this_address())
+        .increase_public_balance_internal(to, amount)
+        .enqueue(&mut context);
+}
+```
+
+## Cross-Contract Optimization
+
+### Typed Interface Calls
+```noir
+// Enqueue public call from private (efficient)
+Token::at(context.this_address())
+    .increase_public_balance_internal(to, amount)
+    .enqueue(&mut context);
+
+// Direct private call
+Token::at(token_address)
+    .transfer_private_to_private(from, to, amount, 0)
+    .call(&mut context);
+```
+
+### Commitment Pattern for Atomic Operations
+- Use `PartialUintNote` to batch private→public transitions
+- Single public call to complete all commitments
+- Reduces transaction complexity

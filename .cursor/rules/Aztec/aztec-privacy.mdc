@@ -1,25 +1,184 @@
 ---
 description: Aztec privacy and security guidelines
 globs: **/*.nr
-version: 1.0.0
+version: 2.0.0
 ---
 
 # Aztec Privacy & Security Guidelines
 
 ## Privacy Patterns
+
+### Dual-Mode Operations
 - Implement both private and public versions of core functions
-- Use commitment pattern for privacy entrance (return Field from private functions)
-- Handle note encryption with encode_and_encrypt_note for recipient discovery
-- Separate private/public state transitions clearly
-- Use PartialUintNote for incomplete notes that complete in public
+- Private functions use note-based state (encrypted, user-specific)
+- Public functions use traditional storage (visible on-chain)
+- Support state transitions in both directions
+
+### Commitment Pattern (Private→Public)
+```noir
+// Phase 1: Private function creates commitment, returns PartialUintNote
+#[external("private")]
+fn transfer_private_to_public_with_commitment(
+    from: AztecAddress,
+    to: AztecAddress,
+    completer: AztecAddress,
+    amount: u128,
+    max_notes: u32,
+) -> PartialUintNote {
+    _validate_from_private::<4>(&mut context, from);
+    _decrease_private_balance(context, storage.private_balances, from, amount, max_notes);
+
+    let commitment = _initialize_transfer_commitment(context, storage.private_balances, from, to, completer);
+
+    Token::at(context.this_address())
+        .increase_commitment_balance_internal(commitment, completer, amount)
+        .enqueue(&mut context);
+
+    commitment
+}
+
+// Phase 2: Public internal completes the commitment
+#[external("public")]
+#[internal]
+fn increase_commitment_balance_internal(commitment: PartialUintNote, completer: AztecAddress, amount: u128) {
+    commitment.complete(context, completer, amount);
+}
+```
+
+### Note Encryption & Emission
+```noir
+// Emit encrypted note for recipient discovery
+private_balances.at(to).add(to, amount).emit(
+    to,  // recipient address for encryption
+    MessageDelivery.CONSTRAINED_ONCHAIN,
+);
+
+// With explicit note creation
+let new_note = UintNote::new(amount, owner);
+private_balances.at(to).insert(new_note).emit(
+    to,
+    MessageDelivery.CONSTRAINED_ONCHAIN,
+);
+```
+
+### Partial Notes
+- Use `PartialUintNote` for incomplete notes that complete in public context
+- Pattern enables atomic private→public transitions
+- Completer address validates who can finalize the operation
 
 ## Authorization
-- Always validate authorization with assert_current_call_valid_authwit
-- Implement dedicated validation functions: _validate_from_private, _validate_minter
-- Use authwit for both private and public contexts appropriately
+
+### Private Authorization
+```noir
+#[contract_library_method]
+fn _validate_from_private<let N: u32>(context: &mut PrivateContext, from: AztecAddress) {
+    // context.msg_sender() returns Option<AztecAddress> in private context
+    if (!from.eq(context.msg_sender().unwrap())) {
+        assert_current_call_valid_authwit::<N>(context, from);
+    }
+}
+```
+- Generic parameter `<N>` specifies expected number of args in authwit hash
+- Call at START of every function operating on behalf of another address
+- `context.msg_sender()` returns `Option<AztecAddress>` in private context
+
+### Public Authorization
+```noir
+#[contract_library_method]
+unconstrained fn _validate_from_public(context: &mut PublicContext, from: AztecAddress) {
+    // context.msg_sender() returns AztecAddress directly in public context
+    if (!from.eq(context.msg_sender())) {
+        assert_current_call_valid_authwit_public(context, from);
+    }
+}
+```
+- Public authwit validation is unconstrained
+- `context.msg_sender()` returns `AztecAddress` directly in public context
+
+### Role Validation
+```noir
+#[contract_library_method]
+fn _validate_minter(sender: AztecAddress, minter: AztecAddress) {
+    assert(minter.eq(sender), "caller is not minter");
+}
+```
 
 ## Note Management
-- Define note limits: INITIAL_TRANSFER_CALL_MAX_NOTES, RECURSIVE_TRANSFER_CALL_MAX_NOTES
-- Handle recursive balance operations when exceeding note limits
-- Always emit notes with proper encryption for recipient
-- Use preprocess_notes_min_sum for efficient note selection
+
+### Note Limits
+```noir
+global INITIAL_TRANSFER_CALL_MAX_NOTES: u32 = 2;      // Optimal for gas
+global RECURSIVE_TRANSFER_CALL_MAX_NOTES: u32 = 8;    // For complex operations
+```
+
+### Recursive Balance Operations
+```noir
+// When note count exceeds limit, recursively call internal function
+#[external("private")]
+#[internal]
+fn recurse_subtract_balance_internal(from: AztecAddress, amount: u128) {
+    _decrease_private_balance(
+        context,
+        storage.private_balances,
+        from,
+        amount,
+        RECURSIVE_TRANSFER_CALL_MAX_NOTES,
+    );
+}
+```
+
+### Note Selection Options
+```noir
+use aztec::note::note_getter_options::NoteGetterOptions;
+
+// Select specific notes
+let notes = private_nft_set.pop_notes(
+    NoteGetterOptions::new()
+        .select(NFTNote::properties().token_id, Comparator.EQ, token_id)
+        .set_limit(1)
+);
+
+// View notes with options
+let notes: BoundedVec<UintNote, MAX_NOTES_PER_PAGE> = set.view_notes(
+    NoteViewerOptions::new().set_offset(offset)
+);
+```
+
+## Security Patterns
+
+### Internal Function Protection
+```noir
+// Mark functions callable only by contract itself
+#[external("public")]
+#[internal]
+fn increase_public_balance_internal(to: AztecAddress, amount: u128) {
+    // Only callable by this contract via enqueue/call
+}
+```
+
+### Address Comparisons
+```noir
+// Use .eq() for address comparisons (not ==)
+if (!from.eq(context.msg_sender().unwrap())) {
+    // ...
+}
+
+// Check for zero address
+assert(!upgrade_authority.eq(AztecAddress::zero()), "upgrade authority not set");
+```
+
+### Error Messages
+```noir
+// Descriptive error messages for security assertions
+assert(subtracted > 0, "Balance too low");
+assert(minter.eq(sender), "caller is not minter");
+assert(owner.eq(from), "caller is not owner");
+assert(notes.len() == 1, "nft not found in private to public");
+```
+
+### Natural Underflow Protection
+```noir
+// Let Noir's automatic overflow checking catch errors with clear context
+let new_balance = public_balances.at(from).read() - amount;
+// Test shows: "attempt to subtract with overflow 'public_balances.at(from).read() - amount'"
+```
