@@ -1,28 +1,223 @@
 ---
 description: Aztec contract design patterns
 globs: **/*.nr
-version: 1.0.0
+version: 2.0.0
 ---
 
 # Aztec Contract Design Patterns
 
 ## Contract Structure
-- Define storage struct with appropriate visibility modifiers
+- Define storage struct with `#[storage]` attribute and `<Context>` generic parameter
 - Group storage by type: immutable config, mutable state, private collections
 - Implement standard interfaces consistently (token, NFT patterns)
-- Use #[aztec] macro for contract definition
-- Apply appropriate function decorators: #[public], #[private], #[view], #[utility]
+- Use `#[aztec]` macro for contract definition
+
+## Function Decorators
+```noir
+// Public initializer (constructor)
+#[external("public")]
+#[initializer]
+fn constructor(...) { }
+
+// Private function
+#[external("private")]
+fn transfer_private_to_public(...) { }
+
+// Public function
+#[external("public")]
+fn transfer_public_to_public(...) { }
+
+// View function (read-only public)
+#[external("public")]
+#[view]
+fn balance_of_public(owner: AztecAddress) -> u128 { }
+
+// Unconstrained/Utility function
+#[external("utility")]
+unconstrained fn balance_of_private(owner: AztecAddress) -> u128 { }
+
+// Internal function (only callable by contract itself)
+#[external("public")]
+#[internal]
+fn increase_public_balance_internal(to: AztecAddress, amount: u128) { }
+
+// Library method (private helper)
+#[contract_library_method]
+fn _validate_minter(sender: AztecAddress, minter: AztecAddress) { }
+```
+
+## Storage Struct Pattern
+```noir
+/// @param name The name of the token
+/// @param symbol The symbol of the token
+/// @param decimals The number of decimals
+/// @param private_balances Private balance mapping
+/// @param public_balances Public balance mapping
+/// @param total_supply Total token supply
+/// @param minter Address authorized to mint
+#[storage]
+struct Storage<Context> {
+    name: PublicImmutable<FieldCompressedString, Context>,
+    symbol: PublicImmutable<FieldCompressedString, Context>,
+    decimals: PublicImmutable<u8, Context>,
+    private_balances: Map<AztecAddress, BalanceSet<Context>, Context>,
+    public_balances: Map<AztecAddress, PublicMutable<u128, Context>, Context>,
+    total_supply: PublicMutable<u128, Context>,
+    minter: PublicImmutable<AztecAddress, Context>,
+}
+```
 
 ## Common Patterns
-- Commitment pattern: initialize_transfer_commitment returns Field
-- Validation pattern: separate _validate_* functions for reuse
-- Balance management: _increase_balance, _decrease_balance helpers
-- Recursive operations: recurse_subtract_balance_internal for note limits
-- Library methods: #[contract_library_method] for shared logic
+
+### Commitment Pattern (Private-to-Public)
+```noir
+// Phase 1: Private function creates commitment and returns PartialUintNote
+#[external("private")]
+fn transfer_private_to_public_with_commitment(
+    from: AztecAddress,
+    to: AztecAddress,
+    completer: AztecAddress,
+    amount: u128,
+    max_notes: u32,
+) -> PartialUintNote {
+    _validate_from_private::<4>(&mut context, from);
+    _decrease_private_balance(context, storage.private_balances, from, amount, max_notes);
+
+    let commitment = _initialize_transfer_commitment(
+        context, storage.private_balances, from, to, completer
+    );
+
+    Token::at(context.this_address())
+        .increase_commitment_balance_internal(commitment, completer, amount)
+        .enqueue(&mut context);
+
+    commitment
+}
+
+// Phase 2: Public internal function validates and completes
+#[external("public")]
+#[internal]
+fn increase_commitment_balance_internal(
+    commitment: PartialUintNote,
+    completer: AztecAddress,
+    amount: u128,
+) {
+    commitment.complete(context, completer, amount);
+}
+```
+
+### Validation Pattern
+```noir
+#[contract_library_method]
+fn _validate_from_private<let N: u32>(context: &mut PrivateContext, from: AztecAddress) {
+    if (!from.eq(context.msg_sender().unwrap())) {
+        assert_current_call_valid_authwit::<N>(context, from);
+    }
+}
+
+#[contract_library_method]
+unconstrained fn _validate_from_public(context: &mut PublicContext, from: AztecAddress) {
+    if (!from.eq(context.msg_sender())) {
+        assert_current_call_valid_authwit_public(context, from);
+    }
+}
+
+#[contract_library_method]
+fn _validate_minter(sender: AztecAddress, minter: AztecAddress) {
+    assert(minter.eq(sender), "caller is not minter");
+}
+```
+
+### Balance Management
+```noir
+#[contract_library_method]
+fn _increase_public_balance(
+    public_balances: Map<AztecAddress, PublicMutable<u128, &mut PublicContext>, &mut PublicContext>,
+    to: AztecAddress,
+    amount: u128,
+) {
+    let new_balance = public_balances.at(to).read() + amount;
+    public_balances.at(to).write(new_balance);
+}
+
+#[contract_library_method]
+fn _decrease_public_balance(
+    public_balances: Map<AztecAddress, PublicMutable<u128, &mut PublicContext>, &mut PublicContext>,
+    from: AztecAddress,
+    amount: u128,
+) {
+    let new_balance = public_balances.at(from).read() - amount;
+    public_balances.at(from).write(new_balance);
+}
+```
+
+### Recursive Operations (Note Limit Handling)
+```noir
+global INITIAL_TRANSFER_CALL_MAX_NOTES: u32 = 2;
+global RECURSIVE_TRANSFER_CALL_MAX_NOTES: u32 = 8;
+
+// Initial call uses 2 notes for optimal gas
+#[external("private")]
+fn transfer_private_to_private(from: AztecAddress, to: AztecAddress, amount: u128, _nonce: Field) {
+    _validate_from_private::<4>(&mut context, from);
+    _decrease_private_balance(context, storage.private_balances, from, amount,
+        INITIAL_TRANSFER_CALL_MAX_NOTES);
+    _increase_private_balance(context, storage.private_balances, to, amount);
+}
+
+// Recursive internal handles more notes
+#[external("private")]
+#[internal]
+fn recurse_subtract_balance_internal(from: AztecAddress, amount: u128) {
+    _decrease_private_balance(context, storage.private_balances, from, amount,
+        RECURSIVE_TRANSFER_CALL_MAX_NOTES);
+}
+```
 
 ## State Management
-- Private state uses note-based system (UintNote, NFTNote)
-- Public state uses traditional mappings
-- Support state transitions in both directions
-- Emit encrypted notes for private recipients
-- Complete partial notes in public context
+
+### Note Emission Pattern
+```noir
+// Add to private balance and emit encrypted note
+private_balances.at(to).add(to, amount).emit(
+    to,  // recipient for encryption
+    MessageDelivery.CONSTRAINED_ONCHAIN,
+);
+
+// Alternative: with custom note
+let new_note = UintNote::new(amount, to);
+private_balances.at(to).insert(new_note).emit(
+    to,
+    MessageDelivery.CONSTRAINED_ONCHAIN,
+);
+```
+
+### Cross-Contract Calls
+```noir
+// Enqueue public call from private context
+Token::at(context.this_address())
+    .increase_public_balance_internal(to, amount)
+    .enqueue(&mut context);
+
+// Direct private call
+Token::at(token_address)
+    .transfer_private_to_private(from, to, amount, 0)
+    .call(&mut context);
+```
+
+### Storage Access
+```noir
+// Initialize immutable (only in constructor)
+storage.name.initialize(FieldCompressedString::from_string(name));
+
+// Read immutable
+let decimals = storage.decimals.read();
+
+// Read/Write mutable
+let balance = storage.public_balances.at(owner).read();
+storage.public_balances.at(owner).write(new_balance);
+
+// Private set operations
+private_balances.at(account).add(account, amount).emit(account, MessageDelivery.CONSTRAINED_ONCHAIN);
+let subtracted = private_balances.at(account).try_sub(amount, max_notes);
+```

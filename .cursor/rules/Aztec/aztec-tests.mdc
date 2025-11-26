@@ -1,33 +1,250 @@
 ---
 description: Aztec test file guidelines
 globs: **/test/**/*.nr
-version: 1.0.0
+version: 2.0.0
 ---
 
 # Aztec Test Guidelines
 
 ## Test Organization
 - Create separate test files for each major functionality
-- Name test files by feature: mint_to_private.nr, transfer_public_to_public.nr
-- Use descriptive test names: mint_to_private_success, burn_public_fail_not_enough_balance
+- Name test files by feature: `mint_to_private.nr`, `transfer_public_to_public.nr`
+- Use descriptive test names: `mint_to_private_success`, `burn_public_fail_not_enough_balance`
 - Group related tests in the same file
+- Declare test modules as `pub mod test;` to enable cross-contract imports
+
+## Test Imports
+```noir
+use crate::Contract;
+use aztec::{
+    note::constants::MAX_NOTES_PER_PAGE,
+    note::note_viewer_options::NoteViewerOptions,
+    oracle::random::random,
+    protocol_types::{address::AztecAddress, storage::map::derive_storage_slot_in_map},
+    state_vars::private_set::PrivateSet,
+    test::helpers::test_environment::TestEnvironment,
+};
+use aztec::test::helpers::authwit as authwit_cheatcodes;
+use std::test::OracleMock;
+use uint_note::uint_note::UintNote;
+
+// For cross-contract tests
+use token::test::utils as token_utils;
+use nft::test::utils as nft_utils;
+```
+
+## TestEnvironment API
+
+### Account Creation
+```noir
+// Fast account - no deployment, cannot use authwits
+let account = env.create_light_account();
+
+// Full account contract - required for authwits
+let account = env.create_contract_account();
+
+// Pattern: conditional account creation for test flexibility
+let (owner, recipient) = if with_account_contracts {
+    (env.create_contract_account(), env.create_contract_account())
+} else {
+    (env.create_light_account(), env.create_light_account())
+};
+```
+
+### Function Execution
+```noir
+// Execute private function with caller
+env.call_private(caller, Contract::at(address).private_function(args));
+
+// Execute public function with caller
+env.call_public(caller, Contract::at(address).public_function(args));
+
+// Read public state (view functions)
+let value = env.view_public(Contract::at(address).view_function(args));
+
+// Run unconstrained/utility function
+let result = env.simulate_utility(Contract::at(address).utility_function(args));
+```
+
+### Direct Storage Access
+```noir
+// Access public storage directly
+let value = env.public_context_at(contract_address, |context| {
+    let value: bool = context.storage_read(storage_slot);
+    value
+});
+
+// Access utility context for note inspection
+let notes = env.utility_context_at(contract_address, |context| {
+    let slot = derive_storage_slot_in_map(base_slot, account);
+    let set = PrivateSet::new(context, slot);
+    set.view_notes(NoteViewerOptions::new())
+});
+```
+
+## Contract Deployment
+```noir
+// Deploy with public initializer
+let contract_address = env.deploy("@package_name/Contract")
+    .with_public_initializer(caller, Contract::interface().constructor(args));
+
+// Deploy with private initializer
+let contract_address = env.deploy("@package_name/Contract")
+    .with_private_initializer(caller, Contract::interface().constructor(args));
+
+// Deploy without initializer
+let contract_address = env.deploy("@package_name/Contract")
+    .without_initializer();
+
+// Deploy with custom secret (for escrow patterns)
+use aztec::test::helpers::{txe_oracles as cheatcodes, utils::ContractDeployment};
+let _account = cheatcodes::add_account(secret);
+let deployer = ContractDeployment { env: *env, path: "@escrow_contract/Escrow", secret };
+let address = deployer.without_initializer();
+```
+
+## Authorization Testing
+
+### Private AuthWit
+```noir
+// Create call interface
+let call_interface = Contract::at(address)
+    .function_name(from, to, amount, nonce);
+
+// Add authorization: authorizer allows caller to execute
+authwit_cheatcodes::add_private_authwit_from_call_interface(
+    env,
+    authorizer,   // The account being acted on behalf of
+    caller,       // The account that will call the function
+    call_interface,
+);
+
+// Execute as authorized caller
+env.call_private(caller, call_interface);
+```
+
+### Public AuthWit
+```noir
+let call_interface = Contract::at(address)
+    .public_function(from, to, amount, nonce);
+
+authwit_cheatcodes::add_public_authwit_from_call_interface(
+    env,
+    authorizer,
+    caller,
+    call_interface,
+);
+
+env.call_public(caller, call_interface);
+```
 
 ## Test Structure
 - Use utils module for common setup and assertions
-- Implement setup helpers: setup_with_minter, setup_with_initial_supply
-- Create balance checking utilities: check_private_balance, check_public_balance
-- Use TestEnvironment for consistent test isolation
+- Implement setup helpers: `setup_with_minter`, `setup_with_initial_supply`
+- Create balance checking utilities: `check_private_balance`, `check_public_balance`, `get_private_balance`
+- Setup functions return tuples: `(env, contract_address, owner, recipient)`
+
+### Setup Helper Pattern
+```noir
+pub unconstrained fn setup_with_minter(
+    with_account_contracts: bool,
+) -> (TestEnvironment, AztecAddress, AztecAddress, AztecAddress, AztecAddress) {
+    let mut env = TestEnvironment::new();
+    let (owner, recipient, minter) = if with_account_contracts {
+        (env.create_contract_account(), env.create_contract_account(), env.create_contract_account())
+    } else {
+        (env.create_light_account(), env.create_light_account(), env.create_light_account())
+    };
+    let contract_address = deploy_contract(&mut env, owner, minter);
+    (env, contract_address, owner, recipient, minter)
+}
+```
+
+### Balance Checking Utilities
+```noir
+pub unconstrained fn check_private_balance(
+    env: TestEnvironment,
+    contract_address: AztecAddress,
+    address: AztecAddress,
+    expected: u128,
+) {
+    let balance = env.simulate_utility(Contract::at(contract_address).balance_of_private(address));
+    assert(balance == expected, "Private balance is not correct");
+}
+
+pub unconstrained fn check_public_balance(
+    env: TestEnvironment,
+    contract_address: AztecAddress,
+    address: AztecAddress,
+    expected: u128,
+) {
+    let balance = env.view_public(Contract::at(contract_address).balance_of_public(address));
+    assert(balance == expected, "Public balance is not correct");
+}
+```
+
+## Note Randomness Mocking
+```noir
+// Required before minting or creating notes
+let note_randomness = random();
+let _ = OracleMock::mock("getRandomField").returns(note_randomness);
+
+env.call_private(caller, Contract::at(address).mint_to_private(recipient, amount));
+```
 
 ## Test Patterns
 - Test both success and failure cases
-- Use #[test(should_fail_with = "error message")] for expected failures
-- Advance blocks after private operations: env.advance_block_by(1)
-- Impersonate users with env.impersonate(address)
-- Use the `authwit_cheatcodes` library for testing authorization cases
-- Always test both authorization success and failure scenarios
+- Use `#[test(should_fail_with = "error message")]` for expected failures
+- All test functions must be `unconstrained fn`
+- Use `#[test]` attribute for standard tests
+
+### Success Test Pattern
+```noir
+#[test]
+unconstrained fn transfer_private_to_public_success() {
+    let (mut env, contract_address, owner, _) = utils::setup_and_mint(false);
+
+    let transfer_amount = 1000;
+    env.call_private(
+        owner,
+        Contract::at(contract_address).transfer_private_to_public(owner, owner, transfer_amount, 0),
+    );
+
+    utils::check_private_balance(env, contract_address, owner, initial_amount - transfer_amount);
+    utils::check_public_balance(env, contract_address, owner, transfer_amount);
+}
+```
+
+### Failure Test Pattern
+```noir
+#[test(should_fail_with = "Balance too low")]
+unconstrained fn transfer_fails_insufficient_balance() {
+    let (mut env, contract_address, owner, _) = utils::setup_and_mint(false);
+
+    let excessive_amount = initial_amount + 1;
+    env.call_private(
+        owner,
+        Contract::at(contract_address).transfer_private_to_public(owner, owner, excessive_amount, 0),
+    );
+}
+
+#[test(should_fail_with = "Unknown auth witness for message hash")]
+unconstrained fn transfer_fails_without_authorization() {
+    let (mut env, contract_address, owner, recipient) = utils::setup_and_mint(true);
+
+    // NO authwit added - should fail
+    env.call_private(
+        recipient,
+        Contract::at(contract_address).transfer_private_to_private(owner, recipient, 1000, 1),
+    );
+}
+```
 
 ## Best Practices
 - Never skip tests - implement or remove them
 - Test edge cases explicitly (zero amounts, max values)
 - Verify state changes after operations
 - Test all privacy combinations (private→public, public→private, etc.)
+- Use `with_account_contracts: true` when testing authorization scenarios
+- Use `with_account_contracts: false` for faster tests when authwits not needed
+- Always test both authorization success and failure scenarios

@@ -1,23 +1,193 @@
 ---
 description: Aztec Noir guidelines
 globs: **/*.nr
-version: 1.0.0
+version: 2.0.0
 ---
 
 # Aztec Noir Base Guidelines
 
+## File Structure
+```noir
+pub mod test;        // Test module (public for cross-contract imports)
+pub mod types;       // Custom types and data structures
+// pub mod library;  // Optional: shared library functions
+
+use aztec::macros::aztec;
+
+#[aztec]
+pub contract ContractName {
+    // ... contract body
+}
+```
+
 ## Code Structure
-- Order module declarations at the top (mod types; mod test;)
+- Module declarations at the top using `pub mod` (not just `mod`) for cross-contract imports
+- Module order: `pub mod test;` then `pub mod types;` (then `pub mod library;` if needed)
 - Import aztec macro immediately after module declarations
-- Inside contract: Aztec imports → External libraries → Custom types → Contract instances
-- Order functions: Initializers → Private → Public → View → Unconstrained/Utility → Internal
-- Use comment headers to separate function sections (// --------- Mintable ---------)
+- Inside contract: Aztec imports → External libraries → Custom types → Global constants
+- Order functions: Initializers → Private → Public → View → Unconstrained/Utility → Internal → Library
+
+## Import Organization (4 Groups)
+```noir
+#[aztec]
+pub contract Token {
+    // Group 1: Aztec library imports (with comment)
+    // aztec library
+    use aztec::{
+        authwit::auth::{assert_current_call_valid_authwit, assert_current_call_valid_authwit_public},
+        context::{PrivateContext, PublicContext},
+        macros::{functions::{external, initializer, internal, view}, storage::storage},
+        messages::message_delivery::MessageDelivery,
+        protocol_types::{address::AztecAddress, traits::{FromField, ToField}},
+        state_vars::{Map, public_immutable::PublicImmutable, public_mutable::PublicMutable},
+    };
+
+    // Group 2: External libraries
+    // note library
+    use uint_note::uint_note::{PartialUintNote, UintNote};
+    // compression library
+    use compressed_string::FieldCompressedString;
+
+    // Group 3: Custom types from crate
+    // private balance library
+    use crate::types::balance_set::BalanceSet;
+
+    // Group 4: Global constants
+    global INITIAL_TRANSFER_CALL_MAX_NOTES: u32 = 2;
+    global RECURSIVE_TRANSFER_CALL_MAX_NOTES: u32 = 8;
+```
+
+## Section Separators
+Use multi-line comment blocks with equals signs for major sections:
+```noir
+/** ==========================================================
+* ========================= PRIVATE =========================
+* ======================================================== */
+
+/** ==========================================================
+* ========================= PUBLIC ==========================
+* ======================================================== */
+
+/** ==========================================================
+* ===================== VIEW FUNCTIONS ======================
+* ======================================================== */
+
+/** ==========================================================
+* ===================== UNCONSTRAINED =======================
+* ======================================================== */
+
+/** ==========================================================
+* ================= TOKEN LIBRARIES =========================
+* ======================================================== */
+```
+
+Section names used: PRIVATE, PUBLIC, VIEW FUNCTIONS, UNCONSTRAINED, MINTABLE, BURNABLE, UPGRADEABLE, TOKEN LIBRARIES, AUTH LIBRARIES, VAULT
 
 ## Naming Conventions
-- Use snake_case for all variables and functions
-- All functions with the `#[contract_library_method]` attribute must be prefixed with `_`
+
+### Library Methods (`#[contract_library_method]`)
+- ALL must be prefixed with underscore `_`
 - Examples: `_increase_private_balance`, `_decrease_public_balance`, `_validate_minter`
-- Name transfers with clear directionality: transfer_private_to_public
-- Do NOT use underscore prefixes for regular internal functions
-- Suffix internal variants with _internal: increase_public_balance_internal
-- Use descriptive variable names: private_balances, public_owners, mint_amount
+- Accept storage pointers and context as parameters for reusability
+
+```noir
+#[contract_library_method]
+fn _validate_minter(sender: AztecAddress, minter: AztecAddress) {
+    assert(minter.eq(sender), "caller is not minter");
+}
+
+#[contract_library_method]
+fn _decrease_private_balance(
+    context: &mut PrivateContext,
+    private_balances: Map<AztecAddress, BalanceSet<&mut PrivateContext>, &mut PrivateContext>,
+    account: AztecAddress,
+    amount: u128,
+    max_notes: u32,
+) { ... }
+```
+
+### Internal Functions (`#[internal]`)
+- ALL must be suffixed with `_internal`
+- Used with `#[external("public")]` for functions callable only by the contract itself
+- NO underscore prefix
+
+```noir
+#[external("public")]
+#[internal]
+fn increase_public_balance_internal(to: AztecAddress, amount: u128) { ... }
+
+#[external("public")]
+#[internal]
+fn mint_to_public_internal(to: AztecAddress, amount: u128) { ... }
+```
+
+### Authorization Validation Functions
+- Prefixed with `_validate_`
+- Common patterns: `_validate_from_private`, `_validate_from_public`, `_validate_minter`
+
+```noir
+#[contract_library_method]
+fn _validate_from_private<let N: u32>(context: &mut PrivateContext, from: AztecAddress) {
+    if (!from.eq(context.msg_sender().unwrap())) {
+        assert_current_call_valid_authwit::<N>(context, from);
+    }
+}
+
+#[contract_library_method]
+unconstrained fn _validate_from_public(context: &mut PublicContext, from: AztecAddress) {
+    if (!from.eq(context.msg_sender())) {
+        assert_current_call_valid_authwit_public(context, from);
+    }
+}
+```
+
+### Public/Private Functions
+- Clear, descriptive names without prefix or suffix
+- Name transfers with clear directionality
+- Examples: `transfer_private_to_public`, `mint_to_private`, `burn_public`
+
+### Variables
+- Use snake_case for all variables and functions
+- Use descriptive variable names: `private_balances`, `public_owners`, `mint_amount`
+- Storage variables: `private_balances`, `public_balances`, `total_supply`, `minter`
+- Parameters: `from`, `to`, `amount`, `token_id`, `recipient`, `completer`
+
+## Documentation Standards
+```noir
+/// @notice Brief description from user perspective
+/// @dev Implementation details, constraints, or technical notes
+/// @param param_name Description of parameter
+/// @return Description of return value (if applicable)
+#[external("private")]
+fn transfer_private_to_public(
+    from: AztecAddress,
+    to: AztecAddress,
+    amount: u128,
+    _nonce: Field,
+) { ... }
+```
+
+Document storage struct fields:
+```noir
+/// @param name The name of the token
+/// @param symbol The symbol of the token
+/// @param decimals The number of decimals of the token
+/// @param private_balances Map of private balances by address
+#[storage]
+struct Storage<Context> { ... }
+```
+
+## Inline Comments
+- Explain "why", not "what"
+- Comment actual behavior for complex operations
+
+```noir
+// Subtracts `amount` from the private balance of `account`
+let change = _subtract_balance(context, private_balances, account, amount, max_notes);
+
+// Increases `change` to the private balance of `account`, and emits a private balance note
+private_balances.at(account).add(account, change).emit(
+    account,
+    MessageDelivery.CONSTRAINED_ONCHAIN,
+);
+```
