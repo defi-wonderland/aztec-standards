@@ -1147,7 +1147,9 @@ pub contract Token {
 
         // Increase recipient public balance
         // total supply is updated in settle_issuance_from_private_with_commitment
-        Token::at(context.this_address()).increase_public_balance_internal(to, shares).enqueue(&mut context);
+        Token::at(context.this_address()).increase_public_balance_internal(to, shares).enqueue(
+            &mut context,
+        );
 
         // Take max_assets from the sender
         Token::at(storage.asset.read())
@@ -1508,7 +1510,9 @@ pub contract Token {
 
         // Burn the shares being redeemed
         // total supply is updated in settle_redemption_to_private_with_commitment
-        Token::at(context.this_address()).decrease_public_balance_internal(from, shares).enqueue(&mut context);
+        Token::at(context.this_address()).decrease_public_balance_internal(from, shares).enqueue(
+            &mut context,
+        );
 
         // Transfers any outstanding assets without revealing the recipient
         // Reverts if min_assets is greater than allowed
@@ -1662,7 +1666,7 @@ pub contract Token {
             storage.total_supply,
             ROUND_UP,
         );
-    
+
         _increase_total_supply(storage.total_supply, shares);
 
         let change = max_assets - assets; // Reverts with underflow if invalid
@@ -1708,14 +1712,14 @@ pub contract Token {
     /// @param max_assets The maximum amount of assets that should be deposited
     #[external("public")]
     #[internal]
-    fn settle_issuance_from_public_internal(from: AztecAddress, shares: u128, max_assets: u128, _nonce: Field) {
+    fn settle_issuance_from_public_internal(
+        from: AztecAddress,
+        shares: u128,
+        max_assets: u128,
+        _nonce: Field,
+    ) {
         let total_assets = _total_assets(&mut context, storage.asset);
-        let assets = _convert_to_assets(
-            shares,
-            total_assets,
-            storage.total_supply,
-            ROUND_UP,
-        );
+        let assets = _convert_to_assets(shares, total_assets, storage.total_supply, ROUND_UP);
 
         // Increase total_supply
         increase_total_supply_internal(shares);
