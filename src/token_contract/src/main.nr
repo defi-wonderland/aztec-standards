@@ -1308,8 +1308,7 @@ pub contract Token {
 
         // Calculate assets to redeem
         let total_assets = self.internal._total_assets();
-        let assets =
-            self.internal._convert_to_assets(shares, total_assets, ROUND_DOWN);
+        let assets = self.internal._convert_to_assets(shares, total_assets, ROUND_DOWN);
 
         // Transfer the assets to the recipient
         self.call(Token::at(self.storage.asset.read()).transfer_public_to_public(
@@ -1479,8 +1478,7 @@ pub contract Token {
     #[only_self]
     fn issue_from_assets_internal(to: AztecAddress, assets: u128) {
         let total_assets = self.internal._total_assets();
-        let shares =
-            self.internal._convert_to_shares(assets, total_assets, ROUND_DOWN);
+        let shares = self.internal._convert_to_shares(assets, total_assets, ROUND_DOWN);
 
         self.internal._mint_to_public(to, shares);
     }
@@ -1492,8 +1490,7 @@ pub contract Token {
     #[only_self]
     fn validate_deposit_rate_internal(assets: u128, shares: u128) {
         let total_assets = self.internal._total_assets();
-        let max_shares =
-            self.internal._convert_to_shares(assets, total_assets, ROUND_DOWN);
+        let max_shares = self.internal._convert_to_shares(assets, total_assets, ROUND_DOWN);
 
         assert(shares <= max_shares, "Too many shares requested");
     }
@@ -1536,8 +1533,7 @@ pub contract Token {
         min_shares: u128,
     ) {
         let total_assets = self.internal._total_assets();
-        let max_shares =
-            self.internal._convert_to_shares(assets, total_assets, ROUND_DOWN);
+        let max_shares = self.internal._convert_to_shares(assets, total_assets, ROUND_DOWN);
 
         let outstanding_shares = max_shares - min_shares; // Reverts with underflow if invalid
         if outstanding_shares > 0 {
@@ -1563,11 +1559,7 @@ pub contract Token {
         max_assets: u128,
     ) {
         let total_assets = self.internal._total_assets();
-        let assets = self.internal._convert_to_assets(
-            shares,
-            total_assets - max_assets,
-            ROUND_UP,
-        );
+        let assets = self.internal._convert_to_assets(shares, total_assets - max_assets, ROUND_UP);
 
         let change = max_assets - assets; // Reverts with underflow if invalid
         if change > 0 {
@@ -1592,12 +1584,16 @@ pub contract Token {
         min_assets: u128,
     ) {
         let total_assets = self.internal._total_assets();
-        let assets =
-            self.internal._convert_to_assets(shares, total_assets, ROUND_DOWN);
+        let assets = self.internal._convert_to_assets(shares, total_assets, ROUND_DOWN);
 
         let outstanding_assets = assets - min_assets; // Reverts with underflow if invalid
         if outstanding_assets > 0 {
-            self.call(Token::at(self.storage.asset.read()).transfer_public_to_commitment(self.address, asset_commitment, outstanding_assets, 0));
+            self.call(Token::at(self.storage.asset.read()).transfer_public_to_commitment(
+                self.address,
+                asset_commitment,
+                outstanding_assets,
+                0,
+            ));
         }
     }
 
@@ -1609,11 +1605,7 @@ pub contract Token {
     #[only_self]
     fn settle_issuance_from_public_internal(from: AztecAddress, shares: u128, max_assets: u128) {
         let total_assets = self.internal._total_assets();
-        let assets = self.internal._convert_to_assets(
-            shares,
-            total_assets - max_assets,
-            ROUND_UP,
-        );
+        let assets = self.internal._convert_to_assets(shares, total_assets - max_assets, ROUND_UP);
 
         let change = max_assets - assets; // Reverts with underflow if invalid
         if change > 0 {
@@ -1648,11 +1640,7 @@ pub contract Token {
     /// @param rounding The rounding direction (ROUND_UP or ROUND_DOWN)
     /// @return The equivalent amount of shares
     #[internal("public")]
-    fn _convert_to_shares(
-        assets: u128,
-        total_assets: u128,
-        rounding: bool,
-    ) -> u128 {
+    fn _convert_to_shares(assets: u128, total_assets: u128, rounding: bool) -> u128 {
         // TODO: handle overflow
         // TODO: optimize rounding
         let mul_term = assets * (self.storage.total_supply.read() + offset());
@@ -1671,11 +1659,7 @@ pub contract Token {
     /// @param rounding The rounding direction (ROUND_UP or ROUND_DOWN)
     /// @return The equivalent amount of assets
     #[internal("public")]
-    fn _convert_to_assets(
-        shares: u128,
-        total_assets: u128,
-        rounding: bool,
-    ) -> u128 {
+    fn _convert_to_assets(shares: u128, total_assets: u128, rounding: bool) -> u128 {
         // TODO: handle overflow
         // TODO: optimize rounding
         let mul_term = shares * (total_assets + 1);

@@ -64,7 +64,7 @@ unconstrained fn transfer_public_to_private_authwitness_success() {
 
     let transfer_public_to_private_call_interface = Token::at(token_contract_address)
         .transfer_public_to_private(sender, recipient, transfer_amount, 0);
-    authwit_cheatcodes::add_private_authwit_from_call_interface(
+    authwit_cheatcodes::add_private_authwit_from_call(
         env,
         sender,
         recipient,

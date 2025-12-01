@@ -234,7 +234,7 @@ unconstrained fn redeem_public_to_private_exact_on_behalf_of_wrong_caller() {
     let redeem_public_to_private_exact_call_interface = Token::at(vault_address)
         .redeem_public_to_private_exact(deposit_recipient, recipient, shares_to_burn, min_assets, 0)
         ;
-    authwit_cheatcodes::add_private_authwit_from_call_interface(
+    authwit_cheatcodes::add_private_authwit_from_call(
         env,
         deposit_recipient,
         owner,
@@ -277,7 +277,7 @@ unconstrained fn redeem_public_to_private_exact_on_behalf_of_other_success() {
     let redeem_public_to_private_exact_call_interface = Token::at(vault_address)
         .redeem_public_to_private_exact(deposit_recipient, recipient, shares_to_burn, min_assets, 0)
         ;
-    authwit_cheatcodes::add_private_authwit_from_call_interface(
+    authwit_cheatcodes::add_private_authwit_from_call(
         env,
         deposit_recipient,
         recipient,

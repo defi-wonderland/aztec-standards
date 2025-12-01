@@ -47,6 +47,6 @@ pub unconstrained fn deploy_escrow_with_secret(
 }
 
 pub unconstrained fn get_escrow_class_id() -> Field {
-    let escrow_instance = cheatcodes::deploy("@escrow_contract/Escrow", "", &[], random());
+    let escrow_instance = cheatcodes::deploy("@escrow_contract/Escrow", "", [], random());
     escrow_instance.contract_class_id.to_field()
 }

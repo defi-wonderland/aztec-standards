@@ -162,7 +162,7 @@ unconstrained fn deposit_public_to_public_on_behalf_of_other_success() {
     // Authorize the recipient to call deposit_public_to_public
     let deposit_public_to_public_call_interface =
         Token::at(vault_address).deposit_public_to_public(owner, recipient, deposit_amount, 0);
-    authwit_cheatcodes::add_public_authwit_from_call_interface(
+    authwit_cheatcodes::add_public_authwit_from_call(
         env,
         owner,
         recipient,

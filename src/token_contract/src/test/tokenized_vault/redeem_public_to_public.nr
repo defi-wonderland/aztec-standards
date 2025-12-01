@@ -150,7 +150,7 @@ unconstrained fn redeem_public_to_public_on_behalf_of_wrong_caller() {
     let requested_shares: u128 = deposit_amount;
     let public_redeem_public_to_public_call_interface = Token::at(vault_address)
         .redeem_public_to_public(deposit_recipient, recipient, requested_shares, 0);
-    authwit_cheatcodes::add_public_authwit_from_call_interface(
+    authwit_cheatcodes::add_public_authwit_from_call(
         env,
         deposit_recipient,
         owner,
@@ -190,7 +190,7 @@ unconstrained fn redeem_public_to_public_on_behalf_of_other_success() {
     let requested_shares: u128 = deposit_amount;
     let public_redeem_public_to_public_call_interface = Token::at(vault_address)
         .redeem_public_to_public(deposit_recipient, recipient, requested_shares, 0);
-    authwit_cheatcodes::add_public_authwit_from_call_interface(
+    authwit_cheatcodes::add_public_authwit_from_call(
         env,
         deposit_recipient,
         recipient,

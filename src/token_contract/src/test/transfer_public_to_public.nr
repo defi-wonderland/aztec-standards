@@ -57,7 +57,7 @@ unconstrained fn public_transfer_on_behalf_of_other() {
     let transfer_amount = mint_amount / (10 as u128);
     let public_transfer_private_to_private_call_interface = Token::at(token_contract_address)
         .transfer_public_to_public(owner, recipient, transfer_amount, 1);
-    authwit_cheatcodes::add_public_authwit_from_call_interface(
+    authwit_cheatcodes::add_public_authwit_from_call(
         env,
         owner,
         recipient,
@@ -110,7 +110,7 @@ unconstrained fn public_transfer_failure_on_behalf_of_other_more_than_balance() 
     let transfer_amount = mint_amount + (1 as u128);
     let public_transfer_private_to_private_call_interface = Token::at(token_contract_address)
         .transfer_public_to_public(owner, recipient, transfer_amount, 1);
-    authwit_cheatcodes::add_public_authwit_from_call_interface(
+    authwit_cheatcodes::add_public_authwit_from_call(
         env,
         owner,
         recipient,
@@ -129,7 +129,7 @@ unconstrained fn public_transfer_failure_on_behalf_of_other_wrong_caller() {
     let transfer_amount = mint_amount / (10 as u128);
     let public_transfer_private_to_private_call_interface = Token::at(token_contract_address)
         .transfer_public_to_public(owner, recipient, transfer_amount, 1);
-    authwit_cheatcodes::add_public_authwit_from_call_interface(
+    authwit_cheatcodes::add_public_authwit_from_call(
         env,
         owner,
         owner,

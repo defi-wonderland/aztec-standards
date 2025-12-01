@@ -46,7 +46,7 @@ unconstrained fn burn_public_on_behalf_of_other() {
     // Burn on behalf of other
     let burn_call_interface =
         Token::at(token_contract_address).burn_public(owner, burn_amount, random());
-    authwit_cheatcodes::add_public_authwit_from_call_interface(
+    authwit_cheatcodes::add_public_authwit_from_call(
         env,
         owner,
         recipient,
@@ -94,7 +94,7 @@ unconstrained fn burn_public_failure_on_behalf_of_other_wrong_caller() {
     let burn_amount = mint_amount / (10 as u128);
     let burn_call_interface =
         Token::at(token_contract_address).burn_public(owner, burn_amount, random());
-    authwit_cheatcodes::add_public_authwit_from_call_interface(
+    authwit_cheatcodes::add_public_authwit_from_call(
         env,
         owner,
         owner,
