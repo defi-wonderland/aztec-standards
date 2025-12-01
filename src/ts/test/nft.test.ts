@@ -85,7 +85,7 @@ describe('NFT - Single PXE', () => {
       }),
     );
 
-    expect(receiptAfterMined.contract.instance.address).toEqual(deploymentData.address);
+    expect(receiptAfterMined.contract.address).toEqual(deploymentData.address);
   }, 300_000);
 
   // --- Mint tests ---

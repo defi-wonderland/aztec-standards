@@ -1,4 +1,4 @@
-import { UniqueNote } from '@aztec/aztec.js/note';
+import { Note } from '@aztec/aztec.js/note';
 import { createLogger } from '@aztec/aztec.js/log';
 import { AztecAddress } from '@aztec/aztec.js/addresses';
 import { deriveEcdhSharedSecret } from '@aztec/stdlib/logs';
@@ -7,7 +7,7 @@ import { Fr, type GrumpkinScalar, Point } from '@aztec/aztec.js/fields';
 import { createAztecNodeClient, waitForNode } from '@aztec/aztec.js/node';
 import { PRIVATE_LOG_CIPHERTEXT_LEN, GeneratorIndex } from '@aztec/constants';
 import { Aes128, poseidon2HashWithSeparator } from '@aztec/foundation/crypto';
-import { registerInitialSandboxAccountsInWallet, TestWallet } from '@aztec/test-wallet/server';
+import { registerInitialLocalNetworkAccountsInWallet, TestWallet } from '@aztec/test-wallet/server';
 import { deriveMasterIncomingViewingSecretKey, PublicKeys, computeAddressSecret } from '@aztec/stdlib/keys';
 
 import {
@@ -71,20 +71,21 @@ export const setupTestSuite = async (suffix?: string) => {
   const { pxe, store } = await setupPXE(suffix);
   const aztecNode = createAztecNodeClient(NODE_URL);
   const wallet: TestWallet = await TestWallet.create(aztecNode);
-  const accounts: AztecAddress[] = await registerInitialSandboxAccountsInWallet(wallet);
+  const accounts: AztecAddress[] = await registerInitialLocalNetworkAccountsInWallet(wallet);
 
   return {
     pxe,
     store,
+    node: aztecNode,
     wallet,
     accounts,
   };
 };
 
 // --- Token Utils ---
-export const expectUintNote = (note: UniqueNote, amount: bigint, owner: AztecAddress) => {
-  expect(note.note.items[0]).toEqual(new Fr(owner.toBigInt()));
-  expect(note.note.items[2]).toEqual(new Fr(amount));
+export const expectUintNote = (note: Note, amount: bigint, owner: AztecAddress) => {
+  expect(note.items[0]).toEqual(new Fr(owner.toBigInt()));
+  expect(note.items[1]).toEqual(new Fr(amount));
 };
 
 export const expectTokenBalances = async (
@@ -318,8 +319,8 @@ export async function initializeTransferCommitment(
     toIvskM,
   );
 
-  // The commitment is the third field in the decrypted raw log
-  return decryptedRawLog[2].toBigInt();
+  // The commitment is the fourth field in the decrypted raw log
+  return decryptedRawLog[3].toBigInt();
 }
 
 /**
@@ -353,8 +354,8 @@ export async function initializeTransferCommitmentNFT(
     toIvskM,
   );
 
-  // The commitment is the third field in the decrypted raw log
-  return decryptedRawLog[2].toBigInt();
+  // The commitment is the fourth field in the decrypted raw log
+  return decryptedRawLog[3].toBigInt();
 }
 
 // --- Logic Contract Utils ---

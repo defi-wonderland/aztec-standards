@@ -62,7 +62,7 @@ export default class LogicContractBenchmark extends Benchmark {
       ovsk_m: grumpkinScalarToFr(escrowKeys.masterOutgoingViewingSecretKey),
       tsk_m: grumpkinScalarToFr(escrowKeys.masterTaggingSecretKey),
     };
-    const escrowSalt = new Fr(logicContract.instance.address.toBigInt());
+    const escrowSalt = new Fr(logicContract.address.toBigInt());
     const escrowContract = (await deployEscrowWithPublicKeysAndSalt(
       escrowKeys.publicKeys,
       wallet,
