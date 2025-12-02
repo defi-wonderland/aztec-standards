@@ -461,22 +461,22 @@ describe.skip('Token - Multi Wallet (PXE)', () => {
     [alice, bob, carl] = accounts;
 
     // TODO: use different PXE instances.
-    alicePXE = pxe;
-    bobPXE = pxe;
+    aliceWallet = wallet;
+    bobWallet = wallet;
   });
 
   beforeEach(async () => {
     token = (await deployTokenWithMinter(wallet, alice)) as TokenContract;
     const tokenInstance = await node.getContract(token.address);
     if (tokenInstance) {
-      await bobPXE.registerContract({ instance: tokenInstance });
+      await bobWallet.registerContract(tokenInstance);
     }
 
     // alice knows bob
-    await alicePXE.registerSender(bob);
+    await aliceWallet.registerSender(bob);
 
     // bob knows alice
-    await bobPXE.registerSender(alice);
+    await bobWallet.registerSender(alice);
   });
 
   it('transfers', async () => {
@@ -497,7 +497,7 @@ describe.skip('Token - Multi Wallet (PXE)', () => {
     await expectTokenBalances(token, alice, wad(5), wad(5));
 
     // retrieve notes from last tx
-    notes = await alicePXE.getNotes({ contractAddress: token.address, scopes: [alice] });
+    notes = await aliceWallet.getNotes({ contractAddress: token.address, scopes: [alice] });
     expect(notes.length).toBe(1);
     expectUintNote(notes[0].note, wad(5), alice);
 
@@ -511,7 +511,7 @@ describe.skip('Token - Multi Wallet (PXE)', () => {
     await token.withWallet(wallet).methods.sync_private_state().simulate({ from: alice });
     await token.withWallet(wallet).methods.sync_private_state().simulate({ from: bob });
 
-    notes = await alicePXE.getNotes({ contractAddress: token.address, scopes: [alice] });
+    notes = await aliceWallet.getNotes({ contractAddress: token.address, scopes: [alice] });
     expect(notes.length).toBe(1);
     expectUintNote(notes[0].note, wad(5), bob);
 
@@ -536,7 +536,7 @@ describe.skip('Token - Multi Wallet (PXE)', () => {
 
     // Alice shouldn't have any notes because it not a sender/registered account in her PXE
     // (but she has because I gave her access to Bob's notes)
-    notes = await alicePXE.getNotes({ contractAddress: token.address, scopes: [alice] });
+    notes = await aliceWallet.getNotes({ contractAddress: token.address, scopes: [alice] });
     expect(notes.length).toBe(1);
     expectUintNote(notes[0].note, wad(5), bob);
 
