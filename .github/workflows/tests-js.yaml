@@ -19,7 +19,7 @@ jobs:
 
       runs-on: 
         labels: ${{ matrix.os }}
-      timeout-minutes: 90
+      timeout-minutes: 60
 
       concurrency:
         group: job-${{ github.workflow }}-${{ github.ref_name }}-${{ matrix.os }}-${{ matrix.threads }}
@@ -62,9 +62,9 @@ jobs:
           run: |
             docker tag aztecprotocol/aztec:${{ steps.aztec-version.outputs.version }} aztecprotocol/aztec:latest
 
-        - name: Start sandbox
+        - name: Start local-network (previously sandbox)
           run: |
-            aztec start --sandbox &
+            aztec start --local-network &
 
         - name: Install project dependencies
           run: yarn --frozen-lockfile
