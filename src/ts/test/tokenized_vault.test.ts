@@ -6,7 +6,6 @@ import {
   expectTokenBalances,
 } from './utils.js';
 
-import { type PXE } from '@aztec/pxe/server';
 import { AztecAddress } from '@aztec/aztec.js/addresses';
 import { type TestWallet } from '@aztec/test-wallet/server';
 import { type AztecLMDBStoreV2 } from '@aztec/kv-store/lmdb-v2';
@@ -15,7 +14,6 @@ import { type ContractFunctionInteraction } from '@aztec/aztec.js/contracts';
 import { TokenContract } from '../../../artifacts/Token.js';
 
 describe('Tokenized Vault', () => {
-  let pxe: PXE;
   let store: AztecLMDBStoreV2;
   let wallet: TestWallet;
   let accounts: AztecAddress[];
@@ -87,7 +85,7 @@ describe('Tokenized Vault', () => {
   }
 
   beforeAll(async () => {
-    ({ pxe, store, wallet, accounts } = await setupTestSuite());
+    ({ store, wallet, accounts } = await setupTestSuite());
 
     [alice, bob, carl] = accounts;
   });

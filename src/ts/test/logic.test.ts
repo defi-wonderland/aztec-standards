@@ -1,4 +1,3 @@
-import { type PXE } from '@aztec/pxe/server';
 import { TxStatus } from '@aztec/aztec.js/tx';
 import { deriveKeys } from '@aztec/stdlib/keys';
 import { PublicKeys } from '@aztec/aztec.js/keys';
@@ -36,7 +35,6 @@ import {
 } from './utils.js';
 
 describe('Logic - Single PXE', () => {
-  let pxe: PXE;
   let node: AztecNode;
   let store: AztecLMDBStoreV2;
 
@@ -71,7 +69,7 @@ describe('Logic - Single PXE', () => {
   };
 
   async function setup() {
-    ({ pxe, store, node, wallet, accounts } = await setupTestSuite());
+    ({ store, node, wallet, accounts } = await setupTestSuite());
 
     [alice, bob, carl] = accounts;
 
@@ -114,7 +112,7 @@ describe('Logic - Single PXE', () => {
 
     escrowInstance = (await node.getContract(escrow.address)) as ContractInstanceWithAddress;
     if (escrowInstance) {
-      await pxe.registerContract({ instance: escrowInstance, artifact: EscrowContractArtifact });
+      await wallet.registerContract(escrowInstance, EscrowContractArtifact);
     }
   });
 
@@ -148,7 +146,7 @@ describe('Logic - Single PXE', () => {
 
       const receiptAfterMined = await tx.wait({ wallet: wallet });
 
-      const contractMetadata = await pxe.getContractMetadata(deploymentData.address);
+      const contractMetadata = await wallet.getContractMetadata(deploymentData.address);
       expect(contractMetadata).toBeDefined();
       expect(contractMetadata.isContractPublished).toBeTruthy();
       expect(receiptAfterMined).toEqual(
@@ -337,7 +335,7 @@ describe('Logic - Single PXE', () => {
 
       const numberOfBlocks = blockNumberCarl - blockNumberBob + 1;
 
-      // Get the events for both bob and carl from bob's pxe for simplicity
+      // Get the events for both bob and carl from bob's wallet for simplicity
       const events = await wallet.getPrivateEvents<EscrowDetailsLogContent>(
         logic.address,
         TestLogicContract.events.EscrowDetailsLogContent,

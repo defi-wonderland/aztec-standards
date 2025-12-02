@@ -23,7 +23,6 @@ import { type AztecLMDBStoreV2 } from '@aztec/kv-store/lmdb-v2';
 import { TokenContractArtifact, TokenContract } from '../../../artifacts/Token.js';
 
 describe('Token - Single PXE', () => {
-  let pxe: PXE;
   let node: AztecNode;
   let store: AztecLMDBStoreV2;
 
@@ -38,7 +37,7 @@ describe('Token - Single PXE', () => {
   let token: TokenContract;
 
   beforeAll(async () => {
-    ({ pxe, store, node, wallet, accounts } = await setupTestSuite());
+    ({ store, node, wallet, accounts } = await setupTestSuite());
 
     [alice, bob, carl] = accounts;
   });
@@ -78,7 +77,7 @@ describe('Token - Single PXE', () => {
 
     const receiptAfterMined = await tx.wait({ wallet: wallet });
 
-    const contractMetadata = await pxe.getContractMetadata(deploymentData.address);
+    const contractMetadata = await wallet.getContractMetadata(deploymentData.address);
     expect(contractMetadata).toBeDefined();
     // TODO: Fix this
     // expect(contractMetadata.isContractPubliclyDeployed).toBeTruthy();
@@ -116,7 +115,7 @@ describe('Token - Single PXE', () => {
 
     const receiptAfterMined = await tx.wait({ wallet: wallet });
 
-    const contractMetadata = await pxe.getContractMetadata(deploymentData.address);
+    const contractMetadata = await wallet.getContractMetadata(deploymentData.address);
     expect(contractMetadata).toBeDefined();
     // TODO: Fix this
     // expect(contractMetadata.isContractPubliclyDeployed).toBeTruthy();
@@ -440,8 +439,7 @@ describe('Token - Single PXE', () => {
 
 // While upgrading in early August multi PXE support was broken, this test is skipped until it is fixed.
 // TODO: we should re-evaluate the necessity of this test suite, the other contracts don't have it and we don't seem to care.
-describe.skip('Token - Multi PXE', () => {
-  let pxe: PXE;
+describe.skip('Token - Multi Wallet (PXE)', () => {
   let node: AztecNode;
 
   let wallet: TestWallet;
@@ -454,11 +452,11 @@ describe.skip('Token - Multi PXE', () => {
 
   let token: TokenContract;
 
-  let alicePXE: PXE;
-  let bobPXE: PXE;
+  let aliceWallet: TestWallet;
+  let bobWallet: TestWallet;
 
   beforeAll(async () => {
-    ({ pxe, node, wallet, accounts } = await setupTestSuite());
+    ({ node, wallet, accounts } = await setupTestSuite());
 
     [alice, bob, carl] = accounts;
 

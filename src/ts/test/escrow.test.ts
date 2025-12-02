@@ -1,4 +1,3 @@
-import { type PXE } from '@aztec/pxe/server';
 import { deriveKeys } from '@aztec/stdlib/keys';
 import { PublicKeys } from '@aztec/aztec.js/keys';
 import { type AztecNode } from '@aztec/aztec.js/node';
@@ -25,7 +24,6 @@ import {
 } from './utils.js';
 
 describe('Escrow', () => {
-  let pxe: PXE;
   let node: AztecNode;
   let store: AztecLMDBStoreV2;
 
@@ -51,7 +49,7 @@ describe('Escrow', () => {
   let escrowSalt: Fr;
 
   beforeEach(async () => {
-    ({ pxe, store, node, wallet, accounts } = await setupTestSuite());
+    ({ store, node, wallet, accounts } = await setupTestSuite());
 
     [alice, bob, logicMock] = accounts;
 
