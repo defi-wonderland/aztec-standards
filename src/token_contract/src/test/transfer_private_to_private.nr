@@ -12,7 +12,7 @@ unconstrained fn transfer_private_on_behalf_of_other() {
     let transfer_amount = (1000 as u128);
     let transfer_private_from_call_interface = Token::at(token_contract_address)
         .transfer_private_to_private(owner, recipient, transfer_amount, 1);
-    authwit_cheatcodes::add_private_authwit_from_call_interface(
+    authwit_cheatcodes::add_private_authwit_from_call(
         env,
         owner,
         recipient,
@@ -106,7 +106,7 @@ unconstrained fn transfer_private_failure_on_behalf_of_more_than_balance() {
     let transfer_amount = mint_amount + (1 as u128);
     let transfer_private_from_call_interface = Token::at(token_contract_address)
         .transfer_private_to_private(owner, recipient, transfer_amount, 1);
-    authwit_cheatcodes::add_private_authwit_from_call_interface(
+    authwit_cheatcodes::add_private_authwit_from_call(
         env,
         owner,
         recipient,
@@ -139,7 +139,7 @@ unconstrained fn transfer_private_failure_on_behalf_of_other_wrong_caller() {
     let transfer_amount: u128 = 1000;
     let transfer_private_from_call_interface = Token::at(token_contract_address)
         .transfer_private_to_private(owner, recipient, transfer_amount, 1);
-    authwit_cheatcodes::add_private_authwit_from_call_interface(
+    authwit_cheatcodes::add_private_authwit_from_call(
         env,
         owner,
         owner,

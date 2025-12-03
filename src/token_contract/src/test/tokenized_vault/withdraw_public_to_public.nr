@@ -146,7 +146,7 @@ unconstrained fn withdraw_public_to_public_on_behalf_of_wrong_caller() {
     // Authorize someone to call withdraw_public_to_public
     let public_withdraw_public_to_public_call_interface = Token::at(vault_address)
         .withdraw_public_to_public(deposit_recipient, recipient, deposit_amount, 0);
-    authwit_cheatcodes::add_public_authwit_from_call_interface(
+    authwit_cheatcodes::add_public_authwit_from_call(
         env,
         deposit_recipient,
         owner,
@@ -185,7 +185,7 @@ unconstrained fn withdraw_public_to_public_on_behalf_of_other_success() {
     // Authorize someone to call withdraw_public_to_public
     let public_withdraw_public_to_public_call_interface = Token::at(vault_address)
         .withdraw_public_to_public(deposit_recipient, recipient, deposit_amount, 0);
-    authwit_cheatcodes::add_public_authwit_from_call_interface(
+    authwit_cheatcodes::add_public_authwit_from_call(
         env,
         deposit_recipient,
         recipient,

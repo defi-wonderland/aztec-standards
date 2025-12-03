@@ -1,9 +1,10 @@
 // Import Aztec dependencies
 import { Fr } from '@aztec/aztec.js/fields';
-import type { PXE } from '@aztec/pxe/server';
 import { deriveKeys } from '@aztec/stdlib/keys';
 import type { Wallet } from '@aztec/aztec.js/wallet';
+import { type AztecNode } from '@aztec/aztec.js/node';
 import { AztecAddress } from '@aztec/aztec.js/addresses';
+import { type ContractInstanceWithAddress } from '@aztec/aztec.js/contracts';
 import type { ContractFunctionInteractionCallIntent } from '@aztec/aztec.js/authorization';
 
 // Import the new Benchmark base class and context
@@ -20,7 +21,7 @@ import { setupTestSuite, deployEscrow, deployTokenWithMinter, deployNFTWithMinte
 
 // Extend the BenchmarkContext from the new package
 interface TokenBenchmarkContext extends BenchmarkContext {
-  pxe: PXE;
+  node: AztecNode;
   wallet: Wallet;
   deployer: AztecAddress;
   accounts: AztecAddress[];
@@ -35,10 +36,10 @@ interface TokenBenchmarkContext extends BenchmarkContext {
 export default class TokenContractBenchmark extends Benchmark {
   /**
    * Sets up the benchmark environment for the TokenContract.
-   * Creates PXE client, gets accounts, and deploys the contract.
+   * Creates wallet, gets accounts, and deploys the contract.
    */
   async setup(): Promise<TokenBenchmarkContext> {
-    const { pxe, wallet, accounts } = await setupTestSuite('bench-escrow');
+    const { node, wallet, accounts } = await setupTestSuite('bench-escrow');
     const [deployer, logicMock] = accounts;
 
     // Setup escrow
@@ -46,13 +47,17 @@ export default class TokenContractBenchmark extends Benchmark {
     const escrowKeys = await deriveKeys(escrowSk);
     const escrowSalt = new Fr(logicMock.toBigInt());
     const escrowContract = (await deployEscrow(escrowKeys.publicKeys, wallet, deployer, escrowSalt)) as EscrowContract;
-    await wallet.registerContract(escrowContract.instance, EscrowContractArtifact, escrowSk);
+
+    const escrowInstance = (await node.getContract(escrowContract.address)) as ContractInstanceWithAddress;
+    if (escrowInstance) {
+      await wallet.registerContract(escrowInstance, EscrowContractArtifact, escrowSk);
+    }
 
     // Deploy token and NFT contracts
     const deployedTokenContract = await deployTokenWithMinter(wallet, deployer);
-    const tokenContract = await TokenContract.at(deployedTokenContract.address, wallet);
+    const tokenContract = TokenContract.at(deployedTokenContract.address, wallet);
     const deployedNFTContract = await deployNFTWithMinter(wallet, deployer);
-    const nftContract = await NFTContract.at(deployedNFTContract.address, wallet);
+    const nftContract = NFTContract.at(deployedNFTContract.address, wallet);
 
     // Mint tokens and NFT to the escrow contract
     const tokenAmount = 100;
@@ -68,7 +73,7 @@ export default class TokenContractBenchmark extends Benchmark {
       .send({ from: deployer })
       .wait();
 
-    return { pxe, wallet, deployer, accounts, tokenContract, nftContract, escrowContract, tokenAmount, tokenId };
+    return { node, wallet, deployer, accounts, tokenContract, nftContract, escrowContract, tokenAmount, tokenId };
   }
 
   /**

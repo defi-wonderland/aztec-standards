@@ -1,4 +1,3 @@
-import type { PXE } from '@aztec/pxe/server';
 import type { Wallet } from '@aztec/aztec.js/wallet';
 import { AztecAddress } from '@aztec/aztec.js/addresses';
 import { AuthWitness } from '@aztec/aztec.js/authorization';
@@ -19,7 +18,6 @@ import {
 
 // Extend the BenchmarkContext from the new package
 interface TokenBenchmarkContext extends BenchmarkContext {
-  pxe: PXE;
   wallet: Wallet;
   deployer: AztecAddress;
   accounts: AztecAddress[];
@@ -39,14 +37,14 @@ function amt(x: bigint | number | string) {
 export default class TokenContractBenchmark extends Benchmark {
   /**
    * Sets up the benchmark environment for the TokenContract.
-   * Creates PXE client, gets accounts, and deploys the contract.
+   * Creates wallet, gets accounts, and deploys the contract.
    */
   async setup(): Promise<TokenBenchmarkContext> {
-    const { pxe, wallet, accounts } = await setupTestSuite();
+    const { wallet, accounts } = await setupTestSuite();
     const [deployer] = accounts;
     const [deployedBaseContract, deployedAssetContract] = await deployVaultAndAssetWithMinter(wallet, deployer);
-    const vaultContract = await TokenContract.at(deployedBaseContract.address, wallet);
-    const assetContract = await TokenContract.at(deployedAssetContract.address, wallet);
+    const vaultContract = TokenContract.at(deployedBaseContract.address, wallet);
+    const assetContract = TokenContract.at(deployedAssetContract.address, wallet);
     const assetMethods = assetContract.withWallet(wallet).methods;
 
     // Mint initial asset supply to the deployer
@@ -97,7 +95,7 @@ export default class TokenContractBenchmark extends Benchmark {
       authWitnesses.push(authWitness);
     }
 
-    return { pxe, wallet, deployer, accounts, vaultContract, assetContract, authWitnesses };
+    return { wallet, deployer, accounts, vaultContract, assetContract, authWitnesses };
   }
 
   /**

@@ -324,7 +324,7 @@ pub unconstrained fn authorize_transfer_private_to_public(
 ) {
     let transfer_private_to_public_call_interface =
         Token::at(token).transfer_private_to_public(from, caller, amount, nonce);
-    authwit_cheatcodes::add_private_authwit_from_call_interface(
+    authwit_cheatcodes::add_private_authwit_from_call(
         env,
         from,
         caller,
@@ -343,7 +343,7 @@ pub unconstrained fn authorize_transfer_public_to_public(
 ) {
     let transfer_public_to_public_call_interface =
         Token::at(token).transfer_public_to_public(from, caller, amount, nonce);
-    authwit_cheatcodes::add_public_authwit_from_call_interface(
+    authwit_cheatcodes::add_public_authwit_from_call(
         env,
         from,
         caller,
