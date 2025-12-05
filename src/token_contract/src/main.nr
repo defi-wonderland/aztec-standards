@@ -1139,7 +1139,9 @@ pub contract Token {
 
         // Increase recipient public balance
         // total supply is updated in settle_issuance_from_private_with_commitment
-        Token::at(context.this_address()).mint_to_public(to, shares).enqueue(&mut context);
+        Token::at(context.this_address()).increase_public_balance_internal(to, shares).enqueue(
+            &mut context,
+        );
 
         // Take max_assets from the sender
         Token::at(storage.asset.read())
@@ -1178,7 +1180,7 @@ pub contract Token {
             .call(&mut context);
 
         // Increase recipient's private balance with `shares`
-        _mint_to_private(&mut context, storage.private_balances, to, shares);
+        _increase_private_balance(storage.private_balances, to, shares);
 
         // Take max_assets from the sender
         Token::at(storage.asset.read())
@@ -1329,6 +1331,7 @@ pub contract Token {
                 partial_note.to_field(),
                 assets,
                 max_shares,
+                to,
             )
             .enqueue(&mut context);
     }
@@ -1763,9 +1766,11 @@ pub contract Token {
         let assets = _convert_to_assets(
             shares,
             total_assets - max_assets,
-            storage.total_supply - shares,
+            storage.total_supply,
             ROUND_UP,
         );
+
+        _increase_total_supply(storage.total_supply, shares);
 
         let change = max_assets - assets; // Reverts with underflow if invalid
         if change > 0 {
