@@ -887,17 +887,12 @@ pub contract Token {
         _validate_from_private::<5>(&mut context, from);
 
         // Validate in public that `assets` is sufficient for the requested shares
-        Token::at(context.this_address()).validate_deposit_rate_internal(assets, shares).enqueue(
+        Token::at(context.this_address()).settle_deposit_public_to_private_internal(from, assets, shares, _nonce).enqueue(
             &mut context,
         );
 
-        // Mint shares in private
-        _mint_to_private(&mut context, storage.private_balances, to, shares);
-
-        // Take the assets from the sender
-        Token::at(storage.asset.read())
-            .transfer_public_to_public(from, context.this_address(), assets, _nonce)
-            .enqueue(&mut context);
+        // Increase recipient's private balance with `shares`
+        _increase_private_balance(storage.private_balances, to, shares);
     }
 
     /// @notice Deposits the underlying asset from a private balance and receives shares to a private balance
@@ -919,12 +914,12 @@ pub contract Token {
         _validate_from_private::<5>(&mut context, from);
 
         // Validate in public that `assets` is sufficient for the requested shares
-        Token::at(context.this_address()).validate_deposit_rate_internal(assets, shares).enqueue(
+        Token::at(context.this_address()).settle_deposit_private_to_private_internal(assets, shares).enqueue(
             &mut context,
         );
 
-        // Mint shares in private
-        _mint_to_private(&mut context, storage.private_balances, to, shares);
+        // Increase recipient's private balance with `shares`
+        _increase_private_balance(storage.private_balances, to, shares);
 
         // Take the assets from the sender
         Token::at(storage.asset.read())
@@ -991,16 +986,13 @@ pub contract Token {
         // Mint any outstanding shares without revealing the recipient and updates the shares total supply
         // Reverts if min_shares is greater than allowed
         Token::at(context.this_address())
-            .settle_deposit_to_private_with_commitment_internal(
+            .settle_deposit_public_to_private_exact_internal(
+                from,
                 partial_note.to_field(),
                 assets,
                 min_shares,
+                _nonce,
             )
-            .enqueue(&mut context);
-
-        // Take the assets from the sender
-        Token::at(storage.asset.read())
-            .transfer_public_to_public(from, context.this_address(), assets, _nonce)
             .enqueue(&mut context);
     }
 
@@ -1038,7 +1030,7 @@ pub contract Token {
         // Mint any outstanding shares without revealing the recipient and updates the shares total supply
         // Reverts if min_shares is greater than allowed
         Token::at(context.this_address())
-            .settle_deposit_to_private_with_commitment_internal(
+            .settle_deposit_private_to_private_exact_internal(
                 partial_note.to_field(),
                 assets,
                 min_shares,
@@ -1583,15 +1575,40 @@ pub contract Token {
     }
 
     /// @notice Validates that the requested shares amount is valid for the deposited assets
+    /// @param from The address of the sender
     /// @param assets The amount of assets being deposited
     /// @param shares The amount of shares being issued
+    /// @param _nonce The nonce used for authwitness
     #[external("public")]
     #[internal]
-    fn validate_deposit_rate_internal(assets: u128, shares: u128) {
+    fn settle_deposit_public_to_private_internal(from: AztecAddress, assets: u128, shares: u128, _nonce: Field) {
         let total_assets = _total_assets(&mut context, storage.asset);
         let max_shares = _convert_to_shares(assets, total_assets, storage.total_supply, ROUND_DOWN);
 
         assert(shares <= max_shares, "Too many shares requested");
+
+        // Finalize minting shares by increasing total supply
+        _increase_total_supply(storage.total_supply, shares);
+
+        // Take the assets from the sender
+        Token::at(storage.asset.read())
+            .transfer_public_to_public(from, context.this_address(), assets, _nonce)
+            .call(&mut context);
+    }
+
+    /// @notice Validates that the requested shares amount is valid for the deposited assets
+    /// @param assets The amount of assets being deposited
+    /// @param shares The amount of shares being issued
+    #[external("public")]
+    #[internal]
+    fn settle_deposit_private_to_private_internal(assets: u128, shares: u128) {
+        let total_assets = _total_assets(&mut context, storage.asset);
+        let max_shares = _convert_to_shares(assets, total_assets, storage.total_supply, ROUND_DOWN);
+
+        assert(shares <= max_shares, "Too many shares requested");
+
+        // Finalize minting shares by increasing total supply
+        _increase_total_supply(storage.total_supply, shares);
     }
 
     /// @notice Decreases shares total supply and refunds excess shares via commitment
@@ -1627,7 +1644,7 @@ pub contract Token {
     /// @param min_shares The minimum amount of shares that should be issued
     #[external("public")]
     #[internal]
-    fn settle_deposit_to_private_with_commitment_internal(
+    fn settle_deposit_private_to_private_exact_internal(
         commitment: Field,
         assets: u128,
         min_shares: u128,
@@ -1646,6 +1663,42 @@ pub contract Token {
         }
 
         _increase_total_supply(storage.total_supply, max_shares);
+    }
+
+    /// @notice Increases shares total supply and issues outstanding shares via commitment
+    /// @param from The address of the sender
+    /// @param commitment The partial note representing the commitment (privacy entrance)
+    /// @param assets The amount of assets being deposited
+    /// @param min_shares The minimum amount of shares that should be issued
+    /// @param _nonce The nonce used for authwitness
+    #[external("public")]
+    #[internal]
+    fn settle_deposit_public_to_private_exact_internal(
+        from: AztecAddress,
+        commitment: Field,
+        assets: u128,
+        min_shares: u128,
+        _nonce: Field,
+    ) {
+        let total_assets = _total_assets(&mut context, storage.asset);
+        let max_shares = _convert_to_shares(assets, total_assets, storage.total_supply, ROUND_DOWN);
+
+        let outstanding_shares = max_shares - min_shares; // Reverts with underflow if invalid
+        if outstanding_shares > 0 {
+            _increase_commitment_balance(
+                &mut context,
+                PartialUintNote::from_field(commitment),
+                context.this_address(),
+                outstanding_shares,
+            );
+        }
+
+        _increase_total_supply(storage.total_supply, max_shares);
+
+        // Take the assets from the sender
+        Token::at(storage.asset.read())
+            .transfer_public_to_public(from, context.this_address(), assets, _nonce)
+            .call(&mut context);
     }
 
     /// @notice Refunds excess assets to the sender via commitment while validating the shares amount requested
