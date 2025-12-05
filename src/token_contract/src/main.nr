@@ -887,9 +887,9 @@ pub contract Token {
         _validate_from_private::<5>(&mut context, from);
 
         // Validate in public that `assets` is sufficient for the requested shares
-        Token::at(context.this_address()).settle_deposit_public_to_private_internal(from, assets, shares, _nonce).enqueue(
-            &mut context,
-        );
+        Token::at(context.this_address())
+            .settle_deposit_public_to_private_internal(from, assets, shares, _nonce)
+            .enqueue(&mut context);
 
         // Increase recipient's private balance with `shares`
         _increase_private_balance(storage.private_balances, to, shares);
@@ -914,9 +914,9 @@ pub contract Token {
         _validate_from_private::<5>(&mut context, from);
 
         // Validate in public that `assets` is sufficient for the requested shares
-        Token::at(context.this_address()).settle_deposit_private_to_private_internal(assets, shares).enqueue(
-            &mut context,
-        );
+        Token::at(context.this_address())
+            .settle_deposit_private_to_private_internal(assets, shares)
+            .enqueue(&mut context);
 
         // Increase recipient's private balance with `shares`
         _increase_private_balance(storage.private_balances, to, shares);
@@ -1273,9 +1273,9 @@ pub contract Token {
         );
 
         // Validate that the shares-assets ratio is correct
-        Token::at(context.this_address()).settle_withdraw_private_to_private_internal(assets, shares).enqueue(
-            &mut context,
-        );;
+        Token::at(context.this_address())
+            .settle_withdraw_private_to_private_internal(assets, shares)
+            .enqueue(&mut context);
 
         // Transfer the assets to the recipient in private
         Token::at(storage.asset.read())
@@ -1325,7 +1325,11 @@ pub contract Token {
         // Any excess amount of shares is sent back to the sender via commitment
         // Reverts if the amount of shares required is greater than max_shares
         Token::at(context.this_address())
-            .settle_withdraw_private_to_public_exact_internal(partial_note.to_field(), assets, max_shares)
+            .settle_withdraw_private_to_public_exact_internal(
+                partial_note.to_field(),
+                assets,
+                max_shares,
+            )
             .enqueue(&mut context);
     }
 
@@ -1371,7 +1375,11 @@ pub contract Token {
         // Any excess amount of shares is sent back to the sender via commitment
         // Reverts if the amount of shares required is greater than max_shares
         Token::at(context.this_address())
-            .settle_withdraw_private_to_private_exact_internal(partial_note.to_field(), assets, max_shares)
+            .settle_withdraw_private_to_private_exact_internal(
+                partial_note.to_field(),
+                assets,
+                max_shares,
+            )
             .enqueue(&mut context);
 
         // Transfer the assets to the recipient in private
@@ -1502,7 +1510,12 @@ pub contract Token {
         // Transfers any outstanding assets without revealing the recipient
         // Reverts if min_assets is greater than allowed
         Token::at(context.this_address())
-            .settle_redeem_public_to_private_exact_internal(from, asset_commitment, shares, min_assets)
+            .settle_redeem_public_to_private_exact_internal(
+                from,
+                asset_commitment,
+                shares,
+                min_assets,
+            )
             .enqueue(&mut context);
 
         // Transfer min_assets to the recipient
@@ -1576,7 +1589,12 @@ pub contract Token {
     /// @param _nonce The nonce used for authwitness
     #[external("public")]
     #[internal]
-    fn settle_deposit_public_to_private_internal(from: AztecAddress, assets: u128, shares: u128, _nonce: Field) {
+    fn settle_deposit_public_to_private_internal(
+        from: AztecAddress,
+        assets: u128,
+        shares: u128,
+        _nonce: Field,
+    ) {
         let total_assets = _total_assets(&mut context, storage.asset);
         let max_shares = _convert_to_shares(assets, total_assets, storage.total_supply, ROUND_DOWN);
 
