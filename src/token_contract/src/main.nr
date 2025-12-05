@@ -1722,7 +1722,7 @@ pub contract Token {
         let assets = _convert_to_assets(shares, total_assets, storage.total_supply, ROUND_UP);
 
         // Increase total_supply
-        increase_total_supply_internal(shares);
+        _increase_total_supply(storage.total_supply, shares);
 
         // Take the assets from the sender
         Token::at(storage.asset.read())
