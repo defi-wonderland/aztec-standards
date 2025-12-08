@@ -1565,35 +1565,45 @@ pub contract Token {
     }
 
     /// @dev Returns the maximum amount of the underlying asset that can be deposited into the Vault for the receiver, through a deposit call.
+    /// @param receiver The address of the receiver
     /// @return The maximum amount of assets that can be deposited
     #[external("public")]
     #[view]
-    fn maxDeposit() -> u128 {
+    fn maxDeposit(receiver: AztecAddress) -> u128 {
+        // Silence unused parameter warning while keeping the function signature
+        let _ = receiver;
         MAX_U128_VALUE
     }
 
     /// @dev Returns the maximum amount of the Vault shares that can be issued for the receiver, through a mint call.
+    /// @param receiver The address of the receiver
     /// @return The maximum amount of shares that can be issued
     #[external("public")]
     #[view]
-    fn maxIssue() -> u128 {
+    fn maxIssue(receiver: AztecAddress) -> u128 {
+        // Silence unused parameter warning while keeping the function signature
+        let _ = receiver;
         MAX_U128_VALUE
     }
 
     /// @dev Returns the maximum amount of the underlying asset that can be withdrawn from the owner balance in the Vault, through a withdraw call.
+    /// @notice This does NOT include private balance - private holders must track their own balance.
+    /// @param owner The address of the owner
     /// @return The maximum amount of assets that can be withdrawn
     #[external("public")]
     #[view]
-    fn maxWithdraw() -> u128 {
-        previewWithdraw(MAX_U128_VALUE)
+    fn maxWithdraw(owner: AztecAddress) -> u128 {
+        previewWithdraw(maxRedeem(owner))
     }
 
     /// @dev Returns the maximum amount of the Vault shares that can be redeemed from the owner balance in the Vault, through a redeem call.
+    /// @notice This does NOT include private balance - private holders must track their own balance.
+    /// @param owner The address of the owner
     /// @return The maximum amount of shares that can be redeemed
     #[external("public")]
     #[view]
-    fn maxRedeem() -> u128 {
-        previewRedeem(MAX_U128_VALUE)
+    fn maxRedeem(owner: AztecAddress) -> u128 {
+        storage.public_balances.at(owner).read()
     }
 
     /** ==========================================================
