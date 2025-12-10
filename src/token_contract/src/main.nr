@@ -964,7 +964,7 @@ pub contract Token {
             .call(&mut context);
 
         // Calculate and mint shares to the recipient in public
-        Token::at(context.this_address()).issue_from_assets_internal(to, assets).enqueue(
+        Token::at(context.this_address()).settle_deposit_private_to_public_internal(to, assets).enqueue(
             &mut context,
         );
     }
@@ -1129,7 +1129,7 @@ pub contract Token {
 
         // Validate the amount of assets transferred and send back any excess
         Token::at(context.this_address())
-            .settle_issuance_from_public_internal(from, shares, max_assets, _nonce)
+            .settle_issue_public_to_private_internal(from, shares, max_assets, _nonce)
             .enqueue(&mut context);
     }
 
@@ -1594,7 +1594,7 @@ pub contract Token {
     /// @param assets The amount of assets being deposited
     #[external("public")]
     #[internal]
-    fn issue_from_assets_internal(to: AztecAddress, assets: u128) {
+    fn settle_deposit_private_to_public_internal(to: AztecAddress, assets: u128) {
         let total_assets = _total_assets(&mut context, storage.asset) - assets;
         let shares = _convert_to_shares(assets, total_assets, storage.total_supply, ROUND_DOWN);
 
@@ -1896,7 +1896,7 @@ pub contract Token {
     /// @param max_assets The maximum amount of assets that should be deposited
     #[external("public")]
     #[internal]
-    fn settle_issuance_from_public_internal(
+    fn settle_issue_public_to_private_internal(
         from: AztecAddress,
         shares: u128,
         max_assets: u128,
