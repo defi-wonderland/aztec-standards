@@ -964,9 +964,9 @@ pub contract Token {
             .call(&mut context);
 
         // Calculate and mint shares to the recipient in public
-        Token::at(context.this_address()).settle_deposit_private_to_public_internal(to, assets).enqueue(
-            &mut context,
-        );
+        Token::at(context.this_address())
+            .settle_deposit_private_to_public_internal(to, assets)
+            .enqueue(&mut context);
     }
 
     /// @notice Deposits the underlying asset from a public balance and receives shares to a private balance
