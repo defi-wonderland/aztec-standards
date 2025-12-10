@@ -1716,7 +1716,7 @@ pub contract Token {
         assets: u128,
         min_shares: u128,
     ) {
-        let total_assets = _total_assets(&mut context, storage.asset);
+        let total_assets = _total_assets(&mut context, storage.asset) - assets;
         let max_shares = _convert_to_shares(assets, total_assets, storage.total_supply, ROUND_DOWN);
 
         let outstanding_shares = max_shares - min_shares; // Reverts with underflow if invalid
