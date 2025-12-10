@@ -844,6 +844,20 @@ pub contract Token {
      * ======================= VAULT =============================
      * ======================================================== */
 
+    // ## Note on ERC-777 assets
+    // ERC-777 hooks may execute user code before a transfer (sender hook) or after it (recipient hook).
+    // Users can therefore use hooks to reenter the vault, either when they send asset tokens in deposit and issue
+    // functions or when they receive asset tokens in withdraw and redeem functions.
+    //
+    // To keep the contract safe, reentrancy should not happen at half-updated states: 
+    //  - Assets should be transferred into the vault BEFORE minting shares. Reentrancy would only happen before any
+    //    balance is updated.
+    //  - Assets should be transferred out of the vault AFTER burning shares. Reentrancy would only happen after all
+    //    balances are updated.
+    //
+    // Note that we only worry about one hook at a time, because hooks called on the vault itself are considered safe, 
+    // since the vault is assume not malicious.
+
     /* ====================== DEPOSIT ========================= */
 
     /// @notice Deposits the underlying asset from a public balance and receives shares to a public balance
@@ -859,13 +873,14 @@ pub contract Token {
         let total_assets = _total_assets(&mut context, storage.asset);
         let shares = _convert_to_shares(assets, total_assets, storage.total_supply, ROUND_DOWN);
 
-        // Mint shares to the recipient
-        _mint_to_public(storage.public_balances, storage.total_supply, to, shares);
-
+        // Order matters: transfer before minting to neutralize ERC-777 reentrancy via the `tokens_to_send` hook.
         // Take the assets from the sender
         Token::at(storage.asset.read())
             .transfer_public_to_public(from, context.this_address(), assets, _nonce)
             .call(&mut context);
+
+        // Mint shares to the recipient
+        _mint_to_public(storage.public_balances, storage.total_supply, to, shares);
     }
 
     /// @notice Deposits the underlying asset from a public balance and receives shares to a private balance
@@ -913,6 +928,12 @@ pub contract Token {
     ) {
         _validate_from_private::<5>(&mut context, from);
 
+        // Order matters: transfer before minting to neutralize ERC-777 reentrancy via the `tokens_to_send` hook.
+        // Take the assets from the sender
+        Token::at(storage.asset.read())
+            .transfer_private_to_public(from, context.this_address(), assets, _nonce)
+            .call(&mut context);
+
         // Validate in public that `assets` is sufficient for the requested shares
         Token::at(context.this_address())
             .settle_deposit_private_to_private_internal(assets, shares)
@@ -920,11 +941,6 @@ pub contract Token {
 
         // Increase recipient's private balance with `shares`
         _increase_private_balance(storage.private_balances, to, shares);
-
-        // Take the assets from the sender
-        Token::at(storage.asset.read())
-            .transfer_private_to_public(from, context.this_address(), assets, _nonce)
-            .call(&mut context);
     }
 
     /// @notice Deposits the underlying asset from a private balance and receives shares to a public balance
@@ -941,15 +957,16 @@ pub contract Token {
     ) {
         _validate_from_private::<4>(&mut context, from);
 
-        // Calculate and mint shares to the recipient in public
-        Token::at(context.this_address()).issue_from_assets_internal(to, assets).enqueue(
-            &mut context,
-        );
-
+        // Order matters: transfer before minting to neutralize ERC-777 reentrancy via the `tokens_to_send` hook.
         // Take the assets from the sender
         Token::at(storage.asset.read())
             .transfer_private_to_public(from, context.this_address(), assets, _nonce)
             .call(&mut context);
+
+        // Calculate and mint shares to the recipient in public
+        Token::at(context.this_address()).issue_from_assets_internal(to, assets).enqueue(
+            &mut context,
+        );
     }
 
     /// @notice Deposits the underlying asset from a public balance and receives shares to a private balance
@@ -1015,9 +1032,6 @@ pub contract Token {
     ) {
         _validate_from_private::<5>(&mut context, from);
 
-        // Increase recipient's private balance with `min_shares`
-        _increase_private_balance(storage.private_balances, to, min_shares);
-
         // TODO (optimization): partial note logs and validity_commitment nullifier are not needed
         // Initialize commitment that allows to mint outstanding shares to the recipient in public
         let partial_note = _initialize_transfer_commitment(
@@ -1026,6 +1040,15 @@ pub contract Token {
             to,
             context.this_address(),
         );
+
+        // Order matters: transfer before minting to neutralize ERC-777 reentrancy via the `tokens_to_send` hook.
+        // Take the assets from the sender
+        Token::at(storage.asset.read())
+            .transfer_private_to_public(from, context.this_address(), assets, _nonce)
+            .call(&mut context);
+
+        // Increase recipient's private balance with `min_shares`
+        _increase_private_balance(storage.private_balances, to, min_shares);
 
         // Mint any outstanding shares without revealing the recipient and updates the shares total supply
         // Reverts if min_shares is greater than allowed
@@ -1036,11 +1059,6 @@ pub contract Token {
                 min_shares,
             )
             .enqueue(&mut context);
-
-        // Take the assets from the sender
-        Token::at(storage.asset.read())
-            .transfer_private_to_public(from, context.this_address(), assets, _nonce)
-            .call(&mut context);
     }
 
     /* ======================= ISSUE ========================== */
@@ -1579,7 +1597,7 @@ pub contract Token {
     #[external("public")]
     #[internal]
     fn issue_from_assets_internal(to: AztecAddress, assets: u128) {
-        let total_assets = _total_assets(&mut context, storage.asset);
+        let total_assets = _total_assets(&mut context, storage.asset) - assets;
         let shares = _convert_to_shares(assets, total_assets, storage.total_supply, ROUND_DOWN);
 
         _mint_to_public(storage.public_balances, storage.total_supply, to, shares);
@@ -1603,13 +1621,14 @@ pub contract Token {
 
         assert(shares <= max_shares, "Too many shares requested");
 
-        // Finalize minting shares by increasing total supply
-        _increase_total_supply(storage.total_supply, shares);
-
+        // Order matters: transfer before minting to neutralize ERC-777 reentrancy via the `tokens_to_send` hook.
         // Take the assets from the sender
         Token::at(storage.asset.read())
             .transfer_public_to_public(from, context.this_address(), assets, _nonce)
             .call(&mut context);
+
+        // Finalize minting shares by increasing total supply
+        _increase_total_supply(storage.total_supply, shares);
     }
 
     /// @notice Validates that the requested shares amount is valid for the deposited assets
@@ -1618,7 +1637,7 @@ pub contract Token {
     #[external("public")]
     #[internal]
     fn settle_deposit_private_to_private_internal(assets: u128, shares: u128) {
-        let total_assets = _total_assets(&mut context, storage.asset);
+        let total_assets = _total_assets(&mut context, storage.asset) - assets;
         let max_shares = _convert_to_shares(assets, total_assets, storage.total_supply, ROUND_DOWN);
 
         assert(shares <= max_shares, "Too many shares requested");
@@ -1732,8 +1751,14 @@ pub contract Token {
     ) {
         let total_assets = _total_assets(&mut context, storage.asset);
         let max_shares = _convert_to_shares(assets, total_assets, storage.total_supply, ROUND_DOWN);
-
         let outstanding_shares = max_shares - min_shares; // Reverts with underflow if invalid
+
+        // Order matters: transfer before minting to neutralize ERC-777 reentrancy via the `tokens_to_send` hook.
+        // Take the assets from the sender
+        Token::at(storage.asset.read())
+            .transfer_public_to_public(from, context.this_address(), assets, _nonce)
+            .call(&mut context);
+
         if outstanding_shares > 0 {
             _increase_commitment_balance(
                 &mut context,
@@ -1744,11 +1769,6 @@ pub contract Token {
         }
 
         _increase_total_supply(storage.total_supply, max_shares);
-
-        // Take the assets from the sender
-        Token::at(storage.asset.read())
-            .transfer_public_to_public(from, context.this_address(), assets, _nonce)
-            .call(&mut context);
     }
 
     /// @notice Refunds excess assets to the sender via commitment while validating the shares amount requested
