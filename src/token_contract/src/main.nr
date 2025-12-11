@@ -1255,9 +1255,9 @@ pub contract Token {
 
         // Order matters: transfer after burning to neutralize ERC-777 reentrancy via the `tokens_received` hook.
         // Calculate and burn the sender's shares
-        Token::at(context.this_address()).settle_withdraw_public_to_private_internal(from, assets).enqueue(
-            &mut context,
-        );
+        Token::at(context.this_address())
+            .settle_withdraw_public_to_private_internal(from, assets)
+            .enqueue(&mut context);
 
         // Transfer the assets to the recipient in private
         Token::at(storage.asset.read())
@@ -1392,7 +1392,7 @@ pub contract Token {
             max_shares,
             INITIAL_TRANSFER_CALL_MAX_NOTES,
         );
-        
+
         // Order matters: transfer after burning to neutralize ERC-777 reentrancy via the `tokens_received` hook.
         // Burn the correct amount of shares
         // Any excess amount of shares is sent back to the sender via commitment
@@ -1426,6 +1426,7 @@ pub contract Token {
         let total_assets = _total_assets(&mut context, storage.asset);
         let assets = _convert_to_assets(shares, total_assets, storage.total_supply, ROUND_DOWN);
 
+        // Order matters: transfer after burning to neutralize ERC-777 reentrancy via the `tokens_received` hook.
         // Burn the sender's shares
         _burn_public(storage.public_balances, storage.total_supply, from, shares);
 
@@ -1454,9 +1455,9 @@ pub contract Token {
         );
 
         // Burn shares and redeem public assets
-        Token::at(context.this_address()).settle_redemption_to_public_internal(to, shares).enqueue(
-            &mut context,
-        );
+        Token::at(context.this_address())
+            .settle_redeem_private_to_public_internal(to, shares)
+            .enqueue(&mut context);
     }
 
     /// @notice Redeems an amount of the shares from a private balance to a private balance
@@ -1493,6 +1494,7 @@ pub contract Token {
             INITIAL_TRANSFER_CALL_MAX_NOTES,
         );
 
+        // Order matters: transfer after burning to neutralize ERC-777 reentrancy via the `tokens_received` hook.
         // Transfers any outstanding assets without revealing the recipient
         // Reverts if min_assets is greater than allowed
         Token::at(context.this_address())
@@ -1530,6 +1532,7 @@ pub contract Token {
             .initialize_transfer_commitment(to, context.this_address())
             .call(&mut context);
 
+        // Order matters: transfer after burning to neutralize ERC-777 reentrancy via the `tokens_received` hook.
         // Transfers any outstanding assets without revealing the recipient
         // Reverts if min_assets is greater than allowed
         Token::at(context.this_address())
@@ -1582,12 +1585,15 @@ pub contract Token {
     /// @param shares The amount of shares being redeemed
     #[external("public")]
     #[internal]
-    fn settle_redemption_to_public_internal(to: AztecAddress, shares: u128) {
+    fn settle_redeem_private_to_public_internal(to: AztecAddress, shares: u128) {
         let total_assets = _total_assets(&mut context, storage.asset);
         let assets = _convert_to_assets(shares, total_assets, storage.total_supply, ROUND_DOWN);
 
+        // Order matters: transfer after burning to neutralize ERC-777 reentrancy via the `tokens_received` hook.
+        // Finalize burning shares by decreasing total supply
         _decrease_total_supply(storage.total_supply, shares);
 
+        // Transfer the assets to the sender
         Token::at(storage.asset.read())
             .transfer_public_to_public(context.this_address(), to, assets, 0)
             .call(&mut context);
@@ -1850,6 +1856,7 @@ pub contract Token {
         let total_assets = _total_assets(&mut context, storage.asset);
         let assets = _convert_to_assets(shares, total_assets, storage.total_supply, ROUND_DOWN);
 
+        // Finalize burning shares by decreasing total supply
         _decrease_total_supply(storage.total_supply, shares);
 
         let outstanding_assets = assets - min_assets; // Reverts with underflow if invalid
