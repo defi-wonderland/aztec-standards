@@ -1520,48 +1520,48 @@ pub contract Token {
      * ====================== VAULT VIEW =========================
      * ======================================================== */
 
-    /// @dev Allows an on-chain or off-chain user to simulate the effects of their deposit at the current block, given current on-chain conditions.
-    /// @param assets The amount of assets to deposit
-    /// @return The amount of shares that would be minted
+    /// @notice Returns the underlying asset address
+    /// @return The address of the underlying asset
     #[external("public")]
     #[view]
-    fn previewDeposit(assets: u128) -> u128 {
-        let total_assets = _total_assets(&mut context, storage.asset);
-        let shares = _convert_to_shares(assets, total_assets, storage.total_supply, ROUND_DOWN);
-        shares
+    fn asset() -> AztecAddress {
+        storage.asset.read()
     }
 
-    /// @dev Allows an on-chain or off-chain user to simulate the effects of their issue at the current block, given current on-chain conditions.
-    /// @param shares The amount of shares to deposit
-    /// @return The amount of assets that would be issued
+    /// @notice Returns the total amount of underlying assets held by the vault
+    /// @return The total amount of assets held by the vault
     #[external("public")]
     #[view]
-    fn previewIssue(shares: u128) -> u128 {
-        let total_assets = _total_assets(&mut context, storage.asset);
-        let assets = _convert_to_assets(shares, total_assets, storage.total_supply, ROUND_UP);
-        assets
+    fn totalAssets() -> u128 {
+        _total_assets(&mut context, storage.asset)
     }
 
-    /// @dev Allows an on-chain or off-chain user to simulate the effects of their withdraw at the current block, given current on-chain conditions.
-    /// @param shares The amount of shares to withdraw
-    /// @return The amount of assets that would be withdrawn
+    /// @notice Converts an amount of assets to shares using the current exchange rate
+    /// @param assets The amount of assets to convert
+    /// @return The equivalent amount of shares
     #[external("public")]
     #[view]
-    fn previewWithdraw(shares: u128) -> u128 {
-        let total_assets = _total_assets(&mut context, storage.asset);
-        let assets = _convert_to_assets(shares, total_assets, storage.total_supply, ROUND_DOWN);
-        assets
+    fn convertToShares(assets: u128) -> u128 {
+        _convert_to_shares(
+            assets,
+            _total_assets(&mut context, storage.asset),
+            storage.total_supply,
+            ROUND_DOWN,
+        )
     }
 
-    /// @dev Allows an on-chain or off-chain user to simulate the effects of their redeem at the current block, given current on-chain conditions.
-    /// @param assets The amount of assets to redeem
-    /// @return The amount of shares that would be redeemed
+    /// @notice Converts an amount of shares to assets using the current exchange rate
+    /// @param shares The amount of shares to convert
+    /// @return The equivalent amount of assets
     #[external("public")]
     #[view]
-    fn previewRedeem(assets: u128) -> u128 {
-        let total_assets = _total_assets(&mut context, storage.asset);
-        let shares = _convert_to_shares(assets, total_assets, storage.total_supply, ROUND_UP);
-        shares
+    fn convertToAssets(shares: u128) -> u128 {
+        _convert_to_assets(
+            shares,
+            _total_assets(&mut context, storage.asset),
+            storage.total_supply,
+            ROUND_UP,
+        )
     }
 
     /// @dev Returns the maximum amount of the underlying asset that can be deposited into the Vault for the receiver, through a deposit call.
@@ -1575,6 +1575,17 @@ pub contract Token {
         MAX_U128_VALUE
     }
 
+    /// @dev Allows an on-chain or off-chain user to simulate the effects of their deposit at the current block, given current on-chain conditions.
+    /// @param assets The amount of assets to deposit
+    /// @return The amount of shares that would be minted
+    #[external("public")]
+    #[view]
+    fn previewDeposit(assets: u128) -> u128 {
+        let total_assets = _total_assets(&mut context, storage.asset);
+        let shares = _convert_to_shares(assets, total_assets, storage.total_supply, ROUND_DOWN);
+        shares
+    }
+
     /// @dev Returns the maximum amount of the Vault shares that can be issued for the receiver, through a mint call.
     /// @param receiver The address of the receiver
     /// @return The maximum amount of shares that can be issued
@@ -1586,6 +1597,17 @@ pub contract Token {
         MAX_U128_VALUE
     }
 
+    /// @dev Allows an on-chain or off-chain user to simulate the effects of their issue at the current block, given current on-chain conditions.
+    /// @param shares The amount of shares to deposit
+    /// @return The amount of assets that would be issued
+    #[external("public")]
+    #[view]
+    fn previewIssue(shares: u128) -> u128 {
+        let total_assets = _total_assets(&mut context, storage.asset);
+        let assets = _convert_to_assets(shares, total_assets, storage.total_supply, ROUND_UP);
+        assets
+    }
+
     /// @dev Returns the maximum amount of the underlying asset that can be withdrawn from the owner balance in the Vault, through a withdraw call.
     /// @notice This does NOT include private balance - private holders must track their own balance.
     /// @param owner The address of the owner
@@ -1593,7 +1615,18 @@ pub contract Token {
     #[external("public")]
     #[view]
     fn maxWithdraw(owner: AztecAddress) -> u128 {
-        previewWithdraw(maxRedeem(owner))
+        previewRedeem(maxRedeem(owner))
+    }
+
+    /// @dev Allows an on-chain or off-chain user to simulate the effects of their withdraw at the current block, given current on-chain conditions.
+    /// @param shares The amount of shares to withdraw
+    /// @return The amount of shares that would be withdrawn
+    #[external("public")]
+    #[view]
+    fn previewWithdraw(assets: u128) -> u128 {
+        let total_assets = _total_assets(&mut context, storage.asset);
+        let shares = _convert_to_shares(assets, total_assets, storage.total_supply, ROUND_UP);
+        shares
     }
 
     /// @dev Returns the maximum amount of the Vault shares that can be redeemed from the owner balance in the Vault, through a redeem call.
@@ -1604,6 +1637,17 @@ pub contract Token {
     #[view]
     fn maxRedeem(owner: AztecAddress) -> u128 {
         storage.public_balances.at(owner).read()
+    }
+
+    /// @dev Allows an on-chain or off-chain user to simulate the effects of their redeem at the current block, given current on-chain conditions.
+    /// @param assets The amount of assets to redeem
+    /// @return The amount of assets that would be redeemed
+    #[external("public")]
+    #[view]
+    fn previewRedeem(shares: u128) -> u128 {
+        let total_assets = _total_assets(&mut context, storage.asset);
+        let assets = _convert_to_assets(shares, total_assets, storage.total_supply, ROUND_DOWN);
+        assets
     }
 
     /** ==========================================================

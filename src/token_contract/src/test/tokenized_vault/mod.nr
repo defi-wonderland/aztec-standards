@@ -1,3 +1,6 @@
+mod asset;
+mod convert_to_assets;
+mod convert_to_shares;
 mod deposit_public_to_public;
 mod deposit_public_to_private;
 mod deposit_private_to_private;
@@ -20,6 +23,7 @@ mod redeem_public_to_public;
 mod redeem_private_to_public;
 mod redeem_private_to_private_exact;
 mod redeem_public_to_private_exact;
+mod total_assets;
 mod withdraw_public_to_public;
 mod withdraw_public_to_private;
 mod withdraw_private_to_private;

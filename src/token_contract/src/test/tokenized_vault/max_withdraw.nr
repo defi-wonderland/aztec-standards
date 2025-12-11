@@ -88,12 +88,14 @@ unconstrained fn max_withdraw_equals_preview_of_max_redeem() {
 
     // Get maxRedeem and previewWithdraw separately
     let max_redeem = env.view_public(Token::at(vault_address).maxRedeem(owner));
-    let preview_withdraw = env.view_public(Token::at(vault_address).previewWithdraw(max_redeem));
+    let preview_redeem_assets = env.view_public(Token::at(vault_address).previewRedeem(max_redeem));
 
-    // maxWithdraw should equal previewWithdraw(maxRedeem(owner))
-    let max_withdraw = env.view_public(Token::at(vault_address).maxWithdraw(owner));
+    let max_withdraw_assets = env.view_public(Token::at(vault_address).maxWithdraw(owner));
 
-    assert(max_withdraw == preview_withdraw, "maxWithdraw should equal previewWithdraw(maxRedeem)");
+    assert(
+        max_withdraw_assets == preview_redeem_assets,
+        "maxWithdraw should equal previewRedeem(maxRedeem)",
+    );
 }
 
 #[test]

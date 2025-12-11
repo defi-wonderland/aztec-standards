@@ -68,27 +68,32 @@ unconstrained fn preview_withdraw_with_yield_accrued_success() {
     // After yield, each share is worth more assets
     // Total assets = deposit_amount + yield_amount, total shares = deposit_amount
     // Rate = (deposit_amount + yield_amount) / deposit_amount
-    let shares_to_withdraw: u128 = deposit_amount;
+    let expected_assets_to_withdraw: u128 = deposit_amount + 1;
 
     // Preview withdraw before withdraw
-    let preview_withdraw_assets =
-        env.view_public(Token::at(vault_address).previewWithdraw(shares_to_withdraw));
+    let preview_withdraw_shares =
+        env.view_public(Token::at(vault_address).previewWithdraw(expected_assets_to_withdraw));
 
     // Withdraw all shares
-    // Due to ROUND_DOWN in _convert_to_assets, user receives deposit_amount + 1
-    let expected_assets: u128 = deposit_amount + 1;
+    let expected_shares_to_burn: u128 = deposit_amount;
+    assert(
+        preview_withdraw_shares == expected_shares_to_burn,
+        "previewWithdraw should return the expected shares",
+    );
 
     // Withdraw
     env.call_public(
         owner,
-        Token::at(vault_address).withdraw_public_to_public(owner, recipient, expected_assets, 0),
+        Token::at(vault_address).withdraw_public_to_public(
+            owner,
+            recipient,
+            expected_assets_to_withdraw,
+            0,
+        ),
     );
 
     // Check recipient received assets
-    utils::check_public_balance(env, asset_address, recipient, expected_assets);
-
-    // Assert preview withdraw is correct
-    assert(preview_withdraw_assets == expected_assets, "Incorrect preview withdraw");
+    utils::check_public_balance(env, asset_address, recipient, expected_assets_to_withdraw);
 }
 
 #[test]

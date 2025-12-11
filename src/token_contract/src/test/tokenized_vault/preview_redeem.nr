@@ -66,28 +66,24 @@ unconstrained fn preview_redeem_with_yield_accrued_success() {
     let yield_amount: u128 = 2;
     env.call_public(owner, Token::at(asset_address).mint_to_public(vault_address, yield_amount));
 
-    // After yield, each share is worth more assets
-    // To redeem deposit_amount + 1 assets, we need deposit_amount shares
-    // previewRedeem uses ROUND_UP, so user needs to burn all shares
-    let assets_to_redeem: u128 = deposit_amount + 1;
-
-    // Preview redeem before redeem
-    let preview_redeem_shares =
-        env.view_public(Token::at(vault_address).previewRedeem(assets_to_redeem));
-
     // Redeem all shares
     let shares_to_burn: u128 = deposit_amount;
+    let preview_redeem_assets =
+        env.view_public(Token::at(vault_address).previewRedeem(shares_to_burn));
+
+    let expected_assets: u128 = deposit_amount + 1;
+    assert(
+        preview_redeem_assets == expected_assets,
+        "previewRedeem should return the expected assets",
+    );
+
     env.call_public(
         owner,
         Token::at(vault_address).redeem_public_to_public(owner, recipient, shares_to_burn, 0),
     );
 
-    // Check recipient received assets
-    utils::check_public_balance(env, asset_address, recipient, assets_to_redeem);
-
-    // Assert preview redeem is correct
-    let expected_shares: u128 = shares_to_burn;
-    assert(preview_redeem_shares == expected_shares, "Incorrect preview redeem");
+    // Check recipient received the expected assets
+    utils::check_public_balance(env, asset_address, recipient, expected_assets);
 }
 
 #[test]
