@@ -1229,6 +1229,7 @@ pub contract Token {
         let total_assets = _total_assets(&mut context, storage.asset);
         let shares = _convert_to_shares(assets, total_assets, storage.total_supply, ROUND_UP);
 
+        // Order matters: transfer after burning to neutralize ERC-777 reentrancy via the `tokens_received` hook.
         // Burn the sender's shares
         _burn_public(storage.public_balances, storage.total_supply, from, shares);
 
@@ -1252,8 +1253,9 @@ pub contract Token {
     ) {
         _validate_from_private::<4>(&mut context, from);
 
+        // Order matters: transfer after burning to neutralize ERC-777 reentrancy via the `tokens_received` hook.
         // Calculate and burn the sender's shares
-        Token::at(context.this_address()).redeem_from_assets_internal(from, assets).enqueue(
+        Token::at(context.this_address()).settle_withdraw_public_to_private_internal(from, assets).enqueue(
             &mut context,
         );
 
@@ -1290,6 +1292,7 @@ pub contract Token {
             INITIAL_TRANSFER_CALL_MAX_NOTES,
         );
 
+        // Order matters: transfer after burning to neutralize ERC-777 reentrancy via the `tokens_received` hook.
         // Validate that the shares-assets ratio is correct
         Token::at(context.this_address())
             .settle_withdraw_private_to_private_internal(assets, shares)
@@ -1389,7 +1392,8 @@ pub contract Token {
             max_shares,
             INITIAL_TRANSFER_CALL_MAX_NOTES,
         );
-
+        
+        // Order matters: transfer after burning to neutralize ERC-777 reentrancy via the `tokens_received` hook.
         // Burn the correct amount of shares
         // Any excess amount of shares is sent back to the sender via commitment
         // Reverts if the amount of shares required is greater than max_shares
@@ -1552,7 +1556,7 @@ pub contract Token {
     /// @param assets The amount of assets to burn shares for
     #[external("public")]
     #[internal]
-    fn redeem_from_assets_internal(from: AztecAddress, assets: u128) {
+    fn settle_withdraw_public_to_private_internal(from: AztecAddress, assets: u128) {
         let total_assets = _total_assets(&mut context, storage.asset);
         let shares = _convert_to_shares(assets, total_assets, storage.total_supply, ROUND_UP);
 
@@ -1670,6 +1674,8 @@ pub contract Token {
             );
         }
 
+        // Order matters: transfer after burning to neutralize ERC-777 reentrancy via the `tokens_received` hook.
+        // Finalize burning shares by decreasing total supply
         _decrease_total_supply(storage.total_supply, shares);
 
         // Transfer the assets to the sender
@@ -1702,6 +1708,7 @@ pub contract Token {
             );
         }
 
+        // Finalize burning shares by decreasing total supply
         _decrease_total_supply(storage.total_supply, shares);
     }
 
