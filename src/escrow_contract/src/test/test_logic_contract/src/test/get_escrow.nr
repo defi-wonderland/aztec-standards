@@ -24,7 +24,7 @@ unconstrained fn get_escrow_correct_instance() {
     let secret = 1;
     let (public_keys, msk, _, _) = logic_utils::get_test_vector();
 
-    let escrow = escrow_utils::deploy_escrow_with_secret(&mut env, secret);
+    escrow_utils::deploy_escrow_with_secret(&mut env, secret);
 
     let escrow_class_id = escrow_utils::get_escrow_class_id();
 
