@@ -11,7 +11,7 @@ contract TestLogic {
         state_vars::public_immutable::PublicImmutable,
     };
     use escrow_contract::library::logic::{
-        _check_escrow, _secret_keys_to_public_keys, _share_escrow, _withdraw, _withdraw_nft,
+        _get_escrow, _secret_keys_to_public_keys, _share_escrow, _withdraw, _withdraw_nft,
         MasterSecretKeys,
     };
 
@@ -42,18 +42,15 @@ contract TestLogic {
         storage.escrow_class_id.initialize(escrow_class_id);
     }
 
-    /// @notice Verifies that the keys correspond to the escrow address and that the escrow instance data is correct.
-    /// @dev Reverts if the data is not correct.
-    /// @param escrow The address of the escrow
+    /// @notice Returns the escrow address that corresponds to the given master secret keys and class ID.
     /// @param master_secret_keys The master secret keys
     #[external("private")]
-    fn check_escrow(escrow: AztecAddress, master_secret_keys: MasterSecretKeys) {
-        _check_escrow(
+    fn get_escrow(master_secret_keys: MasterSecretKeys) -> AztecAddress {
+        _get_escrow(
             &mut context,
-            escrow,
             storage.escrow_class_id.read(),
             master_secret_keys,
-        );
+        )
     }
 
     /// @notice Shares the escrow details needed to find and use the escrow contract
