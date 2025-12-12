@@ -22,7 +22,7 @@ unconstrained fn get_escrow_correct_instance() {
 
     // Secret keys derived using a different seed than 1, hence the public keys will not match
     let secret = 1;
-    let (_, _, public_keys, msk) = logic_utils::get_test_vector();
+    let (public_keys, msk, _, _) = logic_utils::get_test_vector();
 
     let escrow = escrow_utils::deploy_escrow_with_secret(&mut env, secret);
 
@@ -52,7 +52,7 @@ unconstrained fn get_escrow_public_keys_mismatch() {
 
     // Secret key derived using 1 as the seed
     let secret = 1;
-    let (_, incorrect_msk, _, _) = logic_utils::get_test_vector();
+    let (_, _, _, incorrect_msk) = logic_utils::get_test_vector();
 
     let escrow = escrow_utils::deploy_escrow_with_secret(&mut env, secret);
 
