@@ -6,7 +6,7 @@ import { AztecAddress } from '@aztec/aztec.js/addresses';
 import { type TestWallet } from '@aztec/test-wallet/server';
 import { ContractDeployer } from '@aztec/aztec.js/deployment';
 import { type AztecLMDBStoreV2 } from '@aztec/kv-store/lmdb-v2';
-import { Fr, type GrumpkinScalar } from '@aztec/aztec.js/fields';
+import { Fr, type GrumpkinScalar, Point } from '@aztec/aztec.js/fields';
 import {
   Contract,
   getContractInstanceFromInstantiationParams,
@@ -32,6 +32,19 @@ import {
   grumpkinScalarToFr,
   deriveContractAddress,
 } from './utils.js';
+
+type FrInput = Fr | bigint | number | boolean | Buffer;
+
+type NoirWrappedPoint = {
+  inner: {
+    x: FrInput;
+    y: FrInput;
+    is_infinite?: boolean;
+  };
+};
+
+const noirWrappedPointToPoint = (wrapped: NoirWrappedPoint) =>
+  new Point(new Fr(wrapped.inner.x), new Fr(wrapped.inner.y), !!wrapped.inner.is_infinite);
 
 describe('Logic - Single PXE', () => {
   let pxe: PXE;
@@ -236,12 +249,26 @@ describe('Logic - Single PXE', () => {
     });
   });
 
-  describe('check_escrow', () => {
-    it('logic should be able to check escrow correctly', async () => {
-      await logic.methods.check_escrow(escrow.instance.address, secretKeys).simulate({ from: alice });
+  describe('get_escrow', () => {
+    it('logic should be able to get escrow correctly', async () => {
+      const escrow_address = await logic.methods.get_escrow(secretKeys).simulate({ from: alice });
+
+      const publicKeys = await logic.methods.secret_keys_to_public_keys(secretKeys).simulate({ from: alice });
+      const publicKeysObj = new PublicKeys(
+        noirWrappedPointToPoint(publicKeys.npk_m),
+        noirWrappedPointToPoint(publicKeys.ivpk_m),
+        noirWrappedPointToPoint(publicKeys.ovpk_m),
+        noirWrappedPointToPoint(publicKeys.tpk_m),
+      );
+      const escrow_instance = await getContractInstanceFromInstantiationParams(EscrowContractArtifact, {
+        salt: escrowSalt,
+        publicKeys: publicKeysObj,
+      });
+
+      expect(escrow_address).toEqual(escrow_instance.address);
     });
 
-    it('check escrow with incorrect secret keys should fail', async () => {
+    it('get escrow with incorrect secret keys should fail', async () => {
       // We add 1 to each secret key to make it incorrect
       let secretKeysPlusOne = {
         nsk_m: secretKeys.nsk_m.add(Fr.ONE),
@@ -250,43 +277,58 @@ describe('Logic - Single PXE', () => {
         tsk_m: secretKeys.tsk_m.add(Fr.ONE),
       };
 
-      await expect(
-        logic.methods.check_escrow(escrow.instance.address, secretKeysPlusOne).send({ from: alice }).wait(),
-      ).rejects.toThrow(/Assertion failed: Escrow public keys mismatch/);
+      const incorrect_escrow_address = await logic.methods.get_escrow(secretKeysPlusOne).simulate({ from: alice });
+
+      const publicKeys = await logic.methods.secret_keys_to_public_keys(secretKeys).simulate({ from: alice });
+      const publicKeysObj = new PublicKeys(
+        noirWrappedPointToPoint(publicKeys.npk_m),
+        noirWrappedPointToPoint(publicKeys.ivpk_m),
+        noirWrappedPointToPoint(publicKeys.ovpk_m),
+        noirWrappedPointToPoint(publicKeys.tpk_m),
+      );
+      const escrow_instance = await getContractInstanceFromInstantiationParams(EscrowContractArtifact, {
+        salt: escrowSalt,
+        publicKeys: publicKeysObj,
+      });
+
+      expect(incorrect_escrow_address).not.toEqual(escrow_instance.address);
     });
 
-    it('check escrow with non zero deployer should fail', async () => {
-      // Re-deploy the escrow contract with no universalDeploy
-      escrow = (await Contract.deployWithPublicKeys(escrowKeys.publicKeys, wallet, EscrowContractArtifact, [])
-        .send({ contractAddressSalt: escrowSalt, from: alice })
-        .deployed()) as EscrowContract;
+    it('get escrow with non zero deployer should fail', async () => {
+      const escrow_address = await logic.methods.get_escrow(secretKeys).simulate({ from: alice });
 
-      await expect(
-        logic.methods.check_escrow(escrow.instance.address, secretKeys).send({ from: alice }).wait(),
-      ).rejects.toThrow(/Assertion failed: Escrow deployer should be null/);
+      const publicKeys = await logic.methods.secret_keys_to_public_keys(secretKeys).simulate({ from: alice });
+      const publicKeysObj = new PublicKeys(
+        noirWrappedPointToPoint(publicKeys.npk_m),
+        noirWrappedPointToPoint(publicKeys.ivpk_m),
+        noirWrappedPointToPoint(publicKeys.ovpk_m),
+        noirWrappedPointToPoint(publicKeys.tpk_m),
+      );
+      const incorrect_escrow_instance = await getContractInstanceFromInstantiationParams(EscrowContractArtifact, {
+        salt: escrowSalt,
+        publicKeys: publicKeysObj,
+        deployer: alice,
+      });
+
+      expect(escrow_address).not.toEqual(incorrect_escrow_instance.address);
     });
 
-    it('check escrow with incorrect class id should fail', async () => {
-      // Re-deploy the logic contract with an incorrect class id
-      logic = (await deployLogic(wallet, alice, escrowClassId.add(Fr.ONE))) as TestLogicContract;
+    it('get escrow with incorrect salt should fail', async () => {
+      const escrow_address = await logic.methods.get_escrow(secretKeys).simulate({ from: alice });
 
-      await expect(
-        logic.methods.check_escrow(escrow.instance.address, secretKeys).send({ from: alice }).wait(),
-      ).rejects.toThrow(/Assertion failed: Escrow class id mismatch/);
-    });
+      const publicKeys = await logic.methods.secret_keys_to_public_keys(secretKeys).simulate({ from: alice });
+      const publicKeysObj = new PublicKeys(
+        noirWrappedPointToPoint(publicKeys.npk_m),
+        noirWrappedPointToPoint(publicKeys.ivpk_m),
+        noirWrappedPointToPoint(publicKeys.ovpk_m),
+        noirWrappedPointToPoint(publicKeys.tpk_m),
+      );
+      const incorrect_escrow_instance = await getContractInstanceFromInstantiationParams(EscrowContractArtifact, {
+        salt: new Fr(1),
+        publicKeys: publicKeysObj,
+      });
 
-    it('check escrow with incorrect salt should fail', async () => {
-      // Re-deploy the escrow contract with a different salt (different from the logic contract address)
-      escrow = (await deployEscrowWithPublicKeysAndSalt(
-        escrowKeys.publicKeys,
-        wallet,
-        alice,
-        escrowSalt.add(Fr.ONE),
-      )) as EscrowContract;
-
-      await expect(
-        logic.methods.check_escrow(escrow.instance.address, secretKeys).send({ from: alice }).wait(),
-      ).rejects.toThrow(/Assertion failed: Escrow salt mismatch/);
+      expect(escrow_address).not.toEqual(incorrect_escrow_instance.address);
     });
 
     // Testing non-zero initialization hash supposes there is an initialize function in the escrow contract
