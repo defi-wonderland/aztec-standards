@@ -268,7 +268,7 @@ describe('Logic - Single PXE', () => {
       expect(escrow_address).toEqual(escrow_instance.address);
     });
 
-    it('get escrow with incorrect secret keys should fail', async () => {
+    it('get escrow with incorrect secret keys should return a different escrow address', async () => {
       // We add 1 to each secret key to make it incorrect
       let secretKeysPlusOne = {
         nsk_m: secretKeys.nsk_m.add(Fr.ONE),
