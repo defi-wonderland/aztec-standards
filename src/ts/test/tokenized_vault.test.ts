@@ -1230,7 +1230,7 @@ describe('Tokenized Vault', () => {
     }, 300_000);
   });
 
-  describe.only('View Functions', () => {
+  describe('View Functions', () => {
     describe('with empty vault', () => {
       it('asset returns correct address', async () => {
         const returnedAsset = await vault.methods.asset().simulate({ from: alice });
@@ -1467,7 +1467,7 @@ describe('Tokenized Vault', () => {
     });
 
     describe('private vs public balance behavior', () => {
-      it('maxWithdraw returns zero when only private balance exists', async () => {
+      it('maxWithdraw returns zero when the balance exists exclusively in private form', async () => {
         const depositAmount = assetsAlice;
         const sharesAmount = sharesAlice;
 
@@ -1479,12 +1479,12 @@ describe('Tokenized Vault', () => {
           depositAmount,
         );
 
-        // maxWithdraw only considers public balance
+        // maxWithdraw considers public balance, not private
         const maxWithdraw = await vault.methods.maxWithdraw(alice).simulate({ from: alice });
         expect(maxWithdraw).toBe(0n);
       });
 
-      it('maxRedeem returns zero when only private balance exists', async () => {
+      it('maxRedeem returns zero when the balance exists exclusively in private form', async () => {
         const depositAmount = assetsAlice;
         const sharesAmount = sharesAlice;
 
@@ -1496,7 +1496,7 @@ describe('Tokenized Vault', () => {
           depositAmount,
         );
 
-        // maxRedeem only considers public balance
+        // maxRedeem considers public balance, not private
         const maxRedeem = await vault.methods.maxRedeem(alice).simulate({ from: alice });
         expect(maxRedeem).toBe(0n);
       });
@@ -1529,6 +1529,78 @@ describe('Tokenized Vault', () => {
         expect(maxRedeemAlice).not.toBe(maxRedeemBob);
         expect(maxRedeemAlice).toBe(BigInt(aliceDeposit));
         expect(maxRedeemBob).toBe(BigInt(bobDeposit));
+      });
+    });
+  });
+
+  describe('Utility View Functions', () => {
+    describe('maxRedeemPrivate', () => {
+      it('returns zero without shares', async () => {
+        const maxRedeemPrivate = await vault.methods.maxRedeemPrivate(alice).simulate({ from: alice });
+        expect(maxRedeemPrivate).toBe(0n);
+      });
+
+      it('returns zero when the shares exist exclusively in public form', async () => {
+        const depositAmount = 1000;
+
+        await asset.methods.mint_to_public(alice, depositAmount).send({ from: alice }).wait();
+        await callVaultWithPublicAuthWit(
+          vault.methods.deposit_public_to_public(alice, alice, depositAmount, 0),
+          alice,
+          depositAmount,
+        );
+
+        const maxRedeemPrivate = await vault.methods.maxRedeemPrivate(alice).simulate({ from: alice });
+        const maxRedeem = await vault.methods.maxRedeem(alice).simulate({ from: alice });
+
+        expect(maxRedeemPrivate).toBe(0n);
+        expect(maxRedeem).toBe(BigInt(depositAmount));
+      });
+
+      it('returns private shares when private balance exists', async () => {
+        const depositAmount = assetsAlice;
+        const sharesAmount = sharesAlice;
+
+        await asset.methods.mint_to_public(alice, depositAmount).send({ from: alice }).wait();
+        await callVaultWithPublicAuthWit(
+          vault.methods.deposit_public_to_private(alice, alice, depositAmount, sharesAmount, 0),
+          alice,
+          depositAmount,
+        );
+
+        const maxRedeemPrivate = await vault.methods.maxRedeemPrivate(alice).simulate({ from: alice });
+        const maxRedeem = await vault.methods.maxRedeem(alice).simulate({ from: alice });
+
+        expect(maxRedeemPrivate).toBe(BigInt(sharesAmount));
+        expect(maxRedeem).toBe(0n);
+      });
+
+      it('returns private shares when both exist', async () => {
+        const publicDeposit = 1000;
+        const privateDeposit = assetsAlice;
+        const privateShares = sharesAlice;
+
+        // Deposit to public
+        await asset.methods.mint_to_public(alice, publicDeposit).send({ from: alice }).wait();
+        await callVaultWithPublicAuthWit(
+          vault.methods.deposit_public_to_public(alice, alice, publicDeposit, 0),
+          alice,
+          publicDeposit,
+        );
+
+        // Deposit to private
+        await asset.methods.mint_to_public(alice, privateDeposit).send({ from: alice }).wait();
+        await callVaultWithPublicAuthWit(
+          vault.methods.deposit_public_to_private(alice, alice, privateDeposit, privateShares, 0),
+          alice,
+          privateDeposit,
+        );
+
+        const maxRedeemPrivate = await vault.methods.maxRedeemPrivate(alice).simulate({ from: alice });
+        const maxRedeem = await vault.methods.maxRedeem(alice).simulate({ from: alice });
+
+        expect(maxRedeemPrivate).toBe(BigInt(privateShares));
+        expect(maxRedeem).toBe(BigInt(publicDeposit));
       });
     });
   });

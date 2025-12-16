@@ -1651,6 +1651,18 @@ pub contract Token {
     }
 
     /** ==========================================================
+     * ===================== VAULT UTILITY =======================
+     * ======================================================== */
+
+    /// @notice Returns the maximum amount of private shares that can be redeemed by the owner
+    /// @param owner The address to query
+    /// @return The private redeemable shares
+    #[external("utility")]
+    unconstrained fn maxRedeemPrivate(owner: AztecAddress) -> u128 {
+        storage.private_balances.at(owner).balance_of()
+    }
+
+    /** ==========================================================
      * ==================== VAULT INTERNALS ======================
      * ======================================================== */
 

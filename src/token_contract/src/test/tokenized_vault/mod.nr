@@ -14,6 +14,7 @@ mod issue_private_to_private_exact;
 mod max_deposit;
 mod max_issue;
 mod max_redeem;
+mod max_redeem_private;
 mod max_withdraw;
 mod preview_deposit;
 mod preview_issue;
