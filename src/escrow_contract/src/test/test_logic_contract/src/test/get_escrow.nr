@@ -15,7 +15,7 @@ use escrow_contract::test::utils as escrow_utils;
 // is not supported yet in the test environment. Testing deployer and initialization hash has the same problem,
 // it is not possible to deploy a contract with public keys and constructor/deployer
 // https://github.com/AztecProtocol/aztec-packages/issues/16656
-#[test(should_fail_with = "Salt is not the logic contract")]
+#[test(should_fail_with = "Incorrect escrow deployed")]
 unconstrained fn get_escrow_correct_instance() {
     let mut env = TestEnvironment::new();
 
@@ -23,7 +23,7 @@ unconstrained fn get_escrow_correct_instance() {
     let secret = 1;
     let (public_keys, msk, _, _) = logic_utils::get_test_vector();
 
-    let _ = escrow_utils::deploy_escrow_with_secret(&mut env, secret);
+    let deployed_escrow = escrow_utils::deploy_escrow_with_secret(&mut env, secret);
 
     let escrow_class_id = escrow_utils::get_escrow_class_id();
 
@@ -31,6 +31,7 @@ unconstrained fn get_escrow_correct_instance() {
 
     let caller = env.create_light_account();
     let escrow = env.call_private(caller, TestLogic::at(logic).get_escrow(msk));
+    assert_eq(deployed_escrow, escrow, "Incorrect escrow deployed");
 
     let escrow_instance: ContractInstance = get_contract_instance(escrow);
 
