@@ -44,6 +44,7 @@ contract TestLogic {
 
     /// @notice Returns the escrow address that corresponds to the given master secret keys and class ID.
     /// @param master_secret_keys The master secret keys
+    /// @return The escrow address
     #[external("private")]
     fn get_escrow(master_secret_keys: MasterSecretKeys) -> AztecAddress {
         _get_escrow(

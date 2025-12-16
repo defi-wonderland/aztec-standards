@@ -67,6 +67,7 @@ The library functions guarantee that escrow's keys, contract class ID and setup 
 /// @param context The private context
 /// @param escrow_class_id The contract class id of the escrow contract
 /// @param master_secret_keys The master secret keys
+/// @return The escrow address
 #[contract_library_method]
 pub fn _get_escrow(
     context: &mut PrivateContext,
