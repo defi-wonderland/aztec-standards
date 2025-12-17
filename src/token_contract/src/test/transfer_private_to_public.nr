@@ -92,8 +92,8 @@ unconstrained fn transfer_private_to_public_multiple_notes_recursively() {
         utils::get_private_balance_notes(env, token_contract_address, owner, 0);
 
     assert(final_owner_notes.len() == 2, "Incorrect note count"); // 1000 UintNote x1 and 1 UintNote x1
-    assert(final_owner_notes.get(0).get_value() == notes_amount, "Incorrect note amount");
-    assert(final_owner_notes.get(1).get_value() == 1 as u128, "Incorrect note change amount");
+    assert(final_owner_notes.get(0).value == notes_amount, "Incorrect note amount");
+    assert(final_owner_notes.get(1).value == 1 as u128, "Incorrect note change amount");
 
     // Check that the notes generated to the recipient are correct
     let recipient_notes: BoundedVec<UintNote, MAX_NOTES_PER_PAGE> =
