@@ -1,14 +1,16 @@
 use aztec::{
     context::{PrivateContext, UtilityContext},
     note::{
-        note_emission::OuterNoteEmission,
         note_getter_options::{NoteGetterOptions, SortOrder},
         note_interface::NoteProperties,
+        note_message::MaybeNoteMessage,
         note_viewer_options::NoteViewerOptions,
         retrieved_note::RetrievedNote,
     },
-    protocol_types::{address::AztecAddress, constants::MAX_NOTE_HASH_READ_REQUESTS_PER_CALL},
-    state_vars::{PrivateSet, storage::HasStorageSlot},
+    protocol_types::{
+        address::AztecAddress, constants::MAX_NOTE_HASH_READ_REQUESTS_PER_CALL, traits::Packable,
+    },
+    state_vars::{owned_state_variable::OwnedStateVariable, PrivateSet},
 };
 use std::ops::Add;
 use uint_note::uint_note::UintNote;
@@ -18,16 +20,9 @@ pub struct BalanceSet<Context> {
 }
 
 // TODO(#13824): remove this impl once we allow structs to hold state variables.
-impl<Context> HasStorageSlot<1> for BalanceSet<Context> {
-    fn get_storage_slot(self) -> Field {
-        self.set.get_storage_slot()
-    }
-}
-
-impl<Context> BalanceSet<Context> {
-    pub fn new(context: Context, storage_slot: Field) -> Self {
-        assert(storage_slot != 0, "Storage slot 0 not allowed. Storage slots must start from 1.");
-        Self { set: PrivateSet::new(context, storage_slot) }
+impl<Context> OwnedStateVariable<Context> for BalanceSet<Context> {
+    fn new(context: Context, storage_slot: Field, owner: AztecAddress) -> Self {
+        Self { set: PrivateSet::new(context, storage_slot, owner) }
     }
 }
 
@@ -38,11 +33,12 @@ impl BalanceSet<UtilityContext> {
 
     pub unconstrained fn balance_of_with_offset(self: Self, offset: u32) -> u128 {
         let mut balance = 0 as u128;
-        let mut options = NoteViewerOptions::new();
-        let notes = self.set.view_notes(options.set_offset(offset));
+        let options =
+            NoteViewerOptions::<UintNote, <UintNote as Packable>::N>::new().set_offset(offset);
+        let notes = self.set.view_notes(options);
         for i in 0..options.limit {
             if i < notes.len() {
-                balance = balance + notes.get_unchecked(i).get_value();
+                balance = balance + notes.get_unchecked(i).value;
             }
         }
         if (notes.len() == options.limit) {
@@ -54,26 +50,25 @@ impl BalanceSet<UtilityContext> {
 }
 
 impl BalanceSet<&mut PrivateContext> {
-    pub fn add(self: Self, owner: AztecAddress, addend: u128) -> OuterNoteEmission<UintNote> {
-        let content = if addend == 0 as u128 {
+    pub fn add(self: Self, addend: u128) -> MaybeNoteMessage<UintNote> {
+        let maybe_new_note = if addend == 0 as u128 {
             Option::none()
         } else {
-            // We fetch the nullifier public key hash from the registry / from our PXE
-            let mut addend_note = UintNote::new(addend, owner);
+            let addend_note = UintNote { value: addend };
 
-            Option::some(self.set.insert(addend_note).content)
+            Option::some(self.set.insert(addend_note).get_new_note())
         };
 
-        OuterNoteEmission::new(content, self.set.context)
+        MaybeNoteMessage::new(maybe_new_note, self.set.context)
     }
 
-    pub fn sub(self: Self, owner: AztecAddress, amount: u128) -> OuterNoteEmission<UintNote> {
+    pub fn sub(self: Self, amount: u128) -> MaybeNoteMessage<UintNote> {
         let subtracted = self.try_sub(amount, MAX_NOTE_HASH_READ_REQUESTS_PER_CALL);
 
         // try_sub may have subtracted more or less than amount. We must ensure that we subtracted at least as much as
         // we needed, and then create a new note for the owner for the change (if any).
         assert(subtracted >= amount, "Balance too low");
-        self.add(owner, subtracted - amount)
+        self.add(subtracted - amount)
     }
 
     // Attempts to remove 'target_amount' from the owner's balance. try_sub returns how much was actually subtracted
@@ -100,7 +95,7 @@ impl BalanceSet<&mut PrivateContext> {
         for i in 0..options.limit {
             if i < notes.len() {
                 let note = notes.get_unchecked(i);
-                subtracted = subtracted + note.get_value();
+                subtracted = subtracted + note.value;
             }
         }
 
@@ -127,7 +122,7 @@ pub fn preprocess_notes_min_sum(
         if notes[i].is_some() & sum < min_sum {
             let retrieved_note = notes[i].unwrap_unchecked();
             selected[i] = Option::some(retrieved_note);
-            sum = sum.add(retrieved_note.note.get_value());
+            sum = sum.add(retrieved_note.note.value);
         }
     }
     selected

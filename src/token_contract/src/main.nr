@@ -19,7 +19,10 @@ pub contract Token {
             contract_class_id::ContractClassId,
             traits::{FromField, ToField},
         },
-        state_vars::{Map, public_immutable::PublicImmutable, public_mutable::PublicMutable},
+        state_vars::{
+            Map, Owned, public_immutable::PublicImmutable, public_mutable::PublicMutable,
+            StateVariable,
+        },
     };
     // note library
     use uint_note::uint_note::{PartialUintNote, UintNote};
@@ -53,7 +56,7 @@ pub contract Token {
         name: PublicImmutable<FieldCompressedString, Context>,
         symbol: PublicImmutable<FieldCompressedString, Context>,
         decimals: PublicImmutable<u8, Context>,
-        private_balances: Map<AztecAddress, BalanceSet<Context>, Context>,
+        private_balances: Owned<BalanceSet<Context>, Context>,
         total_supply: PublicMutable<u128, Context>,
         public_balances: Map<AztecAddress, PublicMutable<u128, Context>, Context>,
         minter: PublicImmutable<AztecAddress, Context>,
@@ -526,8 +529,7 @@ pub contract Token {
         // Subtracts `amount` from the private balance of `account`
         let change = self.internal._subtract_balance(account, amount, max_notes);
         // Increases `change` to the private balance of `account`, and emits a private balance note to account
-        self.storage.private_balances.at(account).add(account, change).emit(
-            account,
+        self.storage.private_balances.at(account).add(change).deliver(
             MessageDelivery.CONSTRAINED_ONCHAIN,
         );
     }
@@ -539,10 +541,7 @@ pub contract Token {
     #[internal("private")]
     fn _increase_private_balance(to: AztecAddress, amount: u128) {
         // Increases `amount` to the private balance of `to`, and emits a private balance note to `to` from `from`
-        self.storage.private_balances.at(to).add(to, amount).emit(
-            to,
-            MessageDelivery.CONSTRAINED_ONCHAIN,
-        );
+        self.storage.private_balances.at(to).add(amount).deliver(MessageDelivery.CONSTRAINED_ONCHAIN);
     }
 
     /// @notice Updates the given storage pointer `public_balances` to increase the public balance of `to` by `amount`
@@ -641,7 +640,7 @@ pub contract Token {
     ) -> PartialUintNote {
         let commitment = UintNote::partial(
             to,
-            self.storage.private_balances.at(to).set.storage_slot,
+            self.storage.private_balances.get_storage_slot(),
             self.context,
             to,
             completer,
