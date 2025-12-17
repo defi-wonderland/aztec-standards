@@ -89,12 +89,14 @@ pub contract Token {
 
     /// @notice Initializes the token with an asset and an initial deposit
     /// @dev Since this constructor doesn't set a minter address the mint functions will be disabled
+    /// @dev The depositor is the address that will be used to sign the authwit for the transfer of the initial deposit
     /// @param name The name of the token
     /// @param symbol The symbol of the token
     /// @param decimals The number of decimals of the token
     /// @param asset The underlying asset for the yield bearing token
     /// @param upgrade_authority The address of the upgrade authority (zero address if not upgradeable)
     /// @param initial_deposit The initial deposit amount of the asset
+    /// @param depositor The address of the initial depositor of the assets
     /// @param _nonce The nonce used for authwitness for the transfer of the initial deposit
     #[external("public")]
     #[initializer]
@@ -105,8 +107,7 @@ pub contract Token {
         asset: AztecAddress,
         upgrade_authority: AztecAddress,
         initial_deposit: u128,
-        // TODO: Should we consider adding a 'depositor' address, which can sign an authwit and provide the initial deposit?
-        // TODO: Should we consider adding a 'pre-funded' boolean and avoid the transfer in such case?
+        depositor: AztecAddress,
         _nonce: Field,
     ) {
         storage.name.initialize(FieldCompressedString::from_string(name));
@@ -116,15 +117,19 @@ pub contract Token {
         storage.upgrade_authority.initialize(upgrade_authority);
 
         // Caller deposits assets, shares are minted to this contract and are permanently locked.
-        let from = context.msg_sender().unwrap();
+        let from = depositor;
         let to = context.this_address();
 
-        // TODO: Should we use _total_assets(...) and assert that it is 0? Seems not to be necessary as the deployer is in control.
         // There are no assets yet, hence the total assets is 0.
         let total_assets = 0;
-        
+
         // Calculate shares to mint for the initial deposit.
-        let shares = _convert_to_shares(initial_deposit, total_assets, storage.total_supply, ROUND_DOWN);
+        let shares = _convert_to_shares(
+            initial_deposit,
+            total_assets,
+            storage.total_supply,
+            ROUND_DOWN,
+        );
 
         // Transfer the assets from the sender to the vault
         Token::at(storage.asset.read())
