@@ -1,5 +1,6 @@
 import { Fr } from '@aztec/aztec.js/fields';
 import { TxStatus } from '@aztec/aztec.js/tx';
+import { type AztecNode } from '@aztec/aztec.js/node';
 import { AztecAddress } from '@aztec/aztec.js/addresses';
 import { type TestWallet } from '@aztec/test-wallet/server';
 import { ContractDeployer } from '@aztec/aztec.js/deployment';
@@ -22,7 +23,7 @@ import { type AztecLMDBStoreV2 } from '@aztec/kv-store/lmdb-v2';
 import { TokenContractArtifact, TokenContract } from '../../../artifacts/Token.js';
 
 describe('Token - Single PXE', () => {
-  let pxe: PXE;
+  let node: AztecNode;
   let store: AztecLMDBStoreV2;
 
   let wallet: TestWallet;
@@ -36,7 +37,7 @@ describe('Token - Single PXE', () => {
   let token: TokenContract;
 
   beforeAll(async () => {
-    ({ pxe, store, wallet, accounts } = await setupTestSuite());
+    ({ store, node, wallet, accounts } = await setupTestSuite());
 
     [alice, bob, carl] = accounts;
   });
@@ -76,7 +77,7 @@ describe('Token - Single PXE', () => {
 
     const receiptAfterMined = await tx.wait({ wallet: wallet });
 
-    const contractMetadata = await pxe.getContractMetadata(deploymentData.address);
+    const contractMetadata = await wallet.getContractMetadata(deploymentData.address);
     expect(contractMetadata).toBeDefined();
     // TODO: Fix this
     // expect(contractMetadata.isContractPubliclyDeployed).toBeTruthy();
@@ -86,7 +87,7 @@ describe('Token - Single PXE', () => {
       }),
     );
 
-    expect(receiptAfterMined.contract.instance.address).toEqual(deploymentData.address);
+    expect(receiptAfterMined.contract.address).toEqual(deploymentData.address);
   }, 300_000);
 
   it('deploys the contract with initial supply', async () => {
@@ -114,7 +115,7 @@ describe('Token - Single PXE', () => {
 
     const receiptAfterMined = await tx.wait({ wallet: wallet });
 
-    const contractMetadata = await pxe.getContractMetadata(deploymentData.address);
+    const contractMetadata = await wallet.getContractMetadata(deploymentData.address);
     expect(contractMetadata).toBeDefined();
     // TODO: Fix this
     // expect(contractMetadata.isContractPubliclyDeployed).toBeTruthy();
@@ -124,7 +125,7 @@ describe('Token - Single PXE', () => {
       }),
     );
 
-    expect(receiptAfterMined.contract.instance.address).toEqual(deploymentData.address);
+    expect(receiptAfterMined.contract.address).toEqual(deploymentData.address);
   }, 300_000);
 
   it('mints', async () => {
@@ -367,7 +368,7 @@ describe('Token - Single PXE', () => {
 
   // TODO: Can't figure out why this is failing
   // Assertion failed: unauthorized 'true, authorized'
-  it.skip('public transfer with authwitness', async () => {
+  it('public transfer with authwitness', async () => {
     // Mint tokens to Alice in public
     await token.withWallet(wallet).methods.mint_to_public(alice, AMOUNT).send({ from: alice }).wait();
 
@@ -438,8 +439,8 @@ describe('Token - Single PXE', () => {
 
 // While upgrading in early August multi PXE support was broken, this test is skipped until it is fixed.
 // TODO: we should re-evaluate the necessity of this test suite, the other contracts don't have it and we don't seem to care.
-describe.skip('Token - Multi PXE', () => {
-  let pxe: PXE;
+describe.skip('Token - Multi Wallet (PXE)', () => {
+  let node: AztecNode;
 
   let wallet: TestWallet;
   let accounts: AztecAddress[];
@@ -451,28 +452,31 @@ describe.skip('Token - Multi PXE', () => {
 
   let token: TokenContract;
 
-  let alicePXE: PXE;
-  let bobPXE: PXE;
+  let aliceWallet: TestWallet;
+  let bobWallet: TestWallet;
 
   beforeAll(async () => {
-    ({ pxe, wallet, accounts } = await setupTestSuite());
+    ({ node, wallet, accounts } = await setupTestSuite());
 
     [alice, bob, carl] = accounts;
 
     // TODO: use different PXE instances.
-    alicePXE = pxe;
-    bobPXE = pxe;
+    aliceWallet = wallet;
+    bobWallet = wallet;
   });
 
   beforeEach(async () => {
     token = (await deployTokenWithMinter(wallet, alice)) as TokenContract;
-    await bobPXE.registerContract(token);
+    const tokenInstance = await node.getContract(token.address);
+    if (tokenInstance) {
+      await bobWallet.registerContract(tokenInstance);
+    }
 
     // alice knows bob
-    await alicePXE.registerSender(bob);
+    await aliceWallet.registerSender(bob);
 
     // bob knows alice
-    await bobPXE.registerSender(alice);
+    await bobWallet.registerSender(alice);
   });
 
   it('transfers', async () => {
@@ -493,9 +497,9 @@ describe.skip('Token - Multi PXE', () => {
     await expectTokenBalances(token, alice, wad(5), wad(5));
 
     // retrieve notes from last tx
-    notes = await alicePXE.getNotes({ contractAddress: token.address, scopes: [alice] });
+    notes = await aliceWallet.getNotes({ contractAddress: token.address, scopes: [alice] });
     expect(notes.length).toBe(1);
-    expectUintNote(notes[0], wad(5), alice);
+    expectUintNote(notes[0].note, wad(5), alice);
 
     // transfer some private tokens to bob
     const fundBobTx = await token
@@ -507,14 +511,14 @@ describe.skip('Token - Multi PXE', () => {
     await token.withWallet(wallet).methods.sync_private_state().simulate({ from: alice });
     await token.withWallet(wallet).methods.sync_private_state().simulate({ from: bob });
 
-    notes = await alicePXE.getNotes({ contractAddress: token.address, scopes: [alice] });
+    notes = await aliceWallet.getNotes({ contractAddress: token.address, scopes: [alice] });
     expect(notes.length).toBe(1);
-    expectUintNote(notes[0], wad(5), bob);
+    expectUintNote(notes[0].note, wad(5), bob);
 
     // TODO: Bob is not receiving notes
     // notes = await bob.getNotes({ txHash: fundBobTx.txHash });
     // expect(notes.length).toBe(1);
-    // expectUintNote(notes[0], wad(5), bob);
+    // expectUintNote(notes[0].note, wad(5), bob);
 
     // fund bob again
     const fundBobTx2 = await token
@@ -532,15 +536,15 @@ describe.skip('Token - Multi PXE', () => {
 
     // Alice shouldn't have any notes because it not a sender/registered account in her PXE
     // (but she has because I gave her access to Bob's notes)
-    notes = await alicePXE.getNotes({ contractAddress: token.address, scopes: [alice] });
+    notes = await aliceWallet.getNotes({ contractAddress: token.address, scopes: [alice] });
     expect(notes.length).toBe(1);
-    expectUintNote(notes[0], wad(5), bob);
+    expectUintNote(notes[0].note, wad(5), bob);
 
     // TODO: Bob is not receiving notes
     // Bob should have a note
     // notes = await bob.getNotes({txHash: fundBobTx2.txHash});
     // expect(notes.length).toBe(1);
-    // expectUintNote(notes[0], wad(5), bob);
+    // expectUintNote(notes[0].note, wad(5), bob);
 
     // assert alice's balances again
     await expectTokenBalances(token, alice, wad(0), wad(0));

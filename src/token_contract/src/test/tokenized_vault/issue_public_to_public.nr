@@ -261,7 +261,7 @@ unconstrained fn issue_public_to_public_on_behalf_of_other_success() {
         max_assets,
         0,
     );
-    authwit_cheatcodes::add_public_authwit_from_call_interface(
+    authwit_cheatcodes::add_public_authwit_from_call(
         env,
         owner,
         recipient,

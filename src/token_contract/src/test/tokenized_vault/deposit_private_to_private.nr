@@ -285,7 +285,7 @@ unconstrained fn deposit_private_to_private_on_behalf_of_other_success() {
     let shares = deposit_amount;
     let deposit_private_to_private_call_interface = Token::at(vault_address)
         .deposit_private_to_private(owner, recipient, deposit_amount, shares, 0);
-    authwit_cheatcodes::add_private_authwit_from_call_interface(
+    authwit_cheatcodes::add_private_authwit_from_call(
         env,
         owner,
         recipient,

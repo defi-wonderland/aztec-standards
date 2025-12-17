@@ -7,8 +7,7 @@ use aztec::macros::aztec;
 #[aztec]
 pub contract Escrow {
     use aztec::{
-        context::PrivateContext,
-        macros::functions::external,
+        macros::functions::{external, internal},
         oracle::get_contract_instance::get_contract_instance,
         protocol_types::{
             address::AztecAddress, contract_instance::ContractInstance, traits::FromField,
@@ -25,11 +24,9 @@ pub contract Escrow {
     /// @param recipient The address of the recipient
     #[external("private")]
     fn withdraw(token: AztecAddress, amount: u128, recipient: AztecAddress) {
-        _assert_msg_sender(&mut context);
+        self.internal._assert_msg_sender();
 
-        Token::at(token)
-            .transfer_private_to_private(context.this_address(), recipient, amount, 0)
-            .call(&mut context);
+        self.call(Token::at(token).transfer_private_to_private(self.address, recipient, amount, 0));
     }
 
     /// @notice Withdraws a token of a given ID from the escrow's private balance to
@@ -40,21 +37,16 @@ pub contract Escrow {
     /// @param recipient The address of the recipient
     #[external("private")]
     fn withdraw_nft(nft: AztecAddress, token_id: Field, recipient: AztecAddress) {
-        _assert_msg_sender(&mut context);
+        self.internal._assert_msg_sender();
 
-        NFT::at(nft)
-            .transfer_private_to_private(context.this_address(), recipient, token_id, 0)
-            .call(&mut context);
+        self.call(NFT::at(nft).transfer_private_to_private(self.address, recipient, token_id, 0));
     }
 
     /// @notice Asserts that the caller is the one encoded into the contract instance salt
-    #[contract_library_method]
-    fn _assert_msg_sender(context: &mut PrivateContext) {
-        let msg_sender = context.msg_sender();
-        let escrow_instance: ContractInstance = get_contract_instance(context.this_address());
-        assert(
-            AztecAddress::from_field(escrow_instance.salt) == msg_sender.unwrap(),
-            "Not Authorized",
-        );
+    #[internal("private")]
+    fn _assert_msg_sender() {
+        let msg_sender = self.msg_sender().unwrap();
+        let escrow_instance: ContractInstance = get_contract_instance(self.address);
+        assert(AztecAddress::from_field(escrow_instance.salt) == msg_sender, "Not Authorized");
     }
 }

@@ -46,7 +46,7 @@ unconstrained fn nft_transfer_private_to_public_with_commitment_authorized_succe
         .transfer_private_to_public_with_commitment(owner, recipient, token_id, 1);
 
     // Add authorization witness from owner to recipient
-    authwit_cheatcodes::add_private_authwit_from_call_interface(
+    authwit_cheatcodes::add_private_authwit_from_call(
         env,
         owner,
         recipient,

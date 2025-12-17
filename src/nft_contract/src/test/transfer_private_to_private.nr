@@ -58,7 +58,7 @@ unconstrained fn nft_transfer_private_to_private_authorized_success() {
         NFT::at(nft_contract_address).transfer_private_to_private(owner, recipient, token_id, 1);
 
     // Add authorization witness from owner to recipient
-    authwit_cheatcodes::add_private_authwit_from_call_interface(
+    authwit_cheatcodes::add_private_authwit_from_call(
         env,
         owner,
         recipient,
@@ -118,7 +118,7 @@ unconstrained fn nft_transfer_private_to_private_wrong_authwit_fail() {
         NFT::at(nft_contract_address).transfer_private_to_private(owner, recipient, token_id, 1);
 
     // Add authorization witness but to the wrong address (owner instead of recipient)
-    authwit_cheatcodes::add_private_authwit_from_call_interface(
+    authwit_cheatcodes::add_private_authwit_from_call(
         env,
         owner,
         owner, // Wrong address - should be recipient

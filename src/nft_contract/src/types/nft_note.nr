@@ -42,7 +42,7 @@ pub struct NFTNote {
 // docs:end:nft_note
 
 impl NoteHash for NFTNote {
-    fn compute_note_hash(self, storage_slot: Field) -> Field {
+    fn compute_note_hash(self, storage_slot: Field, randomness: Field) -> Field {
         // Partial notes can be implemented by having the note hash be either the result of multiscalar multiplication
         // (MSM), or two rounds of poseidon. MSM results in more constraints and is only required when multiple variants
         // of partial notes are supported. Because NFTNote has just one variant (where the token id is public), we use
@@ -149,6 +149,7 @@ impl NFTNote {
         let encrypted_log = note::compute_partial_note_private_content_log(
             private_log_content,
             storage_slot,
+            randomness,
             recipient,
         );
         // Regardless of the original content size, the log is padded with random bytes up to

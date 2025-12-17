@@ -62,9 +62,9 @@ jobs:
           run: |
             docker tag aztecprotocol/aztec:${{ steps.aztec-version.outputs.version }} aztecprotocol/aztec:latest
 
-        - name: Start sandbox
+        - name: Start local-network (previously sandbox)
           run: |
-            aztec start --sandbox &
+            aztec start --local-network &
 
         - name: Install project dependencies
           run: yarn --frozen-lockfile

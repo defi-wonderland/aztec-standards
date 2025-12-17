@@ -36,12 +36,7 @@ unconstrained fn nft_burn_private_authorized_success() {
     let burn_call_interface = NFT::at(nft_contract_address).burn_private(owner, token_id, 1);
 
     // Add authorization witness from owner to recipient
-    authwit_cheatcodes::add_private_authwit_from_call_interface(
-        env,
-        owner,
-        recipient,
-        burn_call_interface,
-    );
+    authwit_cheatcodes::add_private_authwit_from_call(env, owner, recipient, burn_call_interface);
 
     // Impersonate recipient to perform the authorized burn
     env.call_private(recipient, burn_call_interface);
@@ -89,7 +84,7 @@ unconstrained fn nft_burn_private_wrong_authwit_fail() {
     let burn_call_interface = NFT::at(nft_contract_address).burn_private(owner, token_id, 1);
 
     // Add authorization witness but to the wrong address (owner instead of recipient)
-    authwit_cheatcodes::add_private_authwit_from_call_interface(
+    authwit_cheatcodes::add_private_authwit_from_call(
         env,
         owner,
         owner, // Wrong address - should be recipient

@@ -1,4 +1,4 @@
-import { UniqueNote } from '@aztec/aztec.js/note';
+import { Note } from '@aztec/aztec.js/note';
 import { createLogger } from '@aztec/aztec.js/log';
 import { AztecAddress } from '@aztec/aztec.js/addresses';
 import { deriveEcdhSharedSecret } from '@aztec/stdlib/logs';
@@ -7,7 +7,7 @@ import { Fr, type GrumpkinScalar, Point } from '@aztec/aztec.js/fields';
 import { createAztecNodeClient, waitForNode } from '@aztec/aztec.js/node';
 import { PRIVATE_LOG_CIPHERTEXT_LEN, GeneratorIndex } from '@aztec/constants';
 import { Aes128, poseidon2HashWithSeparator } from '@aztec/foundation/crypto';
-import { registerInitialSandboxAccountsInWallet, TestWallet } from '@aztec/test-wallet/server';
+import { registerInitialLocalNetworkAccountsInWallet, TestWallet } from '@aztec/test-wallet/server';
 import { deriveMasterIncomingViewingSecretKey, PublicKeys, computeAddressSecret } from '@aztec/stdlib/keys';
 
 import {
@@ -25,7 +25,7 @@ import {
   computeContractAddressFromInstance,
 } from '@aztec/stdlib/contract';
 
-import { type PXE } from '@aztec/pxe/server';
+import { PXECreationOptions, type PXE } from '@aztec/pxe/server';
 import { createStore } from '@aztec/kv-store/lmdb-v2';
 import { createPXE, getPXEConfig } from '@aztec/pxe/server';
 import { type AztecLMDBStoreV2 } from '@aztec/kv-store/lmdb-v2';
@@ -44,47 +44,42 @@ const { PXE_VERSION = '2' } = process.env;
 const pxeVersion = parseInt(PXE_VERSION);
 const l1Contracts = await node.getL1ContractAddresses();
 const config = getPXEConfig();
-const fullConfig = { ...config, l1Contracts };
+let fullConfig = { ...config, l1Contracts };
 fullConfig.proverEnabled = false;
 
 /**
- * Setup the PXE and the store
+ * Setup the store, node, wallet and accounts
  * @param suffix - optional - The suffix to use for the store directory.
- * @returns The PXE and the store
+ * @returns The store, node, wallet and accounts
  */
-export const setupPXE = async (suffix?: string) => {
+export const setupTestSuite = async (suffix?: string) => {
   const storeDir = suffix ? `store-${suffix}` : 'store';
-  const store: AztecLMDBStoreV2 = await createStore('pxe', pxeVersion, {
+
+  const aztecNode = createAztecNodeClient(NODE_URL);
+  fullConfig = { ...fullConfig, dataDirectory: storeDir, dataStoreMapSizeKb: 1e6 };
+
+  // Create the store for manual cleanups
+  const store: AztecLMDBStoreV2 = await createStore('pxe_data', pxeVersion, {
     dataDirectory: storeDir,
     dataStoreMapSizeKb: 1e6,
   });
-  const pxe: PXE = await createPXE(node, fullConfig, { store });
-  return { pxe, store };
-};
 
-/**
- * Setup the PXE, the store and the wallet
- * @param suffix - optional - The suffix to use for the store directory.
- * @returns The PXE, the store, the wallet and the accounts
- */
-export const setupTestSuite = async (suffix?: string) => {
-  const { pxe, store } = await setupPXE(suffix);
-  const aztecNode = createAztecNodeClient(NODE_URL);
-  const wallet: TestWallet = await TestWallet.create(aztecNode);
-  const accounts: AztecAddress[] = await registerInitialSandboxAccountsInWallet(wallet);
+  const wallet: TestWallet = await TestWallet.create(aztecNode, fullConfig, { store });
+
+  const accounts: AztecAddress[] = await registerInitialLocalNetworkAccountsInWallet(wallet);
 
   return {
-    pxe,
     store,
+    node: aztecNode,
     wallet,
     accounts,
   };
 };
 
 // --- Token Utils ---
-export const expectUintNote = (note: UniqueNote, amount: bigint, owner: AztecAddress) => {
-  expect(note.note.items[0]).toEqual(new Fr(owner.toBigInt()));
-  expect(note.note.items[2]).toEqual(new Fr(amount));
+export const expectUintNote = (note: Note, amount: bigint, owner: AztecAddress) => {
+  expect(note.items[0]).toEqual(new Fr(owner.toBigInt()));
+  expect(note.items[1]).toEqual(new Fr(amount));
 };
 
 export const expectTokenBalances = async (
@@ -318,8 +313,8 @@ export async function initializeTransferCommitment(
     toIvskM,
   );
 
-  // The commitment is the third field in the decrypted raw log
-  return decryptedRawLog[2].toBigInt();
+  // The commitment is the fourth field in the decrypted raw log
+  return decryptedRawLog[3].toBigInt();
 }
 
 /**
@@ -353,8 +348,8 @@ export async function initializeTransferCommitmentNFT(
     toIvskM,
   );
 
-  // The commitment is the third field in the decrypted raw log
-  return decryptedRawLog[2].toBigInt();
+  // The commitment is the fourth field in the decrypted raw log
+  return decryptedRawLog[3].toBigInt();
 }
 
 // --- Logic Contract Utils ---

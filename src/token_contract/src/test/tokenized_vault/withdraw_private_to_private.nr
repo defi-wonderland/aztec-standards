@@ -234,7 +234,7 @@ unconstrained fn withdraw_private_to_private_on_behalf_of_wrong_caller() {
         shares_to_burn,
         0,
     );
-    authwit_cheatcodes::add_private_authwit_from_call_interface(
+    authwit_cheatcodes::add_private_authwit_from_call(
         env,
         deposit_recipient,
         owner,
@@ -281,7 +281,7 @@ unconstrained fn withdraw_private_to_private_on_behalf_of_other_success() {
         shares_to_burn,
         0,
     );
-    authwit_cheatcodes::add_private_authwit_from_call_interface(
+    authwit_cheatcodes::add_private_authwit_from_call(
         env,
         deposit_recipient,
         recipient,
