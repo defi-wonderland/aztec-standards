@@ -1,16 +1,21 @@
 import {
   setupTestSuite,
   deployVaultAndAssetWithMinter,
+  deployVaultWithInitialDeposit,
   setPrivateAuthWit,
   setPublicAuthWit,
   expectTokenBalances,
+  deployTokenWithMinter,
 } from './utils.js';
 
 import { type PXE } from '@aztec/pxe/server';
+const { Fr } = await import('@aztec/aztec.js/fields');
 import { AztecAddress } from '@aztec/aztec.js/addresses';
 import { type TestWallet } from '@aztec/test-wallet/server';
+const { Contract } = await import('@aztec/aztec.js/contracts');
 import { type AztecLMDBStoreV2 } from '@aztec/kv-store/lmdb-v2';
 import { type ContractFunctionInteraction } from '@aztec/aztec.js/contracts';
+const { TokenContractArtifact } = await import('../../../artifacts/Token.js');
 
 import { TokenContract } from '../../../artifacts/Token.js';
 
@@ -38,7 +43,20 @@ describe('Tokenized Vault', () => {
   async function callVaultWithPublicAuthWit(
     action: ContractFunctionInteraction,
     from: AztecAddress,
-    amount: number,
+    amount: number | bigint,
+    options: { nonce?: number; caller?: AztecAddress } = {},
+  ) {
+    const { nonce = 0, caller = from } = options;
+    const transfer = asset.methods.transfer_public_to_public(from, vault.address, amount, nonce);
+    await setPublicAuthWit(vault.address, transfer, from, wallet);
+    await action.send({ from: caller }).wait();
+  }
+
+  async function callVaultWithPublicAuthWitFromWallet(
+    action: ContractFunctionInteraction,
+    wallet: TestWallet,
+    from: AztecAddress,
+    amount: number | bigint,
     options: { nonce?: number; caller?: AztecAddress } = {},
   ) {
     const { nonce = 0, caller = from } = options;
@@ -1225,6 +1243,156 @@ describe('Tokenized Vault', () => {
           .redeem_private_to_private_exact(alice, alice, sharesRequested, minAssets, 0)
           .send({ from: alice })
           .wait(),
+      ).rejects.toThrow(/app_logic_reverted/);
+    }, 300_000);
+  });
+
+  describe('Constructor with asset and initial deposit', () => {
+    let assetContract: TokenContract;
+    let initialDeposit: bigint = 1000n;
+
+    beforeEach(async () => {
+      // Deploy asset contract first
+      assetContract = (await deployTokenWithMinter(wallet, alice)) as TokenContract;
+
+      // Mint assets to deployer (alice) before deploying the vault
+      await assetContract.methods.mint_to_public(alice, initialDeposit).send({ from: alice }).wait();
+    });
+
+    it('deploys vault with initial deposit successfully', async () => {
+      // Verify alice has the assets
+      await expectTokenBalances(assetContract, alice, initialDeposit, 0);
+
+      // Deploy vault with initial deposit - this requires authwit to be set up before deployment
+      const vaultWithDeposit = await deployVaultWithInitialDeposit(wallet, alice, assetContract, initialDeposit, alice);
+
+      // Verify assets were transferred to vault during constructor
+      await expectTokenBalances(assetContract, vaultWithDeposit.address, initialDeposit, 0, alice);
+
+      // Verify alice no longer has the assets
+      await expectTokenBalances(assetContract, alice, 0, 0);
+
+      // Verify shares are locked in the vault
+      // Initial deposit at 1:1 ratio means vault gets `initialDeposit` shares
+      await expectTokenBalances(vaultWithDeposit, vaultWithDeposit.address, initialDeposit, 0, alice);
+
+      // Verify alice has no shares
+      await expectTokenBalances(vaultWithDeposit, alice, 0, 0);
+
+      // Verify total supply equals locked shares
+      const totalSupply = await vaultWithDeposit.methods.total_supply().simulate({ from: alice });
+      expect(totalSupply).toBe(initialDeposit);
+    }, 400_000);
+
+    it('deploys vault with initial deposit successfully with different depositor', async () => {
+      // Mint assets to depositor (bob) before deploying the vault
+      const initialDeposit = 1000n;
+      await assetContract.methods.mint_to_public(bob, initialDeposit).send({ from: alice }).wait();
+
+      // Verify bob has the assets
+      await expectTokenBalances(assetContract, bob, initialDeposit, 0);
+
+      // Deploy vault with initial deposit - this requires authwit to be set up before deployment
+      const vaultWithDeposit = await deployVaultWithInitialDeposit(wallet, alice, assetContract, initialDeposit, bob);
+
+      // Verify assets were transferred to vault during constructor
+      await expectTokenBalances(assetContract, vaultWithDeposit.address, initialDeposit, 0, bob);
+
+      // Verify bob no longer has the assets
+      await expectTokenBalances(assetContract, bob, 0, 0);
+
+      // Verify shares are locked in the vault
+      // Initial deposit at 1:1 ratio means vault gets `initialDeposit` shares
+      await expectTokenBalances(vaultWithDeposit, vaultWithDeposit.address, initialDeposit, 0, bob);
+
+      // Verify bob has no shares
+      await expectTokenBalances(vaultWithDeposit, bob, 0, 0);
+
+      // Verify total supply equals locked shares
+      const totalSupply = await vaultWithDeposit.methods.total_supply().simulate({ from: bob });
+      expect(totalSupply).toBe(initialDeposit);
+    }, 400_000);
+
+    it('subsequent depositor receives proportional shares', async () => {
+      // Deploy vault with initial deposit
+      const vaultWithDeposit = await deployVaultWithInitialDeposit(wallet, alice, assetContract, initialDeposit, alice);
+
+      // Now Bob wants to deposit
+      const bobDeposit = 500n;
+      await assetContract.methods.mint_to_public(bob, bobDeposit).send({ from: alice }).wait();
+
+      // Authorize vault to use Bob's assets
+      const transfer = assetContract.methods.transfer_public_to_public(bob, vaultWithDeposit.address, bobDeposit, 0);
+      await setPublicAuthWit(vaultWithDeposit.address, transfer, bob, wallet);
+
+      // Bob deposits
+      await vaultWithDeposit.methods.deposit_public_to_public(bob, bob, bobDeposit, 0).send({ from: bob }).wait();
+
+      // Bob should receive shares proportional to his deposit
+      // Since initial deposit established 1:1 ratio, Bob should get bobDeposit shares
+      await expectTokenBalances(vaultWithDeposit, bob, bobDeposit, 0);
+
+      // Vault's locked shares remain unchanged
+      await expectTokenBalances(vaultWithDeposit, vaultWithDeposit.address, initialDeposit, 0, alice);
+
+      // Total supply = initial locked shares + Bob's shares
+      const totalSupply = await vaultWithDeposit.methods.total_supply().simulate({ from: alice });
+      expect(totalSupply).toBe(initialDeposit + bobDeposit);
+    }, 300_000);
+
+    it('vault with initial deposit handles yield correctly', async () => {
+      // Deploy vault with initial deposit
+      const vaultWithDeposit = await deployVaultWithInitialDeposit(wallet, alice, assetContract, initialDeposit, alice);
+
+      // Bob deposits same amount
+      const bobDeposit = 1000n;
+      await assetContract.methods.mint_to_public(bob, bobDeposit).send({ from: alice }).wait();
+
+      const transfer = assetContract.methods.transfer_public_to_public(bob, vaultWithDeposit.address, bobDeposit, 0);
+      await setPublicAuthWit(vaultWithDeposit.address, transfer, bob, wallet);
+      await vaultWithDeposit.methods.deposit_public_to_public(bob, bob, bobDeposit, 0).send({ from: bob }).wait();
+
+      // Simulate yield by minting assets directly to vault
+      const yieldAmount = 200n;
+      await assetContract.methods.mint_to_public(vaultWithDeposit.address, yieldAmount).send({ from: alice }).wait();
+
+      // Now Bob redeems his shares
+      await vaultWithDeposit.methods.redeem_public_to_public(bob, bob, bobDeposit, 0).send({ from: bob }).wait();
+
+      // Bob should have received more than he deposited due to yield
+      const bobAssets = await assetContract.methods.balance_of_public(bob).simulate({ from: bob });
+      expect(bobAssets).toBeGreaterThan(bobDeposit);
+
+      // Locked shares remain unchanged
+      await expectTokenBalances(vaultWithDeposit, vaultWithDeposit.address, initialDeposit, 0, alice);
+    }, 300_000);
+
+    it('fails deployment without authwit', async () => {
+      const constructorArgs = [
+        'VaultToken',
+        'VT',
+        6,
+        assetContract.address,
+        AztecAddress.ZERO, // AztecAddress.ZERO
+        initialDeposit,
+        alice,
+        0,
+      ];
+
+      await expect(
+        Contract.deploy(wallet, TokenContractArtifact, constructorArgs, 'constructor_with_asset_initial_deposit')
+          .send({ contractAddressSalt: Fr.random(), from: alice })
+          .deployed(),
+      ).rejects.toThrow(/app_logic_reverted/);
+    }, 300_000);
+
+    it('fails deployment with insufficient balance', async () => {
+      // This is bigger than what's originally minted to alice, becoming insufficient for the deployment
+      const biggerInitialDeposit = initialDeposit + 1n;
+
+      // Try to deploy vault - should fail due to insufficient balance
+      await expect(
+        deployVaultWithInitialDeposit(wallet, alice, assetContract, biggerInitialDeposit, alice),
       ).rejects.toThrow(/app_logic_reverted/);
     }, 300_000);
   });
