@@ -49,7 +49,7 @@ The Logic library provides functions that standardize and facilitate the impleme
 Usually, a Logic contract will have the following features:
 
 - Manages how escrow details, including keys, are shared to escrow's participants.
-- Verifies that the escrow details are valid.
+- Ensures that the escrow details are valid.
 - Assigns roles to participants (recipients, owner, etc.) and set any additional conditions (start timestamps, amounts, expiration, etc.).
 - Manages Escrow withdrawals.
 
@@ -61,18 +61,16 @@ The library functions guarantee that escrow's keys, contract class ID and setup 
 >
 > It's still the job of the Logic contract implementation to handle information safely and privately, while avoiding malicious attempts of withdrawing funds from Escrow contracts. This library facilitates this but cannot ensure Logic contracts are implemented correctly. Use carefully.
 
-### _check_escrow
+### _get_escrow
 ```rust
-/// @notice Verifies that the keys correspond to the escrow address and that the escrow instance data is correct.
-/// @dev Reverts if the data is not correct.
+/// @notice Returns the escrow address that corresponds to the given master secret keys and class ID.
 /// @param context The private context
-/// @param escrow The address of the escrow
 /// @param escrow_class_id The contract class id of the escrow contract
 /// @param master_secret_keys The master secret keys
+/// @return The escrow address
 #[contract_library_method]
-pub fn _check_escrow(
+pub fn _get_escrow(
     context: &mut PrivateContext,
-    escrow: AztecAddress,
     escrow_class_id: Field,
     master_secret_keys: MasterSecretKeys,
 ) { /* ... */ }
