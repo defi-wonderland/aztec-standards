@@ -1,12 +1,13 @@
 import { Note } from '@aztec/aztec.js/note';
 import { createLogger } from '@aztec/aztec.js/log';
 import { AztecAddress } from '@aztec/aztec.js/addresses';
+import { Aes128 } from '@aztec/foundation/crypto/aes128';
 import { deriveEcdhSharedSecret } from '@aztec/stdlib/logs';
 import { type Wallet, AccountManager } from '@aztec/aztec.js/wallet';
 import { Fr, type GrumpkinScalar, Point } from '@aztec/aztec.js/fields';
 import { createAztecNodeClient, waitForNode } from '@aztec/aztec.js/node';
 import { PRIVATE_LOG_CIPHERTEXT_LEN, GeneratorIndex } from '@aztec/constants';
-import { Aes128, poseidon2HashWithSeparator } from '@aztec/foundation/crypto';
+import { poseidon2HashWithSeparator } from '@aztec/foundation/crypto/poseidon';
 import { registerInitialLocalNetworkAccountsInWallet, TestWallet } from '@aztec/test-wallet/server';
 import { deriveMasterIncomingViewingSecretKey, PublicKeys, computeAddressSecret } from '@aztec/stdlib/keys';
 
@@ -78,8 +79,7 @@ export const setupTestSuite = async (suffix?: string) => {
 
 // --- Token Utils ---
 export const expectUintNote = (note: Note, amount: bigint, owner: AztecAddress) => {
-  expect(note.items[0]).toEqual(new Fr(owner.toBigInt()));
-  expect(note.items[1]).toEqual(new Fr(amount));
+  expect(note.items[0]).toEqual(new Fr(amount));
 };
 
 export const expectTokenBalances = async (
@@ -313,8 +313,8 @@ export async function initializeTransferCommitment(
     toIvskM,
   );
 
-  // The commitment is the fourth field in the decrypted raw log
-  return decryptedRawLog[3].toBigInt();
+  // The commitment is the fifth field in the decrypted raw log
+  return decryptedRawLog[4].toBigInt();
 }
 
 /**
@@ -348,8 +348,8 @@ export async function initializeTransferCommitmentNFT(
     toIvskM,
   );
 
-  // The commitment is the fourth field in the decrypted raw log
-  return decryptedRawLog[3].toBigInt();
+  // The commitment is the fifth field in the decrypted raw log
+  return decryptedRawLog[4].toBigInt();
 }
 
 // --- Logic Contract Utils ---
