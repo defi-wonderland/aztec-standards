@@ -62,7 +62,7 @@ jobs:
           run: |
             docker tag aztecprotocol/aztec:${{ steps.aztec-version.outputs.version }} aztecprotocol/aztec:latest
 
-        - name: Start local-network (previously sandbox)
+        - name: Start local-network
           run: |
             aztec start --local-network &
 
