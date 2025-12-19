@@ -26,9 +26,8 @@ import {
   computeContractAddressFromInstance,
 } from '@aztec/stdlib/contract';
 
-import { PXECreationOptions, type PXE } from '@aztec/pxe/server';
 import { createStore } from '@aztec/kv-store/lmdb-v2';
-import { createPXE, getPXEConfig } from '@aztec/pxe/server';
+import { getPXEConfig } from '@aztec/pxe/server';
 import { type AztecLMDBStoreV2 } from '@aztec/kv-store/lmdb-v2';
 
 import { TokenContract, TokenContractArtifact } from '../../../artifacts/Token.js';
@@ -56,7 +55,6 @@ fullConfig.proverEnabled = false;
 export const setupTestSuite = async (suffix?: string) => {
   const storeDir = suffix ? `store-${suffix}` : 'store';
 
-  const aztecNode = createAztecNodeClient(NODE_URL);
   fullConfig = { ...fullConfig, dataDirectory: storeDir, dataStoreMapSizeKb: 1e6 };
 
   // Create the store for manual cleanups
@@ -65,13 +63,13 @@ export const setupTestSuite = async (suffix?: string) => {
     dataStoreMapSizeKb: 1e6,
   });
 
-  const wallet: TestWallet = await TestWallet.create(aztecNode, fullConfig, { store });
+  const wallet: TestWallet = await TestWallet.create(node, fullConfig, { store });
 
   const accounts: AztecAddress[] = await registerInitialLocalNetworkAccountsInWallet(wallet);
 
   return {
     store,
-    node: aztecNode,
+    node,
     wallet,
     accounts,
   };
