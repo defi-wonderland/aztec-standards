@@ -873,7 +873,7 @@ pub contract Token {
         _validate_from_public(&mut context, from);
 
         // Validate max deposit limit
-        let max_deposit = Token::at(context.this_address()).max_deposit(to).view(&mut context);
+        let max_deposit = _max_deposit(to);
         assert(assets <= max_deposit, "Exceeded max deposit");
 
         // Calculate shares to mint
@@ -1090,7 +1090,7 @@ pub contract Token {
         _validate_from_public(&mut context, from);
 
         // Validate max issue limit
-        let max_issue = Token::at(context.this_address()).max_issue(to).view(&mut context);
+        let max_issue = _max_issue(to);
         assert(shares <= max_issue, "Exceeded max issue");
 
         // Calculate assets required
@@ -1237,7 +1237,13 @@ pub contract Token {
         _validate_from_public(&mut context, from);
 
         // Validate max withdraw limit
-        let max_withdraw = Token::at(context.this_address()).max_withdraw(from).view(&mut context);
+        let max_withdraw = _max_withdraw(
+            from,
+            storage.public_balances,
+            &mut context,
+            storage.asset,
+            storage.total_supply,
+        );
         assert(assets <= max_withdraw, "Exceeded max withdraw");
 
         // Calculate shares to burn
@@ -1438,7 +1444,7 @@ pub contract Token {
         _validate_from_public(&mut context, from);
 
         // Validate max redeem limit
-        let max_redeem = Token::at(context.this_address()).max_redeem(from).view(&mut context);
+        let max_redeem = _max_redeem(from, storage.public_balances);
         assert(shares <= max_redeem, "Exceeded max redeem");
 
         // Calculate assets to redeem
@@ -1623,9 +1629,7 @@ pub contract Token {
     #[external("public")]
     #[view]
     fn max_deposit(receiver: AztecAddress) -> u128 {
-        // Silence unused parameter warning while keeping the function signature
-        let _ = receiver;
-        MAX_U128_VALUE
+        _max_deposit(receiver)
     }
 
     /// @dev Allows an on-chain or off-chain user to simulate the effects of their deposit at the current block, given current on-chain conditions.
@@ -1645,9 +1649,7 @@ pub contract Token {
     #[external("public")]
     #[view]
     fn max_issue(receiver: AztecAddress) -> u128 {
-        // Silence unused parameter warning while keeping the function signature
-        let _ = receiver;
-        MAX_U128_VALUE
+        _max_issue(receiver)
     }
 
     /// @dev Allows an on-chain or off-chain user to simulate the effects of their issue at the current block, given current on-chain conditions.
@@ -1668,7 +1670,12 @@ pub contract Token {
     #[external("public")]
     #[view]
     fn max_withdraw(owner: AztecAddress) -> u128 {
-        preview_redeem(max_redeem(owner))
+        _preview_redeem(
+            _max_redeem(owner, storage.public_balances),
+            &mut context,
+            storage.asset,
+            storage.total_supply,
+        )
     }
 
     /// @dev Allows an on-chain or off-chain user to simulate the effects of their withdraw at the current block, given current on-chain conditions.
@@ -1689,7 +1696,7 @@ pub contract Token {
     #[external("public")]
     #[view]
     fn max_redeem(owner: AztecAddress) -> u128 {
-        storage.public_balances.at(owner).read()
+        _max_redeem(owner, storage.public_balances)
     }
 
     /// @dev Allows an on-chain or off-chain user to simulate the effects of their redeem at the current block, given current on-chain conditions.
@@ -1726,7 +1733,13 @@ pub contract Token {
     #[internal]
     fn settle_withdraw_public_to_private_internal(from: AztecAddress, assets: u128) {
         // Validate max withdraw limit
-        let max_withdraw = Token::at(context.this_address()).max_withdraw(from).view(&mut context);
+        let max_withdraw = _max_withdraw(
+            from,
+            storage.public_balances,
+            &mut context,
+            storage.asset,
+            storage.total_supply,
+        );
         assert(assets <= max_withdraw, "Exceeded max withdraw");
 
         let total_assets = _total_assets(&mut context, storage.asset);
@@ -1775,7 +1788,7 @@ pub contract Token {
     #[internal]
     fn settle_deposit_private_to_public_internal(to: AztecAddress, assets: u128) {
         // Validate max deposit limit
-        let max_deposit = Token::at(context.this_address()).max_deposit(to).view(&mut context);
+        let max_deposit = _max_deposit(to);
         assert(assets <= max_deposit, "Exceeded max deposit");
 
         let total_assets = _total_assets(&mut context, storage.asset) - assets;
@@ -1969,7 +1982,7 @@ pub contract Token {
         to: AztecAddress,
     ) {
         // Validate max issue limit
-        let max_issue = Token::at(context.this_address()).max_issue(to).view(&mut context);
+        let max_issue = _max_issue(to);
         assert(shares <= max_issue, "Exceeded max issue");
 
         let total_assets = _total_assets(&mut context, storage.asset);
@@ -2063,7 +2076,7 @@ pub contract Token {
         min_assets: u128,
     ) {
         // Validate max redeem limit
-        let max_redeem = Token::at(context.this_address()).max_redeem(from).view(&mut context);
+        let max_redeem = _max_redeem(from, storage.public_balances);
         assert(shares <= max_redeem, "Exceeded max redeem");
 
         let total_assets = _total_assets(&mut context, storage.asset);
@@ -2192,5 +2205,78 @@ pub contract Token {
     #[contract_library_method]
     fn offset() -> u128 {
         1
+    }
+
+    /// @dev Returns the maximum amount of the underlying asset that can be deposited into the Vault for the receiver, through a deposit call.
+    /// @param receiver The address of the receiver
+    /// @return The maximum amount of assets that can be deposited
+    #[contract_library_method]
+    fn _max_deposit(receiver: AztecAddress) -> u128 {
+        // Silence unused parameter warning while keeping the function signature
+        let _ = receiver;
+        MAX_U128_VALUE
+    }
+
+    /// @dev Returns the maximum amount of the Vault shares that can be issued for the receiver, through a mint call.
+    /// @param receiver The address of the receiver
+    /// @return The maximum amount of shares that can be issued
+    #[contract_library_method]
+    fn _max_issue(receiver: AztecAddress) -> u128 {
+        // Silence unused parameter warning while keeping the function signature
+        let _ = receiver;
+        MAX_U128_VALUE
+    }
+
+    /// @dev Returns the maximum amount of the underlying asset that can be withdrawn from the owner balance in the Vault, through a withdraw call.
+    /// @notice This does NOT include private balance - private holders must track their own balance.
+    /// @param owner The address of the owner
+    /// @param context The context of the public call
+    /// @param asset The storage pointer to the asset address
+    /// @param total_supply The storage pointer to the total supply
+    /// @return The maximum amount of assets that can be withdrawn
+    #[contract_library_method]
+    unconstrained fn _max_withdraw(
+        owner: AztecAddress,
+        public_balances: Map<AztecAddress, PublicMutable<u128, &mut PublicContext>, &mut PublicContext>,
+        context: &mut PublicContext,
+        asset: PublicImmutable<AztecAddress, &mut PublicContext>,
+        total_supply: PublicMutable<u128, &mut PublicContext>,
+    ) -> u128 {
+        _preview_redeem(
+            _max_redeem(owner, public_balances),
+            context,
+            asset,
+            total_supply,
+        )
+    }
+
+    /// @dev Returns the maximum amount of the Vault shares that can be redeemed from the owner balance in the Vault, through a redeem call.
+    /// @notice This does NOT include private balance - private holders must track their own balance.
+    /// @param owner The address of the owner
+    /// @return The maximum amount of shares that can be redeemed
+    #[contract_library_method]
+    fn _max_redeem(
+        owner: AztecAddress,
+        public_balances: Map<AztecAddress, PublicMutable<u128, &mut PublicContext>, &mut PublicContext>,
+    ) -> u128 {
+        public_balances.at(owner).read()
+    }
+
+    /// @dev Allows an on-chain or off-chain user to simulate the effects of their redeem at the current block, given current on-chain conditions.
+    /// @param assets The amount of assets to redeem
+    /// @param context The context of the public call
+    /// @param asset The storage pointer to the asset address
+    /// @param total_supply The storage pointer to the total supply
+    /// @return The amount of assets that would be redeemed
+    #[contract_library_method]
+    unconstrained fn _preview_redeem(
+        shares: u128,
+        context: &mut PublicContext,
+        asset: PublicImmutable<AztecAddress, &mut PublicContext>,
+        total_supply: PublicMutable<u128, &mut PublicContext>,
+    ) -> u128 {
+        let total_assets = _total_assets(context, asset);
+        let assets = _convert_to_assets(shares, total_assets, total_supply, ROUND_DOWN);
+        assets
     }
 }
