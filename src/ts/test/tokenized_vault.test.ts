@@ -1224,7 +1224,7 @@ describe('Tokenized Vault', () => {
       });
 
       it('totalAssets returns zero', async () => {
-        const totalAssets = await vault.methods.totalAssets().simulate({ from: alice });
+        const totalAssets = await vault.methods.total_assets().simulate({ from: alice });
         expect(totalAssets).toBe(0n);
       });
 
@@ -1251,10 +1251,10 @@ describe('Tokenized Vault', () => {
       });
 
       it('convert and preview functions handle zero amounts', async () => {
-        const convertToShares = await vault.methods.convertToShares(0).simulate({ from: alice });
+        const convertToShares = await vault.methods.convert_to_shares(0).simulate({ from: alice });
         expect(convertToShares).toBe(0n);
 
-        const convertToAssets = await vault.methods.convertToAssets(0).simulate({ from: alice });
+        const convertToAssets = await vault.methods.convert_to_assets(0).simulate({ from: alice });
         expect(convertToAssets).toBe(0n);
 
         const previewDeposit = await vault.methods.preview_deposit(0).simulate({ from: alice });
@@ -1290,17 +1290,17 @@ describe('Tokenized Vault', () => {
       });
 
       it('totalAssets returns deposited amount', async () => {
-        const totalAssets = await vault.methods.totalAssets().simulate({ from: alice });
+        const totalAssets = await vault.methods.total_assets().simulate({ from: alice });
         expect(totalAssets).toBe(BigInt(depositAmount));
       });
 
       it('conversion functions return 1:1 ratio', async () => {
         const testAmount = 500;
 
-        const shares = await vault.methods.convertToShares(testAmount).simulate({ from: alice });
+        const shares = await vault.methods.convert_to_shares(testAmount).simulate({ from: alice });
         expect(shares).toBe(BigInt(testAmount));
 
-        const assets = await vault.methods.convertToAssets(testAmount).simulate({ from: alice });
+        const assets = await vault.methods.convert_to_assets(testAmount).simulate({ from: alice });
         expect(assets).toBe(BigInt(testAmount));
       });
 
@@ -1382,20 +1382,20 @@ describe('Tokenized Vault', () => {
       });
 
       it('totalAssets includes yield', async () => {
-        const totalAssets = await vault.methods.totalAssets().simulate({ from: alice });
+        const totalAssets = await vault.methods.total_assets().simulate({ from: alice });
         expect(totalAssets).toBe(BigInt(depositAmount + yieldAmount));
       });
 
       it('convertToShares returns fewer shares (each share worth more)', async () => {
         const assetsToConvert = 2000;
-        const shares = await vault.methods.convertToShares(assetsToConvert).simulate({ from: alice });
+        const shares = await vault.methods.convert_to_shares(assetsToConvert).simulate({ from: alice });
         // After yield, each share is worth ~2 assets, so fewer shares per asset
         expect(shares).toBeLessThan(BigInt(assetsToConvert));
       });
 
       it('convertToAssets returns more assets (each share worth more)', async () => {
         const sharesToConvert = 1000;
-        const assets = await vault.methods.convertToAssets(sharesToConvert).simulate({ from: alice });
+        const assets = await vault.methods.convert_to_assets(sharesToConvert).simulate({ from: alice });
         // After yield, each share is worth ~2 assets
         expect(assets).toBeGreaterThan(BigInt(sharesToConvert));
       });
