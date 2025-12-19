@@ -6,6 +6,7 @@ import { deriveEcdhSharedSecret } from '@aztec/stdlib/logs';
 import { type Wallet, AccountManager } from '@aztec/aztec.js/wallet';
 import { Fr, type GrumpkinScalar, Point } from '@aztec/aztec.js/fields';
 import { createAztecNodeClient, waitForNode } from '@aztec/aztec.js/node';
+import { type ContractInstanceWithAddress } from '@aztec/aztec.js/contracts';
 import { PRIVATE_LOG_CIPHERTEXT_LEN, GeneratorIndex } from '@aztec/constants';
 import { poseidon2HashWithSeparator } from '@aztec/foundation/crypto/poseidon';
 import { registerInitialLocalNetworkAccountsInWallet, TestWallet } from '@aztec/test-wallet/server';
@@ -241,11 +242,17 @@ export async function deployEscrow(
   salt: Fr = Fr.random(),
   args: unknown[] = [],
   constructor?: string,
-): Promise<EscrowContract> {
-  const contract = await Contract.deployWithPublicKeys(publicKeys, wallet, EscrowContractArtifact, args, constructor)
+): Promise<{ contract: EscrowContract; instance: ContractInstanceWithAddress }> {
+  const { contract, instance } = await Contract.deployWithPublicKeys(
+    publicKeys,
+    wallet,
+    EscrowContractArtifact,
+    args,
+    constructor,
+  )
     .send({ contractAddressSalt: salt, universalDeploy: true, from: deployer })
-    .deployed();
-  return contract as EscrowContract;
+    .wait();
+  return { contract: contract as EscrowContract, instance };
 }
 
 // --- General Utils ---

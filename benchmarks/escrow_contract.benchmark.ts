@@ -5,7 +5,6 @@ import type { Wallet } from '@aztec/aztec.js/wallet';
 import { type AztecNode } from '@aztec/aztec.js/node';
 import { AztecAddress } from '@aztec/aztec.js/addresses';
 import type { AztecLMDBStoreV2 } from '@aztec/kv-store/lmdb-v2';
-import { type ContractInstanceWithAddress } from '@aztec/aztec.js/contracts';
 import type { ContractFunctionInteractionCallIntent } from '@aztec/aztec.js/authorization';
 
 // Import the new Benchmark base class and context
@@ -48,9 +47,13 @@ export default class EscrowContractBenchmark extends Benchmark {
     const escrowSk = Fr.random();
     const escrowKeys = await deriveKeys(escrowSk);
     const escrowSalt = new Fr(logicMock.toBigInt());
-    const escrowContract = (await deployEscrow(escrowKeys.publicKeys, wallet, deployer, escrowSalt)) as EscrowContract;
+    const { contract: escrowContract, instance: escrowInstance } = await deployEscrow(
+      escrowKeys.publicKeys,
+      wallet,
+      deployer,
+      escrowSalt,
+    );
 
-    const escrowInstance = (await node.getContract(escrowContract.address)) as ContractInstanceWithAddress;
     if (escrowInstance) {
       await wallet.registerContract(escrowInstance, EscrowContractArtifact, escrowSk);
     }
