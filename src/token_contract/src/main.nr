@@ -2097,7 +2097,7 @@ pub contract Token {
     /// @param from The address of the sender
     /// @param shares The amount of shares being issued
     /// @param max_assets The maximum amount of assets that should be deposited
-    /// @param _nonce The nonce used for authwitness 
+    /// @param _nonce The nonce used for authwitness
     #[external("public")]
     #[internal]
     fn settle_issue_public_to_private_internal(
@@ -2220,7 +2220,12 @@ pub contract Token {
     /// @param total_supply The storage pointer to the total supply
     /// @return The amount of shares that would be minted
     #[contract_library_method]
-    unconstrained fn _preview_deposit(assets: u128, context: &mut PublicContext, asset: PublicImmutable<AztecAddress, &mut PublicContext>, total_supply: PublicMutable<u128, &mut PublicContext>) -> u128 {
+    unconstrained fn _preview_deposit(
+        assets: u128,
+        context: &mut PublicContext,
+        asset: PublicImmutable<AztecAddress, &mut PublicContext>,
+        total_supply: PublicMutable<u128, &mut PublicContext>,
+    ) -> u128 {
         let total_assets = _total_assets(context, asset);
         let shares = _convert_to_shares(assets, total_assets, total_supply, ROUND_DOWN);
         shares
@@ -2243,7 +2248,12 @@ pub contract Token {
     /// @param total_supply The storage pointer to the total supply
     /// @return The amount of assets that would be issued
     #[contract_library_method]
-    unconstrained fn _preview_issue(shares: u128, context: &mut PublicContext, asset: PublicImmutable<AztecAddress, &mut PublicContext>, total_supply: PublicMutable<u128, &mut PublicContext>) -> u128 {
+    unconstrained fn _preview_issue(
+        shares: u128,
+        context: &mut PublicContext,
+        asset: PublicImmutable<AztecAddress, &mut PublicContext>,
+        total_supply: PublicMutable<u128, &mut PublicContext>,
+    ) -> u128 {
         let total_assets = _total_assets(context, asset);
         let assets = _convert_to_assets(shares, total_assets, total_supply, ROUND_UP);
         assets
@@ -2280,10 +2290,15 @@ pub contract Token {
     /// @param total_supply The storage pointer to the total supply
     /// @return The amount of shares that would be redeemed
     #[contract_library_method]
-    unconstrained fn _preview_withdraw(assets: u128, context: &mut PublicContext, asset: PublicImmutable<AztecAddress, &mut PublicContext>, total_supply: PublicMutable<u128, &mut PublicContext>) -> u128 {
+    unconstrained fn _preview_withdraw(
+        assets: u128,
+        context: &mut PublicContext,
+        asset: PublicImmutable<AztecAddress, &mut PublicContext>,
+        total_supply: PublicMutable<u128, &mut PublicContext>,
+    ) -> u128 {
         let total_assets = _total_assets(context, asset);
         let shares = _convert_to_shares(assets, total_assets, total_supply, ROUND_UP);
-        shares    
+        shares
     }
 
     /// @dev Returns the maximum amount of the Vault shares that can be redeemed from the owner balance in the Vault, through a redeem call.
