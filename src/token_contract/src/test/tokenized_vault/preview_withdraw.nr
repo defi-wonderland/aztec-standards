@@ -1,7 +1,7 @@
 use crate::{test::{tokenized_vault::tokenized_vault_utils, utils::{self, mint_amount}}, Token};
 
-/// NOTE: We only test `previewWithdraw` with one withdraw variant (withdraw_public_to_public)
-/// because `previewWithdraw` is a pure view function that calculates assets based solely on
+/// NOTE: We only test `preview_withdraw` with one withdraw variant (withdraw_public_to_public)
+/// because `preview_withdraw` is a pure view function that calculates assets based solely on
 /// the vault's current state (total_assets, total_supply). The calculation is independent
 /// of the withdraw mechanism - all withdraw functions (public -> public, private -> private, etc.)
 /// use the same underlying `_convert_to_assets` formula. Therefore, testing with one
@@ -28,7 +28,7 @@ unconstrained fn preview_withdraw_success() {
 
     // Preview withdraw before withdraw
     let preview_withdraw_assets =
-        env.view_public(Token::at(vault_address).previewWithdraw(shares_to_withdraw));
+        env.view_public(Token::at(vault_address).preview_withdraw(shares_to_withdraw));
 
     // Withdraw
     env.call_public(
@@ -72,13 +72,13 @@ unconstrained fn preview_withdraw_with_yield_accrued_success() {
 
     // Preview withdraw before withdraw
     let preview_withdraw_shares =
-        env.view_public(Token::at(vault_address).previewWithdraw(expected_assets_to_withdraw));
+        env.view_public(Token::at(vault_address).preview_withdraw(expected_assets_to_withdraw));
 
     // Withdraw all shares
     let expected_shares_to_burn: u128 = deposit_amount;
     assert(
         preview_withdraw_shares == expected_shares_to_burn,
-        "previewWithdraw should return the expected shares",
+        "preview_withdraw should return the expected shares",
     );
 
     // Withdraw
@@ -102,7 +102,7 @@ unconstrained fn preview_withdraw_zero_amount() {
     let (env, vault_address, _owner, _recipient, _asset_address) = utils::setup_with_asset(false);
 
     // Preview withdraw with zero shares
-    let preview_withdraw_assets = env.view_public(Token::at(vault_address).previewWithdraw(0));
+    let preview_withdraw_assets = env.view_public(Token::at(vault_address).preview_withdraw(0));
 
     // Zero shares should yield zero assets
     assert(preview_withdraw_assets == 0, "Zero shares should return zero assets");

@@ -1,17 +1,18 @@
 use crate::{test::{tokenized_vault::tokenized_vault_utils, utils::{self, mint_amount}}, Token};
 
-/// NOTE: `maxRedeemPrivate` returns the maximum amount of shares that can be redeemed from
-/// the owner's PRIVATE balance only. Use `maxRedeem` for public balance.
+/// NOTE: `max_redeem_private` returns the maximum amount of shares that can be redeemed from
+/// the owner's PRIVATE balance only. Use `max_redeem` for public balance.
 
 #[test]
 unconstrained fn max_redeem_private_zero_without_shares() {
     // Setup with asset token
     let (env, vault_address, owner, _recipient, _asset_address) = utils::setup_with_asset(false);
 
-    // maxRedeemPrivate should return 0 when owner has no shares
-    let max_redeem_private = env.simulate_utility(Token::at(vault_address).maxRedeemPrivate(owner));
+    // max_redeem_private should return 0 when owner has no shares
+    let max_redeem_private =
+        env.simulate_utility(Token::at(vault_address).max_redeem_private(owner));
 
-    assert(max_redeem_private == 0, "maxRedeemPrivate should return 0 when owner has no shares");
+    assert(max_redeem_private == 0, "max_redeem_private should return 0 when owner has no shares");
 }
 
 #[test]
@@ -30,14 +31,15 @@ unconstrained fn max_redeem_private_zero_with_only_public_balance() {
         deposit_amount,
     );
 
-    // maxRedeemPrivate should return 0 when owner only has public shares
-    let max_redeem_private = env.simulate_utility(Token::at(vault_address).maxRedeemPrivate(owner));
+    // max_redeem_private should return 0 when owner only has public shares
+    let max_redeem_private =
+        env.simulate_utility(Token::at(vault_address).max_redeem_private(owner));
 
-    assert(max_redeem_private == 0, "maxRedeemPrivate should return 0 when only public exists");
+    assert(max_redeem_private == 0, "max_redeem_private should return 0 when only public exists");
 
-    // Compare with maxRedeem (public only) which should have the balance
-    let max_redeem_public = env.view_public(Token::at(vault_address).maxRedeem(owner));
-    assert(max_redeem_public == deposit_amount, "maxRedeem should return public balance");
+    // Compare with max_redeem (public only) which should have the balance
+    let max_redeem_public = env.view_public(Token::at(vault_address).max_redeem(owner));
+    assert(max_redeem_public == deposit_amount, "max_redeem should return public balance");
 }
 
 #[test]
@@ -59,14 +61,18 @@ unconstrained fn max_redeem_private_returns_private_balance() {
     // At first deposit, 1 share = 1 asset
     let expected_shares: u128 = deposit_amount;
 
-    // maxRedeemPrivate should return the owner's private share balance
-    let max_redeem_private = env.simulate_utility(Token::at(vault_address).maxRedeemPrivate(owner));
+    // max_redeem_private should return the owner's private share balance
+    let max_redeem_private =
+        env.simulate_utility(Token::at(vault_address).max_redeem_private(owner));
 
-    assert(max_redeem_private == expected_shares, "maxRedeemPrivate should return private balance");
+    assert(
+        max_redeem_private == expected_shares,
+        "max_redeem_private should return private balance",
+    );
 
-    // Compare with maxRedeem (public only) which should be 0
-    let max_redeem_public = env.view_public(Token::at(vault_address).maxRedeem(owner));
-    assert(max_redeem_public == 0, "maxRedeem should return 0 for private-only balance");
+    // Compare with max_redeem (public only) which should be 0
+    let max_redeem_public = env.view_public(Token::at(vault_address).max_redeem(owner));
+    assert(max_redeem_public == 0, "max_redeem should return 0 for private-only balance");
 }
 
 #[test]
@@ -107,17 +113,18 @@ unconstrained fn max_redeem_private_only_returns_private_when_both_exist() {
         ),
     );
 
-    // maxRedeemPrivate should return ONLY private shares
-    let max_redeem_private = env.simulate_utility(Token::at(vault_address).maxRedeemPrivate(owner));
+    // max_redeem_private should return ONLY private shares
+    let max_redeem_private =
+        env.simulate_utility(Token::at(vault_address).max_redeem_private(owner));
 
     assert(
         max_redeem_private == private_deposit,
-        "maxRedeemPrivate should return only private shares",
+        "max_redeem_private should return only private shares",
     );
 
-    // Compare with maxRedeem (public only)
-    let max_redeem_public = env.view_public(Token::at(vault_address).maxRedeem(owner));
-    assert(max_redeem_public == public_deposit, "maxRedeem should return only public balance");
+    // Compare with max_redeem (public only)
+    let max_redeem_public = env.view_public(Token::at(vault_address).max_redeem(owner));
+    assert(max_redeem_public == public_deposit, "max_redeem should return only public balance");
 }
 
 #[test]
@@ -158,11 +165,12 @@ unconstrained fn max_redeem_private_different_per_owner() {
         ),
     );
 
-    // Check maxRedeemPrivate for both
-    let owner_max = env.simulate_utility(Token::at(vault_address).maxRedeemPrivate(owner));
-    let recipient_max = env.simulate_utility(Token::at(vault_address).maxRedeemPrivate(recipient));
+    // Check max_redeem_private for both
+    let owner_max = env.simulate_utility(Token::at(vault_address).max_redeem_private(owner));
+    let recipient_max =
+        env.simulate_utility(Token::at(vault_address).max_redeem_private(recipient));
 
-    assert(owner_max == owner_deposit, "Owner maxRedeemPrivate incorrect");
-    assert(recipient_max == recipient_deposit, "Recipient maxRedeemPrivate incorrect");
-    assert(owner_max != recipient_max, "Different owners should have different maxRedeemPrivate");
+    assert(owner_max == owner_deposit, "Owner max_redeem_private incorrect");
+    assert(recipient_max == recipient_deposit, "Recipient max_redeem_private incorrect");
+    assert(owner_max != recipient_max, "Different owners should have different max_redeem_private");
 }

@@ -1,7 +1,7 @@
 use crate::{test::utils::{self, mint_amount}, Token};
 
-/// NOTE: We only test `previewIssue` with one issue variant (issue_public_to_public)
-/// because `previewIssue` is a pure view function that calculates assets based solely on
+/// NOTE: We only test `preview_issue` with one issue variant (issue_public_to_public)
+/// because `preview_issue` is a pure view function that calculates assets based solely on
 /// the vault's current state (total_assets, total_supply). The calculation is independent
 /// of the issue mechanism - all issue functions (public -> public, private -> private, etc.)
 /// use the same underlying `_convert_to_assets` formula. Therefore, testing with one
@@ -31,7 +31,7 @@ unconstrained fn issue_public_to_public_success() {
 
     // Preview issue before issue
     let preview_issue_assets =
-        env.view_public(Token::at(vault_address).previewIssue(requested_shares));
+        env.view_public(Token::at(vault_address).preview_issue(requested_shares));
 
     // Issue
     env.call_public(
@@ -82,7 +82,7 @@ unconstrained fn preview_issue_with_yield_accrued_success() {
 
     // Preview issue before issue
     let preview_issue_assets =
-        env.view_public(Token::at(vault_address).previewIssue(requested_shares));
+        env.view_public(Token::at(vault_address).preview_issue(requested_shares));
 
     // Issue shares
     env.call_public(
@@ -106,7 +106,7 @@ unconstrained fn preview_issue_zero_amount() {
     let (env, vault_address, _owner, _recipient, _asset_address) = utils::setup_with_asset(false);
 
     // Preview issue with zero shares
-    let preview_issue_assets = env.view_public(Token::at(vault_address).previewIssue(0));
+    let preview_issue_assets = env.view_public(Token::at(vault_address).preview_issue(0));
 
     // Zero shares should require zero assets
     assert(preview_issue_assets == 0, "Zero shares should return zero assets");

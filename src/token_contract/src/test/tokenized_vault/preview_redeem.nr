@@ -1,7 +1,7 @@
 use crate::{test::{tokenized_vault::tokenized_vault_utils, utils::{self, mint_amount}}, Token};
 
-/// NOTE: We only test `previewRedeem` with one redeem variant (redeem_public_to_public)
-/// because `previewRedeem` is a pure view function that calculates shares based solely on
+/// NOTE: We only test `preview_redeem` with one redeem variant (redeem_public_to_public)
+/// because `preview_redeem` is a pure view function that calculates shares based solely on
 /// the vault's current state (total_assets, total_supply). The calculation is independent
 /// of the redeem mechanism - all redeem functions (public -> public, private -> private, etc.)
 /// use the same underlying `_convert_to_shares` formula. Therefore, testing with one
@@ -28,7 +28,7 @@ unconstrained fn preview_redeem_success() {
 
     // Preview redeem before redeem
     let preview_redeem_shares =
-        env.view_public(Token::at(vault_address).previewRedeem(assets_to_redeem));
+        env.view_public(Token::at(vault_address).preview_redeem(assets_to_redeem));
 
     // Redeem
     let shares_to_burn: u128 = deposit_amount;
@@ -69,12 +69,12 @@ unconstrained fn preview_redeem_with_yield_accrued_success() {
     // Redeem all shares
     let shares_to_burn: u128 = deposit_amount;
     let preview_redeem_assets =
-        env.view_public(Token::at(vault_address).previewRedeem(shares_to_burn));
+        env.view_public(Token::at(vault_address).preview_redeem(shares_to_burn));
 
     let expected_assets: u128 = deposit_amount + 1;
     assert(
         preview_redeem_assets == expected_assets,
-        "previewRedeem should return the expected assets",
+        "preview_redeem should return the expected assets",
     );
 
     env.call_public(
@@ -92,7 +92,7 @@ unconstrained fn preview_redeem_zero_amount() {
     let (env, vault_address, _owner, _recipient, _asset_address) = utils::setup_with_asset(false);
 
     // Preview redeem with zero assets
-    let preview_redeem_shares = env.view_public(Token::at(vault_address).previewRedeem(0));
+    let preview_redeem_shares = env.view_public(Token::at(vault_address).preview_redeem(0));
 
     // Zero assets should require zero shares
     assert(preview_redeem_shares == 0, "Zero assets should return zero shares");

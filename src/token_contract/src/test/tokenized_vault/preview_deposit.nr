@@ -1,7 +1,7 @@
 use crate::{test::utils::{self, mint_amount}, Token};
 
-/// NOTE: We only test `previewDeposit` with one deposit variant (deposit_public_to_public)
-/// because `previewDeposit` is a pure view function that calculates shares based solely on
+/// NOTE: We only test `preview_deposit` with one deposit variant (deposit_public_to_public)
+/// because `preview_deposit` is a pure view function that calculates shares based solely on
 /// the vault's current state (total_assets, total_supply). The calculation is independent
 /// of the deposit mechanism - all deposit functions (public -> public, private -> private, etc.)
 /// use the same underlying `_convert_to_shares` formula. Therefore, testing with one
@@ -29,7 +29,7 @@ unconstrained fn preview_deposit_success() {
 
     // Preview deposit before deposit
     let preview_deposit_shares =
-        env.view_public(Token::at(vault_address).previewDeposit(deposit_amount));
+        env.view_public(Token::at(vault_address).preview_deposit(deposit_amount));
 
     // Deposit
     env.call_public(
@@ -72,7 +72,7 @@ unconstrained fn preview_deposit_with_yield_accrued_success() {
 
     // Preview deposit before deposit
     let preview_deposit_shares =
-        env.view_public(Token::at(vault_address).previewDeposit(deposit_amount));
+        env.view_public(Token::at(vault_address).preview_deposit(deposit_amount));
 
     // Deposit
     env.call_public(
@@ -94,7 +94,7 @@ unconstrained fn preview_deposit_zero_amount() {
     let (env, vault_address, _owner, _recipient, _asset_address) = utils::setup_with_asset(false);
 
     // Preview deposit with zero assets
-    let preview_deposit_shares = env.view_public(Token::at(vault_address).previewDeposit(0));
+    let preview_deposit_shares = env.view_public(Token::at(vault_address).preview_deposit(0));
 
     // Zero assets should yield zero shares
     assert(preview_deposit_shares == 0, "Zero assets should return zero shares");
