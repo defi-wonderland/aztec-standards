@@ -872,6 +872,10 @@ pub contract Token {
     fn deposit_public_to_public(from: AztecAddress, to: AztecAddress, assets: u128, _nonce: Field) {
         _validate_from_public(&mut context, from);
 
+        // Validate max deposit limit
+        let max_deposit = Token::at(context.this_address()).maxDeposit(to).view(&mut context);
+        assert(assets <= max_deposit, "Exceeded max deposit");
+
         // Calculate shares to mint
         let total_assets = _total_assets(&mut context, storage.asset);
         let shares = _convert_to_shares(assets, total_assets, storage.total_supply, ROUND_DOWN);
@@ -1085,6 +1089,10 @@ pub contract Token {
     ) {
         _validate_from_public(&mut context, from);
 
+        // Validate max issue limit
+        let max_issue = Token::at(context.this_address()).maxIssue(to).view(&mut context);
+        assert(shares <= max_issue, "Exceeded max issue");
+
         // Calculate assets required
         let total_assets = _total_assets(&mut context, storage.asset);
         let assets = _convert_to_assets(shares, total_assets, storage.total_supply, ROUND_UP);
@@ -1227,6 +1235,10 @@ pub contract Token {
         _nonce: Field,
     ) {
         _validate_from_public(&mut context, from);
+
+        // Validate max withdraw limit
+        let max_withdraw = Token::at(context.this_address()).maxWithdraw(from).view(&mut context);
+        assert(assets <= max_withdraw, "Exceeded max withdraw");
 
         // Calculate shares to burn
         let total_assets = _total_assets(&mut context, storage.asset);
@@ -1424,6 +1436,10 @@ pub contract Token {
     #[external("public")]
     fn redeem_public_to_public(from: AztecAddress, to: AztecAddress, shares: u128, _nonce: Field) {
         _validate_from_public(&mut context, from);
+
+        // Validate max redeem limit
+        let max_redeem = Token::at(context.this_address()).maxRedeem(from).view(&mut context);
+        assert(shares <= max_redeem, "Exceeded max redeem");
 
         // Calculate assets to redeem
         let total_assets = _total_assets(&mut context, storage.asset);
@@ -1709,6 +1725,10 @@ pub contract Token {
     #[external("public")]
     #[internal]
     fn settle_withdraw_public_to_private_internal(from: AztecAddress, assets: u128) {
+        // Validate max withdraw limit
+        let max_withdraw = Token::at(context.this_address()).maxWithdraw(from).view(&mut context);
+        assert(assets <= max_withdraw, "Exceeded max withdraw");
+
         let total_assets = _total_assets(&mut context, storage.asset);
         let shares = _convert_to_shares(assets, total_assets, storage.total_supply, ROUND_UP);
 
@@ -1754,6 +1774,10 @@ pub contract Token {
     #[external("public")]
     #[internal]
     fn settle_deposit_private_to_public_internal(to: AztecAddress, assets: u128) {
+        // Validate max deposit limit
+        let max_deposit = Token::at(context.this_address()).maxDeposit(to).view(&mut context);
+        assert(assets <= max_deposit, "Exceeded max deposit");
+
         let total_assets = _total_assets(&mut context, storage.asset) - assets;
         let shares = _convert_to_shares(assets, total_assets, storage.total_supply, ROUND_DOWN);
 
@@ -1944,6 +1968,10 @@ pub contract Token {
         max_assets: u128,
         to: AztecAddress,
     ) {
+        // Validate max issue limit
+        let max_issue = Token::at(context.this_address()).maxIssue(to).view(&mut context);
+        assert(shares <= max_issue, "Exceeded max issue");
+
         let total_assets = _total_assets(&mut context, storage.asset);
         let assets = _convert_to_assets(
             shares,
@@ -2034,6 +2062,10 @@ pub contract Token {
         shares: u128,
         min_assets: u128,
     ) {
+        // Validate max redeem limit
+        let max_redeem = Token::at(context.this_address()).maxRedeem(from).view(&mut context);
+        assert(shares <= max_redeem, "Exceeded max redeem");
+
         let total_assets = _total_assets(&mut context, storage.asset);
         let assets = _convert_to_assets(shares, total_assets, storage.total_supply, ROUND_DOWN);
 
