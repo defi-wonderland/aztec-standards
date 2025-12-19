@@ -5,10 +5,10 @@ unconstrained fn total_assets_zero_initially() {
     // Setup with asset token
     let (env, vault_address, _owner, _recipient, _asset_address) = utils::setup_with_asset(false);
 
-    // totalAssets should be zero before any deposits
-    let total_assets = env.view_public(Token::at(vault_address).totalAssets());
+    // total_assets should be zero before any deposits
+    let total_assets = env.view_public(Token::at(vault_address).total_assets());
 
-    assert(total_assets == 0, "totalAssets should be zero initially");
+    assert(total_assets == 0, "total_assets should be zero initially");
 }
 
 #[test]
@@ -27,10 +27,10 @@ unconstrained fn total_assets_after_deposit() {
         deposit_amount,
     );
 
-    // totalAssets should equal the deposited amount
-    let total_assets = env.view_public(Token::at(vault_address).totalAssets());
+    // total_assets should equal the deposited amount
+    let total_assets = env.view_public(Token::at(vault_address).total_assets());
 
-    assert(total_assets == deposit_amount, "totalAssets should equal deposited amount");
+    assert(total_assets == deposit_amount, "total_assets should equal deposited amount");
 }
 
 #[test]
@@ -53,9 +53,9 @@ unconstrained fn total_assets_with_yield_accrued() {
     let yield_amount: u128 = 1000;
     env.call_public(owner, Token::at(asset_address).mint_to_public(vault_address, yield_amount));
 
-    // totalAssets should include the yield
-    let total_assets = env.view_public(Token::at(vault_address).totalAssets());
+    // total_assets should include the yield
+    let total_assets = env.view_public(Token::at(vault_address).total_assets());
     let expected_total = deposit_amount + yield_amount;
 
-    assert(total_assets == expected_total, "totalAssets should include yield");
+    assert(total_assets == expected_total, "total_assets should include yield");
 }

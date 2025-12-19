@@ -16,11 +16,11 @@ unconstrained fn convert_to_assets_initial_ratio() {
         deposit_amount,
     );
 
-    // At initial 1:1 ratio, convertToAssets should return the same amount
+    // At initial 1:1 ratio, convert_to_assets should return the same amount
     let shares_to_convert: u128 = 1000;
-    let assets = env.view_public(Token::at(vault_address).convertToAssets(shares_to_convert));
+    let assets = env.view_public(Token::at(vault_address).convert_to_assets(shares_to_convert));
 
-    assert(assets == shares_to_convert, "convertToAssets should return 1:1 at initial ratio");
+    assert(assets == shares_to_convert, "convert_to_assets should return 1:1 at initial ratio");
 }
 
 #[test]
@@ -29,7 +29,7 @@ unconstrained fn convert_to_assets_zero_amount() {
     let (env, vault_address, _owner, _recipient, _asset_address) = utils::setup_with_asset(false);
 
     // Zero shares should return zero assets
-    let assets = env.view_public(Token::at(vault_address).convertToAssets(0));
+    let assets = env.view_public(Token::at(vault_address).convert_to_assets(0));
 
     assert(assets == 0, "Zero shares should convert to zero assets");
 }
@@ -56,7 +56,7 @@ unconstrained fn convert_to_assets_with_yield_accrued() {
 
     // After yield, 1 share should be worth around 2 assets
     let shares_to_convert: u128 = 1000;
-    let assets = env.view_public(Token::at(vault_address).convertToAssets(shares_to_convert));
+    let assets = env.view_public(Token::at(vault_address).convert_to_assets(shares_to_convert));
 
     assert(assets > shares_to_convert, "After yield, more assets per share");
 }
