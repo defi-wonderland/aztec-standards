@@ -63,7 +63,8 @@ describe('Escrow', () => {
     escrowSalt = new Fr(logicMock.toBigInt());
 
     // Deploy an escrow contract
-    escrow = (await deployEscrow(escrowKeys.publicKeys, wallet, alice, escrowSalt)) as EscrowContract;
+    const { contract } = await deployEscrow(escrowKeys.publicKeys, wallet, alice, escrowSalt);
+    escrow = contract;
 
     escrowInstance = (await node.getContract(escrow.address)) as ContractInstanceWithAddress;
     if (escrowInstance) {

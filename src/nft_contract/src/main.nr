@@ -24,8 +24,8 @@ pub contract NFT {
             traits::{FromField, ToField},
         },
         state_vars::{
-            Map, private_set::PrivateSet, public_immutable::PublicImmutable,
-            public_mutable::PublicMutable,
+            Map, Owned, private_set::PrivateSet, public_immutable::PublicImmutable,
+            public_mutable::PublicMutable, StateVariable,
         },
         utils::comparison::Comparator,
     };
@@ -46,7 +46,7 @@ pub contract NFT {
     struct Storage<Context> {
         symbol: PublicImmutable<FieldCompressedString, Context>,
         name: PublicImmutable<FieldCompressedString, Context>,
-        private_nfts: Map<AztecAddress, PrivateSet<NFTNote, Context>, Context>,
+        private_nfts: Owned<PrivateSet<NFTNote, Context>, Context>,
         nft_exists: Map<Field, PublicMutable<bool, Context>, Context>,
         public_owners: Map<Field, PublicMutable<AztecAddress, Context>, Context>,
         minter: PublicImmutable<AztecAddress, Context>,
@@ -338,7 +338,7 @@ pub contract NFT {
         let mut owned_nft_ids = [0; MAX_NOTES_PER_PAGE];
         for i in 0..options.limit {
             if i < nfts.len() {
-                owned_nft_ids[i] = nfts.get_unchecked(i).get_token_id();
+                owned_nft_ids[i] = nfts.get_unchecked(i).token_id;
             }
         }
         let page_limit_reached = nfts.len() == options.limit;
@@ -359,8 +359,7 @@ pub contract NFT {
         _validate_minter(self.msg_sender().unwrap(), self.storage.minter.read());
 
         self.enqueue_self.set_nft_exists_internal(token_id, true);
-        self.storage.private_nfts.at(to).insert(NFTNote::new(token_id, to)).emit(
-            to,
+        self.storage.private_nfts.at(to).insert(NFTNote { token_id }).deliver(
             MessageDelivery.CONSTRAINED_ONCHAIN,
         );
     }
@@ -456,7 +455,7 @@ pub contract NFT {
     ) -> PartialNFTNote {
         let commitment = NFTNote::partial(
             to,
-            self.storage.private_nfts.at(to).storage_slot,
+            self.storage.private_nfts.get_storage_slot(),
             self.context,
             to,
             completer,
@@ -472,9 +471,8 @@ pub contract NFT {
     /// @param token_id The id of the token to update
     #[internal("private")]
     fn _update_private_token_owner(to: AztecAddress, token_id: Field) {
-        let new_note = NFTNote::new(token_id, to);
-        self.storage.private_nfts.at(to).insert(new_note).emit(
-            to,
+        let new_note = NFTNote { token_id };
+        self.storage.private_nfts.at(to).insert(new_note).deliver(
             MessageDelivery.CONSTRAINED_ONCHAIN,
         );
     }

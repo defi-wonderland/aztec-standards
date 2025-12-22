@@ -4,6 +4,7 @@ import { PublicKeys } from '@aztec/aztec.js/keys';
 import { type AztecNode } from '@aztec/aztec.js/node';
 import { AztecAddress } from '@aztec/aztec.js/addresses';
 import { type TestWallet } from '@aztec/test-wallet/server';
+import { BlockNumber } from '@aztec/foundation/branded-types';
 import { ContractDeployer } from '@aztec/aztec.js/deployment';
 import { type AztecLMDBStoreV2 } from '@aztec/kv-store/lmdb-v2';
 import { Fr, type GrumpkinScalar } from '@aztec/aztec.js/fields';
@@ -307,16 +308,17 @@ describe('Logic - Single PXE', () => {
       const blockNumber = tx.blockNumber!;
 
       const events = await wallet.getPrivateEvents<EscrowDetailsLogContent>(
-        logic.address,
         TestLogicContract.events.EscrowDetailsLogContent,
-        blockNumber,
-        1,
-        [bob],
+        {
+          contractAddress: logic.address,
+          fromBlock: blockNumber,
+          scopes: [bob],
+        },
       );
 
       expect(events.length).toBe(1);
 
-      const event = events[0];
+      const event = events[0].event;
 
       expect(event.escrow).toEqual(escrow.address);
       expect(event.master_secret_keys.nsk_m).toEqual(escrowKeys.masterNullifierSecretKey.toBigInt());
@@ -337,23 +339,25 @@ describe('Logic - Single PXE', () => {
 
       // Get the events for both bob and carl from bob's wallet for simplicity
       const events = await wallet.getPrivateEvents<EscrowDetailsLogContent>(
-        logic.address,
         TestLogicContract.events.EscrowDetailsLogContent,
-        blockNumberBob,
-        numberOfBlocks,
-        [bob, carl],
+        {
+          contractAddress: logic.address,
+          fromBlock: blockNumberBob,
+          toBlock: BlockNumber(blockNumberBob + numberOfBlocks),
+          scopes: [bob, carl],
+        },
       );
 
       expect(events.length).toBe(2);
 
-      const eventForBob = events[0];
+      const eventForBob = events[0].event;
       expect(eventForBob.escrow).toEqual(escrow.address);
       expect(eventForBob.master_secret_keys.nsk_m).toEqual(escrowKeys.masterNullifierSecretKey.toBigInt());
       expect(eventForBob.master_secret_keys.ivsk_m).toEqual(escrowKeys.masterIncomingViewingSecretKey.toBigInt());
       expect(eventForBob.master_secret_keys.ovsk_m).toEqual(escrowKeys.masterOutgoingViewingSecretKey.toBigInt());
       expect(eventForBob.master_secret_keys.tsk_m).toEqual(escrowKeys.masterTaggingSecretKey.toBigInt());
 
-      const eventForCarl = events[1];
+      const eventForCarl = events[1].event;
       expect(eventForCarl.escrow).toEqual(escrow.address);
       expect(eventForCarl.master_secret_keys.nsk_m).toEqual(escrowKeys.masterNullifierSecretKey.toBigInt());
       expect(eventForCarl.master_secret_keys.ivsk_m).toEqual(escrowKeys.masterIncomingViewingSecretKey.toBigInt());

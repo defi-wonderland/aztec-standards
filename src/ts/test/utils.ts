@@ -1,12 +1,14 @@
 import { Note } from '@aztec/aztec.js/note';
 import { createLogger } from '@aztec/aztec.js/log';
 import { AztecAddress } from '@aztec/aztec.js/addresses';
+import { Aes128 } from '@aztec/foundation/crypto/aes128';
 import { deriveEcdhSharedSecret } from '@aztec/stdlib/logs';
 import { type Wallet, AccountManager } from '@aztec/aztec.js/wallet';
 import { Fr, type GrumpkinScalar, Point } from '@aztec/aztec.js/fields';
 import { createAztecNodeClient, waitForNode } from '@aztec/aztec.js/node';
+import { type ContractInstanceWithAddress } from '@aztec/aztec.js/contracts';
 import { PRIVATE_LOG_CIPHERTEXT_LEN, GeneratorIndex } from '@aztec/constants';
-import { Aes128, poseidon2HashWithSeparator } from '@aztec/foundation/crypto';
+import { poseidon2HashWithSeparator } from '@aztec/foundation/crypto/poseidon';
 import { registerInitialLocalNetworkAccountsInWallet, TestWallet } from '@aztec/test-wallet/server';
 import { deriveMasterIncomingViewingSecretKey, PublicKeys, computeAddressSecret } from '@aztec/stdlib/keys';
 
@@ -25,9 +27,8 @@ import {
   computeContractAddressFromInstance,
 } from '@aztec/stdlib/contract';
 
-import { PXECreationOptions, type PXE } from '@aztec/pxe/server';
 import { createStore } from '@aztec/kv-store/lmdb-v2';
-import { createPXE, getPXEConfig } from '@aztec/pxe/server';
+import { getPXEConfig } from '@aztec/pxe/server';
 import { type AztecLMDBStoreV2 } from '@aztec/kv-store/lmdb-v2';
 
 import { TokenContract, TokenContractArtifact } from '../../../artifacts/Token.js';
@@ -55,7 +56,6 @@ fullConfig.proverEnabled = false;
 export const setupTestSuite = async (suffix?: string) => {
   const storeDir = suffix ? `store-${suffix}` : 'store';
 
-  const aztecNode = createAztecNodeClient(NODE_URL);
   fullConfig = { ...fullConfig, dataDirectory: storeDir, dataStoreMapSizeKb: 1e6 };
 
   // Create the store for manual cleanups
@@ -64,13 +64,13 @@ export const setupTestSuite = async (suffix?: string) => {
     dataStoreMapSizeKb: 1e6,
   });
 
-  const wallet: TestWallet = await TestWallet.create(aztecNode, fullConfig, { store });
+  const wallet: TestWallet = await TestWallet.create(node, fullConfig, { store });
 
   const accounts: AztecAddress[] = await registerInitialLocalNetworkAccountsInWallet(wallet);
 
   return {
     store,
-    node: aztecNode,
+    node,
     wallet,
     accounts,
   };
@@ -78,8 +78,7 @@ export const setupTestSuite = async (suffix?: string) => {
 
 // --- Token Utils ---
 export const expectUintNote = (note: Note, amount: bigint, owner: AztecAddress) => {
-  expect(note.items[0]).toEqual(new Fr(owner.toBigInt()));
-  expect(note.items[1]).toEqual(new Fr(amount));
+  expect(note.items[0]).toEqual(new Fr(amount));
 };
 
 export const expectTokenBalances = async (
@@ -243,11 +242,17 @@ export async function deployEscrow(
   salt: Fr = Fr.random(),
   args: unknown[] = [],
   constructor?: string,
-): Promise<EscrowContract> {
-  const contract = await Contract.deployWithPublicKeys(publicKeys, wallet, EscrowContractArtifact, args, constructor)
+): Promise<{ contract: EscrowContract; instance: ContractInstanceWithAddress }> {
+  const { contract, instance } = await Contract.deployWithPublicKeys(
+    publicKeys,
+    wallet,
+    EscrowContractArtifact,
+    args,
+    constructor,
+  )
     .send({ contractAddressSalt: salt, universalDeploy: true, from: deployer })
-    .deployed();
-  return contract as EscrowContract;
+    .wait();
+  return { contract: contract as EscrowContract, instance };
 }
 
 // --- General Utils ---
@@ -313,8 +318,8 @@ export async function initializeTransferCommitment(
     toIvskM,
   );
 
-  // The commitment is the fourth field in the decrypted raw log
-  return decryptedRawLog[3].toBigInt();
+  // The commitment is the fifth field in the decrypted raw log
+  return decryptedRawLog[4].toBigInt();
 }
 
 /**
@@ -348,8 +353,8 @@ export async function initializeTransferCommitmentNFT(
     toIvskM,
   );
 
-  // The commitment is the fourth field in the decrypted raw log
-  return decryptedRawLog[3].toBigInt();
+  // The commitment is the fifth field in the decrypted raw log
+  return decryptedRawLog[4].toBigInt();
 }
 
 // --- Logic Contract Utils ---

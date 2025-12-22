@@ -1,7 +1,7 @@
 use crate::{test::utils::{self, mint_amount}, Token};
 use aztec::test::helpers::authwit as authwit_cheatcodes;
 
-#[test(should_fail_with = "Contract execution has reverted: No bytecode found, or limit encountered for max calls to unique contract class IDs. Contract address: 0x0000000000000000000000000000000000000000000000000000000000000000.")]
+#[test(should_fail_with = "Contract execution has reverted: Contract 0x0 is not deployed")]
 unconstrained fn issue_public_to_private_without_asset() {
     let (env, vault_address, owner, recipient, _) = utils::setup_with_minter(false);
 

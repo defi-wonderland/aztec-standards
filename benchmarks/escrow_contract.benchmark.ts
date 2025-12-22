@@ -4,7 +4,7 @@ import { deriveKeys } from '@aztec/stdlib/keys';
 import type { Wallet } from '@aztec/aztec.js/wallet';
 import { type AztecNode } from '@aztec/aztec.js/node';
 import { AztecAddress } from '@aztec/aztec.js/addresses';
-import { type ContractInstanceWithAddress } from '@aztec/aztec.js/contracts';
+import type { AztecLMDBStoreV2 } from '@aztec/kv-store/lmdb-v2';
 import type { ContractFunctionInteractionCallIntent } from '@aztec/aztec.js/authorization';
 
 // Import the new Benchmark base class and context
@@ -20,7 +20,8 @@ import { NFTContract } from '../artifacts/NFT.js';
 import { setupTestSuite, deployEscrow, deployTokenWithMinter, deployNFTWithMinter } from '../src/ts/test/utils.js';
 
 // Extend the BenchmarkContext from the new package
-interface TokenBenchmarkContext extends BenchmarkContext {
+interface EscrowBenchmarkContext extends BenchmarkContext {
+  store: AztecLMDBStoreV2;
   node: AztecNode;
   wallet: Wallet;
   deployer: AztecAddress;
@@ -33,22 +34,26 @@ interface TokenBenchmarkContext extends BenchmarkContext {
 }
 
 // Use export default class extending Benchmark
-export default class TokenContractBenchmark extends Benchmark {
+export default class EscrowContractBenchmark extends Benchmark {
   /**
    * Sets up the benchmark environment for the TokenContract.
    * Creates wallet, gets accounts, and deploys the contract.
    */
-  async setup(): Promise<TokenBenchmarkContext> {
-    const { node, wallet, accounts } = await setupTestSuite('bench-escrow');
+  async setup(): Promise<EscrowBenchmarkContext> {
+    const { store, node, wallet, accounts } = await setupTestSuite('bench-escrow');
     const [deployer, logicMock] = accounts;
 
     // Setup escrow
     const escrowSk = Fr.random();
     const escrowKeys = await deriveKeys(escrowSk);
     const escrowSalt = new Fr(logicMock.toBigInt());
-    const escrowContract = (await deployEscrow(escrowKeys.publicKeys, wallet, deployer, escrowSalt)) as EscrowContract;
+    const { contract: escrowContract, instance: escrowInstance } = await deployEscrow(
+      escrowKeys.publicKeys,
+      wallet,
+      deployer,
+      escrowSalt,
+    );
 
-    const escrowInstance = (await node.getContract(escrowContract.address)) as ContractInstanceWithAddress;
     if (escrowInstance) {
       await wallet.registerContract(escrowInstance, EscrowContractArtifact, escrowSk);
     }
@@ -73,14 +78,25 @@ export default class TokenContractBenchmark extends Benchmark {
       .send({ from: deployer })
       .wait();
 
-    return { node, wallet, deployer, accounts, tokenContract, nftContract, escrowContract, tokenAmount, tokenId };
+    return {
+      store,
+      node,
+      wallet,
+      deployer,
+      accounts,
+      tokenContract,
+      nftContract,
+      escrowContract,
+      tokenAmount,
+      tokenId,
+    };
   }
 
   /**
    * Returns the list of TokenContract methods to be benchmarked.
    */
   getMethods(
-    context: TokenBenchmarkContext,
+    context: EscrowBenchmarkContext,
   ): Array<NamedBenchmarkedInteraction | ContractFunctionInteractionCallIntent> {
     const { accounts, tokenContract, nftContract, escrowContract, tokenId, wallet } = context;
     const logicMock = accounts[1];
@@ -109,5 +125,9 @@ export default class TokenContractBenchmark extends Benchmark {
     ];
 
     return methods.filter(Boolean);
+  }
+
+  async teardown(context: EscrowBenchmarkContext): Promise<void> {
+    await context.store.delete();
   }
 }

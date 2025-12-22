@@ -1,6 +1,7 @@
 import type { Wallet } from '@aztec/aztec.js/wallet';
 import { AztecAddress } from '@aztec/aztec.js/addresses';
 import { AuthWitness } from '@aztec/aztec.js/authorization';
+import type { AztecLMDBStoreV2 } from '@aztec/kv-store/lmdb-v2';
 import type { ContractFunctionInteractionCallIntent } from '@aztec/aztec.js/authorization';
 
 import { parseUnits } from 'viem';
@@ -18,6 +19,7 @@ import {
 
 // Extend the BenchmarkContext from the new package
 interface TokenBenchmarkContext extends BenchmarkContext {
+  store: AztecLMDBStoreV2;
   wallet: Wallet;
   deployer: AztecAddress;
   accounts: AztecAddress[];
@@ -40,7 +42,7 @@ export default class TokenContractBenchmark extends Benchmark {
    * Creates wallet, gets accounts, and deploys the contract.
    */
   async setup(): Promise<TokenBenchmarkContext> {
-    const { wallet, accounts } = await setupTestSuite();
+    const { store, wallet, accounts } = await setupTestSuite('bench-tokenized-vault');
     const [deployer] = accounts;
     const [deployedBaseContract, deployedAssetContract] = await deployVaultAndAssetWithMinter(wallet, deployer);
     const vaultContract = TokenContract.at(deployedBaseContract.address, wallet);
@@ -95,7 +97,7 @@ export default class TokenContractBenchmark extends Benchmark {
       authWitnesses.push(authWitness);
     }
 
-    return { wallet, deployer, accounts, vaultContract, assetContract, authWitnesses };
+    return { store, wallet, deployer, accounts, vaultContract, assetContract, authWitnesses };
   }
 
   /**
@@ -235,5 +237,9 @@ export default class TokenContractBenchmark extends Benchmark {
     ];
 
     return methods.filter(Boolean);
+  }
+
+  async teardown(context: TokenBenchmarkContext): Promise<void> {
+    await context.store.delete();
   }
 }
