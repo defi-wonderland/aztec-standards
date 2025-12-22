@@ -54,9 +54,10 @@ unconstrained fn convert_to_shares_with_yield_accrued() {
     let yield_amount: u128 = mint_amount;
     env.call_public(owner, Token::at(asset_address).mint_to_public(vault_address, yield_amount));
 
-    // After yield, 1 share should be worth 2 assets
+    // After yield (2x assets), 2000 assets should convert to 1000 shares
     let assets_to_convert: u128 = 2000;
+    let expected_shares: u128 = 1000;
     let shares = env.view_public(Token::at(vault_address).convert_to_shares(assets_to_convert));
 
-    assert(shares < assets_to_convert, "After yield, fewer shares per asset");
+    assert(shares == expected_shares, "2000 assets should convert to 1000 shares");
 }
