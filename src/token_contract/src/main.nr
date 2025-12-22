@@ -39,6 +39,9 @@ pub contract Token {
     global ROUND_DOWN: bool = false;
     global ROUND_UP: bool = true;
 
+    // The offset used to prevent inflation attacks
+    global OFFSET: u128 = 1;
+
     /// @param name The name of the token
     /// @param symbol The symbol of the token
     /// @param decimals The number of decimals of the token
@@ -1836,6 +1839,6 @@ pub contract Token {
     /// @return The offset value
     #[contract_library_method]
     fn offset() -> u128 {
-        1
+        OFFSET
     }
 }
