@@ -2149,12 +2149,11 @@ pub contract Token {
     }
 
     /// @dev Returns the maximum amount of the underlying asset that can be deposited into the Vault for the receiver, through a deposit call.
-    /// @param receiver The address of the receiver
+    /// @dev The receiver parameter is accepted for ERC-4626 compatibility and future extensibility, but is not used by the default implementation.
+    /// @param _receiver The address of the receiver
     /// @return The maximum amount of assets that can be deposited
     #[contract_library_method]
-    fn _max_deposit(receiver: AztecAddress) -> u128 {
-        // Silence unused parameter warning while keeping the function signature
-        let _ = receiver;
+    fn _max_deposit(_receiver: AztecAddress) -> u128 {
         MAX_U128_VALUE
     }
 
@@ -2177,12 +2176,11 @@ pub contract Token {
     }
 
     /// @dev Returns the maximum amount of the Vault shares that can be issued for the receiver, through a mint call.
-    /// @param receiver The address of the receiver
+    /// @dev The receiver parameter is accepted for ERC-4626 compatibility and future extensibility, but is not used by the default implementation.
+    /// @param _receiver The address of the receiver
     /// @return The maximum amount of shares that can be issued
     #[contract_library_method]
-    fn _max_issue(receiver: AztecAddress) -> u128 {
-        // Silence unused parameter warning while keeping the function signature
-        let _ = receiver;
+    fn _max_issue(_receiver: AztecAddress) -> u128 {
         MAX_U128_VALUE
     }
 
