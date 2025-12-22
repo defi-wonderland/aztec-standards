@@ -873,10 +873,6 @@ pub contract Token {
     fn deposit_public_to_public(from: AztecAddress, to: AztecAddress, assets: u128, _nonce: Field) {
         _validate_from_public(&mut context, from);
 
-        // Validate max deposit limit
-        let max_deposit = _max_deposit(to);
-        assert(assets <= max_deposit, "Exceeded max deposit");
-
         // Calculate shares to mint
         let total_assets = _total_assets(&mut context, storage.asset);
         let shares = _convert_to_shares(assets, total_assets, storage.total_supply, ROUND_DOWN);
@@ -1090,10 +1086,6 @@ pub contract Token {
     ) {
         _validate_from_public(&mut context, from);
 
-        // Validate max issue limit
-        let max_issue = _max_issue(to);
-        assert(shares <= max_issue, "Exceeded max issue");
-
         // Calculate assets required
         let total_assets = _total_assets(&mut context, storage.asset);
         let assets = _convert_to_assets(shares, total_assets, storage.total_supply, ROUND_UP);
@@ -1236,16 +1228,6 @@ pub contract Token {
         _nonce: Field,
     ) {
         _validate_from_public(&mut context, from);
-
-        // Validate max withdraw limit
-        let max_withdraw = _max_withdraw(
-            from,
-            storage.public_balances,
-            &mut context,
-            storage.asset,
-            storage.total_supply,
-        );
-        assert(assets <= max_withdraw, "Exceeded max withdraw");
 
         // Calculate shares to burn
         let total_assets = _total_assets(&mut context, storage.asset);
@@ -1443,10 +1425,6 @@ pub contract Token {
     #[external("public")]
     fn redeem_public_to_public(from: AztecAddress, to: AztecAddress, shares: u128, _nonce: Field) {
         _validate_from_public(&mut context, from);
-
-        // Validate max redeem limit
-        let max_redeem = _max_redeem(from, storage.public_balances);
-        assert(shares <= max_redeem, "Exceeded max redeem");
 
         // Calculate assets to redeem
         let total_assets = _total_assets(&mut context, storage.asset);
@@ -1667,9 +1645,10 @@ pub contract Token {
     #[external("public")]
     #[view]
     fn max_withdraw(owner: AztecAddress) -> u128 {
-        _preview_redeem(
-            _max_redeem(owner, storage.public_balances),
+        _max_withdraw(
+            owner,
             &mut context,
+            storage.public_balances,
             storage.asset,
             storage.total_supply,
         )
@@ -1727,16 +1706,6 @@ pub contract Token {
     #[external("public")]
     #[internal]
     fn settle_withdraw_public_to_private_internal(from: AztecAddress, assets: u128) {
-        // Validate max withdraw limit
-        let max_withdraw = _max_withdraw(
-            from,
-            storage.public_balances,
-            &mut context,
-            storage.asset,
-            storage.total_supply,
-        );
-        assert(assets <= max_withdraw, "Exceeded max withdraw");
-
         let total_assets = _total_assets(&mut context, storage.asset);
         let shares = _convert_to_shares(assets, total_assets, storage.total_supply, ROUND_UP);
 
@@ -1782,10 +1751,6 @@ pub contract Token {
     #[external("public")]
     #[internal]
     fn settle_deposit_private_to_public_internal(to: AztecAddress, assets: u128) {
-        // Validate max deposit limit
-        let max_deposit = _max_deposit(to);
-        assert(assets <= max_deposit, "Exceeded max deposit");
-
         let total_assets = _total_assets(&mut context, storage.asset) - assets;
         let shares = _convert_to_shares(assets, total_assets, storage.total_supply, ROUND_DOWN);
 
@@ -1976,10 +1941,6 @@ pub contract Token {
         max_assets: u128,
         to: AztecAddress,
     ) {
-        // Validate max issue limit
-        let max_issue = _max_issue(to);
-        assert(shares <= max_issue, "Exceeded max issue");
-
         let total_assets = _total_assets(&mut context, storage.asset);
         let assets = _convert_to_assets(
             shares,
@@ -2070,10 +2031,6 @@ pub contract Token {
         shares: u128,
         min_assets: u128,
     ) {
-        // Validate max redeem limit
-        let max_redeem = _max_redeem(from, storage.public_balances);
-        assert(shares <= max_redeem, "Exceeded max redeem");
-
         let total_assets = _total_assets(&mut context, storage.asset);
         let assets = _convert_to_assets(shares, total_assets, storage.total_supply, ROUND_DOWN);
 
@@ -2270,8 +2227,8 @@ pub contract Token {
     #[contract_library_method]
     unconstrained fn _max_withdraw(
         owner: AztecAddress,
-        public_balances: Map<AztecAddress, PublicMutable<u128, &mut PublicContext>, &mut PublicContext>,
         context: &mut PublicContext,
+        public_balances: Map<AztecAddress, PublicMutable<u128, &mut PublicContext>, &mut PublicContext>,
         asset: PublicImmutable<AztecAddress, &mut PublicContext>,
         total_supply: PublicMutable<u128, &mut PublicContext>,
     ) -> u128 {
