@@ -7,6 +7,9 @@ use crate::{
 };
 use aztec::protocol_types::address::AztecAddress;
 
+// TODO: When salt setting in env deployment is supported we can precompute the vault address and
+// compute the authwit before deployment. Deployment use constructor_with_asset for now.
+
 #[test]
 unconstrained fn vault_with_initial_deposit_success() {
     let initial_deposit: u128 = 1000;

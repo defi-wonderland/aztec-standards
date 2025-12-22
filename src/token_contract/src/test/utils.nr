@@ -102,6 +102,9 @@ pub unconstrained fn setup_with_asset(
     (env, vault_contract_address, owner, recipient, asset_contract_address)
 }
 
+// TODO: When salt setting in env deployment is supported we can precompute the vault address and
+// compute the authwit before deployment. Deployment use constructor_with_asset for now.
+
 pub unconstrained fn setup_with_asset_initial_deposit(
     with_account_contracts: bool,
     initial_deposit: u128,
