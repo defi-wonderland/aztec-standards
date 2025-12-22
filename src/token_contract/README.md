@@ -45,6 +45,33 @@ fn constructor_with_asset(
 ) { /* ... */ }
 ```
 
+### constructor_with_asset_initial_deposit
+```rust
+/// @notice Initializes the token with an asset and an initial deposit
+/// @dev Since this constructor doesn't set a minter address the mint functions will be disabled
+/// @dev The depositor is the address that will be used to sign the authwit for the transfer of the initial deposit
+/// @param name The name of the token
+/// @param symbol The symbol of the token
+/// @param decimals The number of decimals of the token
+/// @param asset The underlying asset for the yield bearing token
+/// @param upgrade_authority The address of the upgrade authority (zero address if not upgradeable)
+/// @param initial_deposit The initial deposit amount of the asset
+/// @param depositor The address of the initial depositor of the assets
+/// @param _nonce The nonce used for authwitness for the transfer of the initial deposit
+#[public]
+#[initializer]
+fn constructor_with_asset_initial_deposit(
+    name: str<31>,
+    symbol: str<31>,
+    decimals: u8,
+    asset: AztecAddress,
+    upgrade_authority: AztecAddress,
+    initial_deposit: u128,
+    depositor: AztecAddress,
+    _nonce: Field,
+) { /* ... */ }
+```
+
 ### constructor_with_initial_supply
 ```rust
 /// @notice Initializes the token with an initial supply
