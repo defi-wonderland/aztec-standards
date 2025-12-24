@@ -17,7 +17,7 @@ import {
   getContractClassFromArtifact,
 } from '@aztec/aztec.js/contracts';
 import { AuthWitness, type ContractFunctionInteractionCallIntent } from '@aztec/aztec.js/authorization';
-import { getDefaultInitializer } from '@aztec/stdlib/abi';
+import { getDefaultInitializer, getInitializer } from '@aztec/stdlib/abi';
 import {
   CompleteAddress,
   computeInitializationHash,
@@ -439,6 +439,117 @@ export async function deriveContractAddress(
   });
 
   return { address, initializationHash, saltedInitializationHash };
+}
+
+/**
+ * Predicts the contract address for a given artifact with a specific constructor.
+ * @param artifact - The contract artifact.
+ * @param constructorName - The name of the constructor function to use.
+ * @param constructorArgs - The arguments to pass to the constructor.
+ * @param deployer - The address of the deployer.
+ * @param salt - The salt to use for the contract address.
+ * @param publicKeys - The public keys to use for the contract.
+ * @returns The predicted contract address and salt.
+ */
+export async function deriveContractAddressWithConstructor(
+  artifact: any,
+  constructorName: string,
+  constructorArgs: any[],
+  deployer: AztecAddress,
+  salt: Fr = Fr.random(),
+  publicKeys?: PublicKeys,
+) {
+  if (!publicKeys) {
+    publicKeys = PublicKeys.default();
+  }
+
+  const contractClass = await getContractClassFromArtifact(artifact);
+  const contractClassId = contractClass.id;
+
+  const constructorArtifact = getInitializer(artifact, constructorName);
+  if (!constructorArtifact) {
+    throw new Error(`Constructor ${constructorName} not found in artifact`);
+  }
+
+  const initializationHash = await computeInitializationHash(constructorArtifact, constructorArgs);
+  const saltedInitializationHash = await computeSaltedInitializationHash({
+    initializationHash,
+    salt,
+    deployer,
+  });
+
+  const address = await computeContractAddressFromInstance({
+    originalContractClassId: contractClassId,
+    saltedInitializationHash: saltedInitializationHash,
+    publicKeys: publicKeys,
+  });
+
+  return { address, salt, initializationHash, saltedInitializationHash };
+}
+
+/**
+ * Deploys the Token contract as a vault with an initial deposit.
+ * This requires precomputing the vault address to set up authwit before deployment.
+ * @param wallet - The wallet to deploy the contract with.
+ * @param deployer - The account that will deploy and provide the initial deposit.
+ * @param assetContract - The asset token contract to use.
+ * @param initialDeposit - The amount of assets to deposit initially (locked in vault).
+ * @param depositor - The address that will do the initial deposit and sign the authwit.
+ * @returns The deployed vault contract.
+ */
+export async function deployVaultWithInitialDeposit(
+  wallet: Wallet,
+  deployer: AztecAddress,
+  assetContract: TokenContract,
+  initialDeposit: bigint,
+  depositor: AztecAddress,
+): Promise<TokenContract> {
+  const salt = Fr.random();
+
+  // Constructor args for constructor_with_asset_initial_deposit
+  const constructorArgs = [
+    'VaultToken', // name
+    'VT', // symbol
+    6, // decimals
+    assetContract.address, // asset
+    AztecAddress.ZERO, // upgrade_authority
+    initialDeposit, // initial_deposit
+    depositor, // depositor
+    0, // nonce
+  ];
+
+  // Derive the vault address before deployment
+  const { address: vaultAddress } = await deriveContractAddressWithConstructor(
+    TokenContractArtifact,
+    'constructor_with_asset_initial_deposit',
+    constructorArgs,
+    deployer,
+    salt,
+  );
+
+  // Set up authwit for the vault to transfer assets from deployer during constructor
+  // The constructor ALWAYS calls transfer_public_to_public, even when initial_deposit = 0
+  const transferAction = assetContract.methods.transfer_public_to_public(depositor, vaultAddress, initialDeposit, 0);
+  await setPublicAuthWit(vaultAddress, transferAction, depositor, wallet as TestWallet);
+
+  // Deploy the vault with initial deposit
+  const vaultContract = await Contract.deploy(
+    wallet,
+    TokenContractArtifact,
+    constructorArgs,
+    'constructor_with_asset_initial_deposit',
+  )
+    .send({ contractAddressSalt: salt, from: deployer })
+    .deployed();
+
+  // Verify the address matches
+  if (!vaultContract.address.equals(vaultAddress)) {
+    throw new Error(
+      `Vault address mismatch: expected ${vaultAddress.toString()}, got ${vaultContract.address.toString()}`,
+    );
+  }
+
+  return vaultContract as TokenContract;
 }
 
 /**

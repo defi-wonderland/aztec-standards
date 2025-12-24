@@ -102,6 +102,57 @@ pub unconstrained fn setup_with_asset(
     (env, vault_contract_address, owner, recipient, asset_contract_address)
 }
 
+// TODO: When salt setting in env deployment is supported we can precompute the vault address and
+// compute the authwit before deployment. Deployment use constructor_with_asset for now.
+
+pub unconstrained fn setup_with_asset_initial_deposit(
+    with_account_contracts: bool,
+    initial_deposit: u128,
+) -> (TestEnvironment, AztecAddress, AztecAddress, AztecAddress, AztecAddress, AztecAddress) {
+    // Use setup_with_minter to get the asset token and accounts
+    let (mut env, asset_contract_address, owner, recipient, minter) =
+        setup_with_minter(with_account_contracts);
+
+    // Mint initial_deposit to owner
+    env.call_public(minter, Token::at(asset_contract_address).mint_to_public(owner, initial_deposit));
+
+    // Deploy vault with constructor_with_asset
+    let vault_initializer_call_interface = Token::interface().constructor_with_asset(
+        "Vault00000000000000000000000000",
+        "VAULT00000000000000000000000000",
+        18,
+        asset_contract_address,
+        AztecAddress::zero(),
+    );
+    let vault_contract_address = env.deploy("@token_contract/Token").with_public_initializer(
+        owner,
+        vault_initializer_call_interface,
+    );
+
+    // Authorize vault to transfer assets from owner
+    authorize_transfer_public_to_public(
+        env,
+        asset_contract_address,
+        vault_contract_address,
+        owner,
+        initial_deposit,
+        0,
+    );
+
+    // Deposit to vault, with shares going to vault address itself (locked shares)
+    env.call_public(
+        owner,
+        Token::at(vault_contract_address).deposit_public_to_public(
+            owner,
+            vault_contract_address,
+            initial_deposit,
+            0,
+        ),
+    );
+
+    (env, vault_contract_address, owner, recipient, asset_contract_address, minter)
+}
+
 pub unconstrained fn deploy_token_with_initial_supply(
     env: &mut TestEnvironment,
     owner: AztecAddress,

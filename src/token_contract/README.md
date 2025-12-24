@@ -45,6 +45,33 @@ fn constructor_with_asset(
 ) { /* ... */ }
 ```
 
+### constructor_with_asset_initial_deposit
+```rust
+/// @notice Initializes the token with an asset and an initial deposit
+/// @dev Since this constructor doesn't set a minter address the mint functions will be disabled
+/// @dev The depositor is the address that will be used to sign the authwit for the transfer of the initial deposit
+/// @param name The name of the token
+/// @param symbol The symbol of the token
+/// @param decimals The number of decimals of the token
+/// @param asset The underlying asset for the yield bearing token
+/// @param upgrade_authority The address of the upgrade authority (zero address if not upgradeable)
+/// @param initial_deposit The initial deposit amount of the asset
+/// @param depositor The address of the initial depositor of the assets
+/// @param _nonce The nonce used for authwitness for the transfer of the initial deposit
+#[public]
+#[initializer]
+fn constructor_with_asset_initial_deposit(
+    name: str<31>,
+    symbol: str<31>,
+    decimals: u8,
+    asset: AztecAddress,
+    upgrade_authority: AztecAddress,
+    initial_deposit: u128,
+    depositor: AztecAddress,
+    _nonce: Field,
+) { /* ... */ }
+```
+
 ### constructor_with_initial_supply
 ```rust
 /// @notice Initializes the token with an initial supply
@@ -356,19 +383,19 @@ fn burn_private(from: AztecAddress, amount: u128, nonce: Field) { /* ... */ }
 
 The Token contract (as of now the Tokenized Vault) follows the [AIP-4626: Tokenized Vault Standard](https://forum.aztec.network/t/request-for-comments-aip-4626-tokenized-vault/8079) when configured appropriately. Feel free to review and discuss the specification on the Aztec forum.
 
-## Tokenized Vault Functions
+### Tokenized Vault Functions
 
-This contract also implements yield-bearing vault functionality when initialized with `constructor_with_asset`. The vault allows users to deposit underlying assets and receive shares representing their proportional ownership of the growing asset pool. The design is an adaptation of the [ERC-4626](https://eips.ethereum.org/EIPS/eip-4626). While the Tokenized Vault contract publicly holds the underlying asset deposits and accrued yield, shares can be held either publicly or privately. Likewise, underlying assets can be deposited from or withdrawn to both public and private balances.
+This contract also implements yield-bearing vault functionality when initialized with `constructor_with_asset` or `constructor_with_asset_initial_deposit`. The vault allows users to deposit underlying assets and receive shares representing their proportional ownership of the growing asset pool. The design is an adaptation of the [ERC-4626](https://eips.ethereum.org/EIPS/eip-4626). While the Tokenized Vault contract publicly holds the underlying asset deposits and accrued yield, shares can be held either publicly or privately. Likewise, underlying assets can be deposited from or withdrawn to both public and private balances.
 
 > ⚠️ **WARNING — Private Balance Loss**
 >
-> any asset tokens transfered to the Tokenized Vault's private balance will be lost forever, as the contract doesn't have keys to spend a private balance nor any recovery mechanism. Yield must be sent to the Vault's public balance.
+> any asset tokens transferred to the Tokenized Vault's private balance will be lost forever, as the contract doesn't have keys to spend a private balance nor any recovery mechanism. Yield must be sent to the Vault's public balance.
 
 > ⚠️ **WARNING — Experimental Feature**
 >
 > the AIP-4626 functionality of this contract is not yet production ready. Use it at your own risk. In particular there is a known overflow issue in the asset<>share conversion logic used on deposits and withdrawals. This can corrupt balances for sufficiently large inputs.
 
-### Function Patterns
+#### Function Patterns
 
 Some Tokenized Vault private methods require both `assets` and `shares` amounts as inputs because the exchange rate cannot be computed within the private context. To accommodate this, two complementary patterns are provided:
 
@@ -384,7 +411,7 @@ Some Tokenized Vault private methods require both `assets` and `shares` amounts 
 - Best for volatile exchange rates and when slippage could cause significant losses.
 - May be more expensive due to the additional settlement logic.
 
-### `max_*` and `preview_*` patterns
+##### `max_*` and `preview_*` patterns
 
 Because the vault supports both public and private flows, the `max_*` and `preview_*` families should be interpreted as **helper interfaces** rather than hard guarantees.
 
@@ -397,7 +424,7 @@ Because the vault supports both public and private flows, the `max_*` and `previ
 **Preview Pattern (`preview_deposit`, `preview_issue`, `preview_withdraw`, `preview_redeem`)**
 - These functions simulate outcomes using the **current public state** (e.g., `total_assets`, `total_supply`) and the same conversion logic as the corresponding operation.
 - Previews are intended for quoting and UX; they do not account for private state and do not guarantee execution success if state changes before settlement.
-- Previews follow the vault’s rounding rules and therefore may differ slightly from “ideal” real-number math.
+- Previews follow the vault’s rounding rules and reflect the amounts that would be computed at public execution time under current on-chain state.
 
 > ℹ️ **NOTE — `max_*` and `preview_*` semantics**
 >
@@ -407,9 +434,9 @@ Because the vault supports both public and private flows, the `max_*` and `previ
 >
 > By default, `_max_deposit` and `_max_issue` return `MAX_U128_VALUE` (no limit), while `_max_withdraw` and `_max_redeem` only consider the owner’s **public** share balance.
 
-### Deposit Functions
+#### Deposit Functions
 
-#### deposit_public_to_public
+##### deposit_public_to_public
 ```rust
 /// @notice Deposits underlying assets from public balance and mints shares to public balance
 /// @param from The address providing the assets
@@ -420,7 +447,7 @@ Because the vault supports both public and private flows, the `max_*` and `previ
 fn deposit_public_to_public(from: AztecAddress, to: AztecAddress, assets: u128, nonce: Field) { /* ... */ }
 ```
 
-#### deposit_public_to_private
+##### deposit_public_to_private
 ```rust
 /// @notice Deposits underlying assets from public balance and mints shares to private balance
 /// @param from The address providing the assets
@@ -432,7 +459,7 @@ fn deposit_public_to_public(from: AztecAddress, to: AztecAddress, assets: u128, 
 fn deposit_public_to_private(from: AztecAddress, to: AztecAddress, assets: u128, shares: u128, nonce: Field) { /* ... */ }
 ```
 
-#### deposit_private_to_private
+##### deposit_private_to_private
 ```rust
 /// @notice Deposits underlying assets from private balance and mints shares to private balance
 /// @param from The address providing the assets
@@ -444,7 +471,7 @@ fn deposit_public_to_private(from: AztecAddress, to: AztecAddress, assets: u128,
 fn deposit_private_to_private(from: AztecAddress, to: AztecAddress, assets: u128, shares: u128, nonce: Field) { /* ... */ }
 ```
 
-#### deposit_private_to_public
+##### deposit_private_to_public
 ```rust
 /// @notice Deposits underlying assets from private balance and mints shares to public balance
 /// @param from The address providing the assets
@@ -455,9 +482,9 @@ fn deposit_private_to_private(from: AztecAddress, to: AztecAddress, assets: u128
 fn deposit_private_to_public(from: AztecAddress, to: AztecAddress, assets: u128, nonce: Field) { /* ... */ }
 ```
 
-### Exact Deposit Functions
+#### Exact Deposit Functions
 
-#### deposit_public_to_private_exact
+##### deposit_public_to_private_exact
 ```rust
 /// @notice Deposits underlying assets from public balance for exact shares to private balance
 /// @param from The address providing the assets
@@ -469,7 +496,7 @@ fn deposit_private_to_public(from: AztecAddress, to: AztecAddress, assets: u128,
 fn deposit_public_to_private_exact(from: AztecAddress, to: AztecAddress, assets: u128, min_shares: u128, nonce: Field) { /* ... */ }
 ```
 
-#### deposit_private_to_private_exact
+##### deposit_private_to_private_exact
 ```rust
 /// @notice Deposits underlying assets from private balance for exact shares to private balance
 /// @param from The address providing the assets
@@ -481,9 +508,9 @@ fn deposit_public_to_private_exact(from: AztecAddress, to: AztecAddress, assets:
 fn deposit_private_to_private_exact(from: AztecAddress, to: AztecAddress, assets: u128, min_shares: u128, nonce: Field) { /* ... */ }
 ```
 
-### Issue Functions
+#### Issue Functions
 
-#### issue_public_to_public
+##### issue_public_to_public
 ```rust
 /// @notice Issues exact shares for underlying assets from public balance to public balance
 /// @param from The address providing the assets
@@ -495,7 +522,7 @@ fn deposit_private_to_private_exact(from: AztecAddress, to: AztecAddress, assets
 fn issue_public_to_public(from: AztecAddress, to: AztecAddress, shares: u128, max_assets: u128, nonce: Field) { /* ... */ }
 ```
 
-#### issue_public_to_private
+##### issue_public_to_private
 ```rust
 /// @notice Issues exact shares for underlying assets from public balance to private balance
 /// @param from The address providing the assets
@@ -507,7 +534,7 @@ fn issue_public_to_public(from: AztecAddress, to: AztecAddress, shares: u128, ma
 fn issue_public_to_private(from: AztecAddress, to: AztecAddress, shares: u128, max_assets: u128, nonce: Field) { /* ... */ }
 ```
 
-#### issue_private_to_public_exact
+##### issue_private_to_public_exact
 ```rust
 /// @notice Issues exact shares for underlying assets from private balance to public balance
 /// @dev Any excess assets transferred in private will be returned via commitment during public execution
@@ -520,7 +547,7 @@ fn issue_public_to_private(from: AztecAddress, to: AztecAddress, shares: u128, m
 fn issue_private_to_public_exact(from: AztecAddress, to: AztecAddress, shares: u128, max_assets: u128, nonce: Field) { /* ... */ }
 ```
 
-#### issue_private_to_private_exact
+##### issue_private_to_private_exact
 ```rust
 /// @notice Issues exact shares for underlying assets from private balance to private balance
 /// @dev Any excess assets transferred in private will be returned via commitment during public execution
@@ -533,9 +560,9 @@ fn issue_private_to_public_exact(from: AztecAddress, to: AztecAddress, shares: u
 fn issue_private_to_private_exact(from: AztecAddress, to: AztecAddress, shares: u128, max_assets: u128, nonce: Field) { /* ... */ }
 ```
 
-### Withdraw Functions
+#### Withdraw Functions
 
-#### withdraw_public_to_public
+##### withdraw_public_to_public
 ```rust
 /// @notice Withdraws underlying assets by burning shares from public balance to public balance
 /// @param from The address providing the shares
@@ -546,7 +573,7 @@ fn issue_private_to_private_exact(from: AztecAddress, to: AztecAddress, shares: 
 fn withdraw_public_to_public(from: AztecAddress, to: AztecAddress, assets: u128, nonce: Field) { /* ... */ }
 ```
 
-#### withdraw_public_to_private
+##### withdraw_public_to_private
 ```rust
 /// @notice Withdraws underlying assets by burning shares from public balance to private balance
 /// @param from The address providing the shares
@@ -557,7 +584,7 @@ fn withdraw_public_to_public(from: AztecAddress, to: AztecAddress, assets: u128,
 fn withdraw_public_to_private(from: AztecAddress, to: AztecAddress, assets: u128, nonce: Field) { /* ... */ }
 ```
 
-#### withdraw_private_to_private
+##### withdraw_private_to_private
 ```rust
 /// @notice Withdraws underlying assets by burning shares from private balance to private balance
 /// @param from The address providing the shares
@@ -569,7 +596,7 @@ fn withdraw_public_to_private(from: AztecAddress, to: AztecAddress, assets: u128
 fn withdraw_private_to_private(from: AztecAddress, to: AztecAddress, assets: u128, shares: u128, nonce: Field) { /* ... */ }
 ```
 
-#### withdraw_private_to_public_exact
+##### withdraw_private_to_public_exact
 ```rust
 /// @notice Withdraws exact underlying assets by burning shares from private balance to public balance
 /// @dev Excess shares transferred in private will be returned via commitment during public execution
@@ -582,7 +609,7 @@ fn withdraw_private_to_private(from: AztecAddress, to: AztecAddress, assets: u12
 fn withdraw_private_to_public_exact(from: AztecAddress, to: AztecAddress, assets: u128, max_shares: u128, nonce: Field) { /* ... */ }
 ```
 
-#### withdraw_private_to_private_exact
+##### withdraw_private_to_private_exact
 ```rust
 /// @notice Withdraws exact underlying assets by burning shares from private balance to private balance
 /// @dev Excess shares transferred in private will be returned via commitment during public execution
@@ -595,9 +622,9 @@ fn withdraw_private_to_public_exact(from: AztecAddress, to: AztecAddress, assets
 fn withdraw_private_to_private_exact(from: AztecAddress, to: AztecAddress, assets: u128, max_shares: u128, nonce: Field) { /* ... */ }
 ```
 
-### Redeem Functions
+#### Redeem Functions
 
-#### redeem_public_to_public
+##### redeem_public_to_public
 ```rust
 /// @notice Redeems shares for underlying assets from public balance to public balance
 /// @param from The address providing the shares
@@ -608,7 +635,7 @@ fn withdraw_private_to_private_exact(from: AztecAddress, to: AztecAddress, asset
 fn redeem_public_to_public(from: AztecAddress, to: AztecAddress, shares: u128, nonce: Field) { /* ... */ }
 ```
 
-#### redeem_private_to_public
+##### redeem_private_to_public
 ```rust
 /// @notice Redeems shares for underlying assets from private balance to public balance
 /// @param from The address providing the shares
@@ -619,7 +646,7 @@ fn redeem_public_to_public(from: AztecAddress, to: AztecAddress, shares: u128, n
 fn redeem_private_to_public(from: AztecAddress, to: AztecAddress, shares: u128, nonce: Field) { /* ... */ }
 ```
 
-#### redeem_private_to_private_exact
+##### redeem_private_to_private_exact
 ```rust
 /// @notice Redeems shares for exact underlying assets from private balance to private balance
 /// @dev Outstanding assets beyond min_assets will be transferred via commitment during public execution
@@ -632,7 +659,7 @@ fn redeem_private_to_public(from: AztecAddress, to: AztecAddress, shares: u128, 
 fn redeem_private_to_private_exact(from: AztecAddress, to: AztecAddress, shares: u128, min_assets: u128, nonce: Field) { /* ... */ }
 ```
 
-#### redeem_public_to_private_exact
+##### redeem_public_to_private_exact
 ```rust
 /// @notice Redeems shares for exact underlying assets from public balance to private balance
 /// @dev Outstanding assets beyond min_assets will be transferred via commitment during public execution
@@ -645,9 +672,9 @@ fn redeem_private_to_private_exact(from: AztecAddress, to: AztecAddress, shares:
 fn redeem_public_to_private_exact(from: AztecAddress, to: AztecAddress, shares: u128, min_assets: u128, nonce: Field) { /* ... */ }
 ```
 
-### Vault View Functions
+#### Vault View Functions
 
-#### asset
+##### asset
 ```rust
 /// @notice Returns the underlying asset address
 /// @return The address of the underlying asset
@@ -656,7 +683,7 @@ fn redeem_public_to_private_exact(from: AztecAddress, to: AztecAddress, shares: 
 fn asset() -> AztecAddress { /* ... */ }
 ```
 
-#### total_assets
+##### total_assets
 ```rust
 /// @notice Returns the total amount of underlying assets held by the vault
 /// @return The total amount of assets held by the vault
@@ -665,7 +692,7 @@ fn asset() -> AztecAddress { /* ... */ }
 fn total_assets() -> u128 { /* ... */ }
 ```
 
-#### convert_to_shares
+##### convert_to_shares
 ```rust
 /// @notice Converts an amount of assets to shares using the current exchange rate
 /// @param assets The amount of assets to convert
@@ -675,7 +702,7 @@ fn total_assets() -> u128 { /* ... */ }
 fn convert_to_shares(assets: u128) -> u128 { /* ... */ }
 ```
 
-#### convert_to_assets
+##### convert_to_assets
 ```rust
 /// @notice Converts an amount of shares to assets using the current exchange rate
 /// @param shares The amount of shares to convert
@@ -685,7 +712,7 @@ fn convert_to_shares(assets: u128) -> u128 { /* ... */ }
 fn convert_to_assets(shares: u128) -> u128 { /* ... */ }
 ```
 
-#### max_deposit
+##### max_deposit
 ```rust
 /// @notice Returns the maximum amount of the underlying asset that can be deposited into the Vault for the receiver
 /// @param receiver The address of the receiver
@@ -695,7 +722,7 @@ fn convert_to_assets(shares: u128) -> u128 { /* ... */ }
 fn max_deposit(receiver: AztecAddress) -> u128 { /* ... */ }
 ```
 
-#### preview_deposit
+##### preview_deposit
 ```rust
 /// @notice Simulates the effects of a deposit at the current block
 /// @param assets The amount of assets to deposit
@@ -705,7 +732,7 @@ fn max_deposit(receiver: AztecAddress) -> u128 { /* ... */ }
 fn preview_deposit(assets: u128) -> u128 { /* ... */ }
 ```
 
-#### max_issue
+##### max_issue
 ```rust
 /// @notice Returns the maximum amount of Vault shares that can be issued for the receiver
 /// @param receiver The address of the receiver
@@ -715,7 +742,7 @@ fn preview_deposit(assets: u128) -> u128 { /* ... */ }
 fn max_issue(receiver: AztecAddress) -> u128 { /* ... */ }
 ```
 
-#### preview_issue
+##### preview_issue
 ```rust
 /// @notice Simulates the effects of an issue at the current block
 /// @param shares The amount of shares to issue
@@ -725,7 +752,7 @@ fn max_issue(receiver: AztecAddress) -> u128 { /* ... */ }
 fn preview_issue(shares: u128) -> u128 { /* ... */ }
 ```
 
-#### max_withdraw
+##### max_withdraw
 ```rust
 /// @notice Returns the maximum amount of the underlying asset that can be withdrawn from the owner's public balance
 /// @dev This does NOT include private balance - private holders must track their own balance
@@ -736,7 +763,7 @@ fn preview_issue(shares: u128) -> u128 { /* ... */ }
 fn max_withdraw(owner: AztecAddress) -> u128 { /* ... */ }
 ```
 
-#### preview_withdraw
+##### preview_withdraw
 ```rust
 /// @notice Simulates the effects of a withdrawal at the current block
 /// @param assets The amount of assets to withdraw
@@ -746,7 +773,7 @@ fn max_withdraw(owner: AztecAddress) -> u128 { /* ... */ }
 fn preview_withdraw(assets: u128) -> u128 { /* ... */ }
 ```
 
-#### max_redeem
+##### max_redeem
 ```rust
 /// @notice Returns the maximum amount of Vault shares that can be redeemed from the owner's public balance
 /// @dev This does NOT include private balance - private holders must track their own balance
@@ -757,7 +784,7 @@ fn preview_withdraw(assets: u128) -> u128 { /* ... */ }
 fn max_redeem(owner: AztecAddress) -> u128 { /* ... */ }
 ```
 
-#### preview_redeem
+##### preview_redeem
 ```rust
 /// @notice Simulates the effects of a redemption at the current block
 /// @param shares The amount of shares to redeem
@@ -769,9 +796,9 @@ fn preview_redeem(shares: u128) -> u128 { /* ... */ }
 
 ### Vault Contract Library Methods
 
-### Conversion Functions
+#### Conversion Functions
 
-#### _total_assets
+##### _total_assets
 ```rust
 /// @notice Returns the total amount of underlying assets held by the vault
 /// @param context The public context
@@ -784,7 +811,7 @@ unconstrained fn _total_assets(
 ) -> u128 { /* ... */ }
 ```
 
-#### _convert_to_shares
+##### _convert_to_shares
 ```rust
 /// @notice Converts an amount of assets to shares using the current exchange rate
 /// @param assets The amount of assets to convert
@@ -801,7 +828,7 @@ fn _convert_to_shares(
 ) -> u128 { /* ... */ }
 ```
 
-#### _convert_to_assets
+##### _convert_to_assets
 ```rust
 /// @notice Converts an amount of shares to assets using the current exchange rate
 /// @param shares The amount of shares to convert
@@ -818,7 +845,7 @@ fn _convert_to_assets(
 ) -> u128 { /* ... */ }
 ```
 
-#### offset
+##### offset
 ```rust
 /// @notice Offset that determines the rate of virtual shares to virtual assets in the vault
 /// @dev While not fully preventing inflation attacks, analysis shows that offset=1 makes it non-profitable 
@@ -829,9 +856,9 @@ fn _convert_to_assets(
 fn offset() -> u128 { /* ... */ }
 ```
 
-### Max Functions
+#### Max Functions
 
-#### _max_deposit
+##### _max_deposit
 ```rust
 /// @dev Returns the maximum amount of the underlying asset that can be deposited into the Vault for the receiver, through a deposit call.
 /// @dev The receiver parameter is accepted for ERC-4626 compatibility and future extensibility, but is not used by the default implementation.
@@ -841,7 +868,7 @@ fn offset() -> u128 { /* ... */ }
 fn _max_deposit(_receiver: AztecAddress) -> u128 { /* ... */ }
 ```
 
-#### _max_issue
+##### _max_issue
 ```rust
 /// @dev Returns the maximum amount of the Vault shares that can be issued for the receiver, through a mint call.
 /// @dev The receiver parameter is accepted for ERC-4626 compatibility and future extensibility, but is not used by the default implementation.
@@ -851,7 +878,7 @@ fn _max_deposit(_receiver: AztecAddress) -> u128 { /* ... */ }
 fn _max_issue(_receiver: AztecAddress) -> u128 { /* ... */ }
 ```
 
-#### _max_withdraw
+##### _max_withdraw
 ```rust
 /// @dev Returns the maximum amount of the underlying asset that can be withdrawn from the owner balance in the Vault, through a withdraw call.
 /// @notice This does NOT include private balance - private holders must track their own balance.
@@ -871,7 +898,7 @@ unconstrained fn _max_withdraw(
 ) -> u128 { /* ... */ }
 ```
 
-#### _max_redeem
+##### _max_redeem
 ```rust
 /// @dev Returns the maximum amount of the Vault shares that can be redeemed from the owner balance in the Vault, through a redeem call.
 /// @notice This does NOT include private balance - private holders must track their own balance.
@@ -884,9 +911,9 @@ fn _max_redeem(
 ) -> u128 { /* ... */ }
 ```
 
-### Preview Functions
+#### Preview Functions
 
-#### _preview_deposit
+##### _preview_deposit
 ```rust
 /// @dev Allows an on-chain or off-chain user to simulate the effects of their deposit at the current block, given current on-chain conditions.
 /// @param assets The amount of assets to deposit
@@ -903,7 +930,7 @@ unconstrained fn _preview_deposit(
 ) -> u128 { /* ... */ }
 ```
 
-#### _preview_issue
+##### _preview_issue
 ```rust
 /// @dev Allows an on-chain or off-chain user to simulate the effects of their issue at the current block, given current on-chain conditions.
 /// @param shares The amount of shares to deposit
@@ -920,7 +947,7 @@ unconstrained fn _preview_issue(
 ) -> u128 { /* ... */ }
 ```
 
-#### _preview_withdraw
+##### _preview_withdraw
 ```rust
 /// @dev Allows an on-chain or off-chain user to simulate the effects of their withdraw at the current block, given current on-chain conditions.
 /// @param assets The amount of assets to withdraw
@@ -937,7 +964,7 @@ unconstrained fn _preview_withdraw(
 ) -> u128 { /* ... */ }
 ```
 
-#### _preview_redeem
+##### _preview_redeem
 ```rust
 /// @dev Allows an on-chain or off-chain user to simulate the effects of their redeem at the current block, given current on-chain conditions.
 /// @param shares The amount of shares to redeem
@@ -953,3 +980,110 @@ unconstrained fn _preview_redeem(
     total_supply: PublicMutable<u128, &mut PublicContext>,
 ) -> u128 { /* ... */ }
 ```
+
+### Vault Deployment Guide
+
+The Tokenized Vault can be deployed using two different initializers, each offering different security tradeoffs. Understanding these options is essential for vault deployers.
+
+#### Deployment with `constructor_with_asset`
+
+This initializer deploys the vault **without an initial deposit**:
+
+```rust
+#[public]
+#[initializer]
+fn constructor_with_asset(
+    name: str<31>,
+    symbol: str<31>,
+    decimals: u8,
+    asset: AztecAddress,
+    upgrade_authority: AztecAddress,
+) { /* ... */ }
+```
+
+When using this deployment method, the vault relies on a **virtual shares offset** mechanism to mitigate inflation (donation) attacks. The contract defines a global `OFFSET` constant:
+
+```rust
+// The offset used to mitigate inflation attacks
+global OFFSET: u128 = 1;
+```
+
+This offset introduces virtual assets and virtual shares into the exchange-rate calculation. By doing so, it **dampens exchange-rate manipulation and reduces rounding-based griefing**, which is a key enabler of inflation attacks in empty or near-empty ERC-4626 vaults.
+
+Increasing the offset generally makes early-stage manipulation more expensive and reduces the attacker’s ability to force victims into receiving zero or negligible shares. However, larger offsets also affect share pricing for small deposits and can introduce UX and accounting tradeoffs. As a result, **choosing an appropriate offset is a balance between security and precision**.
+
+It is the **deployer’s responsibility** to evaluate whether the default `OFFSET = 1` provides sufficient protection for their specific use case. Factors to consider include:
+
+- Expected minimum and typical deposit sizes
+- Likelihood of front-running or MEV
+- Whether the vault exposes methods where users supply both `assets` and `shares` (common for private flows where the exchange rate cannot be computed inside the private context)
+- The overall risk profile and value secured by the vault
+
+For a detailed analysis of virtual offsets as a mitigation strategy, see:  
+https://www.openzeppelin.com/news/a-novel-defense-against-erc4626-inflation-attacks
+
+> ⚠️ **WARNING — Inflation Attack Risk**
+>
+> Empty or nearly-empty ERC-4626 vaults are vulnerable to **inflation attacks** (also known as donation attacks). An attacker can manipulate the share-to-asset exchange rate by front-running early deposits with a combination of a small deposit and a large donation. This can cause victims to receive zero or negligible shares for their deposit, effectively stranding their assets in the vault.
+>
+> This class of attack is most effective when total assets are low and deposits can be front-run. On Aztec, some private vault methods accept both `assets` and `shares` as inputs (because the exchange rate may not be computable inside the private context). If callers can choose these values freely (or if integrators don’t enforce conservative bounds), manipulation and rounding issues can become easier to exploit.
+>
+> **The default `OFFSET = 1` provides baseline protection, but may not be sufficient in all scenarios—particularly when multiple deposits can be front-run or when very small deposits are expected.**
+
+#### Deployment with `constructor_with_asset_initial_deposit`
+
+For stronger protection, this initializer allows the vault to be seeded with an initial deposit at deployment time:
+
+```rust
+#[public]
+#[initializer]
+fn constructor_with_asset_initial_deposit(
+    name: str<31>,
+    symbol: str<31>,
+    decimals: u8,
+    asset: AztecAddress,
+    upgrade_authority: AztecAddress,
+    initial_deposit: u128,
+    depositor: AztecAddress,
+    _nonce: Field,
+) { /* ... */ }
+```
+
+The `depositor` can be any address that provides an authwit for the `initial_deposit` amount on the asset token. During initialization:
+
+1. The specified `initial_deposit` of assets is transferred from the `depositor` to the vault
+2. Corresponding shares are minted to an address that **cannot redeem them** (in this implementation: the vault contract address itself)
+3. These shares are permanently locked and act as **dead shares**
+
+This approach is inspired by mitigation strategies used in production systems (e.g., Morpho-style vault seeding). By establishing a non-trivial initial asset and share base, early exchange-rate manipulation becomes economically impractical.
+
+Rather than relying on virtual math alone, this method ensures that an attacker would need to commit **economically significant capital relative to the initial deposit and expected user deposits** in order to meaningfully influence the exchange rate.
+
+> ℹ️ **NOTE — Deployment Preparation**
+>
+> The initial deposit is executed internally via a `transfer_public_to_public` call on the underlying asset token. As a result:
+>
+> - The `depositor` **must hold the `initial_deposit` amount in their public balance**
+> - An **authwit must be signed** authorizing this public transfer
+> - The **vault contract address must be known in advance** in order to correctly compute and sign the authwit
+>
+> Deployers should ensure the vault address is precomputed and that the depositor’s public balance and authorization are set up prior to deployment.
+
+**Choosing the initial deposit amount:**
+
+- The deposit should be large relative to the smallest expected user deposits
+- A common heuristic is to seed the vault with an amount comparable to, or larger than, early expected inflows
+- Larger deposits provide stronger protection but represent permanently locked capital
+
+> ⚠️ **NOTE — Dead Shares Must Be Unrecoverable**
+>
+> Dead shares are intended to remain permanently locked and are not expected to be redeemed under normal operation. Deployers should ensure that any upgrade or governance process preserves this invariant.
+
+#### Combining Offset and Dead Shares
+
+For maximum robustness, the virtual offset mechanism can be combined with an initial deposit:
+
+- The **offset** provides baseline protection against rounding-based manipulation
+- The **initial deposit** establishes meaningful initial liquidity, making economic attacks impractical
+
+This layered approach is recommended for deployments where the vault is expected to accept deposits immediately after deployment and/or secure significant value.

@@ -1,4 +1,5 @@
 mod asset;
+mod constructor_with_asset_initial_deposit;
 mod convert_to_assets;
 mod convert_to_shares;
 mod deposit_public_to_public;
