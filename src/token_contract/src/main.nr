@@ -235,7 +235,7 @@ pub contract Token {
 
     /// @notice Transfer tokens from a private balance to the recipient commitment, which must be already initialized.
     /// @dev Spends notes, emits a new note (UintNote) with any remaining change, and enqueues a public call.
-    ///      The `msg.sender` must be the completer of the partial note.
+    ///      The `msg_sender` must be the completer of the partial note.
     /// @param from The address of the sender
     /// @param commitment The partial note representing the commitment (privacy entrance that the recipient shares with the sender)
     /// @param amount The amount of tokens to transfer
