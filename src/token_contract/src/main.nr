@@ -293,9 +293,9 @@ pub contract Token {
         _increase_private_balance(storage.private_balances, to, amount);
     }
 
-    /// @notice Transfer tokens from private balance to the recipient's commitment (recipient must create a commitment first)
-    /// @dev Spends notes, emits a new note (UintNote) with any remaining change, and enqueues a public call
-    ///      `from` will also be the completer of the partial note
+    /// @notice Transfer tokens from a private balance to the recipient commitment, which must be already initialized.
+    /// @dev Spends notes, emits a new note (UintNote) with any remaining change, and enqueues a public call.
+    ///      The `msg_sender` must be the completer of the partial note.
     /// @param from The address of the sender
     /// @param commitment The partial note representing the commitment (privacy entrance that the recipient shares with the sender)
     /// @param amount The amount of tokens to transfer
