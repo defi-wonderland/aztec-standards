@@ -81,6 +81,11 @@ export const setupTestSuite = async (suffix?: string) => {
   };
 };
 
+// --- Constants ---
+
+// Maximum value for a u128 (2**128 - 1)
+export const MAX_U128_VALUE = 340282366920938463463374607431768211455n;
+
 // --- Token Utils ---
 export const expectUintNote = (note: UniqueNote, amount: bigint, owner: AztecAddress) => {
   expect(note.note.items[0]).toEqual(new Fr(owner.toBigInt()));

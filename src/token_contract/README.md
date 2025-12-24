@@ -408,8 +408,31 @@ Some Tokenized Vault private methods require both `assets` and `shares` amounts 
 **Exact Pattern** (e.g., deposit_public_to_private_exact): 
 - Enforces the exact exchange rate at public execution time.
 - A portion of the tokens is immediately transferred privately, allowing users to use them in other protocols, while any outstanding or surplus amount is settled privately during public execution via partial notes.
-- Best for volatile exchange rates and when slipage could cause significant losses.
+- Best for volatile exchange rates and when slippage could cause significant losses.
 - May be more expensive due to the additional settlement logic.
+
+##### `max_*` and `preview_*` patterns
+
+Because the vault supports both public and private flows, the `max_*` and `preview_*` families should be interpreted as **helper interfaces** rather than hard guarantees.
+
+**Max Pattern (`max_deposit`, `max_issue`, `max_withdraw`, `max_redeem`)**
+- These functions express *policy limits* (caps, pausing, allowlists, etc.) for integrators and frontends.
+- In privacy-preserving contexts, these limits are often only *fully enforceable* in **public execution / settlement** (where state and balances can be queried without leaking private information).
+- As a result, `max_*` should be treated as **advisory** unless a deployment explicitly enforces them in the relevant public execution path(s).
+- Note that `max_withdraw` / `max_redeem` typically only reflect **public share balances** (private holders must track private balances off-chain).
+
+**Preview Pattern (`preview_deposit`, `preview_issue`, `preview_withdraw`, `preview_redeem`)**
+- These functions simulate outcomes using the **current public state** (e.g., `total_assets`, `total_supply`) and the same conversion logic as the corresponding operation.
+- Previews are intended for quoting and UX; they do not account for private state and do not guarantee execution success if state changes before settlement.
+- Previews follow the vault’s rounding rules and reflect the amounts that would be computed at public execution time under current on-chain state.
+
+> ℹ️ **NOTE — `max_*` and `preview_*` semantics**
+>
+> The `max_*` functions (`max_deposit`, `max_issue`, `max_withdraw`, `max_redeem`) are exposed as view helpers and are implemented via contract library methods (`_max_*`) so integrators can override policy (caps, pausing, allowlists, etc.).
+>
+> **Important:** In a privacy-preserving vault, not all entrypoints can safely or deterministically enforce address-dependent limits (e.g. some private flows cannot accept `owner/receiver` without leaking it, and some exchange-rate checks must be performed during public settlement). For this reason, `max_*` should be treated as *advisory* unless a deployment explicitly enforces it in the relevant public execution path(s).
+>
+> By default, `_max_deposit` and `_max_issue` return `MAX_U128_VALUE` (no limit), while `_max_withdraw` and `_max_redeem` only consider the owner’s **public** share balance.
 
 #### Deposit Functions
 
@@ -647,6 +670,315 @@ fn redeem_private_to_private_exact(from: AztecAddress, to: AztecAddress, shares:
 /// @param nonce The nonce used for authwit
 #[private]
 fn redeem_public_to_private_exact(from: AztecAddress, to: AztecAddress, shares: u128, min_assets: u128, nonce: Field) { /* ... */ }
+```
+
+#### Vault View Functions
+
+##### asset
+```rust
+/// @notice Returns the underlying asset address
+/// @return The address of the underlying asset
+#[public]
+#[view]
+fn asset() -> AztecAddress { /* ... */ }
+```
+
+##### total_assets
+```rust
+/// @notice Returns the total amount of underlying assets held by the vault
+/// @return The total amount of assets held by the vault
+#[public]
+#[view]
+fn total_assets() -> u128 { /* ... */ }
+```
+
+##### convert_to_shares
+```rust
+/// @notice Converts an amount of assets to shares using the current exchange rate
+/// @param assets The amount of assets to convert
+/// @return The equivalent amount of shares
+#[public]
+#[view]
+fn convert_to_shares(assets: u128) -> u128 { /* ... */ }
+```
+
+##### convert_to_assets
+```rust
+/// @notice Converts an amount of shares to assets using the current exchange rate
+/// @param shares The amount of shares to convert
+/// @return The equivalent amount of assets
+#[public]
+#[view]
+fn convert_to_assets(shares: u128) -> u128 { /* ... */ }
+```
+
+##### max_deposit
+```rust
+/// @notice Returns the maximum amount of the underlying asset that can be deposited into the Vault for the receiver
+/// @param receiver The address of the receiver
+/// @return The maximum amount of assets that can be deposited
+#[public]
+#[view]
+fn max_deposit(receiver: AztecAddress) -> u128 { /* ... */ }
+```
+
+##### preview_deposit
+```rust
+/// @notice Simulates the effects of a deposit at the current block
+/// @param assets The amount of assets to deposit
+/// @return The amount of shares that would be minted
+#[public]
+#[view]
+fn preview_deposit(assets: u128) -> u128 { /* ... */ }
+```
+
+##### max_issue
+```rust
+/// @notice Returns the maximum amount of Vault shares that can be issued for the receiver
+/// @param receiver The address of the receiver
+/// @return The maximum amount of shares that can be issued
+#[public]
+#[view]
+fn max_issue(receiver: AztecAddress) -> u128 { /* ... */ }
+```
+
+##### preview_issue
+```rust
+/// @notice Simulates the effects of an issue at the current block
+/// @param shares The amount of shares to issue
+/// @return The amount of assets required to issue the shares
+#[public]
+#[view]
+fn preview_issue(shares: u128) -> u128 { /* ... */ }
+```
+
+##### max_withdraw
+```rust
+/// @notice Returns the maximum amount of the underlying asset that can be withdrawn from the owner's public balance
+/// @dev This does NOT include private balance - private holders must track their own balance
+/// @param owner The address of the owner
+/// @return The maximum amount of assets that can be withdrawn
+#[public]
+#[view]
+fn max_withdraw(owner: AztecAddress) -> u128 { /* ... */ }
+```
+
+##### preview_withdraw
+```rust
+/// @notice Simulates the effects of a withdrawal at the current block
+/// @param assets The amount of assets to withdraw
+/// @return The amount of shares that would be burned
+#[public]
+#[view]
+fn preview_withdraw(assets: u128) -> u128 { /* ... */ }
+```
+
+##### max_redeem
+```rust
+/// @notice Returns the maximum amount of Vault shares that can be redeemed from the owner's public balance
+/// @dev This does NOT include private balance - private holders must track their own balance
+/// @param owner The address of the owner
+/// @return The maximum amount of shares that can be redeemed
+#[public]
+#[view]
+fn max_redeem(owner: AztecAddress) -> u128 { /* ... */ }
+```
+
+##### preview_redeem
+```rust
+/// @notice Simulates the effects of a redemption at the current block
+/// @param shares The amount of shares to redeem
+/// @return The amount of assets that would be received
+#[public]
+#[view]
+fn preview_redeem(shares: u128) -> u128 { /* ... */ }
+```
+
+### Vault Contract Library Methods
+
+#### Conversion Functions
+
+##### _total_assets
+```rust
+/// @notice Returns the total amount of underlying assets held by the vault
+/// @param context The public context
+/// @param asset The storage pointer to the asset address
+/// @return The total amount of assets held by the vault
+#[contract_library_method]
+unconstrained fn _total_assets(
+    context: &mut PublicContext,
+    asset: PublicImmutable<AztecAddress, &mut PublicContext>,
+) -> u128 { /* ... */ }
+```
+
+##### _convert_to_shares
+```rust
+/// @notice Converts an amount of assets to shares using the current exchange rate
+/// @param assets The amount of assets to convert
+/// @param total_assets The total amount of assets in the vault
+/// @param total_supply The storage pointer to the total supply of shares
+/// @param rounding The rounding direction (ROUND_UP or ROUND_DOWN)
+/// @return The equivalent amount of shares
+#[contract_library_method]
+fn _convert_to_shares(
+    assets: u128,
+    total_assets: u128,
+    total_supply: PublicMutable<u128, &mut PublicContext>,
+    rounding: bool,
+) -> u128 { /* ... */ }
+```
+
+##### _convert_to_assets
+```rust
+/// @notice Converts an amount of shares to assets using the current exchange rate
+/// @param shares The amount of shares to convert
+/// @param total_assets The total amount of assets in the vault
+/// @param total_supply The storage pointer to the total supply of shares
+/// @param rounding The rounding direction (ROUND_UP or ROUND_DOWN)
+/// @return The equivalent amount of assets
+#[contract_library_method]
+fn _convert_to_assets(
+    shares: u128,
+    total_assets: u128,
+    total_supply: PublicMutable<u128, &mut PublicContext>,
+    rounding: bool,
+) -> u128 { /* ... */ }
+```
+
+##### offset
+```rust
+/// @notice Offset that determines the rate of virtual shares to virtual assets in the vault
+/// @dev While not fully preventing inflation attacks, analysis shows that offset=1 makes it non-profitable 
+///      even if an attacker is able to capture value from multiple user deposits.
+///      With a larger offset, the attack becomes orders of magnitude more expensive than it is profitable.
+/// @return The offset value
+#[contract_library_method]
+fn offset() -> u128 { /* ... */ }
+```
+
+#### Max Functions
+
+##### _max_deposit
+```rust
+/// @dev Returns the maximum amount of the underlying asset that can be deposited into the Vault for the receiver, through a deposit call.
+/// @dev The receiver parameter is accepted for ERC-4626 compatibility and future extensibility, but is not used by the default implementation.
+/// @param _receiver The address of the receiver
+/// @return The maximum amount of assets that can be deposited
+#[contract_library_method]
+fn _max_deposit(_receiver: AztecAddress) -> u128 { /* ... */ }
+```
+
+##### _max_issue
+```rust
+/// @dev Returns the maximum amount of the Vault shares that can be issued for the receiver, through a mint call.
+/// @dev The receiver parameter is accepted for ERC-4626 compatibility and future extensibility, but is not used by the default implementation.
+/// @param _receiver The address of the receiver
+/// @return The maximum amount of shares that can be issued
+#[contract_library_method]
+fn _max_issue(_receiver: AztecAddress) -> u128 { /* ... */ }
+```
+
+##### _max_withdraw
+```rust
+/// @dev Returns the maximum amount of the underlying asset that can be withdrawn from the owner balance in the Vault, through a withdraw call.
+/// @notice This does NOT include private balance - private holders must track their own balance.
+/// @param owner The address of the owner
+/// @param context The context of the public call
+/// @param public_balances The storage pointer to the public balance
+/// @param asset The storage pointer to the asset address
+/// @param total_supply The storage pointer to the total supply
+/// @return The maximum amount of assets that can be withdrawn
+#[contract_library_method]
+unconstrained fn _max_withdraw(
+    owner: AztecAddress,
+    context: &mut PublicContext,
+    public_balances: Map<AztecAddress, PublicMutable<u128, &mut PublicContext>, &mut PublicContext>,
+    asset: PublicImmutable<AztecAddress, &mut PublicContext>,
+    total_supply: PublicMutable<u128, &mut PublicContext>,
+) -> u128 { /* ... */ }
+```
+
+##### _max_redeem
+```rust
+/// @dev Returns the maximum amount of the Vault shares that can be redeemed from the owner balance in the Vault, through a redeem call.
+/// @notice This does NOT include private balance - private holders must track their own balance.
+/// @param owner The address of the owner
+/// @return The maximum amount of shares that can be redeemed
+#[contract_library_method]
+fn _max_redeem(
+    owner: AztecAddress,
+    public_balances: Map<AztecAddress, PublicMutable<u128, &mut PublicContext>, &mut PublicContext>,
+) -> u128 { /* ... */ }
+```
+
+#### Preview Functions
+
+##### _preview_deposit
+```rust
+/// @dev Allows an on-chain or off-chain user to simulate the effects of their deposit at the current block, given current on-chain conditions.
+/// @param assets The amount of assets to deposit
+/// @param context The context of the public call
+/// @param asset The storage pointer to the asset address
+/// @param total_supply The storage pointer to the total supply
+/// @return The amount of shares that would be minted
+#[contract_library_method]
+unconstrained fn _preview_deposit(
+    assets: u128,
+    context: &mut PublicContext,
+    asset: PublicImmutable<AztecAddress, &mut PublicContext>,
+    total_supply: PublicMutable<u128, &mut PublicContext>,
+) -> u128 { /* ... */ }
+```
+
+##### _preview_issue
+```rust
+/// @dev Allows an on-chain or off-chain user to simulate the effects of their issue at the current block, given current on-chain conditions.
+/// @param shares The amount of shares to deposit
+/// @param context The context of the public call
+/// @param asset The storage pointer to the asset address
+/// @param total_supply The storage pointer to the total supply
+/// @return The amount of assets that would be issued
+#[contract_library_method]
+unconstrained fn _preview_issue(
+    shares: u128,
+    context: &mut PublicContext,
+    asset: PublicImmutable<AztecAddress, &mut PublicContext>,
+    total_supply: PublicMutable<u128, &mut PublicContext>,
+) -> u128 { /* ... */ }
+```
+
+##### _preview_withdraw
+```rust
+/// @dev Allows an on-chain or off-chain user to simulate the effects of their withdraw at the current block, given current on-chain conditions.
+/// @param assets The amount of assets to withdraw
+/// @param context The context of the public call
+/// @param asset The storage pointer to the asset address
+/// @param total_supply The storage pointer to the total supply
+/// @return The amount of shares that would be redeemed
+#[contract_library_method]
+unconstrained fn _preview_withdraw(
+    assets: u128,
+    context: &mut PublicContext,
+    asset: PublicImmutable<AztecAddress, &mut PublicContext>,
+    total_supply: PublicMutable<u128, &mut PublicContext>,
+) -> u128 { /* ... */ }
+```
+
+##### _preview_redeem
+```rust
+/// @dev Allows an on-chain or off-chain user to simulate the effects of their redeem at the current block, given current on-chain conditions.
+/// @param shares The amount of shares to redeem
+/// @param context The context of the public call
+/// @param asset The storage pointer to the asset address
+/// @param total_supply The storage pointer to the total supply
+/// @return The amount of assets that would be redeemed
+#[contract_library_method]
+unconstrained fn _preview_redeem(
+    shares: u128,
+    context: &mut PublicContext,
+    asset: PublicImmutable<AztecAddress, &mut PublicContext>,
+    total_supply: PublicMutable<u128, &mut PublicContext>,
+) -> u128 { /* ... */ }
 ```
 
 ### Vault Deployment Guide

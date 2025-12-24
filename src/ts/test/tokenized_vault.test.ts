@@ -5,6 +5,7 @@ import {
   setPrivateAuthWit,
   setPublicAuthWit,
   expectTokenBalances,
+  MAX_U128_VALUE,
   deployTokenWithMinter,
 } from './utils.js';
 
@@ -164,9 +165,7 @@ describe('Tokenized Vault', () => {
       expect(await vault.methods.total_supply().simulate({ from: alice })).toBe(BigInt(sharesBob + sharesAlice));
 
       // Alice withdraws public assets by burning public shares
-      // TODO: call preview max withdraw function
-      // Cannot withdraw 14 due to rounding.
-      const maxWithdraw = assetsAlice + aliceEarnings;
+      const maxWithdraw = await vault.methods.max_withdraw(alice).simulate({ from: alice });
       await vault.methods.withdraw_public_to_public(alice, alice, maxWithdraw, 0).send({ from: alice }).wait();
 
       // Bob redeems public shares for public assets
@@ -181,7 +180,7 @@ describe('Tokenized Vault', () => {
       await expectTokenBalances(vault, alice, 0, 0);
       await expectTokenBalances(vault, bob, 0, 0);
       expect(await vault.methods.total_supply().simulate({ from: alice })).toBe(0n);
-    }, 300_000);
+    }, 400_000);
 
     it('Private assets, Public shares: Alice deposits/withdraws, Bob issues/redeems', async () => {
       // Mint some assets to Alice and Bob for deposit/issue
@@ -215,9 +214,7 @@ describe('Tokenized Vault', () => {
       expect(await vault.methods.total_supply().simulate({ from: alice })).toBe(BigInt(sharesBob + sharesAlice));
 
       // Alice withdraws private assets by burning public shares
-      // TODO: call preview max withdraw function
-      // Cannot withdraw 14 due to rounding.
-      const maxWithdraw = assetsAlice + aliceEarnings;
+      const maxWithdraw = await vault.methods.max_withdraw(alice).simulate({ from: alice });
       await vault.methods.withdraw_public_to_private(alice, alice, maxWithdraw, 0).send({ from: alice }).wait();
 
       // Bob redeems private shares for public assets
@@ -233,7 +230,7 @@ describe('Tokenized Vault', () => {
       await expectTokenBalances(vault, alice, 0, 0);
       await expectTokenBalances(vault, bob, 0, 0);
       expect(await vault.methods.total_supply().simulate({ from: alice })).toBe(0n);
-    }, 300_000);
+    }, 400_000);
 
     it('Public assets, Private shares: Alice deposits/withdraws, Bob issues/redeems', async () => {
       // Mint some assets to Alice and Bob for deposit/issue
@@ -267,9 +264,8 @@ describe('Tokenized Vault', () => {
       expect(await vault.methods.total_supply().simulate({ from: alice })).toBe(BigInt(sharesBob + sharesAlice));
 
       // Alice withdraws public assets by burning public shares
-      // TODO: call preview max withdraw function
-      // Cannot withdraw 14 due to rounding.
-      const maxWithdraw = assetsAlice + aliceEarnings;
+      const maxRedeemPriv = await vault.methods.balance_of_private(alice).simulate({ from: alice });
+      const maxWithdraw = await vault.methods.preview_redeem(maxRedeemPriv).simulate({ from: alice });
       await vault.methods
         .withdraw_private_to_public_exact(alice, alice, maxWithdraw, sharesAlice, 0)
         .send({ from: alice })
@@ -287,7 +283,7 @@ describe('Tokenized Vault', () => {
       await expectTokenBalances(vault, alice, 0, 0);
       await expectTokenBalances(vault, bob, 0, 0);
       expect(await vault.methods.total_supply().simulate({ from: alice })).toBe(0n);
-    }, 300_000);
+    }, 400_000);
 
     it('Private assets, Private shares: Alice deposits/withdraws, Bob issues/redeems', async () => {
       // Mint some assets to Alice and Bob for deposit/issue
@@ -321,9 +317,8 @@ describe('Tokenized Vault', () => {
       expect(await vault.methods.total_supply().simulate({ from: alice })).toBe(BigInt(sharesBob + sharesAlice));
 
       // Alice withdraws public assets by burning public shares
-      // TODO: call preview max withdraw function
-      // Cannot withdraw 14 due to rounding.
-      const maxWithdraw = assetsAlice + aliceEarnings;
+      const maxRedeemPriv = await vault.methods.balance_of_private(alice).simulate({ from: alice });
+      const maxWithdraw = await vault.methods.preview_redeem(maxRedeemPriv).simulate({ from: alice });
       await vault.methods
         .withdraw_private_to_private(alice, alice, maxWithdraw, sharesAlice, 0)
         .send({ from: alice })
@@ -341,7 +336,7 @@ describe('Tokenized Vault', () => {
       await expectTokenBalances(vault, alice, 0, 0);
       await expectTokenBalances(vault, bob, 0, 0);
       expect(await vault.methods.total_supply().simulate({ from: alice })).toBe(0n);
-    }, 300_000);
+    }, 400_000);
 
     it('Exact methods, Mixed Assets, Private shares: Alice deposits/withdraws, Bob deposits/withdraws', async () => {
       // Mint some assets to Alice and Bob for deposit/issue
@@ -375,9 +370,8 @@ describe('Tokenized Vault', () => {
       expect(await vault.methods.total_supply().simulate({ from: alice })).toBe(BigInt(sharesBob + sharesAlice));
 
       // Alice withdraws public assets by burning public shares
-      // TODO: call preview max withdraw function
-      // Cannot withdraw 14 due to rounding.
-      const maxWithdraw = assetsAlice + aliceEarnings;
+      const maxRedeemPriv = await vault.methods.balance_of_private(alice).simulate({ from: alice });
+      const maxWithdraw = await vault.methods.preview_redeem(maxRedeemPriv).simulate({ from: alice });
       await vault.methods
         .withdraw_private_to_private_exact(alice, alice, maxWithdraw, sharesAlice, 0)
         .send({ from: alice })
@@ -398,7 +392,7 @@ describe('Tokenized Vault', () => {
       await expectTokenBalances(vault, alice, 0, 0);
       await expectTokenBalances(vault, bob, 0, 0);
       expect(await vault.methods.total_supply().simulate({ from: alice })).toBe(0n);
-    }, 300_000);
+    }, 400_000);
   });
 
   describe('Successful interactions with authwits.', () => {
@@ -434,9 +428,7 @@ describe('Tokenized Vault', () => {
       expect(await vault.methods.total_supply().simulate({ from: carl })).toBe(BigInt(sharesBob + sharesAlice));
 
       // Alice withdraws public assets by burning public shares
-      // TODO: call preview max withdraw function
-      // Cannot withdraw 14 due to rounding.
-      const maxWithdraw = 13;
+      const maxWithdraw = await vault.methods.max_withdraw(alice).simulate({ from: alice });
       const withdrawAction = vault.methods.withdraw_public_to_public(alice, alice, maxWithdraw, 0);
       await setPublicAuthWit(carl, withdrawAction, alice, wallet);
       await withdrawAction.send({ from: carl }).wait();
@@ -457,7 +449,7 @@ describe('Tokenized Vault', () => {
       await expectTokenBalances(vault, bob, 0, 0);
       await expectTokenBalances(vault, carl, 0, 0);
       expect(await vault.methods.total_supply().simulate({ from: carl })).toBe(0n);
-    }, 300_000);
+    }, 400_000);
 
     it('Private assets, Public shares: Alice deposits/withdraws, Bob issues/redeems', async () => {
       // Mint some assets to Alice and Bob for deposit/issue
@@ -496,9 +488,7 @@ describe('Tokenized Vault', () => {
       expect(await vault.methods.total_supply().simulate({ from: carl })).toBe(BigInt(sharesBob + sharesAlice));
 
       // Alice withdraws private assets by burning public shares
-      // TODO: call preview max withdraw function
-      // Cannot withdraw 14 due to rounding.
-      const maxWithdraw = 13;
+      const maxWithdraw = await vault.methods.max_withdraw(alice).simulate({ from: alice });
       await vault.methods.withdraw_public_to_private(alice, alice, maxWithdraw, 0).send({ from: alice }).wait();
 
       // Bob redeems private shares for public assets
@@ -516,7 +506,7 @@ describe('Tokenized Vault', () => {
       await expectTokenBalances(vault, bob, 0, 0);
       expect(await vault.methods.total_supply().simulate({ from: carl })).toBe(0n);
       await expectTokenBalances(vault, carl, 0, 0);
-    }, 300_000);
+    }, 400_000);
 
     it('Public assets, Private shares: Alice deposits/withdraws, Bob issues/redeems', async () => {
       // Mint some assets to Alice and Bob for deposit/issue
@@ -555,9 +545,8 @@ describe('Tokenized Vault', () => {
       expect(await vault.methods.total_supply().simulate({ from: carl })).toBe(BigInt(sharesBob + sharesAlice));
 
       // Alice withdraws public assets by burning public shares
-      // TODO: call preview max withdraw function
-      // Cannot withdraw 14 due to rounding.
-      const maxWithdraw = 13;
+      const maxRedeemPriv = await vault.methods.balance_of_private(alice).simulate({ from: alice });
+      const maxWithdraw = await vault.methods.preview_redeem(maxRedeemPriv).simulate({ from: alice });
       const withdrawAction = vault.methods.withdraw_private_to_public_exact(alice, alice, maxWithdraw, sharesAlice, 0);
       const withdrawAuthWitness = await setPrivateAuthWit(carl, withdrawAction, alice, wallet);
       await withdrawAction
@@ -584,7 +573,7 @@ describe('Tokenized Vault', () => {
       await expectTokenBalances(vault, bob, 0, 0);
       await expectTokenBalances(vault, carl, 0, 0);
       expect(await vault.methods.total_supply().simulate({ from: carl })).toBe(0n);
-    }, 300_000);
+    }, 400_000);
 
     it('Private assets, Private shares: Alice deposits/withdraws, Bob issues/redeems', async () => {
       // Mint some assets to Alice and Bob for deposit/issue
@@ -623,9 +612,8 @@ describe('Tokenized Vault', () => {
       expect(await vault.methods.total_supply().simulate({ from: carl })).toBe(BigInt(sharesBob + sharesAlice));
 
       // Alice withdraws public assets by burning public shares
-      // TODO: call preview max withdraw function
-      // Cannot withdraw 14 due to rounding.
-      const maxWithdraw = 13;
+      const maxRedeemPriv = await vault.methods.balance_of_private(alice).simulate({ from: alice });
+      const maxWithdraw = await vault.methods.preview_redeem(maxRedeemPriv).simulate({ from: alice });
       const withdrawAction = vault.methods.withdraw_private_to_private(alice, alice, maxWithdraw, 9, 0);
       const withdrawAuthWitness = await setPrivateAuthWit(carl, withdrawAction, alice, wallet);
       await withdrawAction
@@ -652,7 +640,7 @@ describe('Tokenized Vault', () => {
       await expectTokenBalances(vault, bob, 0, 0);
       await expectTokenBalances(vault, carl, 0, 0);
       expect(await vault.methods.total_supply().simulate({ from: carl })).toBe(0n);
-    }, 300_000);
+    }, 400_000);
 
     it('Exact methods, Mixed Assets, Private shares: Alice deposits/withdraws, Bob deposits/withdraws', async () => {
       // Mint some assets to Alice and Bob for deposit/issue
@@ -694,9 +682,8 @@ describe('Tokenized Vault', () => {
       expect(await vault.methods.total_supply().simulate({ from: carl })).toBe(BigInt(sharesBob + sharesAlice));
 
       // Alice withdraws public assets by burning public shares
-      // TODO: call preview max withdraw function
-      // Cannot withdraw 14 due to rounding.
-      const maxWithdraw = 13;
+      const maxRedeemPriv = await vault.methods.balance_of_private(alice).simulate({ from: alice });
+      const maxWithdraw = await vault.methods.preview_redeem(maxRedeemPriv).simulate({ from: alice });
       const withdrawAction = vault.methods.withdraw_private_to_private_exact(alice, alice, maxWithdraw, 9, 0);
       const withdrawAuthWitness = await setPrivateAuthWit(carl, withdrawAction, alice, wallet);
       await withdrawAction
@@ -723,7 +710,7 @@ describe('Tokenized Vault', () => {
       await expectTokenBalances(vault, bob, 0, 0);
       await expectTokenBalances(vault, carl, 0, 0);
       expect(await vault.methods.total_supply().simulate({ from: carl })).toBe(0n);
-    }, 300_000);
+    }, 400_000);
   });
 
   describe('Deposit failures: incorrect amounts', () => {
@@ -1257,6 +1244,381 @@ describe('Tokenized Vault', () => {
           .wait(),
       ).rejects.toThrow(/app_logic_reverted/);
     }, 300_000);
+  });
+
+  describe('View Functions', () => {
+    describe('with empty vault', () => {
+      it('asset returns correct address', async () => {
+        const returnedAsset = await vault.methods.asset().simulate({ from: alice });
+        expect(returnedAsset.toString()).toBe(asset.address.toString());
+      });
+
+      it('totalAssets returns zero', async () => {
+        const totalAssets = await vault.methods.total_assets().simulate({ from: alice });
+        expect(totalAssets).toBe(0n);
+      });
+
+      it('maxDeposit and maxIssue return MAX_U128_VALUE for any address', async () => {
+        const maxDepositAlice = await vault.methods.max_deposit(alice).simulate({ from: alice });
+        expect(maxDepositAlice).toBe(MAX_U128_VALUE);
+
+        const maxDepositBob = await vault.methods.max_deposit(bob).simulate({ from: alice });
+        expect(maxDepositBob).toBe(MAX_U128_VALUE);
+
+        const maxIssueAlice = await vault.methods.max_issue(alice).simulate({ from: alice });
+        expect(maxIssueAlice).toBe(MAX_U128_VALUE);
+
+        const maxIssueBob = await vault.methods.max_issue(bob).simulate({ from: alice });
+        expect(maxIssueBob).toBe(MAX_U128_VALUE);
+      });
+
+      it('maxWithdraw and maxRedeem return zero without shares', async () => {
+        const maxWithdraw = await vault.methods.max_withdraw(alice).simulate({ from: alice });
+        expect(maxWithdraw).toBe(0n);
+
+        const maxRedeem = await vault.methods.max_redeem(alice).simulate({ from: alice });
+        expect(maxRedeem).toBe(0n);
+      });
+
+      it('convert and preview functions handle zero amounts', async () => {
+        const convertToShares = await vault.methods.convert_to_shares(0).simulate({ from: alice });
+        expect(convertToShares).toBe(0n);
+
+        const convertToAssets = await vault.methods.convert_to_assets(0).simulate({ from: alice });
+        expect(convertToAssets).toBe(0n);
+
+        const previewDeposit = await vault.methods.preview_deposit(0).simulate({ from: alice });
+        expect(previewDeposit).toBe(0n);
+
+        const previewIssue = await vault.methods.preview_issue(0).simulate({ from: alice });
+        expect(previewIssue).toBe(0n);
+
+        const previewWithdraw = await vault.methods.preview_withdraw(0).simulate({ from: alice });
+        expect(previewWithdraw).toBe(0n);
+
+        const previewRedeem = await vault.methods.preview_redeem(0).simulate({ from: alice });
+        expect(previewRedeem).toBe(0n);
+      });
+
+      it('previewIssue returns 1:1 ratio at initial state', async () => {
+        const sharesToIssue = 1000;
+        const previewAssets = await vault.methods.preview_issue(sharesToIssue).simulate({ from: alice });
+        expect(previewAssets).toBe(BigInt(sharesToIssue));
+      });
+    });
+
+    describe('with single deposit (1:1 ratio)', () => {
+      const depositAmount = 1000;
+
+      beforeEach(async () => {
+        await asset.methods.mint_to_public(alice, depositAmount).send({ from: alice }).wait();
+        await callVaultWithPublicAuthWit(
+          vault.methods.deposit_public_to_public(alice, alice, depositAmount, 0),
+          alice,
+          depositAmount,
+        );
+      });
+
+      it('totalAssets returns deposited amount', async () => {
+        const totalAssets = await vault.methods.total_assets().simulate({ from: alice });
+        expect(totalAssets).toBe(BigInt(depositAmount));
+      });
+
+      it('conversion functions return 1:1 ratio', async () => {
+        const testAmount = 500;
+
+        const shares = await vault.methods.convert_to_shares(testAmount).simulate({ from: alice });
+        expect(shares).toBe(BigInt(testAmount));
+
+        const assets = await vault.methods.convert_to_assets(testAmount).simulate({ from: alice });
+        expect(assets).toBe(BigInt(testAmount));
+      });
+
+      it('preview functions return 1:1 ratio', async () => {
+        const testAmount = depositAmount;
+
+        const previewWithdraw = await vault.methods.preview_withdraw(testAmount).simulate({ from: alice });
+        expect(previewWithdraw).toBe(BigInt(testAmount));
+
+        const previewRedeem = await vault.methods.preview_redeem(testAmount).simulate({ from: alice });
+        expect(previewRedeem).toBe(BigInt(testAmount));
+      });
+
+      it('max functions reflect public balance at 1:1', async () => {
+        const maxWithdraw = await vault.methods.max_withdraw(alice).simulate({ from: alice });
+        expect(maxWithdraw).toBe(BigInt(depositAmount));
+
+        const maxRedeem = await vault.methods.max_redeem(alice).simulate({ from: alice });
+        expect(maxRedeem).toBe(BigInt(depositAmount));
+      });
+
+      it('previewDeposit matches actual deposit', async () => {
+        const additionalDeposit = 500;
+
+        // Preview before deposit
+        const previewShares = await vault.methods.preview_deposit(additionalDeposit).simulate({ from: alice });
+
+        // Actually deposit more
+        await asset.methods.mint_to_public(alice, additionalDeposit).send({ from: alice }).wait();
+        const beforeBalance = await vault.methods.balance_of_public(alice).simulate({ from: alice });
+        await callVaultWithPublicAuthWit(
+          vault.methods.deposit_public_to_public(alice, alice, additionalDeposit, 0),
+          alice,
+          additionalDeposit,
+        );
+        const afterBalance = await vault.methods.balance_of_public(alice).simulate({ from: alice });
+
+        expect(afterBalance - beforeBalance).toBe(previewShares);
+      });
+
+      it('previewRedeem matches actual redemption', async () => {
+        const sharesToRedeem = depositAmount;
+        const previewAssets = await vault.methods.preview_redeem(sharesToRedeem).simulate({ from: alice });
+
+        // Actually redeem
+        await vault.methods.redeem_public_to_public(alice, bob, sharesToRedeem, 0).send({ from: alice }).wait();
+
+        // Check bob received the previewed amount
+        const bobBalance = await asset.methods.balance_of_public(bob).simulate({ from: alice });
+        expect(bobBalance).toBe(previewAssets);
+      });
+
+      it('maxRedeem updates after redemption', async () => {
+        const redeemAmount = 500;
+        const initialMaxRedeem = await vault.methods.max_redeem(alice).simulate({ from: alice });
+
+        // Redeem half
+        await vault.methods.redeem_public_to_public(alice, alice, redeemAmount, 0).send({ from: alice }).wait();
+
+        const finalMaxRedeem = await vault.methods.max_redeem(alice).simulate({ from: alice });
+        expect(finalMaxRedeem).toBe(initialMaxRedeem - BigInt(redeemAmount));
+      });
+    });
+
+    describe('with yield accrued', () => {
+      const depositAmount = 1000;
+      const yieldAmount = 1000;
+
+      beforeEach(async () => {
+        // Deposit first
+        await asset.methods.mint_to_public(alice, depositAmount).send({ from: alice }).wait();
+        await callVaultWithPublicAuthWit(
+          vault.methods.deposit_public_to_public(alice, alice, depositAmount, 0),
+          alice,
+          depositAmount,
+        );
+        // Add yield (doubling assets)
+        await asset.methods.mint_to_public(vault.address, yieldAmount).send({ from: alice }).wait();
+      });
+
+      it('totalAssets includes yield', async () => {
+        const totalAssets = await vault.methods.total_assets().simulate({ from: alice });
+        expect(totalAssets).toBe(BigInt(depositAmount + yieldAmount));
+      });
+
+      it('convertToShares returns fewer shares (each share worth more)', async () => {
+        const assetsToConvert = 2000;
+        const shares = await vault.methods.convert_to_shares(assetsToConvert).simulate({ from: alice });
+        // After yield, each share is worth ~2 assets, so fewer shares per asset
+        expect(shares).toBeLessThan(BigInt(assetsToConvert));
+      });
+
+      it('convertToAssets returns more assets (each share worth more)', async () => {
+        const sharesToConvert = 1000;
+        const assets = await vault.methods.convert_to_assets(sharesToConvert).simulate({ from: alice });
+        // After yield, each share is worth ~2 assets
+        expect(assets).toBeGreaterThan(BigInt(sharesToConvert));
+      });
+
+      it('maxWithdraw increases with yield', async () => {
+        // maxWithdraw should now be greater than initial deposit
+        const maxWithdraw = await vault.methods.max_withdraw(alice).simulate({ from: alice });
+        expect(maxWithdraw).toBeGreaterThan(BigInt(depositAmount));
+      });
+
+      it('previewWithdraw returns fewer shares after yield', async () => {
+        // Want to withdraw deposit + 1 asset of yield
+        const assetsToWithdraw = depositAmount + 1;
+        const previewShares = await vault.methods.preview_withdraw(assetsToWithdraw).simulate({ from: alice });
+        // Should need roughly half the shares (since each share worth ~2 assets)
+        expect(previewShares).toBeLessThan(BigInt(assetsToWithdraw));
+      });
+
+      it('previewRedeem returns more assets after yield', async () => {
+        const sharesToRedeem = depositAmount;
+        const previewAssets = await vault.methods.preview_redeem(sharesToRedeem).simulate({ from: alice });
+        // Should get back more than deposit due to yield
+        expect(previewAssets).toBeGreaterThan(BigInt(depositAmount));
+      });
+    });
+
+    describe('with yield affecting issue rate', () => {
+      it('previewDeposit accounts for yield when calculating shares', async () => {
+        const depositAmount = 1000;
+        const yieldAmount = 1;
+
+        // Add yield to vault first (changes initial rate)
+        await asset.methods.mint_to_public(vault.address, yieldAmount).send({ from: alice }).wait();
+
+        // Preview deposit
+        const previewShares = await vault.methods.preview_deposit(depositAmount).simulate({ from: alice });
+
+        // With yield present, should get fewer shares (rate is ~1:2)
+        const expectedShares = depositAmount / 2;
+        expect(previewShares).toBe(BigInt(expectedShares));
+      });
+
+      it('previewIssue returns more assets after yield', async () => {
+        const yieldAmount = 1;
+
+        // Add yield to establish rate
+        await asset.methods.mint_to_public(vault.address, yieldAmount).send({ from: alice }).wait();
+
+        const sharesToIssue = 500;
+        const previewAssets = await vault.methods.preview_issue(sharesToIssue).simulate({ from: alice });
+
+        // With yield, each share costs more assets (rate is ~1:2)
+        expect(previewAssets).toBe(BigInt(1000));
+      });
+    });
+
+    describe('private vs public balance behavior', () => {
+      it('maxWithdraw returns zero when the balance exists exclusively in private form', async () => {
+        const depositAmount = assetsAlice;
+        const sharesAmount = sharesAlice;
+
+        // Deposit to private shares
+        await asset.methods.mint_to_public(alice, depositAmount).send({ from: alice }).wait();
+        await callVaultWithPublicAuthWit(
+          vault.methods.deposit_public_to_private(alice, alice, depositAmount, sharesAmount, 0),
+          alice,
+          depositAmount,
+        );
+
+        // maxWithdraw considers public balance, not private
+        const maxWithdraw = await vault.methods.max_withdraw(alice).simulate({ from: alice });
+        expect(maxWithdraw).toBe(0n);
+      });
+
+      it('maxRedeem returns zero when the balance exists exclusively in private form', async () => {
+        const depositAmount = assetsAlice;
+        const sharesAmount = sharesAlice;
+
+        // Deposit to private shares
+        await asset.methods.mint_to_public(alice, depositAmount).send({ from: alice }).wait();
+        await callVaultWithPublicAuthWit(
+          vault.methods.deposit_public_to_private(alice, alice, depositAmount, sharesAmount, 0),
+          alice,
+          depositAmount,
+        );
+
+        // maxRedeem considers public balance, not private
+        const maxRedeem = await vault.methods.max_redeem(alice).simulate({ from: alice });
+        expect(maxRedeem).toBe(0n);
+      });
+    });
+
+    describe('multi-user scenarios', () => {
+      it('maxRedeem differs per owner', async () => {
+        const aliceDeposit = 1000;
+        const bobDeposit = 500;
+
+        // Alice deposits
+        await asset.methods.mint_to_public(alice, aliceDeposit).send({ from: alice }).wait();
+        await callVaultWithPublicAuthWit(
+          vault.methods.deposit_public_to_public(alice, alice, aliceDeposit, 0),
+          alice,
+          aliceDeposit,
+        );
+
+        // Bob deposits
+        await asset.methods.mint_to_public(bob, bobDeposit).send({ from: alice }).wait();
+        await callVaultWithPublicAuthWit(
+          vault.methods.deposit_public_to_public(bob, bob, bobDeposit, 0),
+          bob,
+          bobDeposit,
+        );
+
+        const maxRedeemAlice = await vault.methods.max_redeem(alice).simulate({ from: alice });
+        const maxRedeemBob = await vault.methods.max_redeem(bob).simulate({ from: alice });
+
+        expect(maxRedeemAlice).not.toBe(maxRedeemBob);
+        expect(maxRedeemAlice).toBe(BigInt(aliceDeposit));
+        expect(maxRedeemBob).toBe(BigInt(bobDeposit));
+      });
+    });
+  });
+
+  describe('Utility View Functions', () => {
+    describe('maxRedeemPrivate', () => {
+      it('returns zero without shares', async () => {
+        const maxRedeemPrivate = await vault.methods.balance_of_private(alice).simulate({ from: alice });
+        expect(maxRedeemPrivate).toBe(0n);
+      });
+
+      it('returns zero when the shares exist exclusively in public form', async () => {
+        const depositAmount = 1000;
+
+        await asset.methods.mint_to_public(alice, depositAmount).send({ from: alice }).wait();
+        await callVaultWithPublicAuthWit(
+          vault.methods.deposit_public_to_public(alice, alice, depositAmount, 0),
+          alice,
+          depositAmount,
+        );
+
+        const maxRedeemPrivate = await vault.methods.balance_of_private(alice).simulate({ from: alice });
+        const maxRedeem = await vault.methods.max_redeem(alice).simulate({ from: alice });
+
+        expect(maxRedeemPrivate).toBe(0n);
+        expect(maxRedeem).toBe(BigInt(depositAmount));
+      });
+
+      it('returns private shares when private balance exists', async () => {
+        const depositAmount = assetsAlice;
+        const sharesAmount = sharesAlice;
+
+        await asset.methods.mint_to_public(alice, depositAmount).send({ from: alice }).wait();
+        await callVaultWithPublicAuthWit(
+          vault.methods.deposit_public_to_private(alice, alice, depositAmount, sharesAmount, 0),
+          alice,
+          depositAmount,
+        );
+
+        const maxRedeemPrivate = await vault.methods.balance_of_private(alice).simulate({ from: alice });
+        const maxRedeem = await vault.methods.max_redeem(alice).simulate({ from: alice });
+
+        expect(maxRedeemPrivate).toBe(BigInt(sharesAmount));
+        expect(maxRedeem).toBe(0n);
+      });
+
+      it('returns private shares when both exist', async () => {
+        const publicDeposit = 1000;
+        const privateDeposit = assetsAlice;
+        const privateShares = sharesAlice;
+
+        // Deposit to public
+        await asset.methods.mint_to_public(alice, publicDeposit).send({ from: alice }).wait();
+        await callVaultWithPublicAuthWit(
+          vault.methods.deposit_public_to_public(alice, alice, publicDeposit, 0),
+          alice,
+          publicDeposit,
+        );
+
+        // Deposit to private
+        await asset.methods.mint_to_public(alice, privateDeposit).send({ from: alice }).wait();
+        await callVaultWithPublicAuthWit(
+          vault.methods.deposit_public_to_private(alice, alice, privateDeposit, privateShares, 0),
+          alice,
+          privateDeposit,
+        );
+
+        const maxRedeemPrivate = await vault.methods.balance_of_private(alice).simulate({ from: alice });
+        const maxRedeem = await vault.methods.max_redeem(alice).simulate({ from: alice });
+
+        expect(maxRedeemPrivate).toBe(BigInt(privateShares));
+        expect(maxRedeem).toBe(BigInt(publicDeposit));
+      });
+    });
   });
 
   describe('Constructor with asset and initial deposit', () => {
