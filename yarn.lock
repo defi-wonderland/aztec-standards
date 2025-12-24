@@ -1317,9 +1317,9 @@
   dependencies:
     "@jridgewell/trace-mapping" "0.3.9"
 
-"@defi-wonderland/aztec-benchmark@github:defi-wonderland/aztec-benchmark#069b109f8f259e3f01097ef54d2164b6009be63a":
+"@defi-wonderland/aztec-benchmark@github:defi-wonderland/aztec-benchmark#76767b73fbd6826f60c9a8bf13ee0faa3e5a4e76":
   version "3.0.0-devnet.20251212"
-  resolved "https://codeload.github.com/defi-wonderland/aztec-benchmark/tar.gz/069b109f8f259e3f01097ef54d2164b6009be63a"
+  resolved "https://codeload.github.com/defi-wonderland/aztec-benchmark/tar.gz/76767b73fbd6826f60c9a8bf13ee0faa3e5a4e76"
   dependencies:
     "@actions/core" "1.10.1"
     "@actions/exec" "1.1.1"
