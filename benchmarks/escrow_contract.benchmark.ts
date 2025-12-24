@@ -40,7 +40,7 @@ export default class EscrowContractBenchmark extends Benchmark {
    * Creates wallet, gets accounts, and deploys the contract.
    */
   async setup(): Promise<EscrowBenchmarkContext> {
-    const { store, node, wallet, accounts } = await setupTestSuite('bench-escrow');
+    const { store, node, wallet, accounts } = await setupTestSuite('bench-escrow', true);
     const [deployer, logicMock] = accounts;
 
     // Setup escrow

@@ -170,7 +170,7 @@ jobs:
       # 3️⃣  DIFF &  COMMENT
       # ──────────────────────────────────────────────────────────────
       - name: Generate Markdown diff
-        uses: defi-wonderland/aztec-benchmark/action@main
+        uses: defi-wonderland/aztec-benchmark/action@style/format-comparison-table # TODO: Testing, change to main when the benchmark package is released
         with:
           base_suffix: '_base'
           current_suffix: '_pr'

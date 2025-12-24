@@ -36,7 +36,7 @@ export default class TokenContractBenchmark extends Benchmark {
    */
 
   async setup(): Promise<TokenBenchmarkContext> {
-    const { store, wallet, accounts } = await setupTestSuite('bench-token');
+    const { store, wallet, accounts } = await setupTestSuite('bench-token', true);
     const [deployer] = accounts;
     const deployedBaseContract = await deployTokenWithMinter(wallet, deployer);
     const tokenContract = TokenContract.at(deployedBaseContract.address, wallet);

@@ -45,7 +45,7 @@ export default class LogicContractBenchmark extends Benchmark {
    * Creates wallet, gets accounts, and deploys the contract.
    */
   async setup(): Promise<LogicBenchmarkContext> {
-    const { store, wallet, accounts } = await setupTestSuite('bench-logic');
+    const { store, wallet, accounts } = await setupTestSuite('bench-logic', true);
     const [deployer] = accounts;
 
     const escrowClassId = (await getContractClassFromArtifact(EscrowContractArtifact)).id;
