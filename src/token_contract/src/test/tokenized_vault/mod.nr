@@ -1,3 +1,4 @@
+mod constructor_with_asset_initial_deposit;
 mod deposit_public_to_public;
 mod deposit_public_to_private;
 mod deposit_private_to_private;

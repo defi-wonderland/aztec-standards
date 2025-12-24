@@ -39,6 +39,9 @@ pub contract Token {
     global ROUND_DOWN: bool = false;
     global ROUND_UP: bool = true;
 
+    // The offset used to prevent inflation attacks
+    global OFFSET: u128 = 1;
+
     /// @param name The name of the token
     /// @param symbol The symbol of the token
     /// @param decimals The number of decimals of the token
@@ -82,6 +85,59 @@ pub contract Token {
         storage.asset.initialize(asset);
 
         storage.upgrade_authority.initialize(upgrade_authority);
+    }
+
+    /// @notice Initializes the token with an asset and an initial deposit
+    /// @dev Since this constructor doesn't set a minter address the mint functions will be disabled
+    /// @dev The depositor is the address that will be used to sign the authwit for the transfer of the initial deposit
+    /// @param name The name of the token
+    /// @param symbol The symbol of the token
+    /// @param decimals The number of decimals of the token
+    /// @param asset The underlying asset for the yield bearing token
+    /// @param upgrade_authority The address of the upgrade authority (zero address if not upgradeable)
+    /// @param initial_deposit The initial deposit amount of the asset
+    /// @param depositor The address of the initial depositor of the assets
+    /// @param _nonce The nonce used for authwitness for the transfer of the initial deposit
+    #[external("public")]
+    #[initializer]
+    fn constructor_with_asset_initial_deposit(
+        name: str<31>,
+        symbol: str<31>,
+        decimals: u8,
+        asset: AztecAddress,
+        upgrade_authority: AztecAddress,
+        initial_deposit: u128,
+        depositor: AztecAddress,
+        _nonce: Field,
+    ) {
+        storage.name.initialize(FieldCompressedString::from_string(name));
+        storage.symbol.initialize(FieldCompressedString::from_string(symbol));
+        storage.decimals.initialize(decimals);
+        storage.asset.initialize(asset);
+        storage.upgrade_authority.initialize(upgrade_authority);
+
+        // Caller deposits assets, shares are minted to this contract and are permanently locked.
+        let from = depositor;
+        let to = context.this_address();
+
+        // There are no assets yet, hence the total assets is 0.
+        let total_assets = 0;
+
+        // Calculate shares to mint for the initial deposit.
+        let shares = _convert_to_shares(
+            initial_deposit,
+            total_assets,
+            storage.total_supply,
+            ROUND_DOWN,
+        );
+
+        // Transfer the assets from the sender to the vault
+        Token::at(storage.asset.read())
+            .transfer_public_to_public(from, to, initial_deposit, _nonce)
+            .call(&mut context);
+
+        // Mint shares to the this contract address
+        _mint_to_public(storage.public_balances, storage.total_supply, to, shares);
     }
 
     /// @notice Initializes the token with an initial supply
@@ -2010,6 +2066,6 @@ pub contract Token {
     /// @return The offset value
     #[contract_library_method]
     fn offset() -> u128 {
-        1
+        OFFSET
     }
 }
