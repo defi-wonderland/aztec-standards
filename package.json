@@ -33,7 +33,7 @@
     "@aztec/pxe": "3.0.0-devnet.20251212",
     "@aztec/stdlib": "3.0.0-devnet.20251212",
     "@aztec/test-wallet": "3.0.0-devnet.20251212",
-    "@defi-wonderland/aztec-benchmark": "github:defi-wonderland/aztec-benchmark#76767b73fbd6826f60c9a8bf13ee0faa3e5a4e76",
+    "@defi-wonderland/aztec-benchmark": "github:defi-wonderland/aztec-benchmark#db58e5e3a20a78ffee714564f34d81f7cb59fa40",
     "@types/node": "22.5.1"
   },
   "devDependencies": {
