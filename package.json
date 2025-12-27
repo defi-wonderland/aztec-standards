@@ -37,6 +37,7 @@
     "@types/node": "22.5.1"
   },
   "devDependencies": {
+    "@iarna/toml": "3.0.0",
     "@types/jest": "29.5.11",
     "@types/mocha": "10.0.6",
     "@types/node": "22.5.1",
