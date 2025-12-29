@@ -1069,13 +1069,19 @@ Rather than relying on virtual math alone, this method ensures that an attacker 
 >
 > Deployers should ensure the vault address is precomputed and that the depositor’s public balance and authorization are set up prior to deployment.
 
-**Choosing the initial deposit amount:**
+**Alternative Setup**
 
-- The deposit should be large relative to the smallest expected user deposits
-- A common heuristic is to seed the vault with an amount comparable to, or larger than, early expected inflows
-- Larger deposits provide stronger protection but represent permanently locked capital
+`constructor_with_asset_initial_deposit` also supports an alternative flow that allows transferring the initial deposit directly to the vault before deployment, instead of providing it via authwit. To enable this, set `depositor` to the vault’s precomputed address and transfer `initial_deposit` asset tokens to the vault before deploying it. By doing this, `initial_deposit` will be gulped by the vault at initialization.
 
-> ⚠️ **NOTE — Dead Shares Must Be Unrecoverable**
+**Choosing the Initial Deposit Amount:**
+
+- The deposit should be large enough that the donation required to round the smallest expected user deposits down to zero is economically unfeasible or orders of magnitude larger than the expected attacker's profit.
+- A common heuristic is to seed the vault with an amount comparable to, or larger than, early expected inflows. However, beware that asset's decimals play an important role here:
+    - 18 decimals (e.g. DAI): if the smallest, economically significant user deposit is expected to be 1 DAI, an initial deposit of 1 DAI would mean that an attacker would need one quintillion DAIs (10^18 DAI) to exploit 1-DAI deposits. Even a smaller initial deposit would probably be enough.
+    - 6 decimals (e.g USDC): an attacker would need in comparison only 1 million USDC to exploit 1-USDC deposits. It might still be a strong protection against donation attacks in some cases, but it does not make them unfeasible.
+- Larger deposits provide stronger protection but represent permanently locked capital.
+
+> ⚠️ **NOTE — Dead Shares Should Be Unrecoverable**
 >
 > Dead shares are intended to remain permanently locked and are not expected to be redeemed under normal operation. Deployers should ensure that any upgrade or governance process preserves this invariant.
 

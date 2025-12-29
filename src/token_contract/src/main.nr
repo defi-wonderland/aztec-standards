@@ -124,7 +124,8 @@ pub contract Token {
         let from = depositor;
         let to = context.this_address();
 
-        // There are no assets yet, hence the total assets is 0.
+        // Assets could be donated to the vault's precomputed address before deployment, but such assets are
+        // ignored at this point to ensure the asset<>share conversion is 1:1 for the initial deposit.
         let total_assets = 0;
 
         // Calculate shares to mint for the initial deposit.
