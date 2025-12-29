@@ -3,12 +3,12 @@ use aztec::{
     context::PrivateContext,
     event::event_emission::emit_event_in_private,
     messages::message_delivery::MessageDelivery,
-    oracle::get_contract_instance::get_contract_instance,
     protocol_types::{
         address::AztecAddress,
+        contract_class_id::ContractClassId,
         contract_instance::ContractInstance,
         public_keys::{IvpkM, NpkM, OvpkM, PublicKeys, TpkM},
-        traits::ToField,
+        traits::{FromField, ToField},
     },
 };
 // standard library
@@ -22,41 +22,29 @@ pub use crate::types::escrow_details_event::{EscrowDetailsLogContent, MasterSecr
  * =================== LOGIC LIBRARIES =======================
  * ======================================================== */
 
-/// @notice Verifies that the keys correspond to the escrow address and that the escrow instance data is correct.
-/// @dev Reverts if the data is not correct.
+/// @notice Returns the escrow address that corresponds to the given master secret keys and class ID.
 /// @param context The private context
-/// @param escrow The address of the escrow
 /// @param escrow_class_id The contract class id of the escrow contract
 /// @param master_secret_keys The master secret keys
+/// @return The escrow address
 #[contract_library_method]
-pub fn _check_escrow(
+pub fn _get_escrow(
     context: &mut PrivateContext,
-    escrow: AztecAddress,
     escrow_class_id: Field,
     master_secret_keys: MasterSecretKeys,
-) {
-    // Get the escrow instance
-    let escrow_instance: ContractInstance = get_contract_instance(escrow);
-
+) -> AztecAddress {
     // Compute the public keys from the secret keys
     let computed_public_keys: PublicKeys = _secret_keys_to_public_keys(master_secret_keys);
 
-    // Check the public keys are computed correctly
-    assert_eq(computed_public_keys, escrow_instance.public_keys, "Escrow public keys mismatch");
+    let escrow_instance = ContractInstance {
+        salt: context.this_address().to_field(),
+        deployer: AztecAddress::from_field(0),
+        contract_class_id: ContractClassId::from_field(escrow_class_id),
+        initialization_hash: 0,
+        public_keys: computed_public_keys,
+    };
 
-    // Force the initialization hash and deployer to be null
-    assert_eq(escrow_instance.initialization_hash, 0, "Escrow initialization hash should be null");
-    assert_eq(escrow_instance.deployer.to_field(), 0, "Escrow deployer should be null");
-
-    // Check the class id is correct
-    assert_eq(
-        escrow_instance.contract_class_id.to_field(),
-        escrow_class_id,
-        "Escrow class id mismatch",
-    );
-
-    // Force the salt to be equal to the address of the logic contract (this contract)
-    assert_eq(escrow_instance.salt, context.this_address().to_field(), "Escrow salt mismatch");
+    escrow_instance.to_address()
 }
 
 /// @notice Shares the escrow details needed to find and use the escrow contract
