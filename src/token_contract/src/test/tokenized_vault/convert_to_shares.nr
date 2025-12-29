@@ -35,7 +35,7 @@ unconstrained fn convert_to_shares_zero_amount() {
 }
 
 #[test]
-unconstrained fn convert_to_shares_with_yield_accrued() {
+unconstrained fn convert_to_shares_with_yield_accrued_rounds_down() {
     // Setup with asset token
     let (env, vault_address, owner, _recipient, asset_address) = utils::setup_with_asset(false);
 
