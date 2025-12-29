@@ -1654,7 +1654,7 @@ pub contract Token {
             shares,
             _total_assets(&mut context, storage.asset),
             storage.total_supply,
-            ROUND_UP,
+            ROUND_DOWN,
         )
     }
 
