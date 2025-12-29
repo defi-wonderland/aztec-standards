@@ -14,8 +14,8 @@ version: 1.0.0
 - Use PartialUintNote for incomplete notes that complete in public
 
 ## Authorization
-- Always validate authorization with assert_current_call_valid_authwit
-- Implement dedicated validation functions: _validate_from_private, _validate_minter
+- Always validate authorization with #[authorize_once("from", "_nonce")]
+- Implement dedicated validation functions: _validate_minter
 - Use authwit for both private and public contexts appropriately
 
 ## Note Management
