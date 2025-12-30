@@ -434,6 +434,12 @@ Because the vault supports both public and private flows, the `max_*` and `previ
 >
 > By default, `_max_deposit` and `_max_issue` return `MAX_U128_VALUE` (no limit), while `_max_withdraw` and `_max_redeem` only consider the owner’s **public** share balance.
 
+##### Privacy leaks
+
+In the current implementation the functions `deposit_public_to_private`, `deposit_public_to_private_exact` and `issue_public_to_private` can leak the `to` address. Although they are private functions, all other input parameters become public during execution, which allows an attacker to brute-force candidate `to` addresses until finding one that matches the authwit hash. This limitation will be addressed in a future update.
+
+Also note that several other functions rely on unpredictable nonces for privacy. If private nonces are guessable or reused, additional operations could become vulnerable to similar privacy leaks. Always ensure nonces are generated in a way that is infeasible to predict.
+
 #### Deposit Functions
 
 ##### deposit_public_to_public
