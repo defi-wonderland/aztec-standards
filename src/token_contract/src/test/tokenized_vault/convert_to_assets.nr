@@ -35,7 +35,7 @@ unconstrained fn convert_to_assets_zero_amount() {
 }
 
 #[test]
-unconstrained fn convert_to_assets_with_yield_accrued() {
+unconstrained fn convert_to_assets_with_yield_accrued_rounds_down() {
     // Setup with asset token
     let (env, vault_address, owner, _recipient, asset_address) = utils::setup_with_asset(false);
 
@@ -54,10 +54,10 @@ unconstrained fn convert_to_assets_with_yield_accrued() {
     let yield_amount: u128 = mint_amount;
     env.call_public(owner, Token::at(asset_address).mint_to_public(vault_address, yield_amount));
 
-    // After yield (2x assets), 1000 shares should convert to 2000 assets
+    // After yield (2x assets), 1000 shares should convert to 1999 assets
     let shares_to_convert: u128 = 1000;
-    let expected_assets: u128 = 2000;
+    let expected_assets: u128 = 1999;
     let assets = env.view_public(Token::at(vault_address).convert_to_assets(shares_to_convert));
 
-    assert(assets == expected_assets, "1000 shares should convert to 2000 assets");
+    assert(assets == expected_assets, "1000 shares should convert to 1999 assets");
 }

@@ -434,6 +434,12 @@ Because the vault supports both public and private flows, the `max_*` and `previ
 >
 > By default, `_max_deposit` and `_max_issue` return `MAX_U128_VALUE` (no limit), while `_max_withdraw` and `_max_redeem` only consider the owner’s **public** share balance.
 
+##### Privacy leaks
+
+In the current implementation the functions `deposit_public_to_private`, `deposit_public_to_private_exact` and `issue_public_to_private` can leak the `to` address. Although they are private functions, all other input parameters become public during execution, which allows an attacker to brute-force candidate `to` addresses until finding one that matches the authwit hash. This limitation will be addressed in a future update.
+
+Also note that several other functions rely on unpredictable nonces for privacy. If private nonces are guessable or reused, additional operations could become vulnerable to similar privacy leaks. Always ensure nonces are generated in a way that is infeasible to predict.
+
 #### Deposit Functions
 
 ##### deposit_public_to_public
@@ -1069,13 +1075,19 @@ Rather than relying on virtual math alone, this method ensures that an attacker 
 >
 > Deployers should ensure the vault address is precomputed and that the depositor’s public balance and authorization are set up prior to deployment.
 
-**Choosing the initial deposit amount:**
+**Alternative Setup**
 
-- The deposit should be large relative to the smallest expected user deposits
-- A common heuristic is to seed the vault with an amount comparable to, or larger than, early expected inflows
-- Larger deposits provide stronger protection but represent permanently locked capital
+`constructor_with_asset_initial_deposit` also supports an alternative flow that allows transferring the initial deposit directly to the vault before deployment, instead of providing it via authwit. To enable this, set `depositor` to the vault’s precomputed address and transfer `initial_deposit` asset tokens to the vault before deploying it. By doing this, `initial_deposit` will be gulped by the vault at initialization.
 
-> ⚠️ **NOTE — Dead Shares Must Be Unrecoverable**
+**Choosing the Initial Deposit Amount:**
+
+- The deposit should be large enough that the donation required to round the smallest expected user deposits down to zero is economically unfeasible or orders of magnitude larger than the expected attacker's profit.
+- A common heuristic is to seed the vault with an amount comparable to, or larger than, early expected inflows. However, beware that asset's decimals play an important role here:
+    - 18 decimals (e.g. DAI): if the smallest, economically significant user deposit is expected to be 1 DAI, an initial deposit of 1 DAI would mean that an attacker would need one quintillion DAIs (10^18 DAI) to exploit 1-DAI deposits. Even a smaller initial deposit would probably be enough.
+    - 6 decimals (e.g USDC): an attacker would need in comparison only 1 million USDC to exploit 1-USDC deposits. It might still be a strong protection against donation attacks in some cases, but it does not make them unfeasible.
+- Larger deposits provide stronger protection but represent permanently locked capital.
+
+> ⚠️ **NOTE — Dead Shares Should Be Unrecoverable**
 >
 > Dead shares are intended to remain permanently locked and are not expected to be redeemed under normal operation. Deployers should ensure that any upgrade or governance process preserves this invariant.
 
