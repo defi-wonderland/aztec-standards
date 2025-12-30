@@ -141,7 +141,7 @@ pub contract Token {
             .transfer_public_to_public(from, to, initial_deposit, _nonce)
             .call(&mut context);
 
-        // Mint shares to the this contract address
+        // Mint shares to this contract address
         _mint_to_public(storage.public_balances, storage.total_supply, to, shares);
     }
 
