@@ -185,6 +185,11 @@ jobs:
         run: |
           VERSION=${{ steps.basever.outputs.ver }} aztec-up
 
+      # This is a temporary hack to fix a problem with v3 releases.
+      - name: Manually tag the aztec version as `latest`
+        run: |
+          docker tag aztecprotocol/aztec:${{ steps.basever.outputs.ver }} aztecprotocol/aztec:latest
+
       - name: Start sandbox (BASE, background)
         run: aztec start --sandbox &
 
@@ -193,11 +198,6 @@ jobs:
           VERSION=${{ steps.basever.outputs.ver }} aztec \
             start --port 8081 --pxe --pxe.nodeUrl=http://localhost:8080/ \
             --pxe.proverEnabled false &
-
-      # This is a temporary hack to fix a problem with v3 releases.
-      - name: Manually tag the aztec version as `latest`
-        run: |
-          docker tag aztecprotocol/aztec:${{ steps.basever.outputs.ver }} aztecprotocol/aztec:latest
 
       - name: Install deps (BASE)
         run: yarn --frozen-lockfile
@@ -257,6 +257,11 @@ jobs:
         run: |
           VERSION=${{ steps.prver.outputs.ver }} aztec-up
 
+      # This is a temporary hack to fix a problem with v3 releases.
+      - name: Manually tag the aztec version as `latest`
+        run: |
+          docker tag aztecprotocol/aztec:${{ steps.prver.outputs.ver }} aztecprotocol/aztec:latest
+
       - name: Start sandbox (PR, background)
         if: steps.prver.outputs.ver_diff == 'true'
         run: aztec start --sandbox &
@@ -267,11 +272,6 @@ jobs:
           VERSION=${{ steps.prver.outputs.ver }} aztec \
             start --port 8081 --pxe --pxe.nodeUrl=http://localhost:8080/ \
             --pxe.proverEnabled false &
-
-      # This is a temporary hack to fix a problem with v3 releases.
-      - name: Manually tag the aztec version as `latest`
-        run: |
-          docker tag aztecprotocol/aztec:${{ steps.prver.outputs.ver }} aztecprotocol/aztec:latest
 
       - name: Install deps (PR)
         run: yarn --frozen-lockfile
