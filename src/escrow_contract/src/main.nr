@@ -8,7 +8,7 @@ use aztec::macros::aztec;
 pub contract Escrow {
     use aztec::{
         context::PrivateContext,
-        macros::functions::private,
+        macros::functions::external,
         oracle::get_contract_instance::get_contract_instance,
         protocol_types::{
             address::AztecAddress, contract_instance::ContractInstance, traits::FromField,
@@ -23,7 +23,7 @@ pub contract Escrow {
     /// @param token The address of the token
     /// @param amount The amount of tokens to withdraw from the escrow
     /// @param recipient The address of the recipient
-    #[private]
+    #[external("private")]
     fn withdraw(token: AztecAddress, amount: u128, recipient: AztecAddress) {
         _assert_msg_sender(&mut context);
 
@@ -38,7 +38,7 @@ pub contract Escrow {
     /// @param nft The address of the NFT contract
     /// @param token_id The id of the token to withdraw from the escrow
     /// @param recipient The address of the recipient
-    #[private]
+    #[external("private")]
     fn withdraw_nft(nft: AztecAddress, token_id: Field, recipient: AztecAddress) {
         _assert_msg_sender(&mut context);
 
@@ -52,6 +52,9 @@ pub contract Escrow {
     fn _assert_msg_sender(context: &mut PrivateContext) {
         let msg_sender = context.msg_sender();
         let escrow_instance: ContractInstance = get_contract_instance(context.this_address());
-        assert(AztecAddress::from_field(escrow_instance.salt) == msg_sender, "Not Authorized");
+        assert(
+            AztecAddress::from_field(escrow_instance.salt) == msg_sender.unwrap(),
+            "Not Authorized",
+        );
     }
 }

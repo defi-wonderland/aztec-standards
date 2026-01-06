@@ -4,16 +4,10 @@ use aztec::{
         address::AztecAddress,
         point::Point,
         public_keys::{IvpkM, NpkM, OvpkM, PublicKeys, TpkM},
-        traits::ToField,
     },
-    test::helpers::{
-        test_environment::TestEnvironment, txe_oracles as cheatcodes, utils::ContractDeployment,
-    },
+    test::helpers::test_environment::TestEnvironment,
 };
-use escrow_contract::Escrow;
 use escrow_contract::library::logic::MasterSecretKeys;
-use nft::test::utils as nft_utils;
-use token::test::utils as token_utils;
 
 pub unconstrained fn deploy_logic(
     env: &mut TestEnvironment,
@@ -82,42 +76,4 @@ pub unconstrained fn get_test_vector() -> (PublicKeys, MasterSecretKeys, PublicK
     };
 
     (public_keys_1, master_secret_keys_1, public_keys_2, master_secret_keys_2)
-}
-
-pub unconstrained fn set_escrow_with_token_and_nft(
-    with_account_contracts: bool,
-    escrow_secret: Field,
-    ) -> (TestEnvironment, AztecAddress, AztecAddress, AztecAddress, AztecAddress, AztecAddress, AztecAddress) {
-    // Setup without account contracts. We are not using authwits here, so dummy accounts are enough
-    let (mut env, token_contract_address, owner, recipient, minter) =
-        token_utils::setup_with_minter(with_account_contracts);
-
-    let nft_contract_address = nft_utils::deploy_nft_with_minter(&mut env, owner, minter);
-
-    // Deploy escrow contract
-    let escrow_contract_address = deploy_escrow_with_secret(&mut env, escrow_secret);
-
-    (
-        env, escrow_contract_address, token_contract_address, nft_contract_address, owner,
-        recipient, minter,
-    )
-}
-
-pub unconstrained fn deploy_escrow_with_secret(
-    env: &mut TestEnvironment,
-    escrow_secret: Field,
-) -> AztecAddress {
-    // Create an account with the custom secret, which generates the public keys
-    // This registers the public keys with the test environment so the escrow can decrypt notes
-    let _escrow_account = cheatcodes::add_account(escrow_secret);
-
-    // Deploy the Escrow contract using escrow_secret as the secret
-    // In v1.2.1, deploy_with_public_keys accepted a secret
-    // In v2.0.3, we manually create ContractDeployment with a secret
-    // TODO: The salt will be stored in the contract instance and checked by _assert_msg_sender
-    //       The test extracts logic_contract_address from escrow_instance.salt
-    let deployer =
-        ContractDeployment { env: *env, path: "@escrow_contract/Escrow", secret: escrow_secret };
-
-    deployer.without_initializer()
 }

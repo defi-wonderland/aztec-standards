@@ -147,6 +147,7 @@ unconstrained fn withdraw_public_to_private_on_behalf_of_wrong_caller() {
     let withdraw_public_to_private_call_interface = Token::at(vault_address)
         .withdraw_public_to_private(deposit_recipient, recipient, deposit_amount, 0);
     authwit_cheatcodes::add_private_authwit_from_call_interface(
+        env,
         deposit_recipient,
         owner,
         withdraw_public_to_private_call_interface,
@@ -185,6 +186,7 @@ unconstrained fn withdraw_public_to_private_on_behalf_of_other_success() {
     let withdraw_public_to_private_call_interface = Token::at(vault_address)
         .withdraw_public_to_private(deposit_recipient, recipient, deposit_amount, 0);
     authwit_cheatcodes::add_private_authwit_from_call_interface(
+        env,
         deposit_recipient,
         recipient,
         withdraw_public_to_private_call_interface,

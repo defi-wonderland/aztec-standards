@@ -1,5 +1,6 @@
 use crate::test::utils as logic_utils;
 use crate::TestLogic;
+use escrow_contract::test::utils as escrow_utils;
 use token::{test::utils as token_utils, Token};
 
 // TODO: add test for successful withdraws via the logic contract. Currently it is not possible
@@ -8,7 +9,7 @@ use token::{test::utils as token_utils, Token};
 #[test(should_fail_with = "Not Authorized")]
 unconstrained fn withdraw_unauthorized() {
     let (mut env, escrow, token, _, _, recipient, minter) =
-        logic_utils::set_escrow_with_token_and_nft(false, 1);
+        escrow_utils::set_escrow_with_token_and_nft(false, 1);
 
     // Mint some tokens to escrow
     let amount: u128 = token_utils::mint_amount;

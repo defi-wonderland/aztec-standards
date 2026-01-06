@@ -37,6 +37,7 @@ unconstrained fn nft_burn_private_authorized_success() {
 
     // Add authorization witness from owner to recipient
     authwit_cheatcodes::add_private_authwit_from_call_interface(
+        env,
         owner,
         recipient,
         burn_call_interface,
@@ -89,6 +90,7 @@ unconstrained fn nft_burn_private_wrong_authwit_fail() {
 
     // Add authorization witness but to the wrong address (owner instead of recipient)
     authwit_cheatcodes::add_private_authwit_from_call_interface(
+        env,
         owner,
         owner, // Wrong address - should be recipient
         burn_call_interface,
