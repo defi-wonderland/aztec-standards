@@ -73,6 +73,11 @@ jobs:
         run: |
           VERSION=${{ steps.basever_build.outputs.ver }} aztec-up
 
+      # This is a temporary hack to fix a problem with v3 releases.
+      - name: Manually tag the aztec version as `latest`
+        run: |
+          docker tag aztecprotocol/aztec:${{ steps.basever_build.outputs.ver }} aztecprotocol/aztec:latest
+
       - name: Install deps (BASE)
         run: yarn --frozen-lockfile
 
@@ -108,6 +113,11 @@ jobs:
         if: steps.basever_build.outputs.ver != steps.prver_build.outputs.ver
         run: |
           VERSION=${{ steps.prver_build.outputs.ver }} aztec-up
+
+      # This is a temporary hack to fix a problem with v3 releases.
+      - name: Manually tag the aztec version as `latest`
+        run: |
+          docker tag aztecprotocol/aztec:${{ steps.prver_build.outputs.ver }} aztecprotocol/aztec:latest
 
       - name: Install deps (PR)
         run: yarn --frozen-lockfile
