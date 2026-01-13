@@ -496,14 +496,6 @@ pub contract Token {
         storage.decimals.read()
     }
 
-    /// @notice Returns the decimals of the token
-    /// @return The decimals of the token
-    #[external("public")]
-    #[view]
-    fn get_hidden_offset(offset: u128) -> u128 {
-        offset
-    }
-
     /** ==========================================================
      * ===================== UNCONSTRAINED =======================
      * ======================================================== */
