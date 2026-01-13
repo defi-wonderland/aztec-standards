@@ -62,7 +62,7 @@ pub contract Token {
         minter: PublicImmutable<AztecAddress, Context>,
         upgrade_authority: PublicImmutable<AztecAddress, Context>,
         asset: PublicImmutable<AztecAddress, Context>,
-        offset: PublicImmutable<u128, Context>,
+        vault_offset: PublicImmutable<u128, Context>,
     }
 
     /// @notice Initializes the token with an asset
@@ -80,14 +80,14 @@ pub contract Token {
         symbol: str<31>,
         decimals: u8,
         asset: AztecAddress,
-        offset: u128,
+        vault_offset: u128,
         upgrade_authority: AztecAddress,
     ) {
         storage.name.initialize(FieldCompressedString::from_string(name));
         storage.symbol.initialize(FieldCompressedString::from_string(symbol));
         storage.decimals.initialize(decimals);
         storage.asset.initialize(asset);
-        storage.offset.initialize(offset);
+        storage.vault_offset.initialize(vault_offset);
 
         storage.upgrade_authority.initialize(upgrade_authority);
     }
@@ -111,7 +111,7 @@ pub contract Token {
         symbol: str<31>,
         decimals: u8,
         asset: AztecAddress,
-        offset: u128,
+        vault_offset: u128,
         upgrade_authority: AztecAddress,
         initial_deposit: u128,
         depositor: AztecAddress,
@@ -121,7 +121,7 @@ pub contract Token {
         storage.symbol.initialize(FieldCompressedString::from_string(symbol));
         storage.decimals.initialize(decimals);
         storage.asset.initialize(asset);
-        storage.offset.initialize(offset);
+        storage.vault_offset.initialize(vault_offset);
         storage.upgrade_authority.initialize(upgrade_authority);
 
         // Caller deposits assets, shares are minted to this contract and are permanently locked.
@@ -137,7 +137,7 @@ pub contract Token {
             initial_deposit,
             total_assets,
             storage.total_supply,
-            storage.offset,
+            storage.vault_offset,
             ROUND_DOWN,
         );
 
@@ -494,6 +494,14 @@ pub contract Token {
     #[view]
     fn decimals() -> u8 {
         storage.decimals.read()
+    }
+
+    /// @notice Returns the decimals of the token
+    /// @return The decimals of the token
+    #[external("public")]
+    #[view]
+    fn get_hidden_offset(offset: u128) -> u128 {
+        offset
     }
 
     /** ==========================================================
@@ -941,7 +949,7 @@ pub contract Token {
             assets,
             total_assets,
             storage.total_supply,
-            storage.offset,
+            storage.vault_offset,
             ROUND_DOWN,
         );
 
@@ -1160,7 +1168,7 @@ pub contract Token {
             shares,
             total_assets,
             storage.total_supply,
-            storage.offset,
+            storage.vault_offset,
             ROUND_UP,
         );
 
@@ -1309,7 +1317,7 @@ pub contract Token {
             assets,
             total_assets,
             storage.total_supply,
-            storage.offset,
+            storage.vault_offset,
             ROUND_UP,
         );
 
@@ -1512,7 +1520,7 @@ pub contract Token {
             shares,
             total_assets,
             storage.total_supply,
-            storage.offset,
+            storage.vault_offset,
             ROUND_DOWN,
         );
 
@@ -1670,7 +1678,7 @@ pub contract Token {
             assets,
             _total_assets(&mut context, storage.asset),
             storage.total_supply,
-            storage.offset,
+            storage.vault_offset,
             ROUND_DOWN,
         )
     }
@@ -1685,7 +1693,7 @@ pub contract Token {
             shares,
             _total_assets(&mut context, storage.asset),
             storage.total_supply,
-            storage.offset,
+            storage.vault_offset,
             ROUND_DOWN,
         )
     }
@@ -1710,7 +1718,7 @@ pub contract Token {
             &mut context,
             storage.asset,
             storage.total_supply,
-            storage.offset,
+            storage.vault_offset,
         )
     }
 
@@ -1734,7 +1742,7 @@ pub contract Token {
             &mut context,
             storage.asset,
             storage.total_supply,
-            storage.offset,
+            storage.vault_offset,
         )
     }
 
@@ -1751,7 +1759,7 @@ pub contract Token {
             storage.public_balances,
             storage.asset,
             storage.total_supply,
-            storage.offset,
+            storage.vault_offset,
         )
     }
 
@@ -1766,7 +1774,7 @@ pub contract Token {
             &mut context,
             storage.asset,
             storage.total_supply,
-            storage.offset,
+            storage.vault_offset,
         )
     }
 
@@ -1791,7 +1799,7 @@ pub contract Token {
             shares,
             total_assets,
             storage.total_supply,
-            storage.offset,
+            storage.vault_offset,
             ROUND_DOWN,
         );
         assets
@@ -1812,7 +1820,7 @@ pub contract Token {
             assets,
             total_assets,
             storage.total_supply,
-            storage.offset,
+            storage.vault_offset,
             ROUND_UP,
         );
 
@@ -1830,7 +1838,7 @@ pub contract Token {
             assets,
             total_assets,
             storage.total_supply,
-            storage.offset,
+            storage.vault_offset,
             ROUND_UP,
         );
 
@@ -1850,7 +1858,7 @@ pub contract Token {
             shares,
             total_assets,
             storage.total_supply,
-            storage.offset,
+            storage.vault_offset,
             ROUND_DOWN,
         );
 
@@ -1875,7 +1883,7 @@ pub contract Token {
             assets,
             total_assets,
             storage.total_supply,
-            storage.offset,
+            storage.vault_offset,
             ROUND_DOWN,
         );
 
@@ -1900,7 +1908,7 @@ pub contract Token {
             assets,
             total_assets,
             storage.total_supply,
-            storage.offset,
+            storage.vault_offset,
             ROUND_DOWN,
         );
 
@@ -1927,7 +1935,7 @@ pub contract Token {
             assets,
             total_assets,
             storage.total_supply,
-            storage.offset,
+            storage.vault_offset,
             ROUND_DOWN,
         );
 
@@ -1955,7 +1963,7 @@ pub contract Token {
             assets,
             total_assets,
             storage.total_supply,
-            storage.offset,
+            storage.vault_offset,
             ROUND_UP,
         );
 
@@ -1995,7 +2003,7 @@ pub contract Token {
             assets,
             total_assets,
             storage.total_supply,
-            storage.offset,
+            storage.vault_offset,
             ROUND_UP,
         );
 
@@ -2029,7 +2037,7 @@ pub contract Token {
             assets,
             total_assets,
             storage.total_supply,
-            storage.offset,
+            storage.vault_offset,
             ROUND_DOWN,
         );
 
@@ -2066,7 +2074,7 @@ pub contract Token {
             assets,
             total_assets,
             storage.total_supply,
-            storage.offset,
+            storage.vault_offset,
             ROUND_DOWN,
         );
         let outstanding_shares = max_shares - min_shares; // Reverts with underflow if invalid
@@ -2107,7 +2115,7 @@ pub contract Token {
             shares,
             total_assets - max_assets,
             storage.total_supply,
-            storage.offset,
+            storage.vault_offset,
             ROUND_UP,
         );
 
@@ -2137,7 +2145,7 @@ pub contract Token {
             shares,
             total_assets - max_assets,
             storage.total_supply,
-            storage.offset,
+            storage.vault_offset,
             ROUND_UP,
         );
 
@@ -2167,7 +2175,7 @@ pub contract Token {
             shares,
             total_assets,
             storage.total_supply,
-            storage.offset,
+            storage.vault_offset,
             ROUND_DOWN,
         );
 
@@ -2205,7 +2213,7 @@ pub contract Token {
             shares,
             total_assets,
             storage.total_supply,
-            storage.offset,
+            storage.vault_offset,
             ROUND_DOWN,
         );
 
@@ -2243,7 +2251,7 @@ pub contract Token {
             shares,
             total_assets,
             storage.total_supply,
-            storage.offset,
+            storage.vault_offset,
             ROUND_UP,
         );
 
@@ -2295,12 +2303,12 @@ pub contract Token {
         assets: u128,
         total_assets: u128,
         total_supply: PublicMutable<u128, &mut PublicContext>,
-        offset: PublicImmutable<u128, &mut PublicContext>,
+        vault_offset: PublicImmutable<u128, &mut PublicContext>,
         rounding: bool,
     ) -> u128 {
         // TODO: handle overflow
         // TODO: optimize rounding
-        let mul_term = assets * (total_supply.read() + offset.read());
+        let mul_term = assets * (total_supply.read() + vault_offset.read());
         let denominator = (total_assets + 1);
         let mut shares = mul_term / denominator;
         if (rounding == ROUND_UP) & (mul_term % denominator > 0) {
@@ -2321,13 +2329,13 @@ pub contract Token {
         shares: u128,
         total_assets: u128,
         total_supply: PublicMutable<u128, &mut PublicContext>,
-        offset: PublicImmutable<u128, &mut PublicContext>,
+        vault_offset: PublicImmutable<u128, &mut PublicContext>,
         rounding: bool,
     ) -> u128 {
         // TODO: handle overflow
         // TODO: optimize rounding
         let mul_term = shares * (total_assets + 1);
-        let denominator = (total_supply.read() + offset.read());
+        let denominator = (total_supply.read() + vault_offset.read());
         let mut assets = mul_term / denominator;
         if (rounding == ROUND_UP) & (mul_term % denominator > 0) {
             assets = assets + 1;
@@ -2342,8 +2350,8 @@ pub contract Token {
     /// @return The offset value
     #[external("public")]
     #[view]
-    fn offset() -> u128 {
-        storage.offset.read()
+    fn get_vault_offset() -> u128 {
+        storage.vault_offset.read()
     }
 
     /// @dev Returns the maximum amount of the underlying asset that can be deposited into the Vault for the receiver, through a deposit call.
@@ -2368,10 +2376,11 @@ pub contract Token {
         context: &mut PublicContext,
         asset: PublicImmutable<AztecAddress, &mut PublicContext>,
         total_supply: PublicMutable<u128, &mut PublicContext>,
-        offset: PublicImmutable<u128, &mut PublicContext>,
+        vault_offset: PublicImmutable<u128, &mut PublicContext>,
     ) -> u128 {
         let total_assets = _total_assets(context, asset);
-        let shares = _convert_to_shares(assets, total_assets, total_supply, offset, ROUND_DOWN);
+        let shares =
+            _convert_to_shares(assets, total_assets, total_supply, vault_offset, ROUND_DOWN);
         shares
     }
 
@@ -2397,10 +2406,10 @@ pub contract Token {
         context: &mut PublicContext,
         asset: PublicImmutable<AztecAddress, &mut PublicContext>,
         total_supply: PublicMutable<u128, &mut PublicContext>,
-        offset: PublicImmutable<u128, &mut PublicContext>,
+        vault_offset: PublicImmutable<u128, &mut PublicContext>,
     ) -> u128 {
         let total_assets = _total_assets(context, asset);
-        let assets = _convert_to_assets(shares, total_assets, total_supply, offset, ROUND_UP);
+        let assets = _convert_to_assets(shares, total_assets, total_supply, vault_offset, ROUND_UP);
         assets
     }
 
@@ -2420,14 +2429,14 @@ pub contract Token {
         public_balances: Map<AztecAddress, PublicMutable<u128, &mut PublicContext>, &mut PublicContext>,
         asset: PublicImmutable<AztecAddress, &mut PublicContext>,
         total_supply: PublicMutable<u128, &mut PublicContext>,
-        offset: PublicImmutable<u128, &mut PublicContext>,
+        vault_offset: PublicImmutable<u128, &mut PublicContext>,
     ) -> u128 {
         _preview_redeem(
             _max_redeem(owner, public_balances),
             context,
             asset,
             total_supply,
-            offset,
+            vault_offset,
         )
     }
 
@@ -2444,10 +2453,10 @@ pub contract Token {
         context: &mut PublicContext,
         asset: PublicImmutable<AztecAddress, &mut PublicContext>,
         total_supply: PublicMutable<u128, &mut PublicContext>,
-        offset: PublicImmutable<u128, &mut PublicContext>,
+        vault_offset: PublicImmutable<u128, &mut PublicContext>,
     ) -> u128 {
         let total_assets = _total_assets(context, asset);
-        let shares = _convert_to_shares(assets, total_assets, total_supply, offset, ROUND_UP);
+        let shares = _convert_to_shares(assets, total_assets, total_supply, vault_offset, ROUND_UP);
         shares
     }
 
@@ -2476,10 +2485,11 @@ pub contract Token {
         context: &mut PublicContext,
         asset: PublicImmutable<AztecAddress, &mut PublicContext>,
         total_supply: PublicMutable<u128, &mut PublicContext>,
-        offset: PublicImmutable<u128, &mut PublicContext>,
+        vault_offset: PublicImmutable<u128, &mut PublicContext>,
     ) -> u128 {
         let total_assets = _total_assets(context, asset);
-        let assets = _convert_to_assets(shares, total_assets, total_supply, offset, ROUND_DOWN);
+        let assets =
+            _convert_to_assets(shares, total_assets, total_supply, vault_offset, ROUND_DOWN);
         assets
     }
 }
