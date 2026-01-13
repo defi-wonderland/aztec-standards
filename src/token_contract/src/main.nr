@@ -42,9 +42,6 @@ pub contract Token {
     // Maximum value for a u128 (2**128 - 1)
     global MAX_U128_VALUE: u128 = 340282366920938463463374607431768211455;
 
-    // The offset used to prevent inflation attacks
-    global OFFSET: u128 = 1;
-
     /// @param name The name of the token
     /// @param symbol The symbol of the token
     /// @param decimals The number of decimals of the token
@@ -65,6 +62,7 @@ pub contract Token {
         minter: PublicImmutable<AztecAddress, Context>,
         upgrade_authority: PublicImmutable<AztecAddress, Context>,
         asset: PublicImmutable<AztecAddress, Context>,
+        offset: PublicImmutable<u128, Context>,
     }
 
     /// @notice Initializes the token with an asset
@@ -73,6 +71,7 @@ pub contract Token {
     /// @param symbol The symbol of the token
     /// @param decimals The number of decimals of the token
     /// @param asset The underlying asset for the yield bearing token
+    /// @param offset The offset used to prevent inflation attacks (typically 1)
     /// @param upgrade_authority The address of the upgrade authority (zero address if not upgradeable)
     #[external("public")]
     #[initializer]
@@ -81,12 +80,14 @@ pub contract Token {
         symbol: str<31>,
         decimals: u8,
         asset: AztecAddress,
+        offset: u128,
         upgrade_authority: AztecAddress,
     ) {
         storage.name.initialize(FieldCompressedString::from_string(name));
         storage.symbol.initialize(FieldCompressedString::from_string(symbol));
         storage.decimals.initialize(decimals);
         storage.asset.initialize(asset);
+        storage.offset.initialize(offset);
 
         storage.upgrade_authority.initialize(upgrade_authority);
     }
@@ -98,6 +99,7 @@ pub contract Token {
     /// @param symbol The symbol of the token
     /// @param decimals The number of decimals of the token
     /// @param asset The underlying asset for the yield bearing token
+    /// @param offset The offset used to prevent inflation attacks (typically 1)
     /// @param upgrade_authority The address of the upgrade authority (zero address if not upgradeable)
     /// @param initial_deposit The initial deposit amount of the asset
     /// @param depositor The address of the initial depositor of the assets
@@ -109,6 +111,7 @@ pub contract Token {
         symbol: str<31>,
         decimals: u8,
         asset: AztecAddress,
+        offset: u128,
         upgrade_authority: AztecAddress,
         initial_deposit: u128,
         depositor: AztecAddress,
@@ -118,6 +121,7 @@ pub contract Token {
         storage.symbol.initialize(FieldCompressedString::from_string(symbol));
         storage.decimals.initialize(decimals);
         storage.asset.initialize(asset);
+        storage.offset.initialize(offset);
         storage.upgrade_authority.initialize(upgrade_authority);
 
         // Caller deposits assets, shares are minted to this contract and are permanently locked.
@@ -133,6 +137,7 @@ pub contract Token {
             initial_deposit,
             total_assets,
             storage.total_supply,
+            storage.offset,
             ROUND_DOWN,
         );
 
@@ -932,7 +937,7 @@ pub contract Token {
 
         // Calculate shares to mint
         let total_assets = _total_assets(&mut context, storage.asset);
-        let shares = _convert_to_shares(assets, total_assets, storage.total_supply, ROUND_DOWN);
+        let shares = _convert_to_shares(assets, total_assets, storage.total_supply, storage.offset, ROUND_DOWN);
 
         // Order matters: transfer before minting to neutralize ERC-777 reentrancy via the `tokens_to_send` hook.
         // Take the assets from the sender
@@ -1145,7 +1150,7 @@ pub contract Token {
 
         // Calculate assets required
         let total_assets = _total_assets(&mut context, storage.asset);
-        let assets = _convert_to_assets(shares, total_assets, storage.total_supply, ROUND_UP);
+        let assets = _convert_to_assets(shares, total_assets, storage.total_supply, storage.offset, ROUND_UP);
 
         // Order matters: transfer before minting to neutralize ERC-777 reentrancy via the `tokens_to_send` hook.
         // Take the assets from the sender
@@ -1288,7 +1293,7 @@ pub contract Token {
 
         // Calculate shares to burn
         let total_assets = _total_assets(&mut context, storage.asset);
-        let shares = _convert_to_shares(assets, total_assets, storage.total_supply, ROUND_UP);
+        let shares = _convert_to_shares(assets, total_assets, storage.total_supply, storage.offset, ROUND_UP);
 
         // Order matters: transfer after burning to neutralize ERC-777 reentrancy via the `tokens_received` hook.
         // Burn the sender's shares
@@ -1485,7 +1490,7 @@ pub contract Token {
 
         // Calculate assets to redeem
         let total_assets = _total_assets(&mut context, storage.asset);
-        let assets = _convert_to_assets(shares, total_assets, storage.total_supply, ROUND_DOWN);
+        let assets = _convert_to_assets(shares, total_assets, storage.total_supply, storage.offset, ROUND_DOWN);
 
         // Order matters: transfer after burning to neutralize ERC-777 reentrancy via the `tokens_received` hook.
         // Burn the sender's shares
@@ -1641,6 +1646,7 @@ pub contract Token {
             assets,
             _total_assets(&mut context, storage.asset),
             storage.total_supply,
+            storage.offset,
             ROUND_DOWN,
         )
     }
@@ -1655,6 +1661,7 @@ pub contract Token {
             shares,
             _total_assets(&mut context, storage.asset),
             storage.total_supply,
+            storage.offset,
             ROUND_DOWN,
         )
     }
@@ -1674,7 +1681,7 @@ pub contract Token {
     #[external("public")]
     #[view]
     fn preview_deposit(assets: u128) -> u128 {
-        _preview_deposit(assets, &mut context, storage.asset, storage.total_supply)
+        _preview_deposit(assets, &mut context, storage.asset, storage.total_supply, storage.offset)
     }
 
     /// @dev Returns the maximum amount of the Vault shares that can be issued for the receiver, through a mint call.
@@ -1692,7 +1699,7 @@ pub contract Token {
     #[external("public")]
     #[view]
     fn preview_issue(shares: u128) -> u128 {
-        _preview_issue(shares, &mut context, storage.asset, storage.total_supply)
+        _preview_issue(shares, &mut context, storage.asset, storage.total_supply, storage.offset)
     }
 
     /// @dev Returns the maximum amount of the underlying asset that can be withdrawn from the owner balance in the Vault, through a withdraw call.
@@ -1708,6 +1715,7 @@ pub contract Token {
             storage.public_balances,
             storage.asset,
             storage.total_supply,
+            storage.offset,
         )
     }
 
@@ -1717,7 +1725,7 @@ pub contract Token {
     #[external("public")]
     #[view]
     fn preview_withdraw(assets: u128) -> u128 {
-        _preview_withdraw(assets, &mut context, storage.asset, storage.total_supply)
+        _preview_withdraw(assets, &mut context, storage.asset, storage.total_supply, storage.offset)
     }
 
     /// @dev Returns the maximum amount of the Vault shares that can be redeemed from the owner balance in the Vault, through a redeem call.
@@ -1737,7 +1745,7 @@ pub contract Token {
     #[view]
     fn preview_redeem(shares: u128) -> u128 {
         let total_assets = _total_assets(&mut context, storage.asset);
-        let assets = _convert_to_assets(shares, total_assets, storage.total_supply, ROUND_DOWN);
+        let assets = _convert_to_assets(shares, total_assets, storage.total_supply, storage.offset, ROUND_DOWN);
         assets
     }
 
@@ -1752,7 +1760,7 @@ pub contract Token {
     #[internal]
     fn settle_withdraw_public_to_private_internal(from: AztecAddress, assets: u128) {
         let total_assets = _total_assets(&mut context, storage.asset);
-        let shares = _convert_to_shares(assets, total_assets, storage.total_supply, ROUND_UP);
+        let shares = _convert_to_shares(assets, total_assets, storage.total_supply, storage.offset, ROUND_UP);
 
         _burn_public(storage.public_balances, storage.total_supply, from, shares);
     }
@@ -1764,7 +1772,7 @@ pub contract Token {
     #[internal]
     fn settle_withdraw_private_to_private_internal(assets: u128, shares: u128) {
         let total_assets = _total_assets(&mut context, storage.asset);
-        let min_shares = _convert_to_shares(assets, total_assets, storage.total_supply, ROUND_UP);
+        let min_shares = _convert_to_shares(assets, total_assets, storage.total_supply, storage.offset, ROUND_UP);
 
         assert(min_shares <= shares, "Insufficient shares burnt");
 
@@ -1778,7 +1786,7 @@ pub contract Token {
     #[internal]
     fn settle_redeem_private_to_public_internal(to: AztecAddress, shares: u128) {
         let total_assets = _total_assets(&mut context, storage.asset);
-        let assets = _convert_to_assets(shares, total_assets, storage.total_supply, ROUND_DOWN);
+        let assets = _convert_to_assets(shares, total_assets, storage.total_supply, storage.offset, ROUND_DOWN);
 
         // Order matters: transfer after burning to neutralize ERC-777 reentrancy via the `tokens_received` hook.
         // Finalize burning shares by decreasing total supply
@@ -1797,7 +1805,7 @@ pub contract Token {
     #[internal]
     fn settle_deposit_private_to_public_internal(to: AztecAddress, assets: u128) {
         let total_assets = _total_assets(&mut context, storage.asset) - assets;
-        let shares = _convert_to_shares(assets, total_assets, storage.total_supply, ROUND_DOWN);
+        let shares = _convert_to_shares(assets, total_assets, storage.total_supply, storage.offset, ROUND_DOWN);
 
         _mint_to_public(storage.public_balances, storage.total_supply, to, shares);
     }
@@ -1816,7 +1824,7 @@ pub contract Token {
         _nonce: Field,
     ) {
         let total_assets = _total_assets(&mut context, storage.asset);
-        let max_shares = _convert_to_shares(assets, total_assets, storage.total_supply, ROUND_DOWN);
+        let max_shares = _convert_to_shares(assets, total_assets, storage.total_supply, storage.offset, ROUND_DOWN);
 
         assert(shares <= max_shares, "Too many shares requested");
 
@@ -1837,7 +1845,7 @@ pub contract Token {
     #[internal]
     fn settle_deposit_private_to_private_internal(assets: u128, shares: u128) {
         let total_assets = _total_assets(&mut context, storage.asset) - assets;
-        let max_shares = _convert_to_shares(assets, total_assets, storage.total_supply, ROUND_DOWN);
+        let max_shares = _convert_to_shares(assets, total_assets, storage.total_supply, storage.offset, ROUND_DOWN);
 
         assert(shares <= max_shares, "Too many shares requested");
 
@@ -1859,7 +1867,7 @@ pub contract Token {
         to: AztecAddress,
     ) {
         let total_assets = _total_assets(&mut context, storage.asset);
-        let shares = _convert_to_shares(assets, total_assets, storage.total_supply, ROUND_UP);
+        let shares = _convert_to_shares(assets, total_assets, storage.total_supply, storage.offset, ROUND_UP);
 
         let surplus = max_shares - shares; // Reverts with underflow if invalid
         if surplus > 0 {
@@ -1893,7 +1901,7 @@ pub contract Token {
         max_shares: u128,
     ) {
         let total_assets = _total_assets(&mut context, storage.asset);
-        let shares = _convert_to_shares(assets, total_assets, storage.total_supply, ROUND_UP);
+        let shares = _convert_to_shares(assets, total_assets, storage.total_supply, storage.offset, ROUND_UP);
 
         let surplus = max_shares - shares; // Reverts with underflow if invalid
         if surplus > 0 {
@@ -1921,7 +1929,7 @@ pub contract Token {
         min_shares: u128,
     ) {
         let total_assets = _total_assets(&mut context, storage.asset) - assets;
-        let max_shares = _convert_to_shares(assets, total_assets, storage.total_supply, ROUND_DOWN);
+        let max_shares = _convert_to_shares(assets, total_assets, storage.total_supply, storage.offset, ROUND_DOWN);
 
         let outstanding_shares = max_shares - min_shares; // Reverts with underflow if invalid
         if outstanding_shares > 0 {
@@ -1952,7 +1960,7 @@ pub contract Token {
         _nonce: Field,
     ) {
         let total_assets = _total_assets(&mut context, storage.asset);
-        let max_shares = _convert_to_shares(assets, total_assets, storage.total_supply, ROUND_DOWN);
+        let max_shares = _convert_to_shares(assets, total_assets, storage.total_supply, storage.offset, ROUND_DOWN);
         let outstanding_shares = max_shares - min_shares; // Reverts with underflow if invalid
 
         // Order matters: transfer before minting to neutralize ERC-777 reentrancy via the `tokens_to_send` hook.
@@ -1991,6 +1999,7 @@ pub contract Token {
             shares,
             total_assets - max_assets,
             storage.total_supply,
+            storage.offset,
             ROUND_UP,
         );
 
@@ -2020,6 +2029,7 @@ pub contract Token {
             shares,
             total_assets - max_assets,
             storage.total_supply,
+            storage.offset,
             ROUND_UP,
         );
 
@@ -2045,7 +2055,7 @@ pub contract Token {
         min_assets: u128,
     ) {
         let total_assets = _total_assets(&mut context, storage.asset);
-        let assets = _convert_to_assets(shares, total_assets, storage.total_supply, ROUND_DOWN);
+        let assets = _convert_to_assets(shares, total_assets, storage.total_supply, storage.offset, ROUND_DOWN);
 
         // Finalize burning shares by decreasing total supply
         _decrease_total_supply(storage.total_supply, shares);
@@ -2077,7 +2087,7 @@ pub contract Token {
         min_assets: u128,
     ) {
         let total_assets = _total_assets(&mut context, storage.asset);
-        let assets = _convert_to_assets(shares, total_assets, storage.total_supply, ROUND_DOWN);
+        let assets = _convert_to_assets(shares, total_assets, storage.total_supply, storage.offset, ROUND_DOWN);
 
         // Burn the sender's shares
         _burn_public(storage.public_balances, storage.total_supply, from, shares);
@@ -2109,7 +2119,7 @@ pub contract Token {
         _nonce: Field,
     ) {
         let total_assets = _total_assets(&mut context, storage.asset);
-        let assets = _convert_to_assets(shares, total_assets, storage.total_supply, ROUND_UP);
+        let assets = _convert_to_assets(shares, total_assets, storage.total_supply, storage.offset, ROUND_UP);
 
         // Order matters: transfer before minting to neutralize ERC-777 reentrancy via the `tokens_to_send` hook.
         // Take the assets from the sender
@@ -2151,6 +2161,7 @@ pub contract Token {
     /// @param assets The amount of assets to convert
     /// @param total_assets The total amount of assets in the vault
     /// @param total_supply The storage pointer to the total supply of shares
+    /// @param offset The storage pointer to the offset value
     /// @param rounding The rounding direction (ROUND_UP or ROUND_DOWN)
     /// @return The equivalent amount of shares
     #[contract_library_method]
@@ -2158,11 +2169,12 @@ pub contract Token {
         assets: u128,
         total_assets: u128,
         total_supply: PublicMutable<u128, &mut PublicContext>,
+        offset: PublicImmutable<u128, &mut PublicContext>,
         rounding: bool,
     ) -> u128 {
         // TODO: handle overflow
         // TODO: optimize rounding
-        let mul_term = assets * (total_supply.read() + offset());
+        let mul_term = assets * (total_supply.read() + offset.read());
         let denominator = (total_assets + 1);
         let mut shares = mul_term / denominator;
         if (rounding == ROUND_UP) & (mul_term % denominator > 0) {
@@ -2175,6 +2187,7 @@ pub contract Token {
     /// @param shares The amount of shares to convert
     /// @param total_assets The total amount of assets in the vault
     /// @param total_supply The storage pointer to the total supply of shares
+    /// @param offset The storage pointer to the offset value
     /// @param rounding The rounding direction (ROUND_UP or ROUND_DOWN)
     /// @return The equivalent amount of assets
     #[contract_library_method]
@@ -2182,12 +2195,13 @@ pub contract Token {
         shares: u128,
         total_assets: u128,
         total_supply: PublicMutable<u128, &mut PublicContext>,
+        offset: PublicImmutable<u128, &mut PublicContext>,
         rounding: bool,
     ) -> u128 {
         // TODO: handle overflow
         // TODO: optimize rounding
         let mul_term = shares * (total_assets + 1);
-        let denominator = (total_supply.read() + offset());
+        let denominator = (total_supply.read() + offset.read());
         let mut assets = mul_term / denominator;
         if (rounding == ROUND_UP) & (mul_term % denominator > 0) {
             assets = assets + 1;
@@ -2200,9 +2214,10 @@ pub contract Token {
     /// as a result of the value being captured by the virtual shares (out of the attacker's donation) matching the attacker's expected gains.
     /// With a larger offset, the attack becomes orders of magnitude more expensive than it is profitable.
     /// @return The offset value
-    #[contract_library_method]
+    #[external("public")]
+    #[view]
     fn offset() -> u128 {
-        OFFSET
+        storage.offset.read()
     }
 
     /// @dev Returns the maximum amount of the underlying asset that can be deposited into the Vault for the receiver, through a deposit call.
@@ -2219,6 +2234,7 @@ pub contract Token {
     /// @param context The context of the public call
     /// @param asset The storage pointer to the asset address
     /// @param total_supply The storage pointer to the total supply
+    /// @param offset The storage pointer to the offset value
     /// @return The amount of shares that would be minted
     #[contract_library_method]
     unconstrained fn _preview_deposit(
@@ -2226,9 +2242,10 @@ pub contract Token {
         context: &mut PublicContext,
         asset: PublicImmutable<AztecAddress, &mut PublicContext>,
         total_supply: PublicMutable<u128, &mut PublicContext>,
+        offset: PublicImmutable<u128, &mut PublicContext>,
     ) -> u128 {
         let total_assets = _total_assets(context, asset);
-        let shares = _convert_to_shares(assets, total_assets, total_supply, ROUND_DOWN);
+        let shares = _convert_to_shares(assets, total_assets, total_supply, offset, ROUND_DOWN);
         shares
     }
 
@@ -2246,6 +2263,7 @@ pub contract Token {
     /// @param context The context of the public call
     /// @param asset The storage pointer to the asset address
     /// @param total_supply The storage pointer to the total supply
+    /// @param offset The storage pointer to the offset value
     /// @return The amount of assets that would be issued
     #[contract_library_method]
     unconstrained fn _preview_issue(
@@ -2253,9 +2271,10 @@ pub contract Token {
         context: &mut PublicContext,
         asset: PublicImmutable<AztecAddress, &mut PublicContext>,
         total_supply: PublicMutable<u128, &mut PublicContext>,
+        offset: PublicImmutable<u128, &mut PublicContext>,
     ) -> u128 {
         let total_assets = _total_assets(context, asset);
-        let assets = _convert_to_assets(shares, total_assets, total_supply, ROUND_UP);
+        let assets = _convert_to_assets(shares, total_assets, total_supply, offset, ROUND_UP);
         assets
     }
 
@@ -2266,6 +2285,7 @@ pub contract Token {
     /// @param context The context of the public call
     /// @param asset The storage pointer to the asset address
     /// @param total_supply The storage pointer to the total supply
+    /// @param offset The storage pointer to the offset value
     /// @return The maximum amount of assets that can be withdrawn
     #[contract_library_method]
     unconstrained fn _max_withdraw(
@@ -2274,12 +2294,14 @@ pub contract Token {
         public_balances: Map<AztecAddress, PublicMutable<u128, &mut PublicContext>, &mut PublicContext>,
         asset: PublicImmutable<AztecAddress, &mut PublicContext>,
         total_supply: PublicMutable<u128, &mut PublicContext>,
+        offset: PublicImmutable<u128, &mut PublicContext>,
     ) -> u128 {
         _preview_redeem(
             _max_redeem(owner, public_balances),
             context,
             asset,
             total_supply,
+            offset,
         )
     }
 
@@ -2288,6 +2310,7 @@ pub contract Token {
     /// @param context The context of the public call
     /// @param asset The storage pointer to the asset address
     /// @param total_supply The storage pointer to the total supply
+    /// @param offset The storage pointer to the offset value
     /// @return The amount of shares that would be redeemed
     #[contract_library_method]
     unconstrained fn _preview_withdraw(
@@ -2295,9 +2318,10 @@ pub contract Token {
         context: &mut PublicContext,
         asset: PublicImmutable<AztecAddress, &mut PublicContext>,
         total_supply: PublicMutable<u128, &mut PublicContext>,
+        offset: PublicImmutable<u128, &mut PublicContext>,
     ) -> u128 {
         let total_assets = _total_assets(context, asset);
-        let shares = _convert_to_shares(assets, total_assets, total_supply, ROUND_UP);
+        let shares = _convert_to_shares(assets, total_assets, total_supply, offset, ROUND_UP);
         shares
     }
 
@@ -2318,6 +2342,7 @@ pub contract Token {
     /// @param context The context of the public call
     /// @param asset The storage pointer to the asset address
     /// @param total_supply The storage pointer to the total supply
+    /// @param offset The storage pointer to the offset value
     /// @return The amount of assets that would be redeemed
     #[contract_library_method]
     unconstrained fn _preview_redeem(
@@ -2325,9 +2350,10 @@ pub contract Token {
         context: &mut PublicContext,
         asset: PublicImmutable<AztecAddress, &mut PublicContext>,
         total_supply: PublicMutable<u128, &mut PublicContext>,
+        offset: PublicImmutable<u128, &mut PublicContext>,
     ) -> u128 {
         let total_assets = _total_assets(context, asset);
-        let assets = _convert_to_assets(shares, total_assets, total_supply, ROUND_DOWN);
+        let assets = _convert_to_assets(shares, total_assets, total_supply, offset, ROUND_DOWN);
         assets
     }
 }

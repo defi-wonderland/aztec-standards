@@ -1747,6 +1747,7 @@ describe('Tokenized Vault', () => {
         'VT',
         6,
         assetContract.address,
+        1,
         AztecAddress.ZERO, // AztecAddress.ZERO
         initialDeposit,
         alice,

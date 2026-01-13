@@ -26,6 +26,7 @@ unconstrained fn vault_with_initial_deposit_success() {
         "VAULT00000000000000000000000000",
         18,
         asset_address,
+        1,
         AztecAddress::zero(),
     );
     let vault_address =

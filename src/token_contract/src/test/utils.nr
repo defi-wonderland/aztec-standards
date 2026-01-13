@@ -92,6 +92,7 @@ pub unconstrained fn setup_with_asset(
         "VAULT00000000000000000000000000",
         18,
         asset_contract_address,
+        1,
         AztecAddress::zero(),
     );
     let vault_contract_address = env.deploy("@token_contract/Token").with_public_initializer(
@@ -122,6 +123,7 @@ pub unconstrained fn setup_with_asset_initial_deposit(
         "VAULT00000000000000000000000000",
         18,
         asset_contract_address,
+        1,
         AztecAddress::zero(),
     );
     let vault_contract_address = env.deploy("@token_contract/Token").with_public_initializer(
