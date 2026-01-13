@@ -937,7 +937,13 @@ pub contract Token {
 
         // Calculate shares to mint
         let total_assets = _total_assets(&mut context, storage.asset);
-        let shares = _convert_to_shares(assets, total_assets, storage.total_supply, storage.offset, ROUND_DOWN);
+        let shares = _convert_to_shares(
+            assets,
+            total_assets,
+            storage.total_supply,
+            storage.offset,
+            ROUND_DOWN,
+        );
 
         // Order matters: transfer before minting to neutralize ERC-777 reentrancy via the `tokens_to_send` hook.
         // Take the assets from the sender
@@ -1150,7 +1156,13 @@ pub contract Token {
 
         // Calculate assets required
         let total_assets = _total_assets(&mut context, storage.asset);
-        let assets = _convert_to_assets(shares, total_assets, storage.total_supply, storage.offset, ROUND_UP);
+        let assets = _convert_to_assets(
+            shares,
+            total_assets,
+            storage.total_supply,
+            storage.offset,
+            ROUND_UP,
+        );
 
         // Order matters: transfer before minting to neutralize ERC-777 reentrancy via the `tokens_to_send` hook.
         // Take the assets from the sender
@@ -1293,7 +1305,13 @@ pub contract Token {
 
         // Calculate shares to burn
         let total_assets = _total_assets(&mut context, storage.asset);
-        let shares = _convert_to_shares(assets, total_assets, storage.total_supply, storage.offset, ROUND_UP);
+        let shares = _convert_to_shares(
+            assets,
+            total_assets,
+            storage.total_supply,
+            storage.offset,
+            ROUND_UP,
+        );
 
         // Order matters: transfer after burning to neutralize ERC-777 reentrancy via the `tokens_received` hook.
         // Burn the sender's shares
@@ -1490,7 +1508,13 @@ pub contract Token {
 
         // Calculate assets to redeem
         let total_assets = _total_assets(&mut context, storage.asset);
-        let assets = _convert_to_assets(shares, total_assets, storage.total_supply, storage.offset, ROUND_DOWN);
+        let assets = _convert_to_assets(
+            shares,
+            total_assets,
+            storage.total_supply,
+            storage.offset,
+            ROUND_DOWN,
+        );
 
         // Order matters: transfer after burning to neutralize ERC-777 reentrancy via the `tokens_received` hook.
         // Burn the sender's shares
@@ -1681,7 +1705,13 @@ pub contract Token {
     #[external("public")]
     #[view]
     fn preview_deposit(assets: u128) -> u128 {
-        _preview_deposit(assets, &mut context, storage.asset, storage.total_supply, storage.offset)
+        _preview_deposit(
+            assets,
+            &mut context,
+            storage.asset,
+            storage.total_supply,
+            storage.offset,
+        )
     }
 
     /// @dev Returns the maximum amount of the Vault shares that can be issued for the receiver, through a mint call.
@@ -1699,7 +1729,13 @@ pub contract Token {
     #[external("public")]
     #[view]
     fn preview_issue(shares: u128) -> u128 {
-        _preview_issue(shares, &mut context, storage.asset, storage.total_supply, storage.offset)
+        _preview_issue(
+            shares,
+            &mut context,
+            storage.asset,
+            storage.total_supply,
+            storage.offset,
+        )
     }
 
     /// @dev Returns the maximum amount of the underlying asset that can be withdrawn from the owner balance in the Vault, through a withdraw call.
@@ -1725,7 +1761,13 @@ pub contract Token {
     #[external("public")]
     #[view]
     fn preview_withdraw(assets: u128) -> u128 {
-        _preview_withdraw(assets, &mut context, storage.asset, storage.total_supply, storage.offset)
+        _preview_withdraw(
+            assets,
+            &mut context,
+            storage.asset,
+            storage.total_supply,
+            storage.offset,
+        )
     }
 
     /// @dev Returns the maximum amount of the Vault shares that can be redeemed from the owner balance in the Vault, through a redeem call.
@@ -1745,7 +1787,13 @@ pub contract Token {
     #[view]
     fn preview_redeem(shares: u128) -> u128 {
         let total_assets = _total_assets(&mut context, storage.asset);
-        let assets = _convert_to_assets(shares, total_assets, storage.total_supply, storage.offset, ROUND_DOWN);
+        let assets = _convert_to_assets(
+            shares,
+            total_assets,
+            storage.total_supply,
+            storage.offset,
+            ROUND_DOWN,
+        );
         assets
     }
 
@@ -1760,7 +1808,13 @@ pub contract Token {
     #[internal]
     fn settle_withdraw_public_to_private_internal(from: AztecAddress, assets: u128) {
         let total_assets = _total_assets(&mut context, storage.asset);
-        let shares = _convert_to_shares(assets, total_assets, storage.total_supply, storage.offset, ROUND_UP);
+        let shares = _convert_to_shares(
+            assets,
+            total_assets,
+            storage.total_supply,
+            storage.offset,
+            ROUND_UP,
+        );
 
         _burn_public(storage.public_balances, storage.total_supply, from, shares);
     }
@@ -1772,7 +1826,13 @@ pub contract Token {
     #[internal]
     fn settle_withdraw_private_to_private_internal(assets: u128, shares: u128) {
         let total_assets = _total_assets(&mut context, storage.asset);
-        let min_shares = _convert_to_shares(assets, total_assets, storage.total_supply, storage.offset, ROUND_UP);
+        let min_shares = _convert_to_shares(
+            assets,
+            total_assets,
+            storage.total_supply,
+            storage.offset,
+            ROUND_UP,
+        );
 
         assert(min_shares <= shares, "Insufficient shares burnt");
 
@@ -1786,7 +1846,13 @@ pub contract Token {
     #[internal]
     fn settle_redeem_private_to_public_internal(to: AztecAddress, shares: u128) {
         let total_assets = _total_assets(&mut context, storage.asset);
-        let assets = _convert_to_assets(shares, total_assets, storage.total_supply, storage.offset, ROUND_DOWN);
+        let assets = _convert_to_assets(
+            shares,
+            total_assets,
+            storage.total_supply,
+            storage.offset,
+            ROUND_DOWN,
+        );
 
         // Order matters: transfer after burning to neutralize ERC-777 reentrancy via the `tokens_received` hook.
         // Finalize burning shares by decreasing total supply
@@ -1805,7 +1871,13 @@ pub contract Token {
     #[internal]
     fn settle_deposit_private_to_public_internal(to: AztecAddress, assets: u128) {
         let total_assets = _total_assets(&mut context, storage.asset) - assets;
-        let shares = _convert_to_shares(assets, total_assets, storage.total_supply, storage.offset, ROUND_DOWN);
+        let shares = _convert_to_shares(
+            assets,
+            total_assets,
+            storage.total_supply,
+            storage.offset,
+            ROUND_DOWN,
+        );
 
         _mint_to_public(storage.public_balances, storage.total_supply, to, shares);
     }
@@ -1824,7 +1896,13 @@ pub contract Token {
         _nonce: Field,
     ) {
         let total_assets = _total_assets(&mut context, storage.asset);
-        let max_shares = _convert_to_shares(assets, total_assets, storage.total_supply, storage.offset, ROUND_DOWN);
+        let max_shares = _convert_to_shares(
+            assets,
+            total_assets,
+            storage.total_supply,
+            storage.offset,
+            ROUND_DOWN,
+        );
 
         assert(shares <= max_shares, "Too many shares requested");
 
@@ -1845,7 +1923,13 @@ pub contract Token {
     #[internal]
     fn settle_deposit_private_to_private_internal(assets: u128, shares: u128) {
         let total_assets = _total_assets(&mut context, storage.asset) - assets;
-        let max_shares = _convert_to_shares(assets, total_assets, storage.total_supply, storage.offset, ROUND_DOWN);
+        let max_shares = _convert_to_shares(
+            assets,
+            total_assets,
+            storage.total_supply,
+            storage.offset,
+            ROUND_DOWN,
+        );
 
         assert(shares <= max_shares, "Too many shares requested");
 
@@ -1867,7 +1951,13 @@ pub contract Token {
         to: AztecAddress,
     ) {
         let total_assets = _total_assets(&mut context, storage.asset);
-        let shares = _convert_to_shares(assets, total_assets, storage.total_supply, storage.offset, ROUND_UP);
+        let shares = _convert_to_shares(
+            assets,
+            total_assets,
+            storage.total_supply,
+            storage.offset,
+            ROUND_UP,
+        );
 
         let surplus = max_shares - shares; // Reverts with underflow if invalid
         if surplus > 0 {
@@ -1901,7 +1991,13 @@ pub contract Token {
         max_shares: u128,
     ) {
         let total_assets = _total_assets(&mut context, storage.asset);
-        let shares = _convert_to_shares(assets, total_assets, storage.total_supply, storage.offset, ROUND_UP);
+        let shares = _convert_to_shares(
+            assets,
+            total_assets,
+            storage.total_supply,
+            storage.offset,
+            ROUND_UP,
+        );
 
         let surplus = max_shares - shares; // Reverts with underflow if invalid
         if surplus > 0 {
@@ -1929,7 +2025,13 @@ pub contract Token {
         min_shares: u128,
     ) {
         let total_assets = _total_assets(&mut context, storage.asset) - assets;
-        let max_shares = _convert_to_shares(assets, total_assets, storage.total_supply, storage.offset, ROUND_DOWN);
+        let max_shares = _convert_to_shares(
+            assets,
+            total_assets,
+            storage.total_supply,
+            storage.offset,
+            ROUND_DOWN,
+        );
 
         let outstanding_shares = max_shares - min_shares; // Reverts with underflow if invalid
         if outstanding_shares > 0 {
@@ -1960,7 +2062,13 @@ pub contract Token {
         _nonce: Field,
     ) {
         let total_assets = _total_assets(&mut context, storage.asset);
-        let max_shares = _convert_to_shares(assets, total_assets, storage.total_supply, storage.offset, ROUND_DOWN);
+        let max_shares = _convert_to_shares(
+            assets,
+            total_assets,
+            storage.total_supply,
+            storage.offset,
+            ROUND_DOWN,
+        );
         let outstanding_shares = max_shares - min_shares; // Reverts with underflow if invalid
 
         // Order matters: transfer before minting to neutralize ERC-777 reentrancy via the `tokens_to_send` hook.
@@ -2055,7 +2163,13 @@ pub contract Token {
         min_assets: u128,
     ) {
         let total_assets = _total_assets(&mut context, storage.asset);
-        let assets = _convert_to_assets(shares, total_assets, storage.total_supply, storage.offset, ROUND_DOWN);
+        let assets = _convert_to_assets(
+            shares,
+            total_assets,
+            storage.total_supply,
+            storage.offset,
+            ROUND_DOWN,
+        );
 
         // Finalize burning shares by decreasing total supply
         _decrease_total_supply(storage.total_supply, shares);
@@ -2087,7 +2201,13 @@ pub contract Token {
         min_assets: u128,
     ) {
         let total_assets = _total_assets(&mut context, storage.asset);
-        let assets = _convert_to_assets(shares, total_assets, storage.total_supply, storage.offset, ROUND_DOWN);
+        let assets = _convert_to_assets(
+            shares,
+            total_assets,
+            storage.total_supply,
+            storage.offset,
+            ROUND_DOWN,
+        );
 
         // Burn the sender's shares
         _burn_public(storage.public_balances, storage.total_supply, from, shares);
@@ -2119,7 +2239,13 @@ pub contract Token {
         _nonce: Field,
     ) {
         let total_assets = _total_assets(&mut context, storage.asset);
-        let assets = _convert_to_assets(shares, total_assets, storage.total_supply, storage.offset, ROUND_UP);
+        let assets = _convert_to_assets(
+            shares,
+            total_assets,
+            storage.total_supply,
+            storage.offset,
+            ROUND_UP,
+        );
 
         // Order matters: transfer before minting to neutralize ERC-777 reentrancy via the `tokens_to_send` hook.
         // Take the assets from the sender
