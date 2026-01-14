@@ -51,6 +51,7 @@ pub contract Token {
     /// @param minter The account permissioned to mint the token
     /// @param upgrade_authority The address with permission to upgrade the contract
     /// @param asset The underlying asset for yield-bearing vault functionality
+    /// @param vault_offset The offset used to prevent inflation attacks
     #[storage]
     struct Storage<Context> {
         name: PublicImmutable<FieldCompressedString, Context>,
@@ -71,7 +72,7 @@ pub contract Token {
     /// @param symbol The symbol of the token
     /// @param decimals The number of decimals of the token
     /// @param asset The underlying asset for the yield bearing token
-    /// @param offset The offset used to prevent inflation attacks (typically 1)
+    /// @param vault_offset The offset used to prevent inflation attacks (typically 1)
     /// @param upgrade_authority The address of the upgrade authority (zero address if not upgradeable)
     #[external("public")]
     #[initializer]
@@ -99,7 +100,7 @@ pub contract Token {
     /// @param symbol The symbol of the token
     /// @param decimals The number of decimals of the token
     /// @param asset The underlying asset for the yield bearing token
-    /// @param offset The offset used to prevent inflation attacks (typically 1)
+    /// @param vault_offset The offset used to prevent inflation attacks (typically 1)
     /// @param upgrade_authority The address of the upgrade authority (zero address if not upgradeable)
     /// @param initial_deposit The initial deposit amount of the asset
     /// @param depositor The address of the initial depositor of the assets
@@ -2287,7 +2288,7 @@ pub contract Token {
     /// @param assets The amount of assets to convert
     /// @param total_assets The total amount of assets in the vault
     /// @param total_supply The storage pointer to the total supply of shares
-    /// @param offset The storage pointer to the offset value
+    /// @param vault_offset The storage pointer to the offset value
     /// @param rounding The rounding direction (ROUND_UP or ROUND_DOWN)
     /// @return The equivalent amount of shares
     #[contract_library_method]
@@ -2313,7 +2314,7 @@ pub contract Token {
     /// @param shares The amount of shares to convert
     /// @param total_assets The total amount of assets in the vault
     /// @param total_supply The storage pointer to the total supply of shares
-    /// @param offset The storage pointer to the offset value
+    /// @param vault_offset The storage pointer to the offset value
     /// @param rounding The rounding direction (ROUND_UP or ROUND_DOWN)
     /// @return The equivalent amount of assets
     #[contract_library_method]
@@ -2360,7 +2361,7 @@ pub contract Token {
     /// @param context The context of the public call
     /// @param asset The storage pointer to the asset address
     /// @param total_supply The storage pointer to the total supply
-    /// @param offset The storage pointer to the offset value
+    /// @param vault_offset The storage pointer to the offset value
     /// @return The amount of shares that would be minted
     #[contract_library_method]
     unconstrained fn _preview_deposit(
@@ -2390,7 +2391,7 @@ pub contract Token {
     /// @param context The context of the public call
     /// @param asset The storage pointer to the asset address
     /// @param total_supply The storage pointer to the total supply
-    /// @param offset The storage pointer to the offset value
+    /// @param vault_offset The storage pointer to the offset value
     /// @return The amount of assets that would be issued
     #[contract_library_method]
     unconstrained fn _preview_issue(
@@ -2412,7 +2413,7 @@ pub contract Token {
     /// @param context The context of the public call
     /// @param asset The storage pointer to the asset address
     /// @param total_supply The storage pointer to the total supply
-    /// @param offset The storage pointer to the offset value
+    /// @param vault_offset The storage pointer to the offset value
     /// @return The maximum amount of assets that can be withdrawn
     #[contract_library_method]
     unconstrained fn _max_withdraw(
@@ -2437,7 +2438,7 @@ pub contract Token {
     /// @param context The context of the public call
     /// @param asset The storage pointer to the asset address
     /// @param total_supply The storage pointer to the total supply
-    /// @param offset The storage pointer to the offset value
+    /// @param vault_offset The storage pointer to the offset value
     /// @return The amount of shares that would be redeemed
     #[contract_library_method]
     unconstrained fn _preview_withdraw(
@@ -2469,7 +2470,7 @@ pub contract Token {
     /// @param context The context of the public call
     /// @param asset The storage pointer to the asset address
     /// @param total_supply The storage pointer to the total supply
-    /// @param offset The storage pointer to the offset value
+    /// @param vault_offset The storage pointer to the offset value
     /// @return The amount of assets that would be redeemed
     #[contract_library_method]
     unconstrained fn _preview_redeem(
