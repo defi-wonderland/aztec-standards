@@ -1,6 +1,6 @@
-import type { PXE } from '@aztec/pxe/server';
 import type { Wallet } from '@aztec/aztec.js/wallet';
 import { AztecAddress } from '@aztec/aztec.js/addresses';
+import { type AztecLMDBStoreV2 } from '@aztec/kv-store/lmdb-v2';
 import type { ContractFunctionInteractionCallIntent } from '@aztec/aztec.js/authorization';
 
 // Import the new Benchmark base class and context
@@ -11,7 +11,7 @@ import { deployNFTWithMinter, setupTestSuite } from '../src/ts/test/utils.js';
 
 // Extend the BenchmarkContext from the new package
 interface NFTBenchmarkContext extends BenchmarkContext {
-  pxe: PXE;
+  store: AztecLMDBStoreV2;
   wallet: Wallet;
   deployer: AztecAddress;
   accounts: AztecAddress[];
@@ -22,17 +22,17 @@ interface NFTBenchmarkContext extends BenchmarkContext {
 export default class NFTContractBenchmark extends Benchmark {
   /**
    * Sets up the benchmark environment for the NFTContract.
-   * Creates PXE client, gets accounts, and deploys the contract.
+   * Creates wallet, gets accounts, and deploys the contract.
    */
   async setup(): Promise<NFTBenchmarkContext> {
-    const { pxe, wallet, accounts } = await setupTestSuite();
+    const { store, wallet, accounts } = await setupTestSuite('bench-nft');
     const [deployer] = accounts;
     const deployedBaseContract = await deployNFTWithMinter(wallet, deployer, {
       universalDeploy: true,
       from: deployer,
     });
-    const nftContract = await NFTContract.at(deployedBaseContract.address, wallet);
-    return { pxe, wallet, deployer, accounts, nftContract };
+    const nftContract = NFTContract.at(deployedBaseContract.address, wallet);
+    return { store, wallet, deployer, accounts, nftContract };
   }
 
   /**
@@ -86,5 +86,9 @@ export default class NFTContractBenchmark extends Benchmark {
     ];
 
     return methods.filter(Boolean);
+  }
+
+  async teardown(context: NFTBenchmarkContext): Promise<void> {
+    await context.store.delete();
   }
 }

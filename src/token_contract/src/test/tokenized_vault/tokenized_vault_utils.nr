@@ -18,7 +18,7 @@ pub unconstrained fn mint_and_deposit_public_to_public(
     // Authorize the vault to use the caller's assets
     let public_transfer_public_to_public_call_interface =
         Token::at(asset_address).transfer_public_to_public(minter, vault_address, amount, 0);
-    authwit_cheatcodes::add_public_authwit_from_call_interface(
+    authwit_cheatcodes::add_public_authwit_from_call(
         env,
         minter,
         vault_address,
@@ -46,7 +46,7 @@ pub unconstrained fn mint_and_deposit_public_to_private(
     // Authorize the vault to use the caller's assets
     let public_transfer_public_to_public_call_interface =
         Token::at(asset_address).transfer_public_to_public(minter, vault_address, amount, 0);
-    authwit_cheatcodes::add_public_authwit_from_call_interface(
+    authwit_cheatcodes::add_public_authwit_from_call(
         env,
         minter,
         vault_address,

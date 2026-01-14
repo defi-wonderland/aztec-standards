@@ -39,7 +39,7 @@ contract TestLogic {
     #[external("public")]
     #[initializer]
     fn constructor(escrow_class_id: Field) {
-        storage.escrow_class_id.initialize(escrow_class_id);
+        self.storage.escrow_class_id.initialize(escrow_class_id);
     }
 
     /// @notice Returns the escrow address that corresponds to the given master secret keys and class ID.
@@ -48,8 +48,8 @@ contract TestLogic {
     #[external("private")]
     fn get_escrow(master_secret_keys: MasterSecretKeys) -> AztecAddress {
         _get_escrow(
-            &mut context,
-            storage.escrow_class_id.read(),
+            self.context,
+            self.storage.escrow_class_id.read(),
             master_secret_keys,
         )
     }
@@ -65,7 +65,7 @@ contract TestLogic {
         escrow: AztecAddress,
         master_secret_keys: MasterSecretKeys,
     ) {
-        _share_escrow(&mut context, account, escrow, master_secret_keys);
+        _share_escrow(self.context, account, escrow, master_secret_keys);
     }
 
     /// @notice Withdraws an amount of tokens from the provided escrow.
@@ -75,7 +75,7 @@ contract TestLogic {
     /// @param amount The amount of tokens to withdraw from the escrow
     #[external("private")]
     fn withdraw(escrow: AztecAddress, account: AztecAddress, token: AztecAddress, amount: u128) {
-        _withdraw(&mut context, escrow, account, token, amount);
+        _withdraw(self.context, escrow, account, token, amount);
     }
 
     /// @notice Withdraws an NFT from the provided escrow.
@@ -90,7 +90,7 @@ contract TestLogic {
         nft: AztecAddress,
         token_id: Field,
     ) {
-        _withdraw_nft(&mut context, escrow, account, nft, token_id);
+        _withdraw_nft(self.context, escrow, account, nft, token_id);
     }
 
     /// @notice Derives public keys from secret keys.

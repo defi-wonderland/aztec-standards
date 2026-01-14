@@ -1,9 +1,10 @@
 use crate::Token;
+use crate::types::balance_set::BalanceSet;
 use aztec::{
     note::{constants::MAX_NOTES_PER_PAGE, note_viewer_options::NoteViewerOptions},
     oracle::random::random,
-    protocol_types::{address::AztecAddress, storage::map::derive_storage_slot_in_map},
-    state_vars::private_set::PrivateSet,
+    protocol_types::{address::AztecAddress, traits::Packable},
+    state_vars::owned_state_variable::OwnedStateVariable,
     test::helpers::test_environment::TestEnvironment,
 };
 use aztec::test::helpers::authwit as authwit_cheatcodes;
@@ -287,12 +288,11 @@ pub unconstrained fn get_private_balance_notes(
     offset: u32,
 ) -> BoundedVec<UintNote, MAX_NOTES_PER_PAGE> {
     let notes = env.utility_context_at(token_contract_address, |context| {
-        let mut options = NoteViewerOptions::new();
+        let options =
+            NoteViewerOptions::<UintNote, <UintNote as Packable>::N>::new().set_offset(offset);
         let private_balances_slot = Token::storage_layout().private_balances.slot;
-        let private_balance_slot = derive_storage_slot_in_map(private_balances_slot, account);
-        let set = PrivateSet::new(context, private_balance_slot);
-        let notes: BoundedVec<UintNote, MAX_NOTES_PER_PAGE> =
-            set.view_notes(options.set_offset(offset));
+        let set: BalanceSet<_> = OwnedStateVariable::new(context, private_balances_slot, account);
+        let notes: BoundedVec<UintNote, MAX_NOTES_PER_PAGE> = set.set.view_notes(options);
         notes
     });
 
@@ -324,7 +324,7 @@ pub unconstrained fn authorize_transfer_private_to_public(
 ) {
     let transfer_private_to_public_call_interface =
         Token::at(token).transfer_private_to_public(from, caller, amount, nonce);
-    authwit_cheatcodes::add_private_authwit_from_call_interface(
+    authwit_cheatcodes::add_private_authwit_from_call(
         env,
         from,
         caller,
@@ -343,7 +343,7 @@ pub unconstrained fn authorize_transfer_public_to_public(
 ) {
     let transfer_public_to_public_call_interface =
         Token::at(token).transfer_public_to_public(from, caller, amount, nonce);
-    authwit_cheatcodes::add_public_authwit_from_call_interface(
+    authwit_cheatcodes::add_public_authwit_from_call(
         env,
         from,
         caller,

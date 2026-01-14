@@ -22,27 +22,21 @@ use aztec::{
 // #[custom_note] macro to implement it manually, resulting in some boilerplate. This is expected to be unnecessary once
 // macro support is expanded.
 
-// docs:start:nft_note
 /// A private note representing a token id associated to an account.
 #[derive(Eq, Serialize, Packable)]
 #[custom_note]
 pub struct NFTNote {
-    // The ordering of these fields is important given that it must:
-    //   a) match that of NFTPartialNotePrivateContent, and
-    //   b) have the public field at the end
-    // Correct ordering is checked by the tests in this module.
-
-    /// The owner of the note, i.e. the account whose nullifier secret key is required to compute the nullifier.
-    owner: AztecAddress,
-    /// Random value, protects against note hash preimage attacks.
-    randomness: Field,
     /// The ID of the token represented by this note.
-    token_id: Field,
+    pub token_id: Field,
 }
-// docs:end:nft_note
 
 impl NoteHash for NFTNote {
-    fn compute_note_hash(self, storage_slot: Field) -> Field {
+    fn compute_note_hash(
+        self,
+        owner: AztecAddress,
+        storage_slot: Field,
+        randomness: Field,
+    ) -> Field {
         // Partial notes can be implemented by having the note hash be either the result of multiscalar multiplication
         // (MSM), or two rounds of poseidon. MSM results in more constraints and is only required when multiple variants
         // of partial notes are supported. Because NFTNote has just one variant (where the token id is public), we use
@@ -53,10 +47,9 @@ impl NoteHash for NFTNote {
         // perform both steps of the partial note computation.
 
         // First we create the partial note from a commitment to the private content (including storage slot).
-        let private_content =
-            NFTPartialNotePrivateContent { owner: self.owner, randomness: self.randomness };
-        let partial_note =
-            PartialNFTNote { commitment: private_content.compute_partial_commitment(storage_slot) };
+        let partial_note = PartialNFTNote {
+            commitment: compute_partial_commitment(owner, storage_slot, randomness),
+        };
 
         // Then compute the completion note hash. In a real partial note this step would be performed in public.
         partial_note.compute_complete_note_hash(self.token_id)
@@ -68,9 +61,10 @@ impl NoteHash for NFTNote {
     fn compute_nullifier(
         self,
         context: &mut PrivateContext,
+        owner: AztecAddress,
         note_hash_for_nullification: Field,
     ) -> Field {
-        let owner_npk_m = get_public_keys(self.owner).npk_m;
+        let owner_npk_m = get_public_keys(owner).npk_m;
         let owner_npk_m_hash = owner_npk_m.hash();
         let secret = context.request_nsk_app(owner_npk_m_hash);
         poseidon2_hash_with_separator(
@@ -81,9 +75,10 @@ impl NoteHash for NFTNote {
 
     unconstrained fn compute_nullifier_unconstrained(
         self,
+        owner: AztecAddress,
         note_hash_for_nullification: Field,
     ) -> Field {
-        let owner_npk_m = get_public_keys(self.owner).npk_m;
+        let owner_npk_m = get_public_keys(owner).npk_m;
         let owner_npk_m_hash = owner_npk_m.hash();
         let secret = get_nsk_app(owner_npk_m_hash);
         poseidon2_hash_with_separator(
@@ -94,19 +89,6 @@ impl NoteHash for NFTNote {
 }
 
 impl NFTNote {
-    pub fn new(token_id: Field, owner: AztecAddress) -> Self {
-        // Safety: We use the randomness to preserve the privacy of the note recipient by preventing brute-forcing,
-        // so a malicious sender could use non-random values to make the note less private. But they already know
-        // the full note pre-image anyway, and so the recipient already trusts them to not disclose this
-        // information. We can therefore assume that the sender will cooperate in the random value generation.
-        let randomness = unsafe { random() };
-        Self { token_id, owner, randomness }
-    }
-
-    pub fn get_token_id(self) -> Field {
-        self.token_id
-    }
-
     /// Creates a partial note that will hide the owner and storage slot but not the token id, since the note will be
     /// later completed in public. This is a powerful technique for scenarios in which the token id cannot be known in
     /// private (e.g. because it depends on some public state, such as a DEX).
@@ -134,8 +116,7 @@ impl NFTNote {
         let randomness = unsafe { random() };
 
         // We create a commitment to the private data, which we then use to construct the log we send to the recipient.
-        let commitment = NFTPartialNotePrivateContent { owner, randomness }
-            .compute_partial_commitment(storage_slot);
+        let commitment = compute_partial_commitment(owner, storage_slot, randomness);
 
         // Our partial note log encoding scheme includes a field with the tag of the public completion log, and we use
         // the commitment as the tag. This is good for multiple reasons:
@@ -143,12 +124,13 @@ impl NFTNote {
         //  - the commitment is already public information, so we're not revealing anything else
         //  - we don't need to create any additional information, private or public, for the tag
         //  - other contracts cannot impersonate us and emit logs with the same tag due to public log siloing
-        let private_log_content =
-            NFTPartialNotePrivateLogContent { owner, randomness, public_log_tag: commitment };
+        let private_log_content = NFTPartialNotePrivateLogContent { public_log_tag: commitment };
 
         let encrypted_log = note::compute_partial_note_private_content_log(
             private_log_content,
+            owner,
             storage_slot,
+            randomness,
             recipient,
         );
         // Regardless of the original content size, the log is padded with random bytes up to
@@ -168,35 +150,22 @@ impl NFTNote {
     }
 }
 
-/// The private content of a partial NFTNote, i.e. the fields that will remain private. All other note fields will be
-/// made public.
-#[derive(Packable)]
-struct NFTPartialNotePrivateContent {
-    // The ordering of these fields is important given that it must match that of NFTNote.
-    // Correct ordering is checked by the tests in this module.
+/// Computes a commitment to the private content of a partial NFTNote, i.e. the fields that will remain private. All
+/// other note fields will be made public.
+fn compute_partial_commitment(
     owner: AztecAddress,
+    storage_slot: Field,
     randomness: Field,
-}
-
-impl NFTPartialNotePrivateContent {
-    fn compute_partial_commitment(self, storage_slot: Field) -> Field {
-        // Here we commit to all private values, including the storage slot.
-        poseidon2_hash_with_separator(
-            self.pack().concat([storage_slot]),
-            GENERATOR_INDEX__NOTE_HASH,
-        )
-    }
+) -> Field {
+    poseidon2_hash_with_separator(
+        [owner.to_field(), storage_slot, randomness],
+        GENERATOR_INDEX__NOTE_HASH,
+    )
 }
 
 #[derive(Packable)]
 struct NFTPartialNotePrivateLogContent {
-    // The ordering of these fields is important given that it must:
-    //   a) match that of NFTNote, and
-    //   b) have the public log tag at the beginning
-    // Correct ordering is checked by the tests in this module.
     public_log_tag: Field,
-    owner: AztecAddress,
-    randomness: Field,
 }
 
 impl NoteType for NFTPartialNotePrivateLogContent {
