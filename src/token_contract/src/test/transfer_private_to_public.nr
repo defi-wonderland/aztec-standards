@@ -41,7 +41,7 @@ unconstrained fn transfer_private_to_public_on_behalf_of_other() {
     let transfer_private_to_public_amount = mint_amount / (10 as u128);
     let transfer_private_to_public_call_interface = Token::at(token_contract_address)
         .transfer_private_to_public(owner, recipient, transfer_private_to_public_amount, 0);
-    authwit_cheatcodes::add_private_authwit_from_call_interface(
+    authwit_cheatcodes::add_private_authwit_from_call(
         env,
         owner,
         recipient,
@@ -92,8 +92,8 @@ unconstrained fn transfer_private_to_public_multiple_notes_recursively() {
         utils::get_private_balance_notes(env, token_contract_address, owner, 0);
 
     assert(final_owner_notes.len() == 2, "Incorrect note count"); // 1000 UintNote x1 and 1 UintNote x1
-    assert(final_owner_notes.get(0).get_value() == notes_amount, "Incorrect note amount");
-    assert(final_owner_notes.get(1).get_value() == 1 as u128, "Incorrect note change amount");
+    assert(final_owner_notes.get(0).value == notes_amount, "Incorrect note amount");
+    assert(final_owner_notes.get(1).value == 1 as u128, "Incorrect note change amount");
 
     // Check that the notes generated to the recipient are correct
     let recipient_notes: BoundedVec<UintNote, MAX_NOTES_PER_PAGE> =
@@ -136,7 +136,7 @@ unconstrained fn transfer_private_to_public_failure_on_behalf_of_other_more_than
     let transfer_private_to_public_amount = mint_amount + (1 as u128);
     let transfer_private_to_public_call_interface = Token::at(token_contract_address)
         .transfer_private_to_public(owner, recipient, transfer_private_to_public_amount, 0);
-    authwit_cheatcodes::add_private_authwit_from_call_interface(
+    authwit_cheatcodes::add_private_authwit_from_call(
         env,
         owner,
         recipient,
@@ -154,7 +154,7 @@ unconstrained fn transfer_private_to_public_failure_on_behalf_of_other_invalid_d
     let transfer_private_to_public_amount = mint_amount + (1 as u128);
     let transfer_private_to_public_call_interface = Token::at(token_contract_address)
         .transfer_private_to_public(owner, recipient, transfer_private_to_public_amount, 0);
-    authwit_cheatcodes::add_private_authwit_from_call_interface(
+    authwit_cheatcodes::add_private_authwit_from_call(
         env,
         owner,
         owner,

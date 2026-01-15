@@ -28,7 +28,7 @@ unconstrained fn mint_to_public_failure_as_non_minter() {
     env.call_public(recipient, mint_to_public_call_interface);
 }
 
-#[test(should_fail_with = "Contract execution has reverted: Assertion failed: attempt to add with overflow 'public_balances.at(to).read() + amount'")]
+#[test(should_fail_with = "Contract execution has reverted: Assertion failed: attempt to add with overflow 'self.storage.public_balances.at(to).read() + amount'")]
 unconstrained fn mint_to_public_failure_recipient_balance_overflow() {
     let (mut env, token_contract_address, owner, recipient, minter) =
         utils::setup_with_minter(false);
@@ -44,7 +44,7 @@ unconstrained fn mint_to_public_failure_recipient_balance_overflow() {
     env.call_public(minter, Token::at(token_contract_address).mint_to_public(recipient, 1 as u128));
 }
 
-#[test(should_fail_with = "Contract execution has reverted: Assertion failed: attempt to add with overflow 'public_balances.at(to).read() + amount'")]
+#[test(should_fail_with = "Contract execution has reverted: Assertion failed: attempt to add with overflow 'self.storage.public_balances.at(to).read() + amount'")]
 unconstrained fn mint_to_public_failure_overflow_total_supply() {
     // Setup without account contracts. We are not using authwits here, so dummy accounts are enough
     let (mut env, token_contract_address, owner, _, minter) = utils::setup_with_minter(false);
