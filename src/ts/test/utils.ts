@@ -46,14 +46,14 @@ const pxeVersion = parseInt(PXE_VERSION);
 const l1Contracts = await node.getL1ContractAddresses();
 const config = getPXEConfig();
 let fullConfig = { ...config, l1Contracts };
-fullConfig.proverEnabled = false;
 
 /**
  * Setup the store, node, wallet and accounts
  * @param suffix - optional - The suffix to use for the store directory.
+ * @param proverEnabled - optional - Whether to enable the prover, used for benchmarking.
  * @returns The store, node, wallet and accounts
  */
-export const setupTestSuite = async (suffix?: string) => {
+export const setupTestSuite = async (suffix?: string, proverEnabled: boolean = false) => {
   const storeDir = suffix ? `store-${suffix}` : 'store';
 
   fullConfig = { ...fullConfig, dataDirectory: storeDir, dataStoreMapSizeKb: 1e6 };
@@ -64,7 +64,7 @@ export const setupTestSuite = async (suffix?: string) => {
     dataStoreMapSizeKb: 1e6,
   });
 
-  const wallet: TestWallet = await TestWallet.create(node, fullConfig, { store });
+  const wallet: TestWallet = await TestWallet.create(node, { ...fullConfig, proverEnabled }, { store });
 
   const accounts: AztecAddress[] = await registerInitialLocalNetworkAccountsInWallet(wallet);
 
