@@ -97,7 +97,7 @@ export default class LogicContractBenchmark extends Benchmark {
       // Check escrow correctness
       {
         caller: deployer,
-        action: logicContract.withWallet(wallet).methods.check_escrow(escrowContract.address, secretKeys),
+        action: logicContract.withWallet(wallet).methods.get_escrow(secretKeys),
       },
       // Share escrow
       {
