@@ -33,6 +33,7 @@ Optionally, the `Token` contract can be configured as a Tokenized Vault. Learn m
 /// @param symbol The symbol of the token
 /// @param decimals The number of decimals of the token
 /// @param asset The address of the underlying asset
+/// @param offset The offset value used to mitigate inflation attacks
 /// @param upgrade_authority The address of the upgrade authority (zero if not upgradeable)
 #[public]
 #[initializer]
@@ -41,6 +42,7 @@ fn constructor_with_asset(
     symbol: str<31>,
     decimals: u8,
     asset: AztecAddress,
+    offset: u128,
     upgrade_authority: AztecAddress,
 ) { /* ... */ }
 ```
@@ -54,6 +56,7 @@ fn constructor_with_asset(
 /// @param symbol The symbol of the token
 /// @param decimals The number of decimals of the token
 /// @param asset The underlying asset for the yield bearing token
+/// @param offset The offset value used to mitigate inflation attacks
 /// @param upgrade_authority The address of the upgrade authority (zero address if not upgradeable)
 /// @param initial_deposit The initial deposit amount of the asset
 /// @param depositor The address of the initial depositor of the assets
@@ -65,6 +68,7 @@ fn constructor_with_asset_initial_deposit(
     symbol: str<31>,
     decimals: u8,
     asset: AztecAddress,
+    offset: u128,
     upgrade_authority: AztecAddress,
     initial_deposit: u128,
     depositor: AztecAddress,
@@ -1003,22 +1007,24 @@ fn constructor_with_asset(
     symbol: str<31>,
     decimals: u8,
     asset: AztecAddress,
+    offset: u128,
     upgrade_authority: AztecAddress,
 ) { /* ... */ }
 ```
 
-When using this deployment method, the vault relies on a **virtual shares offset** mechanism to mitigate inflation (donation) attacks. The contract defines a global `OFFSET` constant:
+When using this deployment method, the vault relies on a **virtual shares offset** mechanism to mitigate inflation (donation) attacks. The deployer specifies the `offset` value during deployment:
 
 ```rust
-// The offset used to mitigate inflation attacks
-global OFFSET: u128 = 1;
+// Example: deploying with offset = 1
+let offset: u128 = 1;
+Token::interface().constructor_with_asset(name, symbol, decimals, asset, offset, upgrade_authority)
 ```
 
 This offset introduces virtual assets and virtual shares into the exchange-rate calculation. By doing so, it **dampens exchange-rate manipulation and reduces rounding-based griefing**, which is a key enabler of inflation attacks in empty or near-empty ERC-4626 vaults.
 
-Increasing the offset generally makes early-stage manipulation more expensive and reduces the attacker’s ability to force victims into receiving zero or negligible shares. However, larger offsets also affect share pricing for small deposits and can introduce UX and accounting tradeoffs. As a result, **choosing an appropriate offset is a balance between security and precision**.
+Increasing the offset generally makes early-stage manipulation more expensive and reduces the attacker's ability to force victims into receiving zero or negligible shares. However, larger offsets also affect share pricing for small deposits and can introduce UX and accounting tradeoffs. As a result, **choosing an appropriate offset is a balance between security and precision**.
 
-It is the **deployer’s responsibility** to evaluate whether the default `OFFSET = 1` provides sufficient protection for their specific use case. Factors to consider include:
+It is the **deployer's responsibility** to evaluate whether `offset = 1` provides sufficient protection for their specific use case, or if a larger value is needed. Factors to consider include:
 
 - Expected minimum and typical deposit sizes
 - Likelihood of front-running or MEV
@@ -1032,9 +1038,9 @@ https://www.openzeppelin.com/news/a-novel-defense-against-erc4626-inflation-atta
 >
 > Empty or nearly-empty ERC-4626 vaults are vulnerable to **inflation attacks** (also known as donation attacks). An attacker can manipulate the share-to-asset exchange rate by front-running early deposits with a combination of a small deposit and a large donation. This can cause victims to receive zero or negligible shares for their deposit, effectively stranding their assets in the vault.
 >
-> This class of attack is most effective when total assets are low and deposits can be front-run. On Aztec, some private vault methods accept both `assets` and `shares` as inputs (because the exchange rate may not be computable inside the private context). If callers can choose these values freely (or if integrators don’t enforce conservative bounds), manipulation and rounding issues can become easier to exploit.
+> This class of attack is most effective when total assets are low and deposits can be front-run. On Aztec, some private vault methods accept both `assets` and `shares` as inputs (because the exchange rate may not be computable inside the private context). If callers can choose these values freely (or if integrators don't enforce conservative bounds), manipulation and rounding issues can become easier to exploit.
 >
-> **The default `OFFSET = 1` provides baseline protection, but may not be sufficient in all scenarios—particularly when multiple deposits can be front-run or when very small deposits are expected.**
+> **An `offset = 1` provides baseline protection, but may not be sufficient in all scenarios—particularly when multiple deposits can be front-run or when very small deposits are expected.**
 
 #### Deployment with `constructor_with_asset_initial_deposit`
 
@@ -1048,6 +1054,7 @@ fn constructor_with_asset_initial_deposit(
     symbol: str<31>,
     decimals: u8,
     asset: AztecAddress,
+    offset: u128,
     upgrade_authority: AztecAddress,
     initial_deposit: u128,
     depositor: AztecAddress,

@@ -225,7 +225,7 @@ export async function deployVaultAndAssetWithMinter(
   const vaultContract = await Contract.deploy(
     wallet,
     TokenContractArtifact,
-    ['VaultToken', 'VT', 6, assetContract.address, AztecAddress.ZERO],
+    ['VaultToken', 'VT', 6, assetContract.address, 1, AztecAddress.ZERO],
     'constructor_with_asset',
   )
     .send({ ...options, from: deployer })
@@ -512,6 +512,7 @@ export async function deployVaultWithInitialDeposit(
     'VT', // symbol
     6, // decimals
     assetContract.address, // asset
+    1,
     AztecAddress.ZERO, // upgrade_authority
     initialDeposit, // initial_deposit
     depositor, // depositor
