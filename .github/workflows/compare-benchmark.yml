@@ -16,33 +16,7 @@ env:
   BENCH_DIR: ./benchmarks
 
 jobs:
-  get_contracts:
-    runs-on: ubuntu-latest
-    outputs:
-      contracts: ${{ steps.extract.outputs.contracts }}
-    steps:
-      - name: Checkout repo
-        uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: "22.17.0"
-      - name: Install deps (discovery)
-        run: yarn --frozen-lockfile
-      - name: Extract contracts from Nargo.toml [benchmark]
-        id: extract
-        shell: bash
-        run: |
-          CONTRACTS=$(node -e "
-            const fs = require('fs');
-            const TOML = require('@iarna/toml');
-            const raw = fs.readFileSync('./Nargo.toml', 'utf8');
-            const parsed = TOML.parse(raw);
-            const keys = Object.keys(parsed.benchmark || {});
-            process.stdout.write(JSON.stringify(keys));
-          ")
-          echo "contracts=$CONTRACTS" >> "$GITHUB_OUTPUT"
-
-  build:
+  benchmark_base:
     runs-on: ubuntu-latest-m
     steps:
       - uses: actions/setup-node@v4
@@ -64,132 +38,10 @@ jobs:
           ref: ${{ github.event.pull_request.base.sha }}
 
       - name: Detect Aztec version (BASE)
-        id: basever_build
-        run: |
-          VER=$(node -p "require('./package.json').config.aztecVersion")
-          echo "ver=$VER" >> "$GITHUB_OUTPUT"
-
-      - name: Switch CLI to BASE version
-        run: |
-          VERSION=${{ steps.basever_build.outputs.ver }} aztec-up
-
-      # This is a temporary hack to fix a problem with v3 releases.
-      - name: Manually tag the aztec version as `latest`
-        run: |
-          docker tag aztecprotocol/aztec:${{ steps.basever_build.outputs.ver }} aztecprotocol/aztec:latest
-
-      - name: Install deps (BASE)
-        run: yarn --frozen-lockfile
-
-      - name: Compile contracts (BASE)
-        run: yarn compile
-
-      - name: Codegen wrappers (BASE)
-        run: yarn codegen
-
-      - name: Upload build outputs (BASE)
-        uses: actions/upload-artifact@v4
-        with:
-          name: build-base
-          path: |
-            artifacts/**
-            target/**
-          if-no-files-found: error
-
-      # ── BUILD PR ──
-      - name: Checkout PR branch
-        uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event.pull_request.head.sha }}
-          clean: false
-
-      - name: Detect Aztec version (PR)
-        id: prver_build
-        run: |
-          VER=$(node -p "require('./package.json').config.aztecVersion")
-          echo "ver=$VER" >> "$GITHUB_OUTPUT"
-
-      - name: Switch CLI to PR version
-        if: steps.basever_build.outputs.ver != steps.prver_build.outputs.ver
-        run: |
-          VERSION=${{ steps.prver_build.outputs.ver }} aztec-up
-
-      # This is a temporary hack to fix a problem with v3 releases.
-      - name: Manually tag the aztec version as `latest`
-        run: |
-          docker tag aztecprotocol/aztec:${{ steps.prver_build.outputs.ver }} aztecprotocol/aztec:latest
-
-      - name: Install deps (PR)
-        run: yarn --frozen-lockfile
-
-      - name: Clean base build (PR)
-        run: yarn clean
-
-      - name: Compile contracts (PR)
-        run: yarn compile
-
-      - name: Codegen wrappers (PR)
-        run: yarn codegen
-
-      - name: Upload build outputs (PR)
-        uses: actions/upload-artifact@v4
-        with:
-          name: build-pr
-          path: |
-            artifacts/**
-            target/**
-          if-no-files-found: error
-
-  benchmark:
-    needs: [get_contracts, build]
-    strategy:
-      matrix:
-        os: [ubuntu-latest-m]
-        threads: [12]
-        contract: ${{ fromJson(needs.get_contracts.outputs.contracts) }}
-
-    runs-on: 
-      labels: ${{ matrix.os }}
-    timeout-minutes: 30
-
-    steps:
-      # ──────────────────────────────────────────────────────────────
-      # 0️⃣  SHARED TOOLING – Buildx + Aztec CLI skeleton
-      # ──────────────────────────────────────────────────────────────
-      - name: Checkout repo (full history)
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Set up Docker Buildx (Aztec sandbox needs BuildKit)
-        uses: docker/setup-buildx-action@v2
-
-      - name: Install Aztec CLI
-        run: |
-          curl -s https://install.aztec.network > tmp.sh
-          bash tmp.sh <<< yes "yes"
-    
-      - name: Update path
-        run: echo "/home/runner/.aztec/bin" >> $GITHUB_PATH
-
-      # ──────────────────────────────────────────────────────────────
-      # 1️⃣  BENCHMARK BASE COMMIT
-      # ──────────────────────────────────────────────────────────────
-      - name: Checkout BASE branch
-        uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event.pull_request.base.sha }}
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: "22.17.0"
-
-      - name: Detect Aztec version (BASE)
         id: basever
         run: |
           VER=$(node -p "require('./package.json').config.aztecVersion")
           echo "ver=$VER" >> "$GITHUB_OUTPUT"
-          echo "Base Aztec version is $VER"
 
       - name: Switch CLI to BASE version
         run: |
@@ -200,8 +52,17 @@ jobs:
         run: |
           docker tag aztecprotocol/aztec:${{ steps.basever.outputs.ver }} aztecprotocol/aztec:latest
 
-      - name: Start sandbox (BASE, background)
-        run: aztec start --sandbox &
+      - name: Install deps (BASE)
+        run: yarn --frozen-lockfile
+
+      - name: Compile contracts (BASE)
+        run: yarn compile
+
+      - name: Codegen wrappers (BASE)
+        run: yarn codegen
+
+      - name: Start local network (BASE, background)
+        run: aztec start --local-network &
 
       - name: Start PXE node (BASE, background)
         run: |
@@ -209,61 +70,45 @@ jobs:
             start --port 8081 --pxe --pxe.nodeUrl=http://localhost:8080/ \
             --pxe.proverEnabled false &
 
-      - name: Install deps (BASE)
-        run: yarn --frozen-lockfile
-
-      - name: Download build outputs (BASE)
-        uses: actions/download-artifact@v4
-        with:
-          name: build-base
-          path: .
-
       - name: Benchmark (BASE)
         run: |
-          npx aztec-benchmark --suffix _base --output-dir ${{ env.BENCH_DIR }} --contracts ${{ matrix.contract }}
+          npx aztec-benchmark --suffix _base --output-dir ${{ env.BENCH_DIR }}
+      
+      - name: Upload BASE benchmark artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: benchmarks-base
+          path: ${{ env.BENCH_DIR }}/*.json
+          if-no-files-found: error
 
-      # This is required to avoid the benchmark results being removed by the Checkout PR step
-      - name: Store base benchmark results
+  benchmark_pr:
+    runs-on: ubuntu-latest-m
+    steps:
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22.17.0"
+
+      - name: Install Aztec CLI
         run: |
-          mkdir -p ../benchmarks_base && mv ${{ env.BENCH_DIR }}/*.json ../benchmarks_base/
+          curl -s https://install.aztec.network > tmp.sh
+          bash tmp.sh <<< yes "yes"
 
-      # ──────────────────────────────────────────────────────────────
-      # 2️⃣  BENCHMARK PR HEAD  (github.event.pull_request.head.sha)
-      # ──────────────────────────────────────────────────────────────
+      - name: Update path
+        run: echo "/home/runner/.aztec/bin" >> $GITHUB_PATH
 
-      # clean does not work correctly and is removing the benchmark results anyways
-      # https://github.com/actions/checkout/issues/1201
+      # ── BUILD PR ──
       - name: Checkout PR branch
         uses: actions/checkout@v4
         with:
           ref: ${{ github.event.pull_request.head.sha }}
-          clean: false
-
-      # Restore the base benchmark results to avoid the benchmark results being removed by the Checkout PR step
-      - name: Restore base benchmark results
-        run: mv ../benchmarks_base/* ${{ env.BENCH_DIR }}/
 
       - name: Detect Aztec version (PR)
         id: prver
         run: |
           VER=$(node -p "require('./package.json').config.aztecVersion")
-          echo "PR Aztec version is $VER"
-          if [ "${{ steps.basever.outputs.ver }}" != "$VER" ]; then
-            echo "ver_diff=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "ver_diff=false" >> "$GITHUB_OUTPUT"
-          fi
           echo "ver=$VER" >> "$GITHUB_OUTPUT"
 
-      - name: Kill BASE services
-        if: steps.prver.outputs.ver_diff == 'true'
-        run: |
-          pkill -f "aztec.*--sandbox" || true                   
-          pkill -f "aztec.*--pxe.*8081" || true                   
-          sleep 5      
-
       - name: Switch CLI to PR version
-        if: steps.prver.outputs.ver_diff == 'true'
         run: |
           VERSION=${{ steps.prver.outputs.ver }} aztec-up
 
@@ -272,39 +117,37 @@ jobs:
         run: |
           docker tag aztecprotocol/aztec:${{ steps.prver.outputs.ver }} aztecprotocol/aztec:latest
 
-      - name: Start sandbox (PR, background)
-        if: steps.prver.outputs.ver_diff == 'true'
-        run: aztec start --sandbox &
+      - name: Install deps (PR)
+        run: yarn --frozen-lockfile
+
+      - name: Compile contracts (PR)
+        run: yarn compile
+
+      - name: Codegen wrappers (PR)
+        run: yarn codegen
+
+      - name: Start local network (PR, background)
+        run: aztec start --local-network &
 
       - name: Start PXE node (PR, background)
-        if: steps.prver.outputs.ver_diff == 'true'
         run: |
           VERSION=${{ steps.prver.outputs.ver }} aztec \
             start --port 8081 --pxe --pxe.nodeUrl=http://localhost:8080/ \
             --pxe.proverEnabled false &
 
-      - name: Install deps (PR)
-        run: yarn --frozen-lockfile
-
-      - name: Download build outputs (PR)
-        uses: actions/download-artifact@v4
-        with:
-          name: build-pr
-          path: .
-      
       - name: Benchmark (PR)
         run: |
-          npx --yes github:defi-wonderland/aztec-benchmark#feat/optionally-skip-benchmark --suffix _pr --output-dir ${{ env.BENCH_DIR }} --contracts ${{ matrix.contract }}
+          npx aztec-benchmark --suffix _pr --output-dir ${{ env.BENCH_DIR }}
       
-      - name: Upload benchmark artifacts (per contract)
+      - name: Upload PR benchmark artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: benchmarks-${{ matrix.contract }}
+          name: benchmarks-pr
           path: ${{ env.BENCH_DIR }}/*.json
           if-no-files-found: error
 
   diff:
-    needs: benchmark
+    needs: [benchmark_base, benchmark_pr]
     runs-on: ubuntu-latest-m
     env:
       BENCH_DIR: ./benchmarks
@@ -325,7 +168,7 @@ jobs:
       # 3️⃣  DIFF &  COMMENT
       # ──────────────────────────────────────────────────────────────
       - name: Generate Markdown diff
-        uses: defi-wonderland/aztec-benchmark/action@feat/optionally-skip-benchmark
+        uses: defi-wonderland/aztec-benchmark/action@dev
         with:
           base_suffix: '_base'
           current_suffix: '_pr'
