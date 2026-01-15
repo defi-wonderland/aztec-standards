@@ -283,7 +283,7 @@ unconstrained fn issue_private_to_public_exact_on_behalf_of_other_success() {
     let requested_shares = deposit_amount;
     let issue_private_to_public_exact_call_interface = Token::at(vault_address)
         .issue_private_to_public_exact(owner, recipient, requested_shares, max_assets, 0);
-    authwit_cheatcodes::add_private_authwit_from_call_interface(
+    authwit_cheatcodes::add_private_authwit_from_call(
         env,
         owner,
         recipient,

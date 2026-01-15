@@ -1,13 +1,15 @@
-import { UniqueNote } from '@aztec/aztec.js/note';
+import { Note } from '@aztec/aztec.js/note';
 import { createLogger } from '@aztec/aztec.js/log';
 import { AztecAddress } from '@aztec/aztec.js/addresses';
+import { Aes128 } from '@aztec/foundation/crypto/aes128';
 import { deriveEcdhSharedSecret } from '@aztec/stdlib/logs';
 import { type Wallet, AccountManager } from '@aztec/aztec.js/wallet';
 import { Fr, type GrumpkinScalar, Point } from '@aztec/aztec.js/fields';
 import { createAztecNodeClient, waitForNode } from '@aztec/aztec.js/node';
+import { type ContractInstanceWithAddress } from '@aztec/aztec.js/contracts';
 import { PRIVATE_LOG_CIPHERTEXT_LEN, GeneratorIndex } from '@aztec/constants';
-import { Aes128, poseidon2HashWithSeparator } from '@aztec/foundation/crypto';
-import { registerInitialSandboxAccountsInWallet, TestWallet } from '@aztec/test-wallet/server';
+import { poseidon2HashWithSeparator } from '@aztec/foundation/crypto/poseidon';
+import { registerInitialLocalNetworkAccountsInWallet, TestWallet } from '@aztec/test-wallet/server';
 import { deriveMasterIncomingViewingSecretKey, PublicKeys, computeAddressSecret } from '@aztec/stdlib/keys';
 
 import {
@@ -25,9 +27,8 @@ import {
   computeContractAddressFromInstance,
 } from '@aztec/stdlib/contract';
 
-import { type PXE } from '@aztec/pxe/server';
 import { createStore } from '@aztec/kv-store/lmdb-v2';
-import { createPXE, getPXEConfig } from '@aztec/pxe/server';
+import { getPXEConfig } from '@aztec/pxe/server';
 import { type AztecLMDBStoreV2 } from '@aztec/kv-store/lmdb-v2';
 
 import { TokenContract, TokenContractArtifact } from '../../../artifacts/Token.js';
@@ -44,38 +45,32 @@ const { PXE_VERSION = '2' } = process.env;
 const pxeVersion = parseInt(PXE_VERSION);
 const l1Contracts = await node.getL1ContractAddresses();
 const config = getPXEConfig();
-const fullConfig = { ...config, l1Contracts };
+let fullConfig = { ...config, l1Contracts };
 fullConfig.proverEnabled = false;
 
 /**
- * Setup the PXE and the store
+ * Setup the store, node, wallet and accounts
  * @param suffix - optional - The suffix to use for the store directory.
- * @returns The PXE and the store
+ * @returns The store, node, wallet and accounts
  */
-export const setupPXE = async (suffix?: string) => {
+export const setupTestSuite = async (suffix?: string) => {
   const storeDir = suffix ? `store-${suffix}` : 'store';
-  const store: AztecLMDBStoreV2 = await createStore('pxe', pxeVersion, {
+
+  fullConfig = { ...fullConfig, dataDirectory: storeDir, dataStoreMapSizeKb: 1e6 };
+
+  // Create the store for manual cleanups
+  const store: AztecLMDBStoreV2 = await createStore('pxe_data', pxeVersion, {
     dataDirectory: storeDir,
     dataStoreMapSizeKb: 1e6,
   });
-  const pxe: PXE = await createPXE(node, fullConfig, { store });
-  return { pxe, store };
-};
 
-/**
- * Setup the PXE, the store and the wallet
- * @param suffix - optional - The suffix to use for the store directory.
- * @returns The PXE, the store, the wallet and the accounts
- */
-export const setupTestSuite = async (suffix?: string) => {
-  const { pxe, store } = await setupPXE(suffix);
-  const aztecNode = createAztecNodeClient(NODE_URL);
-  const wallet: TestWallet = await TestWallet.create(aztecNode);
-  const accounts: AztecAddress[] = await registerInitialSandboxAccountsInWallet(wallet);
+  const wallet: TestWallet = await TestWallet.create(node, fullConfig, { store });
+
+  const accounts: AztecAddress[] = await registerInitialLocalNetworkAccountsInWallet(wallet);
 
   return {
-    pxe,
     store,
+    node,
     wallet,
     accounts,
   };
@@ -87,9 +82,8 @@ export const setupTestSuite = async (suffix?: string) => {
 export const MAX_U128_VALUE = 340282366920938463463374607431768211455n;
 
 // --- Token Utils ---
-export const expectUintNote = (note: UniqueNote, amount: bigint, owner: AztecAddress) => {
-  expect(note.note.items[0]).toEqual(new Fr(owner.toBigInt()));
-  expect(note.note.items[2]).toEqual(new Fr(amount));
+export const expectUintNote = (note: Note, amount: bigint, owner: AztecAddress) => {
+  expect(note.items[0]).toEqual(new Fr(amount));
 };
 
 export const expectTokenBalances = async (
@@ -253,11 +247,17 @@ export async function deployEscrow(
   salt: Fr = Fr.random(),
   args: unknown[] = [],
   constructor?: string,
-): Promise<EscrowContract> {
-  const contract = await Contract.deployWithPublicKeys(publicKeys, wallet, EscrowContractArtifact, args, constructor)
+): Promise<{ contract: EscrowContract; instance: ContractInstanceWithAddress }> {
+  const { contract, instance } = await Contract.deployWithPublicKeys(
+    publicKeys,
+    wallet,
+    EscrowContractArtifact,
+    args,
+    constructor,
+  )
     .send({ contractAddressSalt: salt, universalDeploy: true, from: deployer })
-    .deployed();
-  return contract as EscrowContract;
+    .wait();
+  return { contract: contract as EscrowContract, instance };
 }
 
 // --- General Utils ---
@@ -323,8 +323,8 @@ export async function initializeTransferCommitment(
     toIvskM,
   );
 
-  // The commitment is the third field in the decrypted raw log
-  return decryptedRawLog[2].toBigInt();
+  // The commitment is the fifth field in the decrypted raw log
+  return decryptedRawLog[4].toBigInt();
 }
 
 /**
@@ -358,8 +358,8 @@ export async function initializeTransferCommitmentNFT(
     toIvskM,
   );
 
-  // The commitment is the third field in the decrypted raw log
-  return decryptedRawLog[2].toBigInt();
+  // The commitment is the fifth field in the decrypted raw log
+  return decryptedRawLog[4].toBigInt();
 }
 
 // --- Logic Contract Utils ---

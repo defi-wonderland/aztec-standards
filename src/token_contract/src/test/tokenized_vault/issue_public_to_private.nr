@@ -1,7 +1,7 @@
 use crate::{test::utils::{self, mint_amount}, Token};
 use aztec::test::helpers::authwit as authwit_cheatcodes;
 
-#[test(should_fail_with = "Contract execution has reverted: Assertion failed: Trying to read from uninitialized PublicImmutable 'self.is_initialized()'")]
+#[test(should_fail_with = "Trying to read from uninitialized PublicImmutable")]
 unconstrained fn issue_public_to_private_without_asset() {
     let (env, vault_address, owner, recipient, _) = utils::setup_with_minter(false);
 
@@ -283,7 +283,7 @@ unconstrained fn issue_public_to_private_on_behalf_of_other_success() {
         max_assets,
         0,
     );
-    authwit_cheatcodes::add_private_authwit_from_call_interface(
+    authwit_cheatcodes::add_private_authwit_from_call(
         env,
         owner,
         recipient,

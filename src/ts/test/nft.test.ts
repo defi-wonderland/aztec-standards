@@ -7,7 +7,6 @@ import {
 } from './utils.js';
 
 import { Fr } from '@aztec/aztec.js/fields';
-import { type PXE } from '@aztec/pxe/server';
 import { TxStatus } from '@aztec/aztec.js/tx';
 import { AztecAddress } from '@aztec/aztec.js/addresses';
 import { type TestWallet } from '@aztec/test-wallet/server';
@@ -22,7 +21,6 @@ import {
 import { NFTContract, NFTContractArtifact } from '../../../artifacts/NFT.js';
 
 describe('NFT - Single PXE', () => {
-  let pxe: PXE;
   let store: AztecLMDBStoreV2;
   let wallet: TestWallet;
   let accounts: AztecAddress[];
@@ -34,7 +32,7 @@ describe('NFT - Single PXE', () => {
   let nft: NFTContract;
 
   beforeAll(async () => {
-    ({ pxe, store, wallet, accounts } = await setupTestSuite());
+    ({ store, wallet, accounts } = await setupTestSuite());
 
     [alice, bob, carl] = accounts;
   });
@@ -75,7 +73,7 @@ describe('NFT - Single PXE', () => {
 
     const receiptAfterMined = await tx.wait({ wallet });
 
-    const contractMetadata = await pxe.getContractMetadata(deploymentData.address);
+    const contractMetadata = await wallet.getContractMetadata(deploymentData.address);
     expect(contractMetadata).toBeDefined();
     // TODO: Fix this
     // expect(contractMetadata.isContractPubliclyDeployed).toBeTruthy();
@@ -85,7 +83,7 @@ describe('NFT - Single PXE', () => {
       }),
     );
 
-    expect(receiptAfterMined.contract.instance.address).toEqual(deploymentData.address);
+    expect(receiptAfterMined.contract.address).toEqual(deploymentData.address);
   }, 300_000);
 
   // --- Mint tests ---

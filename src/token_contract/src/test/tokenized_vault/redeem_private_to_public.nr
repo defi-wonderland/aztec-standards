@@ -156,7 +156,7 @@ unconstrained fn redeem_private_to_public_on_behalf_of_wrong_caller() {
         requested_shares,
         0,
     );
-    authwit_cheatcodes::add_private_authwit_from_call_interface(
+    authwit_cheatcodes::add_private_authwit_from_call(
         env,
         deposit_recipient,
         owner,
@@ -200,7 +200,7 @@ unconstrained fn redeem_private_to_public_on_behalf_of_other_success() {
         requested_shares,
         0,
     );
-    authwit_cheatcodes::add_private_authwit_from_call_interface(
+    authwit_cheatcodes::add_private_authwit_from_call(
         env,
         deposit_recipient,
         recipient,
