@@ -16,7 +16,46 @@ env:
   BENCH_DIR: ./benchmarks
 
 jobs:
+  version-check:
+    name: Check version compatibility
+    runs-on: ubuntu-latest
+    outputs:
+      skip_benchmark: ${{ steps.compare.outputs.skip }}
+      base_version: ${{ steps.compare.outputs.base_ver }}
+      pr_version: ${{ steps.compare.outputs.pr_ver }}
+    steps:
+      - name: Checkout PR
+        uses: actions/checkout@v4
+
+      - name: Get PR version
+        id: pr
+        run: echo "ver=$(node -p "require('./package.json').config.aztecVersion")" >> "$GITHUB_OUTPUT"
+
+      - name: Checkout BASE
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.base.sha }}
+
+      - name: Compare versions
+        id: compare
+        run: |
+          BASE_VER=$(node -p "require('./package.json').config.aztecVersion")
+          PR_VER="${{ steps.pr.outputs.ver }}"
+          echo "base_ver=$BASE_VER" >> "$GITHUB_OUTPUT"
+          echo "pr_ver=$PR_VER" >> "$GITHUB_OUTPUT"
+          echo "Base version: $BASE_VER"
+          echo "PR version: $PR_VER"
+          if [ "$BASE_VER" != "$PR_VER" ]; then
+            echo "Versions differ - benchmarks will be skipped"
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "Versions match - benchmarks will run"
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+
   benchmark:
+    needs: version-check
+    if: needs.version-check.outputs.skip_benchmark != 'true'
     strategy:
       matrix:
         os: [ubuntu-latest-m]
@@ -180,3 +219,24 @@ jobs:
         with:
           issue-number: ${{ github.event.pull_request.number }}
           body-file: benchmark-comparison.md
+
+  skip-comment:
+    name: Post skip notice
+    needs: version-check
+    if: needs.version-check.outputs.skip_benchmark == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+    steps:
+      - name: Post skip comment
+        uses: peter-evans/create-or-update-comment@v4
+        with:
+          issue-number: ${{ github.event.pull_request.number }}
+          body: |
+            ## Benchmark Comparison Skipped
+
+            Benchmarks were skipped because the Aztec version changed:
+            - **Base:** `${{ needs.version-check.outputs.base_version }}`
+            - **PR:** `${{ needs.version-check.outputs.pr_version }}`
+
+            This is expected during version upgrades.
