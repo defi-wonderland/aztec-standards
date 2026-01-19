@@ -65,7 +65,7 @@ jobs:
         id: aztec-version
         run: |
           VER=$(node -p "require('./package.json').config.aztecVersion")
-          echo "ver=$VER" >> "$GITHUB_OUTPUT"
+          echo "version=$VER" >> "$GITHUB_OUTPUT"
 
       - name: Install Aztec CLI
         run: |
@@ -74,12 +74,12 @@ jobs:
 
       - name: Switch CLI to PR version
         run: |
-          VERSION=${{ steps.aztec-version.outputs.ver }} aztec-up
+          VERSION=${{ steps.aztec-version.outputs.version }} aztec-up
 
       # This is a temporary hack to fix a problem with v3 releases.
       - name: Manually tag the aztec version as `latest`
         run: |
-          docker tag aztecprotocol/aztec:${{ steps.aztec-version.outputs.ver }} aztecprotocol/aztec:latest
+          docker tag aztecprotocol/aztec:${{ steps.aztec-version.outputs.version }} aztecprotocol/aztec:latest
 
       - name: Install deps (PR)
         run: yarn --frozen-lockfile
@@ -95,22 +95,16 @@ jobs:
 
       - name: Start PXE node (PR, background)
         run: |
-          VERSION=${{ steps.aztec-version.outputs.ver }} aztec \
+          VERSION=${{ steps.aztec-version.outputs.version }} aztec \
             start --port 8081 --pxe --pxe.nodeUrl=http://localhost:8080/ \
             --pxe.proverEnabled false &
 
-      # ── RUN PR BENCHMARKS ──
-      - name: Benchmark (PR)
-        run: |
-          npx aztec-benchmark --suffix _new --output-dir ${{ env.BENCH_DIR }}
-
-      # ── GENERATE DIFF REPORT ──
+      # ── RUN BENCHMARK & GENERATE DIFF REPORT ──
       - name: Generate Markdown diff
-        uses: defi-wonderland/aztec-benchmark/action@dev
+        uses: defi-wonderland/aztec-benchmark/action@main
         with:
           base_suffix: '_latest'
           current_suffix: '_new'
-          only_report: true
 
       - name: Comment diff
         uses: peter-evans/create-or-update-comment@v4
@@ -119,7 +113,9 @@ jobs:
           body-path: benchmark-comparison.md
 
       # ── UPDATE BENCHMARK FILES AND COMMIT ──
+      # Skip these steps for fork PRs (no write access to fork branches)
       - name: Update benchmark files
+        if: github.event.pull_request.head.repo.full_name == github.event.pull_request.base.repo.full_name
         run: |
           # Remove old temporary files
           rm -f ${{ env.BENCH_DIR }}/*_latest.benchmark.json
@@ -134,6 +130,7 @@ jobs:
           done
 
       - name: Commit updated benchmark results
+        if: github.event.pull_request.head.repo.full_name == github.event.pull_request.base.repo.full_name
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
