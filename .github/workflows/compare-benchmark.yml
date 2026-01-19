@@ -41,7 +41,7 @@ jobs:
       - name: Install Aztec CLI
         run: |
           curl -s https://install.aztec.network > tmp.sh
-          bash tmp.sh <<< yes "yes"
+          VERSION=${{ steps.basever.outputs.ver }} bash tmp.sh <<< yes "yes"
     
       - name: Update path
         run: echo "/home/runner/.aztec/bin" >> $GITHUB_PATH
