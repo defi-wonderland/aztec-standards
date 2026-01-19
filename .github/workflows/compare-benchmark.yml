@@ -136,7 +136,7 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
           
           # Add new/modified benchmark files
-          git add ${{ env.BENCH_DIR }}/*_latest.benchmark.json 2>/dev/null || true
+          git add --force ${{ env.BENCH_DIR }}/*_latest.benchmark.json 2>/dev/null || true
           
           # Stage deletions (files that were tracked but no longer exist)
           for file in $(git ls-files "${{ env.BENCH_DIR }}" | grep '_latest\.benchmark\.json$'); do
