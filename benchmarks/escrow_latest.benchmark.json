@@ -1,0 +1,184 @@
+{
+  "summary": {
+    "(partial) withdraw": 604950,
+    "withdraw": 604950,
+    "withdraw_nft": 561102
+  },
+  "results": [
+    {
+      "name": "(partial) withdraw",
+      "totalGateCount": 604950,
+      "gateCounts": [
+        {
+          "circuitName": "SchnorrAccount:entrypoint",
+          "gateCount": 54441
+        },
+        {
+          "circuitName": "private_kernel_init",
+          "gateCount": 53128
+        },
+        {
+          "circuitName": "Escrow:withdraw",
+          "gateCount": 7365
+        },
+        {
+          "circuitName": "private_kernel_inner",
+          "gateCount": 107186
+        },
+        {
+          "circuitName": "Token:transfer_private_to_private",
+          "gateCount": 72778
+        },
+        {
+          "circuitName": "private_kernel_inner",
+          "gateCount": 107186
+        },
+        {
+          "circuitName": "private_kernel_reset",
+          "gateCount": 116309
+        },
+        {
+          "circuitName": "private_kernel_tail",
+          "gateCount": 47219
+        },
+        {
+          "circuitName": "hiding_kernel",
+          "gateCount": 39338
+        }
+      ],
+      "gas": {
+        "gasLimits": {
+          "daGas": 22016,
+          "l2Gas": 512
+        },
+        "teardownGasLimits": {
+          "daGas": 0,
+          "l2Gas": 0
+        }
+      },
+      "provingTime": 32471.77242200001
+    },
+    {
+      "name": "withdraw",
+      "totalGateCount": 604950,
+      "gateCounts": [
+        {
+          "circuitName": "SchnorrAccount:entrypoint",
+          "gateCount": 54441
+        },
+        {
+          "circuitName": "private_kernel_init",
+          "gateCount": 53128
+        },
+        {
+          "circuitName": "Escrow:withdraw",
+          "gateCount": 7365
+        },
+        {
+          "circuitName": "private_kernel_inner",
+          "gateCount": 107186
+        },
+        {
+          "circuitName": "Token:transfer_private_to_private",
+          "gateCount": 72778
+        },
+        {
+          "circuitName": "private_kernel_inner",
+          "gateCount": 107186
+        },
+        {
+          "circuitName": "private_kernel_reset",
+          "gateCount": 116309
+        },
+        {
+          "circuitName": "private_kernel_tail",
+          "gateCount": 47219
+        },
+        {
+          "circuitName": "hiding_kernel",
+          "gateCount": 39338
+        }
+      ],
+      "gas": {
+        "gasLimits": {
+          "daGas": 11776,
+          "l2Gas": 512
+        },
+        "teardownGasLimits": {
+          "daGas": 0,
+          "l2Gas": 0
+        }
+      },
+      "provingTime": 32451.189337999967
+    },
+    {
+      "name": "withdraw_nft",
+      "totalGateCount": 561102,
+      "gateCounts": [
+        {
+          "circuitName": "SchnorrAccount:entrypoint",
+          "gateCount": 54441
+        },
+        {
+          "circuitName": "private_kernel_init",
+          "gateCount": 53128
+        },
+        {
+          "circuitName": "Escrow:withdraw_nft",
+          "gateCount": 7359
+        },
+        {
+          "circuitName": "private_kernel_inner",
+          "gateCount": 107186
+        },
+        {
+          "circuitName": "NFT:transfer_private_to_private",
+          "gateCount": 28936
+        },
+        {
+          "circuitName": "private_kernel_inner",
+          "gateCount": 107186
+        },
+        {
+          "circuitName": "private_kernel_reset",
+          "gateCount": 116309
+        },
+        {
+          "circuitName": "private_kernel_tail",
+          "gateCount": 47219
+        },
+        {
+          "circuitName": "hiding_kernel",
+          "gateCount": 39338
+        }
+      ],
+      "gas": {
+        "gasLimits": {
+          "daGas": 11776,
+          "l2Gas": 512
+        },
+        "teardownGasLimits": {
+          "daGas": 0,
+          "l2Gas": 0
+        }
+      },
+      "provingTime": 31489.374309999985
+    }
+  ],
+  "gasSummary": {
+    "(partial) withdraw": 22528,
+    "withdraw": 12288,
+    "withdraw_nft": 12288
+  },
+  "provingTimeSummary": {
+    "(partial) withdraw": 32471.77242200001,
+    "withdraw": 32451.189337999967,
+    "withdraw_nft": 31489.374309999985
+  },
+  "systemInfo": {
+    "cpuModel": "AMD EPYC 7763 64-Core Processor",
+    "cpuCores": 16,
+    "totalMemoryGiB": 63,
+    "arch": "x64"
+  }
+}
