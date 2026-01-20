@@ -150,6 +150,6 @@ jobs:
           if git diff --staged --quiet; then
             echo "No changes to benchmark files"
           else
-            git commit -m "chore: update benchmark results [skip ci]"
+            git commit -m "chore: update benchmark results"
             git push origin HEAD:${{ github.event.pull_request.head.ref }}
           fi
