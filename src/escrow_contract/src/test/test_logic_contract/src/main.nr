@@ -11,7 +11,7 @@ contract TestLogic {
         state_vars::public_immutable::PublicImmutable,
     };
     use escrow_contract::library::logic::{
-        _check_escrow, _secret_keys_to_public_keys, _share_escrow, _withdraw, _withdraw_nft,
+        _get_escrow, _secret_keys_to_public_keys, _share_escrow, _withdraw, _withdraw_nft,
         MasterSecretKeys,
     };
 
@@ -39,21 +39,19 @@ contract TestLogic {
     #[external("public")]
     #[initializer]
     fn constructor(escrow_class_id: Field) {
-        storage.escrow_class_id.initialize(escrow_class_id);
+        self.storage.escrow_class_id.initialize(escrow_class_id);
     }
 
-    /// @notice Verifies that the keys correspond to the escrow address and that the escrow instance data is correct.
-    /// @dev Reverts if the data is not correct.
-    /// @param escrow The address of the escrow
+    /// @notice Returns the escrow address that corresponds to the given master secret keys and class ID.
     /// @param master_secret_keys The master secret keys
+    /// @return The escrow address
     #[external("private")]
-    fn check_escrow(escrow: AztecAddress, master_secret_keys: MasterSecretKeys) {
-        _check_escrow(
-            &mut context,
-            escrow,
-            storage.escrow_class_id.read(),
+    fn get_escrow(master_secret_keys: MasterSecretKeys) -> AztecAddress {
+        _get_escrow(
+            self.context,
+            self.storage.escrow_class_id.read(),
             master_secret_keys,
-        );
+        )
     }
 
     /// @notice Shares the escrow details needed to find and use the escrow contract
@@ -67,7 +65,7 @@ contract TestLogic {
         escrow: AztecAddress,
         master_secret_keys: MasterSecretKeys,
     ) {
-        _share_escrow(&mut context, account, escrow, master_secret_keys);
+        _share_escrow(self.context, account, escrow, master_secret_keys);
     }
 
     /// @notice Withdraws an amount of tokens from the provided escrow.
@@ -77,7 +75,7 @@ contract TestLogic {
     /// @param amount The amount of tokens to withdraw from the escrow
     #[external("private")]
     fn withdraw(escrow: AztecAddress, account: AztecAddress, token: AztecAddress, amount: u128) {
-        _withdraw(&mut context, escrow, account, token, amount);
+        _withdraw(self.context, escrow, account, token, amount);
     }
 
     /// @notice Withdraws an NFT from the provided escrow.
@@ -92,7 +90,7 @@ contract TestLogic {
         nft: AztecAddress,
         token_id: Field,
     ) {
-        _withdraw_nft(&mut context, escrow, account, nft, token_id);
+        _withdraw_nft(self.context, escrow, account, nft, token_id);
     }
 
     /// @notice Derives public keys from secret keys.
