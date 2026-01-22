@@ -114,11 +114,6 @@ jobs:
           name: benchmark-results-pr-${{ github.event.pull_request.number }}
           path: ${{ env.BENCH_DIR }}
 
-      - name: List downloaded files
-        run: |
-          echo "Downloaded benchmark files:"
-          ls -la ${{ env.BENCH_DIR }}/ || echo "No files found"
-
       - name: Commit updated benchmark results
         run: |
           git config user.name "github-actions[bot]"
