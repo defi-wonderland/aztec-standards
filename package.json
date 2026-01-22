@@ -48,6 +48,9 @@
     "ts-node": "10.9.2",
     "typescript": "5.7.2"
   },
+  "resolutions": {
+    "@aztec/foundation": "3.0.0-devnet.6-patch.1"
+  },
   "jest": {
     "testTimeout": 200000
   },
