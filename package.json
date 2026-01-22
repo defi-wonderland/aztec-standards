@@ -1,6 +1,6 @@
 {
   "name": "@defi-wonderland/aztec-standards",
-  "version": "3.0.0-devnet.6.patch.1",
+  "version": "3.0.0-devnet.6-patch.1",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/defi-wonderland/aztec-standards.git"
