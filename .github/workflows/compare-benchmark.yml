@@ -168,11 +168,6 @@ jobs:
       - name: Restore base benchmark results
         run: mv ../benchmarks_base/* ${{ env.BENCH_DIR }}/
 
-      # This is a temporary hack to fix a problem with v3 releases.
-      - name: Manually tag the aztec version as `latest`
-        run: |
-          docker tag aztecprotocol/aztec:${{ steps.basever.outputs.ver }} aztecprotocol/aztec:latest
-
       - name: Install deps (PR)
         run: yarn --frozen-lockfile
 
