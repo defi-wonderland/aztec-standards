@@ -129,5 +129,7 @@ export default class EscrowContractBenchmark extends Benchmark {
 
   async teardown(context: EscrowBenchmarkContext): Promise<void> {
     await context.store.delete();
+    // Force exit to prevent hanging from open HTTP connections/handles
+    process.exit(0);
   }
 }

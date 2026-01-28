@@ -90,5 +90,7 @@ export default class NFTContractBenchmark extends Benchmark {
 
   async teardown(context: NFTBenchmarkContext): Promise<void> {
     await context.store.delete();
+    // Force exit to prevent hanging from open HTTP connections/handles
+    process.exit(0);
   }
 }

@@ -111,5 +111,7 @@ export default class LogicContractBenchmark extends Benchmark {
 
   async teardown(context: LogicBenchmarkContext): Promise<void> {
     await context.store.delete();
+    // Force exit to prevent hanging from open HTTP connections/handles
+    process.exit(0);
   }
 }
