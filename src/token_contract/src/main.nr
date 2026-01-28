@@ -64,6 +64,11 @@ pub contract Token {
         asset: PublicImmutable<AztecAddress, Context>,
     }
 
+    #[external("private")]
+    fn add_new_method_for_test() {
+        // do nothing
+    }
+
     /// @notice Initializes the token with an asset
     /// @dev Since this constructor doesn't set a minter address the mint functions will be disabled
     /// @param name The name of the token
