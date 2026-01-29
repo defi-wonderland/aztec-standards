@@ -57,7 +57,7 @@
           "l2Gas": 0
         }
       },
-      "provingTime": 6890.983125999992
+      "provingTime": 7112.062000999998
     },
     {
       "name": "mint_to_public",
@@ -94,7 +94,7 @@
           "l2Gas": 0
         }
       },
-      "provingTime": 5706.609089000005
+      "provingTime": 5965.138135999994
     },
     {
       "name": "transfer_private_to_public",
@@ -139,7 +139,7 @@
           "l2Gas": 0
         }
       },
-      "provingTime": 7063.931668999998
+      "provingTime": 7231.133262999996
     },
     {
       "name": "transfer_private_to_public_with_commitment",
@@ -184,7 +184,7 @@
           "l2Gas": 0
         }
       },
-      "provingTime": 7236.806424000009
+      "provingTime": 7410.179749999981
     },
     {
       "name": "transfer_private_to_private",
@@ -229,7 +229,7 @@
           "l2Gas": 0
         }
       },
-      "provingTime": 6709.311965000001
+      "provingTime": 6933.836733000004
     },
     {
       "name": "transfer_public_to_private",
@@ -274,7 +274,7 @@
           "l2Gas": 0
         }
       },
-      "provingTime": 6991.158354999992
+      "provingTime": 7051.696415999992
     },
     {
       "name": "transfer_public_to_public",
@@ -311,7 +311,7 @@
           "l2Gas": 0
         }
       },
-      "provingTime": 5812.968548000004
+      "provingTime": 5931.929252000002
     },
     {
       "name": "burn_private",
@@ -356,7 +356,7 @@
           "l2Gas": 0
         }
       },
-      "provingTime": 6925.689731999999
+      "provingTime": 7095.569837000046
     },
     {
       "name": "burn_public",
@@ -393,7 +393,7 @@
           "l2Gas": 0
         }
       },
-      "provingTime": 5746.164567
+      "provingTime": 6386.567398999992
     },
     {
       "name": "initialize_transfer_commitment",
@@ -438,7 +438,7 @@
           "l2Gas": 0
         }
       },
-      "provingTime": 6354.40157300001
+      "provingTime": 7136.591746999999
     },
     {
       "name": "transfer_private_to_commitment",
@@ -483,7 +483,7 @@
           "l2Gas": 0
         }
       },
-      "provingTime": 6765.922959999996
+      "provingTime": 7311.1021480000345
     },
     {
       "name": "transfer_public_to_commitment",
@@ -520,7 +520,7 @@
           "l2Gas": 0
         }
       },
-      "provingTime": 5784.038024000009
+      "provingTime": 6291.114799999981
     }
   ],
   "gasSummary": {
@@ -538,18 +538,18 @@
     "transfer_public_to_commitment": 70876
   },
   "provingTimeSummary": {
-    "mint_to_private": 6890.983125999992,
-    "mint_to_public": 5706.609089000005,
-    "transfer_private_to_public": 7063.931668999998,
-    "transfer_private_to_public_with_commitment": 7236.806424000009,
-    "transfer_private_to_private": 6709.311965000001,
-    "transfer_public_to_private": 6991.158354999992,
-    "transfer_public_to_public": 5812.968548000004,
-    "burn_private": 6925.689731999999,
-    "burn_public": 5746.164567,
-    "initialize_transfer_commitment": 6354.40157300001,
-    "transfer_private_to_commitment": 6765.922959999996,
-    "transfer_public_to_commitment": 5784.038024000009
+    "mint_to_private": 7112.062000999998,
+    "mint_to_public": 5965.138135999994,
+    "transfer_private_to_public": 7231.133262999996,
+    "transfer_private_to_public_with_commitment": 7410.179749999981,
+    "transfer_private_to_private": 6933.836733000004,
+    "transfer_public_to_private": 7051.696415999992,
+    "transfer_public_to_public": 5931.929252000002,
+    "burn_private": 7095.569837000046,
+    "burn_public": 6386.567398999992,
+    "initialize_transfer_commitment": 7136.591746999999,
+    "transfer_private_to_commitment": 7311.1021480000345,
+    "transfer_public_to_commitment": 6291.114799999981
   },
   "systemInfo": {
     "cpuModel": "AMD EPYC 7763 64-Core Processor",
