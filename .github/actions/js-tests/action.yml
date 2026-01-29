@@ -5,6 +5,7 @@ runs:
   using: 'composite'
   steps:
     - name: Clear Vite/Vitest cache
+      shell: bash
       run: rm -rf node_modules/.vite node_modules/.vitest
 
     - name: Run JS tests
