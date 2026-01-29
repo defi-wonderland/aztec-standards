@@ -183,8 +183,8 @@ describe('Logic - Single PXE', () => {
       );
 
       expect(address).toEqual(escrow.address);
-      expect(initializationHash).toEqual(Fr.ZERO);
-      expect(initializationHash).toEqual(escrowInstance.initializationHash);
+      expect(initializationHash.equals(Fr.ZERO)).toBe(true);
+      expect(initializationHash.equals(escrowInstance.initializationHash)).toBe(true);
     });
   });
 
