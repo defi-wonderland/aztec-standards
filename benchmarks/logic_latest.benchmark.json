@@ -1,0 +1,160 @@
+{
+  "summary": {
+    "secret_keys_to_public_keys": 426195,
+    "get_escrow": 431118,
+    "share_escrow": 445954
+  },
+  "results": [
+    {
+      "name": "secret_keys_to_public_keys",
+      "totalGateCount": 426195,
+      "gateCounts": [
+        {
+          "circuitName": "SchnorrAccount:entrypoint",
+          "gateCount": 54441
+        },
+        {
+          "circuitName": "private_kernel_init",
+          "gateCount": 53128
+        },
+        {
+          "circuitName": "TestLogic:secret_keys_to_public_keys",
+          "gateCount": 8574
+        },
+        {
+          "circuitName": "private_kernel_inner",
+          "gateCount": 107186
+        },
+        {
+          "circuitName": "private_kernel_reset",
+          "gateCount": 116309
+        },
+        {
+          "circuitName": "private_kernel_tail",
+          "gateCount": 47219
+        },
+        {
+          "circuitName": "hiding_kernel",
+          "gateCount": 39338
+        }
+      ],
+      "gas": {
+        "gasLimits": {
+          "daGas": 1024,
+          "l2Gas": 512
+        },
+        "teardownGasLimits": {
+          "daGas": 0,
+          "l2Gas": 0
+        }
+      },
+      "provingTime": 6329.021414000075
+    },
+    {
+      "name": "get_escrow",
+      "totalGateCount": 431118,
+      "gateCounts": [
+        {
+          "circuitName": "SchnorrAccount:entrypoint",
+          "gateCount": 54441
+        },
+        {
+          "circuitName": "private_kernel_init",
+          "gateCount": 53128
+        },
+        {
+          "circuitName": "TestLogic:get_escrow",
+          "gateCount": 13497
+        },
+        {
+          "circuitName": "private_kernel_inner",
+          "gateCount": 107186
+        },
+        {
+          "circuitName": "private_kernel_reset",
+          "gateCount": 116309
+        },
+        {
+          "circuitName": "private_kernel_tail",
+          "gateCount": 47219
+        },
+        {
+          "circuitName": "hiding_kernel",
+          "gateCount": 39338
+        }
+      ],
+      "gas": {
+        "gasLimits": {
+          "daGas": 1024,
+          "l2Gas": 512
+        },
+        "teardownGasLimits": {
+          "daGas": 0,
+          "l2Gas": 0
+        }
+      },
+      "provingTime": 6368.2948630000465
+    },
+    {
+      "name": "share_escrow",
+      "totalGateCount": 445954,
+      "gateCounts": [
+        {
+          "circuitName": "SchnorrAccount:entrypoint",
+          "gateCount": 54441
+        },
+        {
+          "circuitName": "private_kernel_init",
+          "gateCount": 53128
+        },
+        {
+          "circuitName": "TestLogic:share_escrow",
+          "gateCount": 28333
+        },
+        {
+          "circuitName": "private_kernel_inner",
+          "gateCount": 107186
+        },
+        {
+          "circuitName": "private_kernel_reset",
+          "gateCount": 116309
+        },
+        {
+          "circuitName": "private_kernel_tail",
+          "gateCount": 47219
+        },
+        {
+          "circuitName": "hiding_kernel",
+          "gateCount": 39338
+        }
+      ],
+      "gas": {
+        "gasLimits": {
+          "daGas": 11264,
+          "l2Gas": 512
+        },
+        "teardownGasLimits": {
+          "daGas": 0,
+          "l2Gas": 0
+        }
+      },
+      "provingTime": 6445.517341000028
+    }
+  ],
+  "gasSummary": {
+    "secret_keys_to_public_keys": 1536,
+    "get_escrow": 1536,
+    "share_escrow": 11776
+  },
+  "provingTimeSummary": {
+    "secret_keys_to_public_keys": 6329.021414000075,
+    "get_escrow": 6368.2948630000465,
+    "share_escrow": 6445.517341000028
+  },
+  "systemInfo": {
+    "cpuModel": "AMD EPYC 7763 64-Core Processor",
+    "cpuCores": 16,
+    "totalMemoryGiB": 63,
+    "arch": "x64"
+  }
+}
