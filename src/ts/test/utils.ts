@@ -1,3 +1,4 @@
+import { expect } from 'vitest';
 import { Note } from '@aztec/aztec.js/note';
 import { createLogger } from '@aztec/aztec.js/log';
 import { AztecAddress } from '@aztec/aztec.js/addresses';

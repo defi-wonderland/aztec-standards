@@ -1,3 +1,4 @@
+import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest';
 import { Fr } from '@aztec/aztec.js/fields';
 import { TxStatus } from '@aztec/aztec.js/tx';
 import { type AztecNode } from '@aztec/aztec.js/node';
