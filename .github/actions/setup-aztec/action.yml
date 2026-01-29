@@ -47,11 +47,6 @@ runs:
         curl -s $INSTALL_URL > tmp.sh
         VERSION=${{ steps.aztec-version.outputs.version }} bash tmp.sh <<< yes "yes"
 
-    - name: Switch CLI to target version
-      shell: bash
-      run: |
-        VERSION=${{ steps.aztec-version.outputs.version }} aztec-up
-
     # Temporary hack to fix a problem with v3 releases
     - name: Tag Aztec Docker image as latest
       shell: bash
