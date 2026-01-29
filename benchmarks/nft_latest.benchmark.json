@@ -53,7 +53,7 @@
           "l2Gas": 0
         }
       },
-      "provingTime": 7667.139411000011
+      "provingTime": 6984.460636999982
     },
     {
       "name": "mint_to_public",
@@ -90,7 +90,7 @@
           "l2Gas": 0
         }
       },
-      "provingTime": 6438.249573000008
+      "provingTime": 5910.154902999988
     },
     {
       "name": "transfer_private_to_public",
@@ -135,7 +135,7 @@
           "l2Gas": 0
         }
       },
-      "provingTime": 7464.997803999984
+      "provingTime": 6874.756892000034
     },
     {
       "name": "transfer_public_to_private",
@@ -180,7 +180,7 @@
           "l2Gas": 0
         }
       },
-      "provingTime": 7573.126388999983
+      "provingTime": 6941.669018000015
     },
     {
       "name": "transfer_private_to_private",
@@ -225,7 +225,7 @@
           "l2Gas": 0
         }
       },
-      "provingTime": 7174.638493000064
+      "provingTime": 6497.083124999946
     },
     {
       "name": "transfer_public_to_public",
@@ -262,7 +262,7 @@
           "l2Gas": 0
         }
       },
-      "provingTime": 6381.568114000023
+      "provingTime": 5856.2876440000255
     },
     {
       "name": "burn_private",
@@ -307,7 +307,7 @@
           "l2Gas": 0
         }
       },
-      "provingTime": 7464.215027999948
+      "provingTime": 6880.813245999976
     },
     {
       "name": "burn_public",
@@ -344,7 +344,7 @@
           "l2Gas": 0
         }
       },
-      "provingTime": 6346.686426999979
+      "provingTime": 5878.915816999972
     }
   ],
   "gasSummary": {
@@ -358,14 +358,14 @@
     "burn_public": 56617
   },
   "provingTimeSummary": {
-    "mint_to_private": 7667.139411000011,
-    "mint_to_public": 6438.249573000008,
-    "transfer_private_to_public": 7464.997803999984,
-    "transfer_public_to_private": 7573.126388999983,
-    "transfer_private_to_private": 7174.638493000064,
-    "transfer_public_to_public": 6381.568114000023,
-    "burn_private": 7464.215027999948,
-    "burn_public": 6346.686426999979
+    "mint_to_private": 6984.460636999982,
+    "mint_to_public": 5910.154902999988,
+    "transfer_private_to_public": 6874.756892000034,
+    "transfer_public_to_private": 6941.669018000015,
+    "transfer_private_to_private": 6497.083124999946,
+    "transfer_public_to_public": 5856.2876440000255,
+    "burn_private": 6880.813245999976,
+    "burn_public": 5878.915816999972
   },
   "systemInfo": {
     "cpuModel": "AMD EPYC 7763 64-Core Processor",

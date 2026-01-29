@@ -56,7 +56,7 @@
           "l2Gas": 0
         }
       },
-      "provingTime": 6412.046595999971
+      "provingTime": 5813.251877999981
     },
     {
       "name": "deposit_public_to_private",
@@ -101,7 +101,7 @@
           "l2Gas": 0
         }
       },
-      "provingTime": 7548.459664999973
+      "provingTime": 6939.8265169999795
     },
     {
       "name": "deposit_private_to_private",
@@ -162,7 +162,7 @@
           "l2Gas": 0
         }
       },
-      "provingTime": 9795.319834999973
+      "provingTime": 9291.526050999993
     },
     {
       "name": "deposit_private_to_public",
@@ -223,7 +223,7 @@
           "l2Gas": 0
         }
       },
-      "provingTime": 9028.898531000013
+      "provingTime": 9167.540508000064
     },
     {
       "name": "deposit_public_to_private_exact",
@@ -268,7 +268,7 @@
           "l2Gas": 0
         }
       },
-      "provingTime": 7031.282419000054
+      "provingTime": 7125.534315000055
     },
     {
       "name": "deposit_private_to_private_exact",
@@ -329,7 +329,7 @@
           "l2Gas": 0
         }
       },
-      "provingTime": 9454.061466000043
+      "provingTime": 9506.664754000027
     },
     {
       "name": "issue_public_to_public",
@@ -366,7 +366,7 @@
           "l2Gas": 0
         }
       },
-      "provingTime": 5757.807811000035
+      "provingTime": 5876.709811000037
     },
     {
       "name": "issue_public_to_private",
@@ -411,7 +411,7 @@
           "l2Gas": 0
         }
       },
-      "provingTime": 6879.978247000021
+      "provingTime": 6974.308379000053
     },
     {
       "name": "issue_private_to_public_exact",
@@ -480,7 +480,7 @@
           "l2Gas": 0
         }
       },
-      "provingTime": 10236.530632999958
+      "provingTime": 10355.34967799997
     },
     {
       "name": "issue_private_to_private_exact",
@@ -549,7 +549,7 @@
           "l2Gas": 0
         }
       },
-      "provingTime": 10400.408892000094
+      "provingTime": 10710.21130299999
     },
     {
       "name": "withdraw_public_to_public",
@@ -586,7 +586,7 @@
           "l2Gas": 0
         }
       },
-      "provingTime": 5746.795463000191
+      "provingTime": 5854.778716999921
     },
     {
       "name": "withdraw_public_to_private",
@@ -639,7 +639,7 @@
           "l2Gas": 0
         }
       },
-      "provingTime": 7883.999540999997
+      "provingTime": 8138.2595389999915
     },
     {
       "name": "withdraw_private_to_private",
@@ -692,7 +692,7 @@
           "l2Gas": 0
         }
       },
-      "provingTime": 8073.962628999958
+      "provingTime": 8200.778780999826
     },
     {
       "name": "withdraw_private_to_public_exact",
@@ -737,7 +737,7 @@
           "l2Gas": 0
         }
       },
-      "provingTime": 7054.773478999967
+      "provingTime": 7179.4041800000705
     },
     {
       "name": "withdraw_private_to_private_exact",
@@ -790,7 +790,7 @@
           "l2Gas": 0
         }
       },
-      "provingTime": 8242.44182499987
+      "provingTime": 8294.450437000021
     },
     {
       "name": "redeem_public_to_public",
@@ -827,7 +827,7 @@
           "l2Gas": 0
         }
       },
-      "provingTime": 5707.665419000201
+      "provingTime": 5853.097513000015
     },
     {
       "name": "redeem_private_to_public",
@@ -872,7 +872,7 @@
           "l2Gas": 0
         }
       },
-      "provingTime": 6955.257309000008
+      "provingTime": 7033.9095069998875
     },
     {
       "name": "redeem_private_to_private_exact",
@@ -933,7 +933,7 @@
           "l2Gas": 0
         }
       },
-      "provingTime": 9217.006043000147
+      "provingTime": 9386.789591999957
     },
     {
       "name": "redeem_public_to_private_exact",
@@ -994,7 +994,7 @@
           "l2Gas": 0
         }
       },
-      "provingTime": 8974.682569999946
+      "provingTime": 9110.058966000099
     }
   ],
   "gasSummary": {
@@ -1019,25 +1019,25 @@
     "redeem_public_to_private_exact": 168710
   },
   "provingTimeSummary": {
-    "deposit_public_to_public": 6412.046595999971,
-    "deposit_public_to_private": 7548.459664999973,
-    "deposit_private_to_private": 9795.319834999973,
-    "deposit_private_to_public": 9028.898531000013,
-    "deposit_public_to_private_exact": 7031.282419000054,
-    "deposit_private_to_private_exact": 9454.061466000043,
-    "issue_public_to_public": 5757.807811000035,
-    "issue_public_to_private": 6879.978247000021,
-    "issue_private_to_public_exact": 10236.530632999958,
-    "issue_private_to_private_exact": 10400.408892000094,
-    "withdraw_public_to_public": 5746.795463000191,
-    "withdraw_public_to_private": 7883.999540999997,
-    "withdraw_private_to_private": 8073.962628999958,
-    "withdraw_private_to_public_exact": 7054.773478999967,
-    "withdraw_private_to_private_exact": 8242.44182499987,
-    "redeem_public_to_public": 5707.665419000201,
-    "redeem_private_to_public": 6955.257309000008,
-    "redeem_private_to_private_exact": 9217.006043000147,
-    "redeem_public_to_private_exact": 8974.682569999946
+    "deposit_public_to_public": 5813.251877999981,
+    "deposit_public_to_private": 6939.8265169999795,
+    "deposit_private_to_private": 9291.526050999993,
+    "deposit_private_to_public": 9167.540508000064,
+    "deposit_public_to_private_exact": 7125.534315000055,
+    "deposit_private_to_private_exact": 9506.664754000027,
+    "issue_public_to_public": 5876.709811000037,
+    "issue_public_to_private": 6974.308379000053,
+    "issue_private_to_public_exact": 10355.34967799997,
+    "issue_private_to_private_exact": 10710.21130299999,
+    "withdraw_public_to_public": 5854.778716999921,
+    "withdraw_public_to_private": 8138.2595389999915,
+    "withdraw_private_to_private": 8200.778780999826,
+    "withdraw_private_to_public_exact": 7179.4041800000705,
+    "withdraw_private_to_private_exact": 8294.450437000021,
+    "redeem_public_to_public": 5853.097513000015,
+    "redeem_private_to_public": 7033.9095069998875,
+    "redeem_private_to_private_exact": 9386.789591999957,
+    "redeem_public_to_private_exact": 9110.058966000099
   },
   "systemInfo": {
     "cpuModel": "AMD EPYC 7763 64-Core Processor",

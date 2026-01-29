@@ -48,7 +48,7 @@
           "l2Gas": 0
         }
       },
-      "provingTime": 6329.021414000075
+      "provingTime": 6366.175537999952
     },
     {
       "name": "get_escrow",
@@ -93,7 +93,7 @@
           "l2Gas": 0
         }
       },
-      "provingTime": 6368.2948630000465
+      "provingTime": 6415.441171000013
     },
     {
       "name": "share_escrow",
@@ -138,7 +138,7 @@
           "l2Gas": 0
         }
       },
-      "provingTime": 6445.517341000028
+      "provingTime": 6488.3120010001585
     }
   ],
   "gasSummary": {
@@ -147,9 +147,9 @@
     "share_escrow": 11776
   },
   "provingTimeSummary": {
-    "secret_keys_to_public_keys": 6329.021414000075,
-    "get_escrow": 6368.2948630000465,
-    "share_escrow": 6445.517341000028
+    "secret_keys_to_public_keys": 6366.175537999952,
+    "get_escrow": 6415.441171000013,
+    "share_escrow": 6488.3120010001585
   },
   "systemInfo": {
     "cpuModel": "AMD EPYC 7763 64-Core Processor",

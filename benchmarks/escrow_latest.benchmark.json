@@ -56,7 +56,7 @@
           "l2Gas": 0
         }
       },
-      "provingTime": 7684.455023000017
+      "provingTime": 7753.102380000055
     },
     {
       "name": "withdraw",
@@ -109,7 +109,7 @@
           "l2Gas": 0
         }
       },
-      "provingTime": 7707.78775899997
+      "provingTime": 7776.698559999932
     },
     {
       "name": "withdraw_nft",
@@ -162,7 +162,7 @@
           "l2Gas": 0
         }
       },
-      "provingTime": 7403.968639999861
+      "provingTime": 7506.035426999908
     }
   ],
   "gasSummary": {
@@ -171,9 +171,9 @@
     "withdraw_nft": 12288
   },
   "provingTimeSummary": {
-    "(partial) withdraw": 7684.455023000017,
-    "withdraw": 7707.78775899997,
-    "withdraw_nft": 7403.968639999861
+    "(partial) withdraw": 7753.102380000055,
+    "withdraw": 7776.698559999932,
+    "withdraw_nft": 7506.035426999908
   },
   "systemInfo": {
     "cpuModel": "AMD EPYC 7763 64-Core Processor",
