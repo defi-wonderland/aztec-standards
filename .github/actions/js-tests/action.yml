@@ -1,0 +1,14 @@
+name: 'Run JS Tests'
+description: 'Run JavaScript integration tests'
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Clear Vite/Vitest cache
+      shell: bash
+      run: rm -rf node_modules/.vite node_modules/.vitest
+
+    - name: Run JS tests
+      shell: bash
+      run: |
+        script -e -c "BASE_PXE_URL=http://localhost NODE_NO_WARNINGS=1 yarn test:js"

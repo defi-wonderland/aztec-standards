@@ -1,3 +1,4 @@
+import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest';
 import { TxStatus } from '@aztec/aztec.js/tx';
 import { deriveKeys } from '@aztec/stdlib/keys';
 import { PublicKeys } from '@aztec/aztec.js/keys';
@@ -182,8 +183,8 @@ describe('Logic - Single PXE', () => {
       );
 
       expect(address).toEqual(escrow.address);
-      expect(initializationHash).toEqual(Fr.ZERO);
-      expect(initializationHash).toEqual(escrowInstance.initializationHash);
+      expect(initializationHash.equals(Fr.ZERO)).toBe(true);
+      expect(initializationHash.equals(escrowInstance.initializationHash)).toBe(true);
     });
   });
 

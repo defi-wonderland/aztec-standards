@@ -1,3 +1,4 @@
+import { expect } from 'vitest';
 import { Note } from '@aztec/aztec.js/note';
 import { createLogger } from '@aztec/aztec.js/log';
 import { AztecAddress } from '@aztec/aztec.js/addresses';
@@ -78,7 +79,11 @@ export const setupTestSuite = async (suffix?: string, proverEnabled: boolean = f
 
 // --- Token Utils ---
 export const expectUintNote = (note: Note, amount: bigint, owner: AztecAddress) => {
-  expect(note.items[0]).toEqual(new Fr(amount));
+  const expected = new Fr(amount);
+  expect(
+    note.items[0].equals(expected),
+    `Expected note amount ${note.items[0].toString()} to equal ${expected.toString()}`,
+  ).toBe(true);
 };
 
 export const expectTokenBalances = async (
