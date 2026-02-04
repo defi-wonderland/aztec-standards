@@ -125,7 +125,9 @@ impl NFTNote {
         //  - the commitment is already public information, so we're not revealing anything else
         //  - we don't need to create any additional information, private or public, for the tag
         //  - other contracts cannot impersonate us and emit logs with the same tag due to public log siloing
-        let private_log_content = NFTPartialNotePrivateLogContent { public_log_tag: commitment };
+        // NFTNote has no private content fields (token_id is public), so the private log content is empty.
+        // The commitment is passed separately as the note_completion_log_tag parameter.
+        let private_log_content = NFTPartialNotePrivateLogContent {};
 
         let encrypted_log = partial_note::compute_partial_note_private_content_log(
             private_log_content,
@@ -165,10 +167,10 @@ fn compute_partial_commitment(
     )
 }
 
+/// Represents the private content of a partial NFTNote. Since NFTNote only has `token_id` which is
+/// revealed publicly when completing the partial note, there are no private content fields.
 #[derive(Packable)]
-struct NFTPartialNotePrivateLogContent {
-    public_log_tag: Field,
-}
+struct NFTPartialNotePrivateLogContent {}
 
 impl NoteType for NFTPartialNotePrivateLogContent {
     fn get_id() -> Field {
