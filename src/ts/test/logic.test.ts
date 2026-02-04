@@ -67,7 +67,7 @@ describe('Logic - Single PXE', () => {
   let escrowInstance: ContractInstanceWithAddress;
   let escrowSk: Fr;
   let escrowKeys: {
-    masterNullifierSecretKey: GrumpkinScalar;
+    masterNullifierHidingKey: GrumpkinScalar;
     masterIncomingViewingSecretKey: GrumpkinScalar;
     masterOutgoingViewingSecretKey: GrumpkinScalar;
     masterTaggingSecretKey: GrumpkinScalar;
@@ -98,7 +98,7 @@ describe('Logic - Single PXE', () => {
 
     // Convert the keys to Fr
     secretKeys = {
-      nsk_m: grumpkinScalarToFr(escrowKeys.masterNullifierSecretKey),
+      nsk_m: grumpkinScalarToFr(escrowKeys.masterNullifierHidingKey),
       ivsk_m: grumpkinScalarToFr(escrowKeys.masterIncomingViewingSecretKey),
       ovsk_m: grumpkinScalarToFr(escrowKeys.masterOutgoingViewingSecretKey),
       tsk_m: grumpkinScalarToFr(escrowKeys.masterTaggingSecretKey),
@@ -144,32 +144,16 @@ describe('Logic - Single PXE', () => {
       });
 
       const deployer = new ContractDeployer(TestLogicContractArtifact, wallet, undefined, 'constructor');
-      const tx = deployer.deploy(escrowClassId).send({
+      const contract = await deployer.deploy(escrowClassId).send({
         contractAddressSalt: escrowSalt,
         from: alice,
       });
 
-      const receipt = await tx.getReceipt();
-
-      expect(receipt).toEqual(
-        expect.objectContaining({
-          status: TxStatus.PENDING,
-          error: '',
-        }),
-      );
-
-      const receiptAfterMined = await tx.wait({ wallet: wallet });
-
       const contractMetadata = await wallet.getContractMetadata(deploymentData.address);
       expect(contractMetadata).toBeDefined();
       expect(contractMetadata.isContractPublished).toBeTruthy();
-      expect(receiptAfterMined).toEqual(
-        expect.objectContaining({
-          status: TxStatus.SUCCESS,
-        }),
-      );
 
-      expect(receiptAfterMined.contract.address).toEqual(deploymentData.address);
+      expect(contract.address).toEqual(deploymentData.address);
     });
 
     it('deploys escrow with correctly derived address', async () => {
@@ -346,7 +330,7 @@ describe('Logic - Single PXE', () => {
   describe('share_escrow', () => {
     it('logic should be able to share escrow correctly', async () => {
       // Share the escrow contract with bob
-      const tx = await logic.methods.share_escrow(bob, escrow.address, secretKeys).send({ from: alice }).wait();
+      const tx = await logic.methods.share_escrow(bob, escrow.address, secretKeys).send({ from: alice });
       const blockNumber = tx.blockNumber!;
 
       const events = await wallet.getPrivateEvents<EscrowDetailsLogContent>(
@@ -363,7 +347,7 @@ describe('Logic - Single PXE', () => {
       const event = events[0].event;
 
       expect(event.escrow).toEqual(escrow.address);
-      expect(event.master_secret_keys.nsk_m).toEqual(escrowKeys.masterNullifierSecretKey.toBigInt());
+      expect(event.master_secret_keys.nsk_m).toEqual(escrowKeys.masterNullifierHidingKey.toBigInt());
       expect(event.master_secret_keys.ivsk_m).toEqual(escrowKeys.masterIncomingViewingSecretKey.toBigInt());
       expect(event.master_secret_keys.ovsk_m).toEqual(escrowKeys.masterOutgoingViewingSecretKey.toBigInt());
       expect(event.master_secret_keys.tsk_m).toEqual(escrowKeys.masterTaggingSecretKey.toBigInt());
@@ -371,10 +355,10 @@ describe('Logic - Single PXE', () => {
 
     it('share escrow with multiple recipients correctly', async () => {
       // Share the escrow contract with bob
-      const txForBob = await logic.methods.share_escrow(bob, escrow.address, secretKeys).send({ from: alice }).wait();
+      const txForBob = await logic.methods.share_escrow(bob, escrow.address, secretKeys).send({ from: alice });
       const blockNumberBob = txForBob.blockNumber!;
 
-      const txForCarl = await logic.methods.share_escrow(carl, escrow.address, secretKeys).send({ from: alice }).wait();
+      const txForCarl = await logic.methods.share_escrow(carl, escrow.address, secretKeys).send({ from: alice });
       const blockNumberCarl = txForCarl.blockNumber!;
 
       const numberOfBlocks = blockNumberCarl - blockNumberBob + 1;
@@ -394,14 +378,14 @@ describe('Logic - Single PXE', () => {
 
       const eventForBob = events[0].event;
       expect(eventForBob.escrow).toEqual(escrow.address);
-      expect(eventForBob.master_secret_keys.nsk_m).toEqual(escrowKeys.masterNullifierSecretKey.toBigInt());
+      expect(eventForBob.master_secret_keys.nsk_m).toEqual(escrowKeys.masterNullifierHidingKey.toBigInt());
       expect(eventForBob.master_secret_keys.ivsk_m).toEqual(escrowKeys.masterIncomingViewingSecretKey.toBigInt());
       expect(eventForBob.master_secret_keys.ovsk_m).toEqual(escrowKeys.masterOutgoingViewingSecretKey.toBigInt());
       expect(eventForBob.master_secret_keys.tsk_m).toEqual(escrowKeys.masterTaggingSecretKey.toBigInt());
 
       const eventForCarl = events[1].event;
       expect(eventForCarl.escrow).toEqual(escrow.address);
-      expect(eventForCarl.master_secret_keys.nsk_m).toEqual(escrowKeys.masterNullifierSecretKey.toBigInt());
+      expect(eventForCarl.master_secret_keys.nsk_m).toEqual(escrowKeys.masterNullifierHidingKey.toBigInt());
       expect(eventForCarl.master_secret_keys.ivsk_m).toEqual(escrowKeys.masterIncomingViewingSecretKey.toBigInt());
       expect(eventForCarl.master_secret_keys.ovsk_m).toEqual(escrowKeys.masterOutgoingViewingSecretKey.toBigInt());
       expect(eventForCarl.master_secret_keys.tsk_m).toEqual(escrowKeys.masterTaggingSecretKey.toBigInt());
@@ -420,17 +404,12 @@ describe('Logic - Single PXE', () => {
     });
 
     it('logic should be able to withdraw correctly', async () => {
-      // Bob needs to sync his private state to see the escrow details
-      await token.withWallet(wallet).methods.sync_private_state().simulate({ from: bob });
-
       const privateBalance = await token.methods.balance_of_private(escrow.address).simulate({ from: bob });
 
       await expectTokenBalances(token, escrow.address, wad(0), AMOUNT, bob);
       await expectTokenBalances(token, bob, wad(0), wad(0), bob);
 
       await logic.withWallet(wallet).methods.withdraw(escrow.address, bob, token.address, AMOUNT).send({ from: bob });
-
-      await token.withWallet(wallet).methods.sync_private_state().simulate({ from: bob });
 
       await expectTokenBalances(token, escrow.address, wad(0), wad(0), bob);
       await expectTokenBalances(token, bob, wad(0), AMOUNT, bob);
@@ -443,9 +422,6 @@ describe('Logic - Single PXE', () => {
     it('withdrawing less than the balance should succeed', async () => {
       const halfAmount = AMOUNT / 2n;
 
-      // Bob needs to sync his private state to see the escrow details
-      await token.withWallet(wallet).methods.sync_private_state().simulate({ from: bob });
-
       await expectTokenBalances(token, escrow.address, wad(0), AMOUNT, bob);
       await expectTokenBalances(token, bob, wad(0), wad(0), bob);
 
@@ -453,8 +429,6 @@ describe('Logic - Single PXE', () => {
         .withWallet(wallet)
         .methods.withdraw(escrow.address, bob, token.address, halfAmount)
         .send({ from: bob });
-
-      await token.withWallet(wallet).methods.sync_private_state().simulate({ from: bob });
 
       await expectTokenBalances(token, escrow.address, wad(0), halfAmount, bob);
       await expectTokenBalances(token, bob, wad(0), halfAmount, bob);
@@ -500,9 +474,6 @@ describe('Logic - Single PXE', () => {
     });
 
     it('logic should be able to withdraw NFT correctly', async () => {
-      // Bob needs to sync his private state to see the escrow details
-      await nft.withWallet(wallet).methods.sync_private_state().simulate({ from: bob });
-
       await assertOwnsPrivateNFT(nft, tokenId, escrow.address, true);
       await assertOwnsPrivateNFT(nft, tokenId, bob, false);
 
@@ -510,8 +481,6 @@ describe('Logic - Single PXE', () => {
         .withWallet(wallet)
         .methods.withdraw_nft(escrow.address, bob, nft.address, tokenId)
         .send({ from: bob });
-
-      await nft.withWallet(wallet).methods.sync_private_state().simulate({ from: bob });
 
       await assertOwnsPrivateNFT(nft, tokenId, escrow.address, false);
       await assertOwnsPrivateNFT(nft, tokenId, bob, true);

@@ -57,7 +57,7 @@ export default class LogicContractBenchmark extends Benchmark {
     const escrowSk = Fr.random();
     const escrowKeys = await deriveKeys(escrowSk);
     const secretKeys = {
-      nsk_m: grumpkinScalarToFr(escrowKeys.masterNullifierSecretKey),
+      nsk_m: grumpkinScalarToFr(escrowKeys.masterNullifierHidingKey),
       ivsk_m: grumpkinScalarToFr(escrowKeys.masterIncomingViewingSecretKey),
       ovsk_m: grumpkinScalarToFr(escrowKeys.masterOutgoingViewingSecretKey),
       tsk_m: grumpkinScalarToFr(escrowKeys.masterTaggingSecretKey),

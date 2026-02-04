@@ -1205,7 +1205,7 @@ describe('Tokenized Vault', () => {
         // Attempt redeeming more shares than Alice actually has
         let sharesRequested = assetsAlice + 1;
         await expect(
-          vault.methods.redeem_public_to_public(alice, alice, sharesRequested, 0).send({ from: alice }).wait(),
+          vault.methods.redeem_public_to_public(alice, alice, sharesRequested, 0).send({ from: alice }),
         ).rejects.toThrow(/app_logic_reverted/); // Underflow
       },
       TEST_TIMEOUT,
@@ -1247,7 +1247,7 @@ describe('Tokenized Vault', () => {
         // Attempt redeeming more shares than Alice actually has
         let sharesRequested = assetsAlice + 1;
         await expect(
-          vault.methods.redeem_private_to_public(alice, alice, sharesRequested, 0).send({ from: alice }).wait(),
+          vault.methods.redeem_private_to_public(alice, alice, sharesRequested, 0).send({ from: alice }),
         ).rejects.toThrow(/Assertion failed: Balance too low 'subtracted > 0'/);
       },
       TEST_TIMEOUT,

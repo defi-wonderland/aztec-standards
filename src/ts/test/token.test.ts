@@ -62,32 +62,17 @@ describe('Token - Single PXE', () => {
     });
 
     const deployer = new ContractDeployer(TokenContractArtifact, wallet, undefined, 'constructor_with_minter');
-    const tx = deployer.deploy('PrivateToken', 'PT', 18, deployerWallet, deployerWallet).send({
+    const contract = await deployer.deploy('PrivateToken', 'PT', 18, deployerWallet, deployerWallet).send({
       contractAddressSalt: salt,
       from: deployerWallet,
     });
-    const receipt = await tx.getReceipt();
-
-    expect(receipt).toEqual(
-      expect.objectContaining({
-        status: TxStatus.PENDING,
-        error: '',
-      }),
-    );
-
-    const receiptAfterMined = await tx.wait({ wallet: wallet });
 
     const contractMetadata = await wallet.getContractMetadata(deploymentData.address);
     expect(contractMetadata).toBeDefined();
     // TODO: Fix this
     // expect(contractMetadata.isContractPubliclyDeployed).toBeTruthy();
-    expect(receiptAfterMined).toEqual(
-      expect.objectContaining({
-        status: TxStatus.SUCCESS,
-      }),
-    );
 
-    expect(receiptAfterMined.contract.address).toEqual(deploymentData.address);
+    expect(contract.address).toEqual(deploymentData.address);
   }, 300_000);
 
   it('deploys the contract with initial supply', async () => {
@@ -101,31 +86,16 @@ describe('Token - Single PXE', () => {
       deployer: deployerWallet,
     });
     const deployer = new ContractDeployer(TokenContractArtifact, wallet, undefined, 'constructor_with_initial_supply');
-    const tx = deployer
+    const contract = await deployer
       .deploy('PrivateToken', 'PT', 18, 1, deployerWallet, deployerWallet)
       .send({ contractAddressSalt: salt, from: deployerWallet });
-    const receipt = await tx.getReceipt();
-
-    expect(receipt).toEqual(
-      expect.objectContaining({
-        status: TxStatus.PENDING,
-        error: '',
-      }),
-    );
-
-    const receiptAfterMined = await tx.wait({ wallet: wallet });
 
     const contractMetadata = await wallet.getContractMetadata(deploymentData.address);
     expect(contractMetadata).toBeDefined();
     // TODO: Fix this
     // expect(contractMetadata.isContractPubliclyDeployed).toBeTruthy();
-    expect(receiptAfterMined).toEqual(
-      expect.objectContaining({
-        status: TxStatus.SUCCESS,
-      }),
-    );
 
-    expect(receiptAfterMined.contract.address).toEqual(deploymentData.address);
+    expect(contract.address).toEqual(deploymentData.address);
   }, 300_000);
 
   it('mints', async () => {
@@ -159,10 +129,10 @@ describe('Token - Single PXE', () => {
   //     .withWallet(wallet)
   //     .methods.mint_to_public(alice, AMOUNT * 2n)
   //     .send()
-  //     .wait();
+  //     ;
 
   //   // Burn 1 token from alice
-  //   await token.withWallet(wallet).methods.burn_public(alice, AMOUNT, 0).send({ from: alice }).wait();
+  //   await token.withWallet(wallet).methods.burn_public(alice, AMOUNT, 0).send({ from: alice });
 
   //   // Check balance and total supply are reduced
   //   const aliceBalance = await token.methods.balance_of_public(alice).simulate({ from: alice });
@@ -202,7 +172,7 @@ describe('Token - Single PXE', () => {
     //     .withWallet(wallet)
     //     .methods.transfer_private_to_public(alice, alice, AMOUNT + 1n, 0)
     //     .send()
-    //     .wait(),
+    //     ,
     // ).rejects.toThrow(/Balance too low/);
   }, 300_000);
 
@@ -226,7 +196,7 @@ describe('Token - Single PXE', () => {
     //     .withWallet(wallet)
     //     .methods.transfer_private_to_private(alice, bob, AMOUNT + 1n, 0)
     //     .send()
-    //     .wait(),
+    //     ,
     // ).rejects.toThrow(/Balance too low/);
 
     // Check total supply hasn't changed
@@ -294,7 +264,7 @@ describe('Token - Single PXE', () => {
     //     .withWallet(wallet)
     //     .methods.transfer_public_to_private(alice, alice, AMOUNT * 2n, 0)
     //     .send()
-    //     .wait(),
+    //     ,
     // ).rejects.toThrow(/attempt to subtract with underflow/);
 
     // Check total supply stayed the same
@@ -462,7 +432,6 @@ describe.skip('Token - Multi Wallet (PXE)', () => {
       .withWallet(wallet)
       .methods.transfer_public_to_private(alice, alice, wad(5), 0)
       .send({ from: alice });
-    await token.withWallet(wallet).methods.sync_private_state().simulate({ from: alice });
 
     // assert balances
     await expectTokenBalances(token, alice, wad(5), wad(5));
@@ -477,8 +446,6 @@ describe.skip('Token - Multi Wallet (PXE)', () => {
       .withWallet(wallet)
       .methods.transfer_public_to_private(alice, bob, wad(5), 0)
       .send({ from: alice });
-    await token.withWallet(wallet).methods.sync_private_state().simulate({ from: alice });
-    await token.withWallet(wallet).methods.sync_private_state().simulate({ from: bob });
 
     notes = await aliceWallet.getNotes({ contractAddress: token.address, scopes: [alice] });
     expect(notes.length).toBe(1);
@@ -494,8 +461,6 @@ describe.skip('Token - Multi Wallet (PXE)', () => {
       .withWallet(wallet)
       .methods.transfer_private_to_private(alice, bob, wad(5), 0)
       .send({ from: alice });
-    await token.withWallet(wallet).methods.sync_private_state().simulate({ from: alice });
-    await token.withWallet(wallet).methods.sync_private_state().simulate({ from: bob });
 
     // assert balances
     await expectTokenBalances(token, alice, wad(0), wad(0));

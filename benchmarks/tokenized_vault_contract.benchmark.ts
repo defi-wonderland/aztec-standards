@@ -50,10 +50,10 @@ export default class TokenContractBenchmark extends Benchmark {
     const assetMethods = assetContract.withWallet(wallet).methods;
 
     // Mint initial asset supply to the deployer
-    await assetContract.withWallet(wallet).methods.mint_to_public(deployer, amt(100)).send({ from: deployer }).wait();
+    await assetContract.withWallet(wallet).methods.mint_to_public(deployer, amt(100)).send({ from: deployer });
     for (let i = 0; i < 6; i++) {
       // 1 Note per benchmark test so that a single full Note is used in each.
-      await assetContract.withWallet(wallet).methods.mint_to_private(deployer, amt(1)).send({ from: deployer }).wait();
+      await assetContract.withWallet(wallet).methods.mint_to_private(deployer, amt(1)).send({ from: deployer });
     }
 
     // Initialize shares total supply by depositing 1 asset and sending 1 share to the zero address
@@ -62,8 +62,7 @@ export default class TokenContractBenchmark extends Benchmark {
     await vaultContract
       .withWallet(wallet)
       .methods.deposit_public_to_public(deployer, AztecAddress.ZERO, amt(1), 1234)
-      .send({ from: deployer })
-      .wait();
+      .send({ from: deployer });
 
     /* ======================= PUBLIC AUTHWITS ========================== */
 

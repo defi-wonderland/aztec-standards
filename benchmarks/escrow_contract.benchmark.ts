@@ -69,14 +69,12 @@ export default class EscrowContractBenchmark extends Benchmark {
     await tokenContract
       .withWallet(wallet)
       .methods.mint_to_private(escrowContract.address, tokenAmount)
-      .send({ from: deployer })
-      .wait();
+      .send({ from: deployer });
     const tokenId = 1;
     await nftContract
       .withWallet(wallet)
       .methods.mint_to_private(escrowContract.address, tokenId)
-      .send({ from: deployer })
-      .wait();
+      .send({ from: deployer });
 
     return {
       store,

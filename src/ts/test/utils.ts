@@ -233,15 +233,16 @@ export async function deployEscrow(
   args: unknown[] = [],
   constructor?: string,
 ): Promise<{ contract: EscrowContract; instance: ContractInstanceWithAddress }> {
-  const { contract, instance } = await Contract.deployWithPublicKeys(
+  const contract = await Contract.deployWithPublicKeys(
     publicKeys,
     wallet,
     EscrowContractArtifact,
     args,
     constructor,
-  )
-    .send({ contractAddressSalt: salt, universalDeploy: true, from: deployer })
-    .wait();
+  ).send({ contractAddressSalt: salt, universalDeploy: true, from: deployer });
+
+  // Get the instance from the node after deployment
+  const instance = (await node.getContract(contract.address)) as ContractInstanceWithAddress;
   return { contract: contract as EscrowContract, instance };
 }
 
@@ -292,7 +293,7 @@ export async function initializeTransferCommitment(
   completer: AztecAddress,
 ) {
   // Workaround because we could not get the commitment from the simulation, so we decrypt the private log instead
-  const tx = await token.methods.initialize_transfer_commitment(to.address, completer).send({ from: caller }).wait();
+  const tx = await token.methods.initialize_transfer_commitment(to.address, completer).send({ from: caller });
   const txEffect = await node.getTxEffect(tx.txHash);
   if (!txEffect?.data.privateLogs) {
     throw new Error('No private logs found');
@@ -327,7 +328,7 @@ export async function initializeTransferCommitmentNFT(
   completer: AztecAddress,
 ) {
   // Workaround because we could not get the commitment from the simulation, so we decrypt the private log instead
-  const tx = await nft.methods.initialize_transfer_commitment(to.address, completer).send({ from: caller }).wait();
+  const tx = await nft.methods.initialize_transfer_commitment(to.address, completer).send({ from: caller });
   const txEffect = await node.getTxEffect(tx.txHash);
   if (!txEffect?.data.privateLogs) {
     throw new Error('No private logs found');

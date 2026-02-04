@@ -40,7 +40,7 @@ describe('Escrow', () => {
   let escrowInstance: ContractInstanceWithAddress;
   let escrowSk: Fr;
   let escrowKeys: {
-    masterNullifierSecretKey: GrumpkinScalar;
+    masterNullifierHidingKey: GrumpkinScalar;
     masterIncomingViewingSecretKey: GrumpkinScalar;
     masterOutgoingViewingSecretKey: GrumpkinScalar;
     masterTaggingSecretKey: GrumpkinScalar;
@@ -79,17 +79,13 @@ describe('Escrow', () => {
   describe('authorization', () => {
     it('withdrawing tokens from account different than the logic contract should fail', async () => {
       await expect(
-        escrow.withWallet(wallet).methods.withdraw(AztecAddress.ZERO, 0, AztecAddress.ZERO).send({ from: bob }).wait(),
+        escrow.withWallet(wallet).methods.withdraw(AztecAddress.ZERO, 0, AztecAddress.ZERO).send({ from: bob }),
       ).rejects.toThrow(/Assertion failed: Not Authorized/);
     });
 
     it('withdrawing nft from account different than the logic contract should fail', async () => {
       await expect(
-        escrow
-          .withWallet(wallet)
-          .methods.withdraw_nft(AztecAddress.ZERO, 0, AztecAddress.ZERO)
-          .send({ from: bob })
-          .wait(),
+        escrow.withWallet(wallet).methods.withdraw_nft(AztecAddress.ZERO, 0, AztecAddress.ZERO).send({ from: bob }),
       ).rejects.toThrow(/Assertion failed: Not Authorized/);
     });
   });
@@ -139,8 +135,7 @@ describe('Escrow', () => {
         escrow
           .withWallet(wallet)
           .methods.withdraw(token.address, AMOUNT + 1n, bob)
-          .send({ from: logicMock })
-          .wait(),
+          .send({ from: logicMock }),
       ).rejects.toThrow(/Assertion failed: Balance too low/);
     });
   });
@@ -173,8 +168,7 @@ describe('Escrow', () => {
         escrow
           .withWallet(wallet)
           .methods.withdraw_nft(nft.address, tokenId + 1n, bob)
-          .send({ from: logicMock })
-          .wait(),
+          .send({ from: logicMock }),
       ).rejects.toThrow(/Assertion failed: nft not found in private to public/);
     });
   });
