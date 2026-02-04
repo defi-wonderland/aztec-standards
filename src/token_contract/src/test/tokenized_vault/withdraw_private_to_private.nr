@@ -1,7 +1,7 @@
 use crate::{test::{tokenized_vault::tokenized_vault_utils, utils::{self, mint_amount}}, Token};
 use aztec::test::helpers::authwit as authwit_cheatcodes;
 
-#[test(should_fail_with = "No contract instance found for address 0x0000000000000000000000000000000000000000000000000000000000000000")]
+#[test(should_fail_with = "Trying to read from uninitialized PublicImmutable")]
 unconstrained fn withdraw_private_to_private_without_asset() {
     // Setup without account contracts. We are not using authwits here, so dummy accounts are enough
     let (env, vault_address, owner, recipient, minter) = utils::setup_with_minter(false);
