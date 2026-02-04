@@ -1,19 +1,19 @@
 use aztec::{
     context::{PrivateContext, UtilityContext},
     note::{
+        HintedNote,
+        MaybeNoteMessage,
         note_getter_options::{NoteGetterOptions, SortOrder},
         note_interface::NoteProperties,
-        note_message::MaybeNoteMessage,
         note_viewer_options::NoteViewerOptions,
-        retrieved_note::RetrievedNote,
     },
-    protocol_types::{
+    protocol::{
         address::AztecAddress, constants::MAX_NOTE_HASH_READ_REQUESTS_PER_CALL, traits::Packable,
     },
-    state_vars::{owned_state_variable::OwnedStateVariable, PrivateSet},
+    state_vars::{OwnedStateVariable, PrivateSet},
 };
 use std::ops::Add;
-use uint_note::uint_note::UintNote;
+use uint_note::UintNote;
 
 pub struct BalanceSet<Context> {
     pub set: PrivateSet<UintNote, Context>,
@@ -109,9 +109,9 @@ impl BalanceSet<&mut PrivateContext> {
 // 'min_sum' - all it does is remove extra notes if it does reach that value.
 // Note that proper usage of this preprocessor requires for notes to be sorted in descending order.
 pub fn preprocess_notes_min_sum(
-    notes: [Option<RetrievedNote<UintNote>>; MAX_NOTE_HASH_READ_REQUESTS_PER_CALL],
+    notes: [Option<HintedNote<UintNote>>; MAX_NOTE_HASH_READ_REQUESTS_PER_CALL],
     min_sum: u128,
-) -> [Option<RetrievedNote<UintNote>>; MAX_NOTE_HASH_READ_REQUESTS_PER_CALL] {
+) -> [Option<HintedNote<UintNote>>; MAX_NOTE_HASH_READ_REQUESTS_PER_CALL] {
     let mut selected = [Option::none(); MAX_NOTE_HASH_READ_REQUESTS_PER_CALL];
     let mut sum = 0 as u128;
     for i in 0..notes.len() {

@@ -44,7 +44,7 @@ describe('Tokenized Vault', () => {
     const { nonce = 0, caller = from } = options;
     const transfer = asset.methods.transfer_public_to_public(from, vault.address, amount, nonce);
     await setPublicAuthWit(vault.address, transfer, from, wallet);
-    await action.send({ from: caller }).wait();
+    await action.send({ from: caller });
   }
 
   async function callVaultWithPrivateAuthWit(
@@ -56,15 +56,12 @@ describe('Tokenized Vault', () => {
     const { nonce = 0, caller = from } = options;
     const transfer = asset.methods.transfer_private_to_public(from, vault.address, amount, nonce);
     const transferAuthWitness = await setPrivateAuthWit(vault.address, transfer, from, wallet);
-    await action
-      .with({ authWitnesses: [transferAuthWitness] })
-      .send({ from: caller })
-      .wait();
+    await action.with({ authWitnesses: [transferAuthWitness] }).send({ from: caller });
   }
 
   async function mintAndDepositInPrivate(account: AztecAddress, mint: number, assets: number, shares: number) {
     // Mint some assets to Alice
-    await asset.methods.mint_to_private(account, mint).send({ from: alice }).wait();
+    await asset.methods.mint_to_private(account, mint).send({ from: alice });
 
     // Alice deposits private assets, receives private shares
     await callVaultWithPrivateAuthWit(
@@ -76,7 +73,7 @@ describe('Tokenized Vault', () => {
 
   async function mintAndDepositInPublic(account: AztecAddress, mint: number, assets: number) {
     // Mint some assets to Alice
-    await asset.methods.mint_to_public(account, mint).send({ from: alice }).wait();
+    await asset.methods.mint_to_public(account, mint).send({ from: alice });
 
     // Alice deposits public assets, receives public shares
     await callVaultWithPublicAuthWit(
@@ -106,8 +103,8 @@ describe('Tokenized Vault', () => {
       'Public assets, Public shares: Alice deposits/withdraws, Bob issues/redeems',
       async () => {
         // Mint some assets to Alice and Bob for deposit/issue
-        await asset.methods.mint_to_public(alice, initialAmount).send({ from: alice }).wait();
-        await asset.methods.mint_to_public(bob, initialAmount).send({ from: alice }).wait();
+        await asset.methods.mint_to_public(alice, initialAmount).send({ from: alice });
+        await asset.methods.mint_to_public(bob, initialAmount).send({ from: alice });
 
         // Alice deposits public assets, receives public shares
         await callVaultWithPublicAuthWit(
@@ -117,7 +114,7 @@ describe('Tokenized Vault', () => {
         );
 
         // Simulate yield: mint assets to vault
-        await asset.methods.mint_to_public(vault.address, yieldAmount).send({ from: alice }).wait();
+        await asset.methods.mint_to_public(vault.address, yieldAmount).send({ from: alice });
 
         // Bob issues public shares for public assets
         await callVaultWithPublicAuthWit(
@@ -139,11 +136,11 @@ describe('Tokenized Vault', () => {
         // TODO: call preview max withdraw function
         // Cannot withdraw 14 due to rounding.
         const maxWithdraw = assetsAlice + aliceEarnings;
-        await vault.methods.withdraw_public_to_public(alice, alice, maxWithdraw, 0).send({ from: alice }).wait();
+        await vault.methods.withdraw_public_to_public(alice, alice, maxWithdraw, 0).send({ from: alice });
 
         // Bob redeems public shares for public assets
         // Bob should get 15 asset tokens back, 1 token remains in the vault
-        await vault.methods.redeem_public_to_public(bob, bob, sharesBob, 0).send({ from: bob }).wait();
+        await vault.methods.redeem_public_to_public(bob, bob, sharesBob, 0).send({ from: bob });
 
         // Check asset balances
         await expectTokenBalances(asset, alice, initialAmount + aliceEarnings, 0);
@@ -161,8 +158,8 @@ describe('Tokenized Vault', () => {
       'Private assets, Public shares: Alice deposits/withdraws, Bob issues/redeems',
       async () => {
         // Mint some assets to Alice and Bob for deposit/issue
-        await asset.methods.mint_to_private(alice, initialAmount).send({ from: alice }).wait();
-        await asset.methods.mint_to_private(bob, initialAmount).send({ from: alice }).wait();
+        await asset.methods.mint_to_private(alice, initialAmount).send({ from: alice });
+        await asset.methods.mint_to_private(bob, initialAmount).send({ from: alice });
 
         // Alice deposits private assets, receives public shares
         await callVaultWithPrivateAuthWit(
@@ -172,7 +169,7 @@ describe('Tokenized Vault', () => {
         );
 
         // Simulate yield: mint assets to vault
-        await asset.methods.mint_to_public(vault.address, yieldAmount).send({ from: alice }).wait();
+        await asset.methods.mint_to_public(vault.address, yieldAmount).send({ from: alice });
 
         // Bob issues public shares for public assets
         await callVaultWithPrivateAuthWit(
@@ -194,15 +191,12 @@ describe('Tokenized Vault', () => {
         // TODO: call preview max withdraw function
         // Cannot withdraw 14 due to rounding.
         const maxWithdraw = assetsAlice + aliceEarnings;
-        await vault.methods.withdraw_public_to_private(alice, alice, maxWithdraw, 0).send({ from: alice }).wait();
+        await vault.methods.withdraw_public_to_private(alice, alice, maxWithdraw, 0).send({ from: alice });
 
         // Bob redeems private shares for public assets
         // Bob should get 15 asset tokens back, 1 token remains in the vault
         const minAssets = assetsBob;
-        await vault.methods
-          .redeem_public_to_private_exact(bob, bob, sharesBob, minAssets, 0)
-          .send({ from: bob })
-          .wait();
+        await vault.methods.redeem_public_to_private_exact(bob, bob, sharesBob, minAssets, 0).send({ from: bob });
 
         // Check asset balances
         await expectTokenBalances(asset, alice, 0, initialAmount + aliceEarnings);
@@ -220,8 +214,8 @@ describe('Tokenized Vault', () => {
       'Public assets, Private shares: Alice deposits/withdraws, Bob issues/redeems',
       async () => {
         // Mint some assets to Alice and Bob for deposit/issue
-        await asset.methods.mint_to_public(alice, initialAmount).send({ from: alice }).wait();
-        await asset.methods.mint_to_public(bob, initialAmount).send({ from: alice }).wait();
+        await asset.methods.mint_to_public(alice, initialAmount).send({ from: alice });
+        await asset.methods.mint_to_public(bob, initialAmount).send({ from: alice });
 
         // Alice deposits public assets, receives public shares
         await callVaultWithPublicAuthWit(
@@ -231,7 +225,7 @@ describe('Tokenized Vault', () => {
         );
 
         // Simulate yield: mint assets to vault
-        await asset.methods.mint_to_public(vault.address, yieldAmount).send({ from: alice }).wait();
+        await asset.methods.mint_to_public(vault.address, yieldAmount).send({ from: alice });
 
         // Bob issues public shares for public assets
         await callVaultWithPublicAuthWit(
@@ -255,12 +249,11 @@ describe('Tokenized Vault', () => {
         const maxWithdraw = assetsAlice + aliceEarnings;
         await vault.methods
           .withdraw_private_to_public_exact(alice, alice, maxWithdraw, sharesAlice, 0)
-          .send({ from: alice })
-          .wait();
+          .send({ from: alice });
 
         // Bob redeems public shares for public assets
         // Bob should get 15 asset tokens back, 1 token remains in the vault
-        await vault.methods.redeem_private_to_public(bob, bob, sharesBob, 0).send({ from: bob }).wait();
+        await vault.methods.redeem_private_to_public(bob, bob, sharesBob, 0).send({ from: bob });
 
         // Check asset balances
         await expectTokenBalances(asset, alice, initialAmount + aliceEarnings, 0);
@@ -278,8 +271,8 @@ describe('Tokenized Vault', () => {
       'Private assets, Private shares: Alice deposits/withdraws, Bob issues/redeems',
       async () => {
         // Mint some assets to Alice and Bob for deposit/issue
-        await asset.methods.mint_to_private(alice, initialAmount).send({ from: alice }).wait();
-        await asset.methods.mint_to_private(bob, initialAmount).send({ from: alice }).wait();
+        await asset.methods.mint_to_private(alice, initialAmount).send({ from: alice });
+        await asset.methods.mint_to_private(bob, initialAmount).send({ from: alice });
 
         // Alice deposits private assets, receives private shares
         await callVaultWithPrivateAuthWit(
@@ -289,7 +282,7 @@ describe('Tokenized Vault', () => {
         );
 
         // Simulate yield: mint assets to vault
-        await asset.methods.mint_to_public(vault.address, yieldAmount).send({ from: alice }).wait();
+        await asset.methods.mint_to_public(vault.address, yieldAmount).send({ from: alice });
 
         // Bob issues private shares for private assets
         await callVaultWithPrivateAuthWit(
@@ -313,15 +306,11 @@ describe('Tokenized Vault', () => {
         const maxWithdraw = assetsAlice + aliceEarnings;
         await vault.methods
           .withdraw_private_to_private(alice, alice, maxWithdraw, sharesAlice, 0)
-          .send({ from: alice })
-          .wait();
+          .send({ from: alice });
 
         // Bob redeems public shares for public assets
         // Bob should get 15 asset tokens back, 1 token remains in the vault
-        await vault.methods
-          .redeem_private_to_private_exact(bob, bob, sharesBob, assetsBob, 0)
-          .send({ from: bob })
-          .wait();
+        await vault.methods.redeem_private_to_private_exact(bob, bob, sharesBob, assetsBob, 0).send({ from: bob });
 
         // Check asset balances
         await expectTokenBalances(asset, alice, 0, initialAmount + aliceEarnings);
@@ -339,8 +328,8 @@ describe('Tokenized Vault', () => {
       'Exact methods, Mixed Assets, Private shares: Alice deposits/withdraws, Bob deposits/withdraws',
       async () => {
         // Mint some assets to Alice and Bob for deposit/issue
-        await asset.methods.mint_to_private(alice, initialAmount).send({ from: alice }).wait();
-        await asset.methods.mint_to_public(bob, initialAmount).send({ from: alice }).wait();
+        await asset.methods.mint_to_private(alice, initialAmount).send({ from: alice });
+        await asset.methods.mint_to_public(bob, initialAmount).send({ from: alice });
 
         // Alice deposits private assets, receives public shares
         await callVaultWithPrivateAuthWit(
@@ -350,7 +339,7 @@ describe('Tokenized Vault', () => {
         );
 
         // Simulate yield: mint assets to vault
-        await asset.methods.mint_to_public(vault.address, yieldAmount).send({ from: alice }).wait();
+        await asset.methods.mint_to_public(vault.address, yieldAmount).send({ from: alice });
 
         // Bob issues public shares for public assets
         await callVaultWithPublicAuthWit(
@@ -374,15 +363,11 @@ describe('Tokenized Vault', () => {
         const maxWithdraw = assetsAlice + aliceEarnings;
         await vault.methods
           .withdraw_private_to_private_exact(alice, alice, maxWithdraw, sharesAlice, 0)
-          .send({ from: alice })
-          .wait();
+          .send({ from: alice });
 
         // Bob redeems public shares for public assets
         // Bob should get 15 asset tokens back, 1 token remains in the vault
-        await vault.methods
-          .withdraw_private_to_public_exact(bob, bob, assetsBob, sharesBob, 0)
-          .send({ from: bob })
-          .wait();
+        await vault.methods.withdraw_private_to_public_exact(bob, bob, assetsBob, sharesBob, 0).send({ from: bob });
 
         // Check asset balances
         await expectTokenBalances(asset, alice, 0, initialAmount + aliceEarnings);
@@ -404,8 +389,8 @@ describe('Tokenized Vault', () => {
       'Public assets, Public shares: Alice deposits/withdraws, Bob issues/redeems',
       async () => {
         // Mint some assets to Alice and Bob for deposit/issue
-        await asset.methods.mint_to_public(alice, initialAmount).send({ from: alice }).wait();
-        await asset.methods.mint_to_public(bob, initialAmount).send({ from: alice }).wait();
+        await asset.methods.mint_to_public(alice, initialAmount).send({ from: alice });
+        await asset.methods.mint_to_public(bob, initialAmount).send({ from: alice });
 
         // Alice deposits public assets, receives public shares
         const depositAction = vault.methods.deposit_public_to_public(alice, alice, assetsAlice, 0);
@@ -413,7 +398,7 @@ describe('Tokenized Vault', () => {
         await callVaultWithPublicAuthWit(depositAction, alice, assetsAlice, { caller: carl });
 
         // Simulate yield: mint assets to vault
-        await asset.methods.mint_to_public(vault.address, yieldAmount).send({ from: alice }).wait();
+        await asset.methods.mint_to_public(vault.address, yieldAmount).send({ from: alice });
 
         // Bob issues public shares for public assets
         const issueAction = vault.methods.issue_public_to_public(bob, bob, sharesBob, assetsBob, 0);
@@ -437,13 +422,13 @@ describe('Tokenized Vault', () => {
         const maxWithdraw = 13;
         const withdrawAction = vault.methods.withdraw_public_to_public(alice, alice, maxWithdraw, 0);
         await setPublicAuthWit(carl, withdrawAction, alice, wallet);
-        await withdrawAction.send({ from: carl }).wait();
+        await withdrawAction.send({ from: carl });
 
         // Bob redeems public shares for public assets
         // Bob should get 15 asset tokens back, 1 token remains in the vault
         const redeemAction = vault.methods.redeem_public_to_public(bob, bob, sharesBob, 0);
         await setPublicAuthWit(carl, redeemAction, bob, wallet);
-        await redeemAction.send({ from: carl }).wait();
+        await redeemAction.send({ from: carl });
 
         // Check asset balances
         await expectTokenBalances(asset, alice, initialAmount + aliceEarnings, 0);
@@ -463,8 +448,8 @@ describe('Tokenized Vault', () => {
       'Private assets, Public shares: Alice deposits/withdraws, Bob issues/redeems',
       async () => {
         // Mint some assets to Alice and Bob for deposit/issue
-        await asset.methods.mint_to_private(alice, initialAmount).send({ from: alice }).wait();
-        await asset.methods.mint_to_private(bob, initialAmount).send({ from: alice }).wait();
+        await asset.methods.mint_to_private(alice, initialAmount).send({ from: alice });
+        await asset.methods.mint_to_private(bob, initialAmount).send({ from: alice });
 
         // Alice deposits private assets, receives public shares
         const depositAction = vault.methods.deposit_private_to_public(alice, alice, assetsAlice, 0);
@@ -477,7 +462,7 @@ describe('Tokenized Vault', () => {
         );
 
         // Simulate yield: mint assets to vault
-        await asset.methods.mint_to_public(vault.address, yieldAmount).send({ from: alice }).wait();
+        await asset.methods.mint_to_public(vault.address, yieldAmount).send({ from: alice });
 
         // Bob issues public shares for public assets
         const issueAction = vault.methods.issue_private_to_public_exact(bob, bob, sharesBob, assetsBob, 0);
@@ -501,15 +486,12 @@ describe('Tokenized Vault', () => {
         // TODO: call preview max withdraw function
         // Cannot withdraw 14 due to rounding.
         const maxWithdraw = 13;
-        await vault.methods.withdraw_public_to_private(alice, alice, maxWithdraw, 0).send({ from: alice }).wait();
+        await vault.methods.withdraw_public_to_private(alice, alice, maxWithdraw, 0).send({ from: alice });
 
         // Bob redeems private shares for public assets
         // Bob should get 15 asset tokens back, 1 token remains in the vault
         const minAssets = 15;
-        await vault.methods
-          .redeem_public_to_private_exact(bob, bob, sharesBob, minAssets, 0)
-          .send({ from: bob })
-          .wait();
+        await vault.methods.redeem_public_to_private_exact(bob, bob, sharesBob, minAssets, 0).send({ from: bob });
 
         // Check asset balances
         await expectTokenBalances(asset, alice, 0, initialAmount + aliceEarnings);
@@ -529,8 +511,8 @@ describe('Tokenized Vault', () => {
       'Public assets, Private shares: Alice deposits/withdraws, Bob issues/redeems',
       async () => {
         // Mint some assets to Alice and Bob for deposit/issue
-        await asset.methods.mint_to_public(alice, initialAmount).send({ from: alice }).wait();
-        await asset.methods.mint_to_public(bob, initialAmount).send({ from: alice }).wait();
+        await asset.methods.mint_to_public(alice, initialAmount).send({ from: alice });
+        await asset.methods.mint_to_public(bob, initialAmount).send({ from: alice });
 
         // Alice deposits public assets, receives public shares
         const depositAction = vault.methods.deposit_public_to_private(alice, alice, assetsAlice, sharesAlice, 0);
@@ -543,7 +525,7 @@ describe('Tokenized Vault', () => {
         );
 
         // Simulate yield: mint assets to vault
-        await asset.methods.mint_to_public(vault.address, yieldAmount).send({ from: alice }).wait();
+        await asset.methods.mint_to_public(vault.address, yieldAmount).send({ from: alice });
 
         // Bob issues public shares for public assets
         const issueAction = vault.methods.issue_public_to_private(bob, bob, sharesBob, assetsBob, 0);
@@ -575,19 +557,13 @@ describe('Tokenized Vault', () => {
           0,
         );
         const withdrawAuthWitness = await setPrivateAuthWit(carl, withdrawAction, alice, wallet);
-        await withdrawAction
-          .with({ authWitnesses: [withdrawAuthWitness] })
-          .send({ from: carl })
-          .wait();
+        await withdrawAction.with({ authWitnesses: [withdrawAuthWitness] }).send({ from: carl });
 
         // Bob redeems public shares for public assets
         // Bob should get 15 asset tokens back, 1 token remains in the vault
         const redeemAction = vault.methods.redeem_private_to_public(bob, bob, sharesBob, 0);
         const redeemAuthWitness = await setPrivateAuthWit(carl, redeemAction, bob, wallet);
-        await redeemAction
-          .with({ authWitnesses: [redeemAuthWitness] })
-          .send({ from: carl })
-          .wait();
+        await redeemAction.with({ authWitnesses: [redeemAuthWitness] }).send({ from: carl });
 
         // Check asset balances
         await expectTokenBalances(asset, alice, initialAmount + aliceEarnings, 0);
@@ -607,8 +583,8 @@ describe('Tokenized Vault', () => {
       'Private assets, Private shares: Alice deposits/withdraws, Bob issues/redeems',
       async () => {
         // Mint some assets to Alice and Bob for deposit/issue
-        await asset.methods.mint_to_private(alice, initialAmount).send({ from: alice }).wait();
-        await asset.methods.mint_to_private(bob, initialAmount).send({ from: alice }).wait();
+        await asset.methods.mint_to_private(alice, initialAmount).send({ from: alice });
+        await asset.methods.mint_to_private(bob, initialAmount).send({ from: alice });
 
         // Alice deposits private assets, receives public shares
         const depositAction = vault.methods.deposit_private_to_private(alice, alice, assetsAlice, sharesAlice, 0);
@@ -621,7 +597,7 @@ describe('Tokenized Vault', () => {
         );
 
         // Simulate yield: mint assets to vault
-        await asset.methods.mint_to_public(vault.address, yieldAmount).send({ from: alice }).wait();
+        await asset.methods.mint_to_public(vault.address, yieldAmount).send({ from: alice });
 
         // Bob issues public shares for public assets
         const issueAction = vault.methods.issue_private_to_private_exact(bob, bob, sharesBob, assetsBob, 0);
@@ -647,19 +623,13 @@ describe('Tokenized Vault', () => {
         const maxWithdraw = 13;
         const withdrawAction = vault.methods.withdraw_private_to_private(alice, alice, maxWithdraw, 9, 0);
         const withdrawAuthWitness = await setPrivateAuthWit(carl, withdrawAction, alice, wallet);
-        await withdrawAction
-          .with({ authWitnesses: [withdrawAuthWitness] })
-          .send({ from: carl })
-          .wait();
+        await withdrawAction.with({ authWitnesses: [withdrawAuthWitness] }).send({ from: carl });
 
         // Bob redeems public shares for public assets
         // Bob should get 15 asset tokens back, 1 token remains in the vault
         const redeemAction = vault.methods.redeem_private_to_private_exact(bob, bob, sharesBob, 15, 0);
         const redeemAuthWitness = await setPrivateAuthWit(carl, redeemAction, bob, wallet);
-        await redeemAction
-          .with({ authWitnesses: [redeemAuthWitness] })
-          .send({ from: carl })
-          .wait();
+        await redeemAction.with({ authWitnesses: [redeemAuthWitness] }).send({ from: carl });
 
         // Check asset balances
         await expectTokenBalances(asset, alice, 0, initialAmount + aliceEarnings);
@@ -679,8 +649,8 @@ describe('Tokenized Vault', () => {
       'Exact methods, Mixed Assets, Private shares: Alice deposits/withdraws, Bob deposits/withdraws',
       async () => {
         // Mint some assets to Alice and Bob for deposit/issue
-        await asset.methods.mint_to_private(alice, initialAmount).send({ from: alice }).wait();
-        await asset.methods.mint_to_public(bob, initialAmount).send({ from: alice }).wait();
+        await asset.methods.mint_to_private(alice, initialAmount).send({ from: alice });
+        await asset.methods.mint_to_public(bob, initialAmount).send({ from: alice });
 
         // Alice deposits private assets, receives public shares
         const depositAction = vault.methods.deposit_private_to_private_exact(alice, alice, assetsAlice, sharesAlice, 0);
@@ -693,7 +663,7 @@ describe('Tokenized Vault', () => {
         );
 
         // Simulate yield: mint assets to vault
-        await asset.methods.mint_to_public(vault.address, yieldAmount).send({ from: alice }).wait();
+        await asset.methods.mint_to_public(vault.address, yieldAmount).send({ from: alice });
 
         // Bob issues public shares for public assets
         const publicDepositAction = vault.methods.deposit_public_to_private_exact(bob, bob, assetsBob, sharesBob, 0);
@@ -722,19 +692,13 @@ describe('Tokenized Vault', () => {
         const maxWithdraw = 13;
         const withdrawAction = vault.methods.withdraw_private_to_private_exact(alice, alice, maxWithdraw, 9, 0);
         const withdrawAuthWitness = await setPrivateAuthWit(carl, withdrawAction, alice, wallet);
-        await withdrawAction
-          .with({ authWitnesses: [withdrawAuthWitness] })
-          .send({ from: carl })
-          .wait();
+        await withdrawAction.with({ authWitnesses: [withdrawAuthWitness] }).send({ from: carl });
 
         // Bob redeems public shares for public assets
         // Bob should get 15 asset tokens back, 1 token remains in the vault
         const publicWithdrawAction = vault.methods.withdraw_private_to_public_exact(bob, bob, 15, sharesBob, 0);
         const publicWithdrawAuthWitness = await setPrivateAuthWit(carl, publicWithdrawAction, bob, wallet);
-        await publicWithdrawAction
-          .with({ authWitnesses: [publicWithdrawAuthWitness] })
-          .send({ from: carl })
-          .wait();
+        await publicWithdrawAction.with({ authWitnesses: [publicWithdrawAuthWitness] }).send({ from: carl });
 
         // Check asset balances
         await expectTokenBalances(asset, alice, 0, initialAmount + aliceEarnings);
@@ -758,23 +722,20 @@ describe('Tokenized Vault', () => {
       'deposit_public_to_public',
       async () => {
         // Mint some assets to Alice
-        await asset.methods.mint_to_public(alice, initialAmount).send({ from: alice }).wait();
+        await asset.methods.mint_to_public(alice, initialAmount).send({ from: alice });
 
         // Attempt depositing more assets than Alice actually has
         let transfer = asset.methods.transfer_public_to_public(alice, vault.address, initialAmount + 1, 0);
         await setPublicAuthWit(vault.address, transfer, alice, wallet);
         await expect(
-          vault.methods
-            .deposit_public_to_public(alice, alice, initialAmount + 1, 0)
-            .send({ from: alice })
-            .wait(),
+          vault.methods.deposit_public_to_public(alice, alice, initialAmount + 1, 0).send({ from: alice }),
         ).rejects.toThrow(/app_logic_reverted/);
 
         // Attemp to deposit with an incorrect allowance
         transfer = asset.methods.transfer_public_to_public(alice, vault.address, assetsAlice - 1, 0);
         await setPublicAuthWit(vault.address, transfer, alice, wallet);
         await expect(
-          vault.methods.deposit_public_to_public(alice, alice, assetsAlice, 0).send({ from: alice }).wait(),
+          vault.methods.deposit_public_to_public(alice, alice, assetsAlice, 0).send({ from: alice }),
         ).rejects.toThrow(/app_logic_reverted/);
       },
       TEST_TIMEOUT,
@@ -784,7 +745,7 @@ describe('Tokenized Vault', () => {
       'deposit_public_to_private',
       async () => {
         // Mint some assets to Alice
-        await asset.methods.mint_to_public(alice, initialAmount).send({ from: alice }).wait();
+        await asset.methods.mint_to_public(alice, initialAmount).send({ from: alice });
 
         // Attempt depositing more assets than Alice actually has
         let sharesRequested = initialAmount + 1;
@@ -793,8 +754,7 @@ describe('Tokenized Vault', () => {
         await expect(
           vault.methods
             .deposit_public_to_private(alice, alice, initialAmount + 1, sharesRequested, 0)
-            .send({ from: alice })
-            .wait(),
+            .send({ from: alice }),
         ).rejects.toThrow(/app_logic_reverted/);
 
         // Attemp to deposit with an incorrect allowance
@@ -802,10 +762,7 @@ describe('Tokenized Vault', () => {
         transfer = asset.methods.transfer_public_to_public(alice, vault.address, assetsAlice - 1, 0);
         await setPublicAuthWit(vault.address, transfer, alice, wallet);
         await expect(
-          vault.methods
-            .deposit_public_to_private(alice, alice, assetsAlice, sharesRequested, 0)
-            .send({ from: alice })
-            .wait(),
+          vault.methods.deposit_public_to_private(alice, alice, assetsAlice, sharesRequested, 0).send({ from: alice }),
         ).rejects.toThrow(/app_logic_reverted/);
 
         // Attemp to request more shares than allowed for the given deposit
@@ -813,10 +770,7 @@ describe('Tokenized Vault', () => {
         transfer = asset.methods.transfer_public_to_public(alice, vault.address, assetsAlice, 0);
         await setPublicAuthWit(vault.address, transfer, alice, wallet);
         await expect(
-          vault.methods
-            .deposit_public_to_private(alice, alice, assetsAlice, sharesRequested, 0)
-            .send({ from: alice })
-            .wait(),
+          vault.methods.deposit_public_to_private(alice, alice, assetsAlice, sharesRequested, 0).send({ from: alice }),
         ).rejects.toThrow(/app_logic_reverted/); // Too many shares requested
       },
       TEST_TIMEOUT,
@@ -826,7 +780,7 @@ describe('Tokenized Vault', () => {
       'deposit_private_to_public',
       async () => {
         // Mint some assets to Alice
-        await asset.methods.mint_to_private(alice, initialAmount).send({ from: alice }).wait();
+        await asset.methods.mint_to_private(alice, initialAmount).send({ from: alice });
 
         // Attempt depositing more assets than Alice actually has
         let transfer = asset.methods.transfer_private_to_public(alice, vault.address, initialAmount + 1, 0);
@@ -835,8 +789,7 @@ describe('Tokenized Vault', () => {
           vault.methods
             .deposit_private_to_public(alice, alice, initialAmount + 1, 0)
             .with({ authWitnesses: [transferAuthWitness] })
-            .send({ from: alice })
-            .wait(),
+            .send({ from: alice }),
         ).rejects.toThrow(/Assertion failed: Balance too low 'subtracted > 0'/);
 
         // Attemp to deposit with an incorrect allowance
@@ -846,8 +799,7 @@ describe('Tokenized Vault', () => {
           vault.methods
             .deposit_private_to_public(alice, alice, assetsAlice, 0)
             .with({ authWitnesses: [transferAuthWitness] })
-            .send({ from: alice })
-            .wait(),
+            .send({ from: alice }),
         ).rejects.toThrow(/Unknown auth witness for message hash /);
       },
       TEST_TIMEOUT,
@@ -857,7 +809,7 @@ describe('Tokenized Vault', () => {
       'deposit_private_to_private',
       async () => {
         // Mint some assets to Alice
-        await asset.methods.mint_to_private(alice, initialAmount).send({ from: alice }).wait();
+        await asset.methods.mint_to_private(alice, initialAmount).send({ from: alice });
 
         // Attempt depositing more assets than Alice actually has
         let sharesRequested = initialAmount + 1;
@@ -867,8 +819,7 @@ describe('Tokenized Vault', () => {
           vault.methods
             .deposit_private_to_private(alice, alice, initialAmount + 1, sharesRequested, 0)
             .with({ authWitnesses: [transferAuthWitness] })
-            .send({ from: alice })
-            .wait(),
+            .send({ from: alice }),
         ).rejects.toThrow(/Assertion failed: Balance too low 'subtracted > 0'/);
 
         // Attemp to deposit with an incorrect allowance
@@ -879,8 +830,7 @@ describe('Tokenized Vault', () => {
           vault.methods
             .deposit_private_to_private(alice, alice, assetsAlice, sharesRequested, 0)
             .with({ authWitnesses: [transferAuthWitness] })
-            .send({ from: alice })
-            .wait(),
+            .send({ from: alice }),
         ).rejects.toThrow(/Unknown auth witness for message hash /);
 
         // Attemp to request more shares than allowed for the given deposit
@@ -891,8 +841,7 @@ describe('Tokenized Vault', () => {
           vault.methods
             .deposit_private_to_private(alice, alice, assetsAlice, sharesRequested, 0)
             .with({ authWitnesses: [transferAuthWitness] })
-            .send({ from: alice })
-            .wait(),
+            .send({ from: alice }),
         ).rejects.toThrow(/app_logic_reverted/); // Too many shares requested
       },
       TEST_TIMEOUT,
@@ -902,7 +851,7 @@ describe('Tokenized Vault', () => {
       'deposit_public_to_private_exact',
       async () => {
         // Mint some assets to Alice
-        await asset.methods.mint_to_public(alice, initialAmount).send({ from: alice }).wait();
+        await asset.methods.mint_to_public(alice, initialAmount).send({ from: alice });
 
         // Attempt depositing more assets than Alice actually has
         let sharesRequested = initialAmount + 1;
@@ -911,8 +860,7 @@ describe('Tokenized Vault', () => {
         await expect(
           vault.methods
             .deposit_public_to_private_exact(alice, alice, initialAmount + 1, sharesRequested, 0)
-            .send({ from: alice })
-            .wait(),
+            .send({ from: alice }),
         ).rejects.toThrow(/app_logic_reverted/);
 
         // Attemp to deposit with an incorrect allowance
@@ -922,8 +870,7 @@ describe('Tokenized Vault', () => {
         await expect(
           vault.methods
             .deposit_public_to_private_exact(alice, alice, assetsAlice, sharesRequested, 0)
-            .send({ from: alice })
-            .wait(),
+            .send({ from: alice }),
         ).rejects.toThrow(/app_logic_reverted/);
 
         // Attemp to request more shares than allowed for the given deposit
@@ -933,8 +880,7 @@ describe('Tokenized Vault', () => {
         await expect(
           vault.methods
             .deposit_public_to_private_exact(alice, alice, assetsAlice, sharesRequested, 0)
-            .send({ from: alice })
-            .wait(),
+            .send({ from: alice }),
         ).rejects.toThrow(/app_logic_reverted/); // Underflow
       },
       TEST_TIMEOUT,
@@ -944,7 +890,7 @@ describe('Tokenized Vault', () => {
       'deposit_private_to_private_exact',
       async () => {
         // Mint some assets to Alice
-        await asset.methods.mint_to_private(alice, initialAmount).send({ from: alice }).wait();
+        await asset.methods.mint_to_private(alice, initialAmount).send({ from: alice });
 
         // Attempt depositing more assets than Alice actually has
         let sharesRequested = initialAmount + 1;
@@ -954,8 +900,7 @@ describe('Tokenized Vault', () => {
           vault.methods
             .deposit_private_to_private_exact(alice, alice, initialAmount + 1, sharesRequested, 0)
             .with({ authWitnesses: [transferAuthWitness] })
-            .send({ from: alice })
-            .wait(),
+            .send({ from: alice }),
         ).rejects.toThrow(/Assertion failed: Balance too low 'subtracted > 0'/);
 
         // Attemp to deposit with an incorrect allowance
@@ -966,8 +911,7 @@ describe('Tokenized Vault', () => {
           vault.methods
             .deposit_private_to_private_exact(alice, alice, assetsAlice, sharesRequested, 0)
             .with({ authWitnesses: [transferAuthWitness] })
-            .send({ from: alice })
-            .wait(),
+            .send({ from: alice }),
         ).rejects.toThrow(/Unknown auth witness for message hash /);
 
         // Attemp to request more shares than allowed for the given deposit
@@ -978,8 +922,7 @@ describe('Tokenized Vault', () => {
           vault.methods
             .deposit_private_to_private_exact(alice, alice, assetsAlice, sharesRequested, 0)
             .with({ authWitnesses: [transferAuthWitness] })
-            .send({ from: alice })
-            .wait(),
+            .send({ from: alice }),
         ).rejects.toThrow(/app_logic_reverted/); // Underflow
       },
       TEST_TIMEOUT,
@@ -993,7 +936,7 @@ describe('Tokenized Vault', () => {
       'issue_public_to_public',
       async () => {
         // Mint some assets to Alice
-        await asset.methods.mint_to_public(alice, initialAmount).send({ from: alice }).wait();
+        await asset.methods.mint_to_public(alice, initialAmount).send({ from: alice });
 
         // Attempt depositing more assets than Alice actually has
         let sharesRequested = initialAmount + 1;
@@ -1001,10 +944,7 @@ describe('Tokenized Vault', () => {
         let transfer = asset.methods.transfer_public_to_public(alice, vault.address, maxAssets, 0);
         await setPublicAuthWit(vault.address, transfer, alice, wallet);
         await expect(
-          vault.methods
-            .issue_public_to_public(alice, alice, sharesRequested, maxAssets, 0)
-            .send({ from: alice })
-            .wait(),
+          vault.methods.issue_public_to_public(alice, alice, sharesRequested, maxAssets, 0).send({ from: alice }),
         ).rejects.toThrow(/app_logic_reverted/);
 
         // Attemp to deposit with an incorrect allowance
@@ -1013,10 +953,7 @@ describe('Tokenized Vault', () => {
         transfer = asset.methods.transfer_public_to_public(alice, vault.address, maxAssets - 1, 0);
         await setPublicAuthWit(vault.address, transfer, alice, wallet);
         await expect(
-          vault.methods
-            .issue_public_to_public(alice, alice, sharesRequested, maxAssets, 0)
-            .send({ from: alice })
-            .wait(),
+          vault.methods.issue_public_to_public(alice, alice, sharesRequested, maxAssets, 0).send({ from: alice }),
         ).rejects.toThrow(/app_logic_reverted/);
       },
       TEST_TIMEOUT,
@@ -1026,7 +963,7 @@ describe('Tokenized Vault', () => {
       'issue_public_to_private',
       async () => {
         // Mint some assets to Alice
-        await asset.methods.mint_to_public(alice, initialAmount).send({ from: alice }).wait();
+        await asset.methods.mint_to_public(alice, initialAmount).send({ from: alice });
 
         // Attempt depositing more assets than Alice actually has
         let sharesRequested = initialAmount + 1;
@@ -1034,10 +971,7 @@ describe('Tokenized Vault', () => {
         let transfer = asset.methods.transfer_public_to_public(alice, vault.address, maxAssets, 0);
         await setPublicAuthWit(vault.address, transfer, alice, wallet);
         await expect(
-          vault.methods
-            .issue_public_to_private(alice, alice, sharesRequested, maxAssets, 0)
-            .send({ from: alice })
-            .wait(),
+          vault.methods.issue_public_to_private(alice, alice, sharesRequested, maxAssets, 0).send({ from: alice }),
         ).rejects.toThrow(/app_logic_reverted/);
 
         // Attemp to deposit with an incorrect allowance
@@ -1046,10 +980,7 @@ describe('Tokenized Vault', () => {
         transfer = asset.methods.transfer_public_to_public(alice, vault.address, maxAssets - 1, 0);
         await setPublicAuthWit(vault.address, transfer, alice, wallet);
         await expect(
-          vault.methods
-            .issue_public_to_private(alice, alice, sharesRequested, maxAssets, 0)
-            .send({ from: alice })
-            .wait(),
+          vault.methods.issue_public_to_private(alice, alice, sharesRequested, maxAssets, 0).send({ from: alice }),
         ).rejects.toThrow(/app_logic_reverted/);
 
         // Attemp to request more shares than allowed for the given deposit
@@ -1058,10 +989,7 @@ describe('Tokenized Vault', () => {
         transfer = asset.methods.transfer_public_to_public(alice, vault.address, maxAssets, 0);
         await setPublicAuthWit(vault.address, transfer, alice, wallet);
         await expect(
-          vault.methods
-            .issue_public_to_private(alice, alice, sharesRequested, maxAssets, 0)
-            .send({ from: alice })
-            .wait(),
+          vault.methods.issue_public_to_private(alice, alice, sharesRequested, maxAssets, 0).send({ from: alice }),
         ).rejects.toThrow(/app_logic_reverted/); // Underflow
       },
       TEST_TIMEOUT,
@@ -1071,7 +999,7 @@ describe('Tokenized Vault', () => {
       'issue_private_to_public_exact',
       async () => {
         // Mint some assets to Alice
-        await asset.methods.mint_to_private(alice, initialAmount).send({ from: alice }).wait();
+        await asset.methods.mint_to_private(alice, initialAmount).send({ from: alice });
 
         // Attempt depositing more assets than Alice actually has
         let sharesRequested = initialAmount + 1;
@@ -1082,8 +1010,7 @@ describe('Tokenized Vault', () => {
           vault.methods
             .issue_private_to_public_exact(alice, alice, sharesRequested, maxAssets, 0)
             .with({ authWitnesses: [transferAuthWitness] })
-            .send({ from: alice })
-            .wait(),
+            .send({ from: alice }),
         ).rejects.toThrow(/Assertion failed: Balance too low 'subtracted > 0'/);
 
         // Attemp to deposit with an incorrect allowance
@@ -1095,8 +1022,7 @@ describe('Tokenized Vault', () => {
           vault.methods
             .issue_private_to_public_exact(alice, alice, sharesRequested, maxAssets, 0)
             .with({ authWitnesses: [transferAuthWitness] })
-            .send({ from: alice })
-            .wait(),
+            .send({ from: alice }),
         ).rejects.toThrow(/Unknown auth witness for message hash /);
 
         // Attemp to request more shares than allowed for the given deposit
@@ -1108,8 +1034,7 @@ describe('Tokenized Vault', () => {
           vault.methods
             .issue_private_to_public_exact(alice, alice, sharesRequested, maxAssets, 0)
             .with({ authWitnesses: [transferAuthWitness] })
-            .send({ from: alice })
-            .wait(),
+            .send({ from: alice }),
         ).rejects.toThrow(/app_logic_reverted/); // Underflow
       },
       TEST_TIMEOUT,
@@ -1119,7 +1044,7 @@ describe('Tokenized Vault', () => {
       'issue_private_to_private_exact',
       async () => {
         // Mint some assets to Alice
-        await asset.methods.mint_to_private(alice, initialAmount).send({ from: alice }).wait();
+        await asset.methods.mint_to_private(alice, initialAmount).send({ from: alice });
 
         // Attempt depositing more assets than Alice actually has
         let sharesRequested = initialAmount + 1;
@@ -1130,8 +1055,7 @@ describe('Tokenized Vault', () => {
           vault.methods
             .issue_private_to_private_exact(alice, alice, sharesRequested, maxAssets, 0)
             .with({ authWitnesses: [transferAuthWitness] })
-            .send({ from: alice })
-            .wait(),
+            .send({ from: alice }),
         ).rejects.toThrow(/Assertion failed: Balance too low 'subtracted > 0'/);
 
         // Attemp to deposit with an incorrect allowance
@@ -1143,8 +1067,7 @@ describe('Tokenized Vault', () => {
           vault.methods
             .issue_private_to_private_exact(alice, alice, sharesRequested, maxAssets, 0)
             .with({ authWitnesses: [transferAuthWitness] })
-            .send({ from: alice })
-            .wait(),
+            .send({ from: alice }),
         ).rejects.toThrow(/Unknown auth witness for message hash /);
 
         // Attemp to request more shares than allowed for the given deposit
@@ -1156,8 +1079,7 @@ describe('Tokenized Vault', () => {
           vault.methods
             .issue_private_to_private_exact(alice, alice, sharesRequested, maxAssets, 0)
             .with({ authWitnesses: [transferAuthWitness] })
-            .send({ from: alice })
-            .wait(),
+            .send({ from: alice }),
         ).rejects.toThrow(/app_logic_reverted/); // Underflow
       },
       TEST_TIMEOUT,
@@ -1175,10 +1097,7 @@ describe('Tokenized Vault', () => {
 
         // Attempt withdrawing more assets than allowed
         await expect(
-          vault.methods
-            .withdraw_public_to_public(alice, alice, assetsAlice + 1, 0)
-            .send({ from: alice })
-            .wait(),
+          vault.methods.withdraw_public_to_public(alice, alice, assetsAlice + 1, 0).send({ from: alice }),
         ).rejects.toThrow(/app_logic_reverted/);
       },
       TEST_TIMEOUT,
@@ -1192,10 +1111,7 @@ describe('Tokenized Vault', () => {
 
         // Attempt withdrawing more assets than allowed
         await expect(
-          vault.methods
-            .withdraw_public_to_private(alice, alice, assetsAlice + 1, 0)
-            .send({ from: alice })
-            .wait(),
+          vault.methods.withdraw_public_to_private(alice, alice, assetsAlice + 1, 0).send({ from: alice }),
         ).rejects.toThrow(/app_logic_reverted/);
       },
       TEST_TIMEOUT,
@@ -1212,8 +1128,7 @@ describe('Tokenized Vault', () => {
         await expect(
           vault.methods
             .withdraw_private_to_private(alice, alice, assetsAlice + 1, sharesRequested, 0)
-            .send({ from: alice })
-            .wait(),
+            .send({ from: alice }),
         ).rejects.toThrow(/app_logic_reverted/);
 
         // Attempt burning more shares than Alice actually has
@@ -1221,8 +1136,7 @@ describe('Tokenized Vault', () => {
         await expect(
           vault.methods
             .withdraw_private_to_private(alice, alice, assetsAlice, sharesRequested, 0)
-            .send({ from: alice })
-            .wait(),
+            .send({ from: alice }),
         ).rejects.toThrow(/Assertion failed: Balance too low 'subtracted > 0'/);
       },
       TEST_TIMEOUT,
@@ -1239,8 +1153,7 @@ describe('Tokenized Vault', () => {
         await expect(
           vault.methods
             .withdraw_private_to_public_exact(alice, alice, assetsAlice + 1, sharesRequested, 0)
-            .send({ from: alice })
-            .wait(),
+            .send({ from: alice }),
         ).rejects.toThrow(/app_logic_reverted/); // /Underflow/
 
         // Attempt burning more shares than Alice actually has
@@ -1248,8 +1161,7 @@ describe('Tokenized Vault', () => {
         await expect(
           vault.methods
             .withdraw_private_to_public_exact(alice, alice, assetsAlice, sharesRequested, 0)
-            .send({ from: alice })
-            .wait(),
+            .send({ from: alice }),
         ).rejects.toThrow(/Assertion failed: Balance too low 'subtracted > 0'/);
       },
       TEST_TIMEOUT,
@@ -1266,8 +1178,7 @@ describe('Tokenized Vault', () => {
         await expect(
           vault.methods
             .withdraw_private_to_private_exact(alice, alice, assetsAlice + 1, sharesRequested, 0)
-            .send({ from: alice })
-            .wait(),
+            .send({ from: alice }),
         ).rejects.toThrow(/app_logic_reverted/);
 
         // Attempt burning more shares than Alice actually has
@@ -1275,8 +1186,7 @@ describe('Tokenized Vault', () => {
         await expect(
           vault.methods
             .withdraw_private_to_private_exact(alice, alice, assetsAlice, sharesRequested, 0)
-            .send({ from: alice })
-            .wait(),
+            .send({ from: alice }),
         ).rejects.toThrow(/Assertion failed: Balance too low 'subtracted > 0'/);
       },
       TEST_TIMEOUT,
@@ -1313,8 +1223,7 @@ describe('Tokenized Vault', () => {
         await expect(
           vault.methods
             .redeem_public_to_private_exact(alice, alice, sharesRequested, minAssets, 0)
-            .send({ from: alice })
-            .wait(),
+            .send({ from: alice }),
         ).rejects.toThrow(/app_logic_reverted/); // /Underflow/
 
         // Attempt redeeming with an invalid rate
@@ -1323,8 +1232,7 @@ describe('Tokenized Vault', () => {
         await expect(
           vault.methods
             .redeem_public_to_private_exact(alice, alice, sharesRequested, minAssets, 0)
-            .send({ from: alice })
-            .wait(),
+            .send({ from: alice }),
         ).rejects.toThrow(/app_logic_reverted/);
       },
       TEST_TIMEOUT,
@@ -1357,8 +1265,7 @@ describe('Tokenized Vault', () => {
         await expect(
           vault.methods
             .redeem_private_to_private_exact(alice, alice, sharesRequested, minAssets, 0)
-            .send({ from: alice })
-            .wait(),
+            .send({ from: alice }),
         ).rejects.toThrow(/Assertion failed: Balance too low 'subtracted > 0'/);
 
         // Attempt redeeming with an invalid rate
@@ -1367,8 +1274,7 @@ describe('Tokenized Vault', () => {
         await expect(
           vault.methods
             .redeem_private_to_private_exact(alice, alice, sharesRequested, minAssets, 0)
-            .send({ from: alice })
-            .wait(),
+            .send({ from: alice }),
         ).rejects.toThrow(/app_logic_reverted/);
       },
       TEST_TIMEOUT,

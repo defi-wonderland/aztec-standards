@@ -3,14 +3,14 @@ use crate::types::balance_set::BalanceSet;
 use aztec::{
     note::{constants::MAX_NOTES_PER_PAGE, note_viewer_options::NoteViewerOptions},
     oracle::random::random,
-    protocol_types::{address::AztecAddress, traits::Packable},
-    state_vars::owned_state_variable::OwnedStateVariable,
+    protocol::{address::AztecAddress, traits::Packable},
+    state_vars::OwnedStateVariable,
     test::helpers::test_environment::TestEnvironment,
 };
 use aztec::test::helpers::authwit as authwit_cheatcodes;
 use std::ops::WrappingSub;
 use std::test::OracleMock;
-use uint_note::uint_note::UintNote;
+use uint_note::UintNote;
 
 pub global mint_amount: u128 = 10_000 as u128;
 

@@ -9,9 +9,7 @@ pub contract Escrow {
     use aztec::{
         macros::functions::{external, internal},
         oracle::get_contract_instance::get_contract_instance,
-        protocol_types::{
-            address::AztecAddress, contract_instance::ContractInstance, traits::FromField,
-        },
+        protocol::{address::AztecAddress, contract_instance::ContractInstance, traits::FromField},
     };
     use nft::NFT;
     use token::Token;
@@ -45,7 +43,7 @@ pub contract Escrow {
     /// @notice Asserts that the caller is the one encoded into the contract instance salt
     #[internal("private")]
     fn _assert_msg_sender() {
-        let msg_sender = self.msg_sender().unwrap();
+        let msg_sender = self.msg_sender();
         let escrow_instance: ContractInstance = get_contract_instance(self.address);
         assert(AztecAddress::from_field(escrow_instance.salt) == msg_sender, "Not Authorized");
     }

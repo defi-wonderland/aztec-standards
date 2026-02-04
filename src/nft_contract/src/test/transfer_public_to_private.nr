@@ -1,7 +1,7 @@
 use crate::NFT;
 use crate::test::utils;
 use aztec::{
-    oracle::random::random, protocol_types::address::AztecAddress,
+    oracle::random::random, protocol::address::AztecAddress,
     test::helpers::authwit as authwit_cheatcodes,
 };
 

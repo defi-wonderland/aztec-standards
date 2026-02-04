@@ -45,24 +45,24 @@ jobs:
             echo "version=$AZTEC_VERSION" >> "$GITHUB_OUTPUT"
             echo "Aztec version is ${{ steps.aztec-version.outputs.version }}"
 
+        - name: Install Foundry
+          uses: foundry-rs/foundry-toolchain@v1
+
         - name: Install Aztec CLI
           run: |
             INSTALL_URL="https://install.aztec.network/${{ steps.aztec-version.outputs.version }}/"
             echo "Installing from: $INSTALL_URL"
-            curl -s $INSTALL_URL > tmp.sh
+            curl -sL $INSTALL_URL > tmp.sh
             VERSION=${{ steps.aztec-version.outputs.version }} bash tmp.sh <<< yes "yes"
 
         - name: Update path
-          run: echo "/home/runner/.aztec/bin" >> $GITHUB_PATH
+          run: |
+            echo "$HOME/.aztec/current/bin" >> $GITHUB_PATH
+            echo "$HOME/.aztec/current/node_modules/.bin" >> $GITHUB_PATH
+            echo "$HOME/.aztec/bin" >> $GITHUB_PATH
   
         - name: Set Aztec version
-          run: |
-            VERSION=${{ steps.aztec-version.outputs.version }} aztec-up
-        
-        # This is a temporary hack to fix a problem with v3 releases.
-        - name: Manually tag the aztec version as `latest`
-          run: |
-            docker tag aztecprotocol/aztec:${{ steps.aztec-version.outputs.version }} aztecprotocol/aztec:latest
+          run: aztec-up install ${{ steps.aztec-version.outputs.version }}
 
         - name: Install project dependencies
           run: yarn --frozen-lockfile

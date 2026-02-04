@@ -416,7 +416,7 @@ describe('Logic - Single PXE', () => {
 
       await wallet.registerContract(escrowInstance, EscrowContractArtifact, escrowSk);
 
-      await token.withWallet(wallet).methods.mint_to_private(escrow.address, AMOUNT).send({ from: alice }).wait();
+      await token.withWallet(wallet).methods.mint_to_private(escrow.address, AMOUNT).send({ from: alice });
     });
 
     it('logic should be able to withdraw correctly', async () => {
@@ -428,11 +428,7 @@ describe('Logic - Single PXE', () => {
       await expectTokenBalances(token, escrow.address, wad(0), AMOUNT, bob);
       await expectTokenBalances(token, bob, wad(0), wad(0), bob);
 
-      await logic
-        .withWallet(wallet)
-        .methods.withdraw(escrow.address, bob, token.address, AMOUNT)
-        .send({ from: bob })
-        .wait();
+      await logic.withWallet(wallet).methods.withdraw(escrow.address, bob, token.address, AMOUNT).send({ from: bob });
 
       await token.withWallet(wallet).methods.sync_private_state().simulate({ from: bob });
 
@@ -456,8 +452,7 @@ describe('Logic - Single PXE', () => {
       await logic
         .withWallet(wallet)
         .methods.withdraw(escrow.address, bob, token.address, halfAmount)
-        .send({ from: bob })
-        .wait();
+        .send({ from: bob });
 
       await token.withWallet(wallet).methods.sync_private_state().simulate({ from: bob });
 
@@ -478,8 +473,7 @@ describe('Logic - Single PXE', () => {
         logic
           .withWallet(wallet)
           .methods.withdraw(escrow.address, bob, token.address, AMOUNT + 1n)
-          .send({ from: bob })
-          .wait(),
+          .send({ from: bob }),
       ).rejects.toThrow(/Assertion failed: Balance too low/);
     });
   });
@@ -502,7 +496,7 @@ describe('Logic - Single PXE', () => {
 
       await wallet.registerContract(escrowInstance, EscrowContractArtifact, escrowSk);
 
-      await nft.withWallet(wallet).methods.mint_to_private(escrow.address, tokenId).send({ from: alice }).wait();
+      await nft.withWallet(wallet).methods.mint_to_private(escrow.address, tokenId).send({ from: alice });
     });
 
     it('logic should be able to withdraw NFT correctly', async () => {
@@ -515,8 +509,7 @@ describe('Logic - Single PXE', () => {
       await logic
         .withWallet(wallet)
         .methods.withdraw_nft(escrow.address, bob, nft.address, tokenId)
-        .send({ from: bob })
-        .wait();
+        .send({ from: bob });
 
       await nft.withWallet(wallet).methods.sync_private_state().simulate({ from: bob });
 
@@ -532,8 +525,7 @@ describe('Logic - Single PXE', () => {
         logic
           .withWallet(wallet)
           .methods.withdraw_nft(escrow.address, bob, nft.address, tokenId + 1n)
-          .send({ from: bob })
-          .wait(),
+          .send({ from: bob }),
       ).rejects.toThrow(/Assertion failed: nft not found in private to public/);
     });
   });

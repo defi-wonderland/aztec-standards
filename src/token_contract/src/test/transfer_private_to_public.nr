@@ -1,7 +1,7 @@
 use crate::test::utils::{self, mint_amount};
 use crate::Token;
 use aztec::{note::constants::MAX_NOTES_PER_PAGE, test::helpers::authwit as authwit_cheatcodes};
-use uint_note::uint_note::UintNote;
+use uint_note::UintNote;
 
 #[test]
 unconstrained fn transfer_private_to_public_on_behalf_of_self() {

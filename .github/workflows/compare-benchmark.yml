@@ -84,13 +84,21 @@ jobs:
           echo "version=$AZTEC_VERSION" >> "$GITHUB_OUTPUT"
           echo "Aztec version is $version"
 
+      - name: Install Foundry
+        uses: foundry-rs/foundry-toolchain@v1
+
       - name: Install Aztec CLI
         run: |
-          curl -s https://install.aztec.network > tmp.sh
+          INSTALL_URL="https://install.aztec.network/${{ steps.aztec-version.outputs.version }}/"
+          echo "Installing from: $INSTALL_URL"
+          curl -sL $INSTALL_URL > tmp.sh
           VERSION=${{ steps.aztec-version.outputs.version }} bash tmp.sh <<< yes "yes"
     
       - name: Update path
-        run: echo "/home/runner/.aztec/bin" >> $GITHUB_PATH
+        run: |
+          echo "$HOME/.aztec/current/bin" >> $GITHUB_PATH
+          echo "$HOME/.aztec/current/node_modules/.bin" >> $GITHUB_PATH
+          echo "$HOME/.aztec/bin" >> $GITHUB_PATH
 
       # ──────────────────────────────────────────────────────────────
       # 1️⃣  BENCHMARK BASE COMMIT
@@ -112,22 +120,16 @@ jobs:
           echo "Base Aztec version is $VER"
 
       - name: Switch CLI to BASE version
-        run: |
-          VERSION=${{ steps.basever.outputs.ver }} aztec-up
+        run: aztec-up install ${{ steps.basever.outputs.ver }}
 
       - name: Start local network (BASE, background)
         run: aztec start --local-network &
 
       - name: Start PXE node (BASE, background)
         run: |
-          VERSION=${{ steps.basever.outputs.ver }} aztec \
+          aztec \
             start --port 8081 --pxe --pxe.nodeUrl=http://localhost:8080/ \
             --pxe.proverEnabled false &
-
-      # This is a temporary hack to fix a problem with v3 releases.
-      - name: Manually tag the aztec version as `latest`
-        run: |
-          docker tag aztecprotocol/aztec:${{ steps.basever.outputs.ver }} aztecprotocol/aztec:latest
 
       - name: Install deps (BASE)
         run: yarn --frozen-lockfile
@@ -184,8 +186,7 @@ jobs:
 
       - name: Switch CLI to PR version
         if: steps.prver.outputs.ver_diff == 'true'
-        run: |
-          VERSION=${{ steps.prver.outputs.ver }} aztec-up
+        run: aztec-up install ${{ steps.prver.outputs.ver }}
 
       - name: Start local network (PR, background)
         if: steps.prver.outputs.ver_diff == 'true'
@@ -194,14 +195,9 @@ jobs:
       - name: Start PXE node (PR, background)
         if: steps.prver.outputs.ver_diff == 'true'
         run: |
-          VERSION=${{ steps.prver.outputs.ver }} aztec \
+          aztec \
             start --port 8081 --pxe --pxe.nodeUrl=http://localhost:8080/ \
             --pxe.proverEnabled false &
-
-      # This is a temporary hack to fix a problem with v3 releases.
-      - name: Manually tag the aztec version as `latest`
-        run: |
-          docker tag aztecprotocol/aztec:${{ steps.prver.outputs.ver }} aztecprotocol/aztec:latest
 
       - name: Install deps (PR)
         run: yarn --frozen-lockfile
@@ -216,7 +212,7 @@ jobs:
       # 3️⃣  DIFF &  COMMENT
       # ──────────────────────────────────────────────────────────────
       - name: Generate Markdown diff
-        uses: defi-wonderland/aztec-benchmark/action@main
+        uses: defi-wonderland/aztec-benchmark/action@chore/v4
         with:
           base_suffix: '_base'
           current_suffix: '_pr'

@@ -13,19 +13,16 @@ pub contract Token {
         context::PrivateContext,
         macros::{functions::{external, initializer, internal, only_self, view}, storage::storage},
         messages::message_delivery::MessageDelivery,
-        protocol_types::{
+        protocol::{
             address::AztecAddress,
             constants::CONTRACT_INSTANCE_REGISTRY_CONTRACT_ADDRESS,
             contract_class_id::ContractClassId,
             traits::{FromField, ToField},
         },
-        state_vars::{
-            Map, Owned, public_immutable::PublicImmutable, public_mutable::PublicMutable,
-            StateVariable,
-        },
+        state_vars::{Map, Owned, PublicImmutable, PublicMutable, StateVariable},
     };
     // note library
-    use uint_note::uint_note::{PartialUintNote, UintNote};
+    use uint_note::{PartialUintNote, UintNote};
     // compression library
     use compressed_string::FieldCompressedString;
     // contract instance registry
@@ -183,7 +180,7 @@ pub contract Token {
         self.enqueue_self.increase_public_balance_internal(to, amount);
 
         // Only the sender will be able to complete the partial note
-        let completer = self.msg_sender().unwrap();
+        let completer = self.msg_sender();
         let commitment = self.internal._initialize_transfer_commitment(to, completer);
         commitment.to_field()
     }
@@ -226,7 +223,7 @@ pub contract Token {
 
         self.internal._decrease_private_balance(from, amount, INITIAL_TRANSFER_CALL_MAX_NOTES);
 
-        let completer = self.msg_sender().unwrap();
+        let completer = self.msg_sender();
         PartialUintNote::from_field(commitment).complete_from_private(
             self.context,
             completer,
@@ -318,7 +315,7 @@ pub contract Token {
 
         self.internal._decrease_public_balance(from, amount);
 
-        let completer = self.msg_sender().unwrap();
+        let completer = self.msg_sender();
         self.internal._increase_commitment_balance(
             PartialUintNote::from_field(commitment),
             completer,
@@ -411,7 +408,7 @@ pub contract Token {
     /// @param amount The amount of tokens to mint
     #[external("private")]
     fn mint_to_private(to: AztecAddress, amount: u128) {
-        _validate_minter(self.msg_sender().unwrap(), self.storage.minter.read());
+        _validate_minter(self.msg_sender(), self.storage.minter.read());
 
         self.internal._mint_to_private(to, amount);
     }
@@ -422,7 +419,7 @@ pub contract Token {
     /// @param amount The amount of tokens to mint
     #[external("public")]
     fn mint_to_public(to: AztecAddress, amount: u128) {
-        _validate_minter(self.msg_sender().unwrap(), self.storage.minter.read());
+        _validate_minter(self.msg_sender(), self.storage.minter.read());
 
         self.internal._mint_to_public(to, amount);
     }
@@ -433,7 +430,7 @@ pub contract Token {
     /// @param amount The amount of tokens to mint
     #[external("public")]
     fn mint_to_commitment(commitment: Field, amount: u128) {
-        let sender = self.msg_sender().unwrap();
+        let sender = self.msg_sender();
         _validate_minter(sender, self.storage.minter.read());
         let completer = sender;
         self.internal._increase_total_supply(amount);
@@ -530,7 +527,7 @@ pub contract Token {
         let change = self.internal._subtract_balance(account, amount, max_notes);
         // Increases `change` to the private balance of `account`, and emits a private balance note to account
         self.storage.private_balances.at(account).add(change).deliver(
-            MessageDelivery.CONSTRAINED_ONCHAIN,
+            MessageDelivery.ONCHAIN_CONSTRAINED,
         );
     }
 
@@ -541,7 +538,7 @@ pub contract Token {
     #[internal("private")]
     fn _increase_private_balance(to: AztecAddress, amount: u128) {
         // Increases `amount` to the private balance of `to`, and emits a private balance note to `to` from `from`
-        self.storage.private_balances.at(to).add(amount).deliver(MessageDelivery.CONSTRAINED_ONCHAIN);
+        self.storage.private_balances.at(to).add(amount).deliver(MessageDelivery.ONCHAIN_CONSTRAINED);
     }
 
     /// @notice Updates the given storage pointer `public_balances` to increase the public balance of `to` by `amount`
@@ -706,7 +703,7 @@ pub contract Token {
         let upgrade_authority = self.storage.upgrade_authority.read();
 
         assert(!upgrade_authority.eq(AztecAddress::zero()), "upgrade authority not set");
-        assert(self.msg_sender().unwrap().eq(upgrade_authority), "caller is not upgrade authority");
+        assert(self.msg_sender().eq(upgrade_authority), "caller is not upgrade authority");
 
         self.call(ContractInstanceRegistry::at(CONTRACT_INSTANCE_REGISTRY_CONTRACT_ADDRESS).update(
             ContractClassId::from_field(new_contract_class_id),
@@ -722,7 +719,7 @@ pub contract Token {
     /// @param from The address of the sender
     #[contract_library_method]
     fn _validate_from_private<let N: u32>(context: &mut PrivateContext, from: AztecAddress) {
-        if (!from.eq(context.msg_sender().unwrap())) {
+        if (!from.eq(context.maybe_msg_sender().unwrap())) {
             assert_current_call_valid_authwit::<N>(context, from);
         }
     }
@@ -732,7 +729,7 @@ pub contract Token {
     /// @param from The address of the sender
     #[internal("public")]
     fn _validate_from_public(from: AztecAddress) {
-        if (!from.eq(self.msg_sender().unwrap())) {
+        if (!from.eq(self.msg_sender())) {
             assert_current_call_valid_authwit_public(self.context, from);
         }
     }

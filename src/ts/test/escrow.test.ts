@@ -97,14 +97,14 @@ describe('Escrow', () => {
   describe('withdraw', () => {
     beforeEach(async () => {
       token = (await deployTokenWithMinter(wallet, alice)) as TokenContract;
-      await token.withWallet(wallet).methods.mint_to_private(escrow.address, AMOUNT).send({ from: alice }).wait();
+      await token.withWallet(wallet).methods.mint_to_private(escrow.address, AMOUNT).send({ from: alice });
     });
 
     it('logic should be able to withdraw correctly', async () => {
       await expectTokenBalances(token, escrow.address, wad(0), AMOUNT, bob);
       await expectTokenBalances(token, bob, wad(0), wad(0));
 
-      await escrow.withWallet(wallet).methods.withdraw(token.address, AMOUNT, bob).send({ from: logicMock }).wait();
+      await escrow.withWallet(wallet).methods.withdraw(token.address, AMOUNT, bob).send({ from: logicMock });
 
       await expectTokenBalances(token, escrow.address, wad(0), wad(0), bob);
       await expectTokenBalances(token, bob, wad(0), AMOUNT);
@@ -120,7 +120,7 @@ describe('Escrow', () => {
       await expectTokenBalances(token, escrow.address, wad(0), AMOUNT, bob);
       await expectTokenBalances(token, bob, wad(0), wad(0));
 
-      await escrow.withWallet(wallet).methods.withdraw(token.address, halfAmount, bob).send({ from: logicMock }).wait();
+      await escrow.withWallet(wallet).methods.withdraw(token.address, halfAmount, bob).send({ from: logicMock });
 
       await expectTokenBalances(token, escrow.address, wad(0), halfAmount, bob);
       await expectTokenBalances(token, bob, wad(0), halfAmount);
@@ -152,14 +152,14 @@ describe('Escrow', () => {
     beforeEach(async () => {
       tokenId = 1n;
       nft = (await deployNFTWithMinter(wallet, alice)) as NFTContract;
-      await nft.withWallet(wallet).methods.mint_to_private(escrow.address, tokenId).send({ from: alice }).wait();
+      await nft.withWallet(wallet).methods.mint_to_private(escrow.address, tokenId).send({ from: alice });
     });
 
     it('logic should be able to withdraw NFT correctly', async () => {
       await assertOwnsPrivateNFT(nft, tokenId, escrow.address, true, bob);
       await assertOwnsPrivateNFT(nft, tokenId, bob, false);
 
-      await escrow.withWallet(wallet).methods.withdraw_nft(nft.address, tokenId, bob).send({ from: logicMock }).wait();
+      await escrow.withWallet(wallet).methods.withdraw_nft(nft.address, tokenId, bob).send({ from: logicMock });
 
       await assertOwnsPrivateNFT(nft, tokenId, escrow.address, false, bob);
       await assertOwnsPrivateNFT(nft, tokenId, bob, true);

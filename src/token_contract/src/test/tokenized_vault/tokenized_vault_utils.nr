@@ -1,7 +1,5 @@
 use crate::Token;
-use aztec::{
-    protocol_types::address::AztecAddress, test::helpers::test_environment::TestEnvironment,
-};
+use aztec::{protocol::address::AztecAddress, test::helpers::test_environment::TestEnvironment};
 use aztec::test::helpers::authwit as authwit_cheatcodes;
 
 pub unconstrained fn mint_and_deposit_public_to_public(

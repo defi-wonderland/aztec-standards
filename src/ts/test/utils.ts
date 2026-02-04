@@ -120,9 +120,7 @@ export async function deployTokenWithMinter(wallet: Wallet, deployer: AztecAddre
     TokenContractArtifact,
     ['PrivateToken', 'PT', 18, deployer, AztecAddress.ZERO],
     'constructor_with_minter',
-  )
-    .send({ ...options, from: deployer })
-    .deployed();
+  ).send({ ...options, from: deployer });
   return contract;
 }
 
@@ -138,9 +136,7 @@ export async function deployTokenWithInitialSupply(wallet: Wallet, deployer: Azt
     TokenContractArtifact,
     ['PrivateToken', 'PT', 18, 0, deployer, deployer],
     'constructor_with_initial_supply',
-  )
-    .send({ ...options, from: deployer })
-    .deployed();
+  ).send({ ...options, from: deployer });
   return contract;
 }
 
@@ -180,12 +176,10 @@ export async function deployNFTWithMinter(wallet: TestWallet, deployer: AztecAdd
     NFTContractArtifact,
     ['TestNFT', 'TNFT', deployer, deployer],
     'constructor_with_minter',
-  )
-    .send({
-      ...options,
-      from: deployer,
-    })
-    .deployed();
+  ).send({
+    ...options,
+    from: deployer,
+  });
   return contract;
 }
 
@@ -207,18 +201,14 @@ export async function deployVaultAndAssetWithMinter(
     TokenContractArtifact,
     ['PrivateToken', 'PT', 6, deployer, AztecAddress.ZERO],
     'constructor_with_minter',
-  )
-    .send({ ...options, from: deployer })
-    .deployed();
+  ).send({ ...options, from: deployer });
 
   const vaultContract = await Contract.deploy(
     wallet,
     TokenContractArtifact,
     ['VaultToken', 'VT', 6, assetContract.address, AztecAddress.ZERO],
     'constructor_with_asset',
-  )
-    .send({ ...options, from: deployer })
-    .deployed();
+  ).send({ ...options, from: deployer });
 
   return [vaultContract, assetContract];
 }
@@ -284,7 +274,7 @@ export async function setPublicAuthWit(
     },
     true,
   );
-  await validateAction.send().wait();
+  await validateAction.send();
 }
 
 /**
@@ -367,9 +357,9 @@ export async function initializeTransferCommitmentNFT(
  * @returns A deployed contract instance.
  */
 export async function deployLogic(wallet: Wallet, deployer: AztecAddress, escrowClassId: Fr) {
-  const contract = await Contract.deploy(wallet, TestLogicContractArtifact, [escrowClassId], 'constructor')
-    .send({ from: deployer })
-    .deployed();
+  const contract = await Contract.deploy(wallet, TestLogicContractArtifact, [escrowClassId], 'constructor').send({
+    from: deployer,
+  });
   return contract as TestLogicContract;
 }
 
@@ -391,9 +381,13 @@ export async function deployEscrowWithPublicKeysAndSalt(
   args: unknown[] = [],
   constructor?: string,
 ): Promise<EscrowContract> {
-  const contract = await Contract.deployWithPublicKeys(publicKeys, wallet, EscrowContractArtifact, args, constructor)
-    .send({ contractAddressSalt: salt, universalDeploy: true, from: deployer })
-    .deployed();
+  const contract = await Contract.deployWithPublicKeys(
+    publicKeys,
+    wallet,
+    EscrowContractArtifact,
+    args,
+    constructor,
+  ).send({ contractAddressSalt: salt, universalDeploy: true, from: deployer });
   return contract as EscrowContract;
 }
 
