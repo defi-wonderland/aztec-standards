@@ -19,7 +19,7 @@ import {
 
 import { describe, it, expect, beforeAll, beforeEach, afterAll } from 'vitest';
 
-import { NFTContract, NFTContractArtifact } from '../../../artifacts/NFT.js';
+import { NFTContract, NFTContractArtifact } from '../../../src/artifacts/NFT.js';
 
 const TEST_TIMEOUT = 300_000;
 

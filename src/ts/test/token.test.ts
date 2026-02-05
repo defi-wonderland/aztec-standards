@@ -12,7 +12,7 @@ import { describe, it, expect, beforeAll, beforeEach, afterAll } from 'vitest';
 import { setupTestSuite, AMOUNT, deployTokenWithMinter, initializeTransferCommitment } from './utils.js';
 
 import { type AztecLMDBStoreV2 } from '@aztec/kv-store/lmdb-v2';
-import { TokenContractArtifact, TokenContract } from '../../../artifacts/Token.js';
+import { TokenContractArtifact, TokenContract } from '../../../src/artifacts/Token.js';
 
 const TEST_TIMEOUT = 300_000;
 

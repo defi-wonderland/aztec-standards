@@ -16,10 +16,14 @@ import {
 
 import { describe, it, expect, beforeAll, beforeEach, afterAll } from 'vitest';
 
-import { TestLogicContractArtifact, TestLogicContract, EscrowDetailsLogContent } from '../../../artifacts/TestLogic.js';
-import { EscrowContractArtifact, EscrowContract } from '../../../artifacts/Escrow.js';
-import { TokenContract } from '../../../artifacts/Token.js';
-import { NFTContract } from '../../../artifacts/NFT.js';
+import {
+  TestLogicContractArtifact,
+  TestLogicContract,
+  EscrowDetailsLogContent,
+} from '../../../src/artifacts/TestLogic.js';
+import { EscrowContractArtifact, EscrowContract } from '../../../src/artifacts/Escrow.js';
+import { TokenContract } from '../../../src/artifacts/Token.js';
+import { NFTContract } from '../../../src/artifacts/NFT.js';
 
 import {
   setupTestSuite,

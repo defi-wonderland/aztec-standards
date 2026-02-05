@@ -11,8 +11,8 @@ import type { ContractFunctionInteractionCallIntent } from '@aztec/aztec.js/auth
 import { Benchmark, BenchmarkContext } from '@defi-wonderland/aztec-benchmark';
 
 // Import artifacts
-import { EscrowContract, EscrowContractArtifact } from '../artifacts/Escrow.js';
-import { TestLogicContract } from '../artifacts/TestLogic.js';
+import { EscrowContract, EscrowContractArtifact } from '../src/artifacts/Escrow.js';
+import { TestLogicContract } from '../src/artifacts/TestLogic.js';
 
 // Import test utilities
 import {

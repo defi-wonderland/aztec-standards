@@ -13,7 +13,7 @@ import { type ContractFunctionInteraction } from '@aztec/aztec.js/contracts';
 
 import { describe, it, expect, beforeAll, beforeEach, afterAll } from 'vitest';
 
-import { TokenContract } from '../../../artifacts/Token.js';
+import { TokenContract } from '../../../src/artifacts/Token.js';
 
 const TEST_TIMEOUT = 300_000;
 

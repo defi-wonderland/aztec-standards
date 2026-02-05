@@ -6,7 +6,7 @@ import type { ContractFunctionInteractionCallIntent } from '@aztec/aztec.js/auth
 // Import the new Benchmark base class and context
 import { Benchmark, BenchmarkContext } from '@defi-wonderland/aztec-benchmark';
 
-import { NFTContract } from '../artifacts/NFT.js';
+import { NFTContract } from '../src/artifacts/NFT.js';
 import { deployNFTWithMinter, setupTestSuite } from '../src/ts/test/utils.js';
 
 // Extend the BenchmarkContext from the new package

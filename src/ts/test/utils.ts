@@ -30,10 +30,10 @@ import { createStore } from '@aztec/kv-store/lmdb-v2';
 import { getPXEConfig } from '@aztec/pxe/server';
 import { type AztecLMDBStoreV2 } from '@aztec/kv-store/lmdb-v2';
 
-import { TokenContract } from '../../../artifacts/Token.js';
-import { NFTContract } from '../../../artifacts/NFT.js';
-import { TestLogicContract } from '../../../artifacts/TestLogic.js';
-import { EscrowContract } from '../../../artifacts/Escrow.js';
+import { TokenContract } from '../../../src/artifacts/Token.js';
+import { NFTContract } from '../../../src/artifacts/NFT.js';
+import { TestLogicContract } from '../../../src/artifacts/TestLogic.js';
+import { EscrowContract } from '../../../src/artifacts/Escrow.js';
 
 import { expect } from 'vitest';
 

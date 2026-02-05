@@ -9,9 +9,9 @@ import { type ContractInstanceWithAddress } from '@aztec/aztec.js/contracts';
 
 import { describe, it, expect, beforeAll, beforeEach, afterAll } from 'vitest';
 
-import { EscrowContract, EscrowContractArtifact } from '../../../artifacts/Escrow.js';
-import { TokenContract } from '../../../artifacts/Token.js';
-import { NFTContract } from '../../../artifacts/NFT.js';
+import { EscrowContract, EscrowContractArtifact } from '../../../src/artifacts/Escrow.js';
+import { TokenContract } from '../../../src/artifacts/Token.js';
+import { NFTContract } from '../../../src/artifacts/NFT.js';
 
 import {
   setupTestSuite,
