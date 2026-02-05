@@ -2,60 +2,35 @@ name: Canary Release
 
 on: workflow_dispatch
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
+  # ══════════════════════════════════════════════════════════════════════════════
+  # CANARY RELEASE JOB
+  # ══════════════════════════════════════════════════════════════════════════════
   export:
     name: Generate Canary Release
     environment: Development
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-latest-m
+    timeout-minutes: 60
 
     env:
       PROJECT_NAME: '@defi-wonderland/aztec-standards'
 
     steps:
-      - name: Checkout Repo
+      - name: Checkout
         uses: actions/checkout@v4
-
-      - name: Install Node
-        uses: actions/setup-node@v4
         with:
-          node-version: "22.17.0"
-          registry-url: "https://registry.npmjs.org"
-          cache: "yarn"
+          fetch-depth: 0
 
-      - name: Set up Docker
-        uses: docker/setup-buildx-action@v2
-
-      - name: Detect Aztec version
-        id: aztec-version
-        run: |
-          AZTEC_VERSION=$(node -p "require('./package.json').config.aztecVersion")
-          echo "version=$AZTEC_VERSION" >> "$GITHUB_OUTPUT"
-          echo "Aztec version is $AZTEC_VERSION"
-
-      - name: Install Aztec CLI
-        run: |
-          curl -s https://install.aztec.network > tmp.sh
-          VERSION=${{ steps.aztec-version.outputs.version }} bash tmp.sh <<< yes "yes"
-      - name: Update path
-        run: echo "/home/runner/.aztec/bin" >> $GITHUB_PATH
-
-      - name: Set Aztec version
-        run: |
-          VERSION=${{ steps.aztec-version.outputs.version }} aztec-up
-      
-      # This is a temporary hack to fix a problem with v3 releases.
-      - name: Manually tag the aztec version as `latest`
-        run: |
-          docker tag aztecprotocol/aztec:${{ steps.aztec-version.outputs.version }} aztecprotocol/aztec:latest
-
-      - name: Install dependencies
-        run: yarn --frozen-lockfile
-
-      - name: Compile
-        run: yarn compile
-
-      - name: Codegen
-        run: aztec codegen target --outdir artifacts
+      - name: Setup Aztec environment
+        id: setup-aztec
+        uses: ./.github/actions/setup-aztec
+        with:
+          start-pxe: 'false'
+          run-codegen: 'true'
 
       - name: Compile artifacts to JS
         run: |
@@ -100,6 +75,7 @@ jobs:
           cp LICENSE export/${{ env.PROJECT_NAME }}/
 
           cat package.json | jq 'del(.scripts, .jest, ."lint-staged", .packageManager, .devDependencies, .dependencies, .engines, .resolutions)' > export/${{ env.PROJECT_NAME }}/package.json
+
       - name: Publish to NPM
         run: cd export/${{ env.PROJECT_NAME }} && npm publish --access public --tag canary
         env:

@@ -11,6 +11,8 @@ import { type TestWallet } from '@aztec/test-wallet/server';
 import { type AztecLMDBStoreV2 } from '@aztec/kv-store/lmdb-v2';
 import { type ContractFunctionInteraction } from '@aztec/aztec.js/contracts';
 
+import { describe, it, expect, beforeAll, beforeEach, afterAll } from 'vitest';
+
 import { TokenContract } from '../../../artifacts/Token.js';
 
 const TEST_TIMEOUT = 300_000;
@@ -19,7 +21,6 @@ describe('Tokenized Vault', () => {
   let store: AztecLMDBStoreV2;
   let wallet: TestWallet;
   let accounts: AztecAddress[];
-  let deployer: AztecAddress;
   let alice: AztecAddress;
   let bob: AztecAddress;
   let carl: AztecAddress;
@@ -1154,7 +1155,7 @@ describe('Tokenized Vault', () => {
           vault.methods
             .withdraw_private_to_public_exact(alice, alice, assetsAlice + 1, sharesRequested, 0)
             .send({ from: alice }),
-        ).rejects.toThrow(/app_logic_reverted/); // /Underflow/
+        ).rejects.toThrow(/app_logic_reverted/); // Underflow
 
         // Attempt burning more shares than Alice actually has
         sharesRequested = assetsAlice + 1;
@@ -1224,7 +1225,7 @@ describe('Tokenized Vault', () => {
           vault.methods
             .redeem_public_to_private_exact(alice, alice, sharesRequested, minAssets, 0)
             .send({ from: alice }),
-        ).rejects.toThrow(/app_logic_reverted/); // /Underflow/
+        ).rejects.toThrow(/app_logic_reverted/); // Underflow
 
         // Attempt redeeming with an invalid rate
         sharesRequested = assetsAlice;

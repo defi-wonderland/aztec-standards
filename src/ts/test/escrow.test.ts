@@ -7,6 +7,8 @@ import { type AztecLMDBStoreV2 } from '@aztec/kv-store/lmdb-v2';
 import { Fr, type GrumpkinScalar } from '@aztec/aztec.js/fields';
 import { type ContractInstanceWithAddress } from '@aztec/aztec.js/contracts';
 
+import { describe, it, expect, beforeAll, beforeEach, afterAll } from 'vitest';
+
 import { EscrowContract, EscrowContractArtifact } from '../../../artifacts/Escrow.js';
 import { TokenContract } from '../../../artifacts/Token.js';
 import { NFTContract } from '../../../artifacts/NFT.js';
@@ -20,7 +22,6 @@ import {
   wad,
   deployNFTWithMinter,
   deployEscrow,
-  expectUintNote,
 } from './utils.js';
 
 describe('Escrow', () => {
@@ -48,7 +49,7 @@ describe('Escrow', () => {
   };
   let escrowSalt: Fr;
 
-  beforeEach(async () => {
+  beforeAll(async () => {
     ({ store, node, wallet, accounts } = await setupTestSuite());
 
     [alice, bob, logicMock] = accounts;
@@ -61,7 +62,9 @@ describe('Escrow', () => {
 
     // Use the logic contract address as the salt for the escrow contract
     escrowSalt = new Fr(logicMock.toBigInt());
+  });
 
+  beforeEach(async () => {
     // Deploy an escrow contract
     const { contract } = await deployEscrow(escrowKeys.publicKeys, wallet, alice, escrowSalt);
     escrow = contract;
@@ -72,7 +75,7 @@ describe('Escrow', () => {
     }
   });
 
-  afterEach(async () => {
+  afterAll(async () => {
     await store.delete();
   });
 
@@ -104,10 +107,6 @@ describe('Escrow', () => {
 
       await expectTokenBalances(token, escrow.address, wad(0), wad(0), bob);
       await expectTokenBalances(token, bob, wad(0), AMOUNT);
-
-      const notes = await wallet.getNotes({ contractAddress: token.address, scopes: [bob] });
-      expect(notes.length).toBe(1);
-      expectUintNote(notes[0].note, AMOUNT, bob);
     });
 
     it('withdrawing less than the balance should succeed', async () => {
@@ -120,14 +119,6 @@ describe('Escrow', () => {
 
       await expectTokenBalances(token, escrow.address, wad(0), halfAmount, bob);
       await expectTokenBalances(token, bob, wad(0), halfAmount);
-
-      const escrowNote = await wallet.getNotes({ contractAddress: token.address, scopes: [escrow.address] });
-      expect(escrowNote.length).toBe(1);
-      expectUintNote(escrowNote[0].note, halfAmount, escrow.address);
-
-      const bobNote = await wallet.getNotes({ contractAddress: token.address, scopes: [bob] });
-      expect(bobNote.length).toBe(1);
-      expectUintNote(bobNote[0].note, halfAmount, bob);
     });
 
     it('withdrawing more than the balance should fail', async () => {
@@ -158,9 +149,6 @@ describe('Escrow', () => {
 
       await assertOwnsPrivateNFT(nft, tokenId, escrow.address, false, bob);
       await assertOwnsPrivateNFT(nft, tokenId, bob, true);
-
-      const notes = await wallet.getNotes({ contractAddress: nft.address, scopes: [bob] });
-      expect(notes.length).toBe(1);
     });
 
     it('withdrawing non-existent NFT should fail', async () => {

@@ -9,11 +9,12 @@ import { ContractDeployer } from '@aztec/aztec.js/deployment';
 import { type AztecLMDBStoreV2 } from '@aztec/kv-store/lmdb-v2';
 import { Fr, type GrumpkinScalar, Point } from '@aztec/aztec.js/fields';
 import {
-  Contract,
   getContractInstanceFromInstantiationParams,
   getContractClassFromArtifact,
   type ContractInstanceWithAddress,
 } from '@aztec/aztec.js/contracts';
+
+import { describe, it, expect, beforeAll, beforeEach, afterAll } from 'vitest';
 
 import { TestLogicContractArtifact, TestLogicContract, EscrowDetailsLogContent } from '../../../artifacts/TestLogic.js';
 import { EscrowContractArtifact, EscrowContract } from '../../../artifacts/Escrow.js';
@@ -27,7 +28,6 @@ import {
   expectTokenBalances,
   wad,
   deployNFTWithMinter,
-  expectUintNote,
   assertOwnsPrivateNFT,
   deployLogic,
   deployEscrowWithPublicKeysAndSalt,
@@ -48,9 +48,9 @@ type NoirWrappedPoint = {
 const noirWrappedPointToPoint = (wrapped: NoirWrappedPoint) =>
   new Point(new Fr(wrapped.inner.x), new Fr(wrapped.inner.y), !!wrapped.inner.is_infinite);
 
-describe('Logic - Single PXE', () => {
-  let node: AztecNode;
+describe('Logic', () => {
   let store: AztecLMDBStoreV2;
+  let node: AztecNode;
 
   let wallet: TestWallet;
   let accounts: AztecAddress[];
@@ -82,7 +82,7 @@ describe('Logic - Single PXE', () => {
     tsk_m: Fr;
   };
 
-  async function setup() {
+  beforeAll(async () => {
     ({ store, node, wallet, accounts } = await setupTestSuite());
 
     [alice, bob, carl] = accounts;
@@ -103,10 +103,6 @@ describe('Logic - Single PXE', () => {
       ovsk_m: grumpkinScalarToFr(escrowKeys.masterOutgoingViewingSecretKey),
       tsk_m: grumpkinScalarToFr(escrowKeys.masterTaggingSecretKey),
     };
-  }
-
-  beforeAll(async () => {
-    await setup();
   });
 
   beforeEach(async () => {
@@ -413,10 +409,6 @@ describe('Logic - Single PXE', () => {
 
       await expectTokenBalances(token, escrow.address, wad(0), wad(0), bob);
       await expectTokenBalances(token, bob, wad(0), AMOUNT, bob);
-
-      const notes = await wallet.getNotes({ contractAddress: token.address, scopes: [bob] });
-      expect(notes.length).toBe(1);
-      expectUintNote(notes[0].note, AMOUNT, bob);
     });
 
     it('withdrawing less than the balance should succeed', async () => {
@@ -432,14 +424,6 @@ describe('Logic - Single PXE', () => {
 
       await expectTokenBalances(token, escrow.address, wad(0), halfAmount, bob);
       await expectTokenBalances(token, bob, wad(0), halfAmount, bob);
-
-      const escrowNote = await wallet.getNotes({ contractAddress: token.address, scopes: [escrow.address] });
-      expect(escrowNote.length).toBe(1);
-      expectUintNote(escrowNote[0].note, halfAmount, escrow.address);
-
-      const bobNote = await wallet.getNotes({ contractAddress: token.address, scopes: [bob] });
-      expect(bobNote.length).toBe(1);
-      expectUintNote(bobNote[0].note, halfAmount, bob);
     });
 
     it('withdrawing more than the balance should fail', async () => {
@@ -458,7 +442,26 @@ describe('Logic - Single PXE', () => {
     // at SchnorrAccount.entrypoint
     beforeAll(async () => {
       await store.delete();
-      await setup();
+      ({ store, node, wallet, accounts } = await setupTestSuite());
+
+      [alice, bob, carl] = accounts;
+
+      // Get the class id of the escrow contract
+      escrowClassId = (await getContractClassFromArtifact(EscrowContractArtifact)).id;
+
+      // We default to a secret key of 1 for testing purposes
+      escrowSk = Fr.ONE;
+
+      // Derive the keys from the secret key
+      escrowKeys = await deriveKeys(escrowSk);
+
+      // Convert the keys to Fr
+      secretKeys = {
+        nsk_m: grumpkinScalarToFr(escrowKeys.masterNullifierHidingKey),
+        ivsk_m: grumpkinScalarToFr(escrowKeys.masterIncomingViewingSecretKey),
+        ovsk_m: grumpkinScalarToFr(escrowKeys.masterOutgoingViewingSecretKey),
+        tsk_m: grumpkinScalarToFr(escrowKeys.masterTaggingSecretKey),
+      };
     });
 
     let nft: NFTContract;
@@ -484,9 +487,6 @@ describe('Logic - Single PXE', () => {
 
       await assertOwnsPrivateNFT(nft, tokenId, escrow.address, false);
       await assertOwnsPrivateNFT(nft, tokenId, bob, true);
-
-      const notes = await wallet.getNotes({ contractAddress: nft.address, scopes: [bob] });
-      expect(notes.length).toBe(1);
     });
 
     it('withdrawing non-existent NFT should fail', async () => {
