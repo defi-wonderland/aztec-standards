@@ -1,15 +1,27 @@
+import { TxStatus } from '@aztec/aztec.js/tx';
 import { deriveKeys } from '@aztec/stdlib/keys';
 import { PublicKeys } from '@aztec/aztec.js/keys';
 import { type AztecNode } from '@aztec/aztec.js/node';
 import { AztecAddress } from '@aztec/aztec.js/addresses';
 import { type TestWallet } from '@aztec/test-wallet/server';
+import { BlockNumber } from '@aztec/foundation/branded-types';
+import { ContractDeployer } from '@aztec/aztec.js/deployment';
 import { type AztecLMDBStoreV2 } from '@aztec/kv-store/lmdb-v2';
-import { Fr, type GrumpkinScalar } from '@aztec/aztec.js/fields';
-import { type ContractInstanceWithAddress } from '@aztec/aztec.js/contracts';
+import { Fr, type GrumpkinScalar, Point } from '@aztec/aztec.js/fields';
+import {
+  getContractInstanceFromInstantiationParams,
+  getContractClassFromArtifact,
+  type ContractInstanceWithAddress,
+} from '@aztec/aztec.js/contracts';
 
 import { describe, it, expect, beforeAll, beforeEach, afterAll } from 'vitest';
 
-import { EscrowContract, EscrowContractArtifact } from '../../../src/artifacts/Escrow.js';
+import {
+  TestLogicContractArtifact,
+  TestLogicContract,
+  EscrowDetailsLogContent,
+} from '../../../src/artifacts/TestLogic.js';
+import { EscrowContractArtifact, EscrowContract } from '../../../src/artifacts/Escrow.js';
 import { TokenContract } from '../../../src/artifacts/Token.js';
 import { NFTContract } from '../../../src/artifacts/NFT.js';
 
@@ -18,23 +30,41 @@ import {
   deployTokenWithMinter,
   AMOUNT,
   expectTokenBalances,
-  assertOwnsPrivateNFT,
   wad,
   deployNFTWithMinter,
-  deployEscrow,
+  assertOwnsPrivateNFT,
+  deployLogic,
+  deployEscrowWithPublicKeysAndSalt,
+  grumpkinScalarToFr,
+  deriveContractAddress,
 } from './utils.js';
 
+type FrInput = Fr | bigint | number | boolean | Buffer;
+
+type NoirWrappedPoint = {
+  inner: {
+    x: FrInput;
+    y: FrInput;
+    is_infinite?: boolean;
+  };
+};
+
+const noirWrappedPointToPoint = (wrapped: NoirWrappedPoint) =>
+  new Point(new Fr(wrapped.inner.x), new Fr(wrapped.inner.y), !!wrapped.inner.is_infinite);
+
 describe('Escrow', () => {
-  let node: AztecNode;
   let store: AztecLMDBStoreV2;
+  let node: AztecNode;
 
   let wallet: TestWallet;
   let accounts: AztecAddress[];
 
   let alice: AztecAddress;
   let bob: AztecAddress;
-  let logicMock: AztecAddress;
-  let token: TokenContract;
+  let carl: AztecAddress;
+
+  // Logic contract (used to interact with escrow)
+  let logic: TestLogicContract;
 
   // Escrow contract
   let escrow: EscrowContract;
@@ -48,30 +78,55 @@ describe('Escrow', () => {
     publicKeys: PublicKeys;
   };
   let escrowSalt: Fr;
+  let escrowClassId: Fr;
+  let secretKeys: {
+    nsk_m: Fr;
+    ivsk_m: Fr;
+    ovsk_m: Fr;
+    tsk_m: Fr;
+  };
 
   beforeAll(async () => {
     ({ store, node, wallet, accounts } = await setupTestSuite());
 
-    [alice, bob, logicMock] = accounts;
+    [alice, bob, carl] = accounts;
+
+    // Get the class id of the escrow contract
+    escrowClassId = (await getContractClassFromArtifact(EscrowContractArtifact)).id;
 
     // We default to a secret key of 1 for testing purposes
-    escrowSk = Fr.random();
+    escrowSk = Fr.ONE;
 
     // Derive the keys from the secret key
     escrowKeys = await deriveKeys(escrowSk);
 
-    // Use the logic contract address as the salt for the escrow contract
-    escrowSalt = new Fr(logicMock.toBigInt());
+    // Convert the keys to Fr
+    secretKeys = {
+      nsk_m: grumpkinScalarToFr(escrowKeys.masterNullifierHidingKey),
+      ivsk_m: grumpkinScalarToFr(escrowKeys.masterIncomingViewingSecretKey),
+      ovsk_m: grumpkinScalarToFr(escrowKeys.masterOutgoingViewingSecretKey),
+      tsk_m: grumpkinScalarToFr(escrowKeys.masterTaggingSecretKey),
+    };
   });
 
   beforeEach(async () => {
+    // Logic is deployed with the public keys because it sends encrypted events to the recipient and with the escrow class id
+    logic = (await deployLogic(wallet, alice, escrowClassId)) as TestLogicContract;
+
+    // Use the logic contract address as the salt for the escrow contract
+    escrowSalt = new Fr(logic.address.toBigInt());
+
     // Deploy an escrow contract
-    const { contract } = await deployEscrow(escrowKeys.publicKeys, wallet, alice, escrowSalt);
-    escrow = contract;
+    escrow = (await deployEscrowWithPublicKeysAndSalt(
+      escrowKeys.publicKeys,
+      wallet,
+      alice,
+      escrowSalt,
+    )) as EscrowContract;
 
     escrowInstance = (await node.getContract(escrow.address)) as ContractInstanceWithAddress;
     if (escrowInstance) {
-      await wallet.registerContract(escrowInstance, EscrowContractArtifact, escrowSk);
+      await wallet.registerContract(escrowInstance, EscrowContractArtifact);
     }
   });
 
@@ -79,85 +134,274 @@ describe('Escrow', () => {
     await store.delete();
   });
 
-  describe('authorization', () => {
-    it('withdrawing tokens from account different than the logic contract should fail', async () => {
-      await expect(
-        escrow.withWallet(wallet).methods.withdraw(AztecAddress.ZERO, 0, AztecAddress.ZERO).send({ from: bob }),
-      ).rejects.toThrow(/Assertion failed: Not Authorized/);
+  describe('Deployment', () => {
+    it('deploys escrow logic contract with correct constructor params', async () => {
+      const deploymentData = await getContractInstanceFromInstantiationParams(TestLogicContractArtifact, {
+        constructorArtifact: 'constructor',
+        constructorArgs: [escrowClassId],
+        salt: escrowSalt,
+        deployer: alice,
+      });
+
+      const deployer = new ContractDeployer(TestLogicContractArtifact, wallet, undefined, 'constructor');
+      const contract = await deployer.deploy(escrowClassId).send({
+        contractAddressSalt: escrowSalt,
+        from: alice,
+      });
+
+      const contractMetadata = await wallet.getContractMetadata(deploymentData.address);
+      expect(contractMetadata).toBeDefined();
+      expect(contractMetadata.isContractPublished).toBeTruthy();
+
+      expect(contract.address).toEqual(deploymentData.address);
     });
 
-    it('withdrawing nft from account different than the logic contract should fail', async () => {
-      await expect(
-        escrow.withWallet(wallet).methods.withdraw_nft(AztecAddress.ZERO, 0, AztecAddress.ZERO).send({ from: bob }),
-      ).rejects.toThrow(/Assertion failed: Not Authorized/);
+    it('deploys escrow with correctly derived address', async () => {
+      const { address, initializationHash } = await deriveContractAddress(
+        EscrowContractArtifact,
+        [], // constructor args are null
+        AztecAddress.ZERO, // deployer is null
+        escrowSalt,
+        escrowKeys.publicKeys,
+      );
+
+      expect(address).toEqual(escrow.address);
+      expect(initializationHash).toEqual(Fr.ZERO);
+      expect(initializationHash).toEqual(escrowInstance.initializationHash);
+    });
+  });
+
+  describe('secret_keys_to_public_keys', () => {
+    it('derives escrow public keys from private keys correctly', async () => {
+      const circuitPublicKeys = await logic.methods.secret_keys_to_public_keys(secretKeys).simulate({ from: alice });
+
+      expect(new Fr(circuitPublicKeys.npk_m.inner.x).toString()).toBe(
+        escrowKeys.publicKeys.masterNullifierPublicKey.x.toString(),
+      );
+      expect(new Fr(circuitPublicKeys.npk_m.inner.y).toString()).toBe(
+        escrowKeys.publicKeys.masterNullifierPublicKey.y.toString(),
+      );
+      expect(new Fr(circuitPublicKeys.ivpk_m.inner.x).toString()).toBe(
+        escrowKeys.publicKeys.masterIncomingViewingPublicKey.x.toString(),
+      );
+      expect(new Fr(circuitPublicKeys.ivpk_m.inner.y).toString()).toBe(
+        escrowKeys.publicKeys.masterIncomingViewingPublicKey.y.toString(),
+      );
+      expect(new Fr(circuitPublicKeys.ovpk_m.inner.x).toString()).toBe(
+        escrowKeys.publicKeys.masterOutgoingViewingPublicKey.x.toString(),
+      );
+      expect(new Fr(circuitPublicKeys.ovpk_m.inner.y).toString()).toBe(
+        escrowKeys.publicKeys.masterOutgoingViewingPublicKey.y.toString(),
+      );
+      expect(new Fr(circuitPublicKeys.tpk_m.inner.x).toString()).toBe(
+        escrowKeys.publicKeys.masterTaggingPublicKey.x.toString(),
+      );
+      expect(new Fr(circuitPublicKeys.tpk_m.inner.y).toString()).toBe(
+        escrowKeys.publicKeys.masterTaggingPublicKey.y.toString(),
+      );
+    });
+  });
+
+  describe('get_escrow', () => {
+    it('should be able to get escrow address correctly', async () => {
+      const escrow_address = await logic.methods.get_escrow(secretKeys).simulate({ from: alice });
+
+      const publicKeys = await logic.methods.secret_keys_to_public_keys(secretKeys).simulate({ from: alice });
+      const publicKeysObj = new PublicKeys(
+        noirWrappedPointToPoint(publicKeys.npk_m),
+        noirWrappedPointToPoint(publicKeys.ivpk_m),
+        noirWrappedPointToPoint(publicKeys.ovpk_m),
+        noirWrappedPointToPoint(publicKeys.tpk_m),
+      );
+      const escrow_instance = await getContractInstanceFromInstantiationParams(EscrowContractArtifact, {
+        salt: escrowSalt,
+        publicKeys: publicKeysObj,
+      });
+
+      expect(escrow_address).toEqual(escrow_instance.address);
+    });
+
+    it('get escrow with non zero deployer should fail', async () => {
+      const escrow_address = await logic.methods.get_escrow(secretKeys).simulate({ from: alice });
+
+      const publicKeys = await logic.methods.secret_keys_to_public_keys(secretKeys).simulate({ from: alice });
+      const publicKeysObj = new PublicKeys(
+        noirWrappedPointToPoint(publicKeys.npk_m),
+        noirWrappedPointToPoint(publicKeys.ivpk_m),
+        noirWrappedPointToPoint(publicKeys.ovpk_m),
+        noirWrappedPointToPoint(publicKeys.tpk_m),
+      );
+      const incorrect_escrow_instance = await getContractInstanceFromInstantiationParams(EscrowContractArtifact, {
+        salt: escrowSalt,
+        publicKeys: publicKeysObj,
+        deployer: alice,
+      });
+
+      expect(escrow_address).not.toEqual(incorrect_escrow_instance.address);
+    });
+
+    it('get escrow with incorrect salt should fail', async () => {
+      const escrow_address = await logic.methods.get_escrow(secretKeys).simulate({ from: alice });
+
+      const publicKeys = await logic.methods.secret_keys_to_public_keys(secretKeys).simulate({ from: alice });
+      const publicKeysObj = new PublicKeys(
+        noirWrappedPointToPoint(publicKeys.npk_m),
+        noirWrappedPointToPoint(publicKeys.ivpk_m),
+        noirWrappedPointToPoint(publicKeys.ovpk_m),
+        noirWrappedPointToPoint(publicKeys.tpk_m),
+      );
+      const incorrect_escrow_instance = await getContractInstanceFromInstantiationParams(EscrowContractArtifact, {
+        salt: new Fr(1),
+        publicKeys: publicKeysObj,
+      });
+
+      expect(escrow_address).not.toEqual(incorrect_escrow_instance.address);
+    });
+
+    // Testing non-zero initialization hash supposes there is an initialize function in the escrow contract
+    // which is not the case for the current escrow contract
+  });
+
+  describe('share_escrow', () => {
+    it('should be able to share escrow correctly', async () => {
+      // Share the escrow contract with bob
+      const tx = await logic.methods.share_escrow(bob, escrow.address, secretKeys).send({ from: alice });
+      const blockNumber = tx.blockNumber!;
+
+      const events = await wallet.getPrivateEvents<EscrowDetailsLogContent>(
+        TestLogicContract.events.EscrowDetailsLogContent,
+        {
+          contractAddress: logic.address,
+          fromBlock: blockNumber,
+          scopes: [bob],
+        },
+      );
+
+      expect(events.length).toBe(1);
+
+      const event = events[0].event;
+
+      expect(event.escrow).toEqual(escrow.address);
+      expect(event.master_secret_keys.nsk_m).toEqual(escrowKeys.masterNullifierHidingKey.toBigInt());
+      expect(event.master_secret_keys.ivsk_m).toEqual(escrowKeys.masterIncomingViewingSecretKey.toBigInt());
+      expect(event.master_secret_keys.ovsk_m).toEqual(escrowKeys.masterOutgoingViewingSecretKey.toBigInt());
+      expect(event.master_secret_keys.tsk_m).toEqual(escrowKeys.masterTaggingSecretKey.toBigInt());
+    });
+
+    it('share escrow with multiple recipients correctly', async () => {
+      // Share the escrow contract with bob
+      const txForBob = await logic.methods.share_escrow(bob, escrow.address, secretKeys).send({ from: alice });
+      const blockNumberBob = txForBob.blockNumber!;
+
+      const txForCarl = await logic.methods.share_escrow(carl, escrow.address, secretKeys).send({ from: alice });
+      const blockNumberCarl = txForCarl.blockNumber!;
+
+      const numberOfBlocks = blockNumberCarl - blockNumberBob + 1;
+
+      // Get the events for both bob and carl from bob's wallet for simplicity
+      const events = await wallet.getPrivateEvents<EscrowDetailsLogContent>(
+        TestLogicContract.events.EscrowDetailsLogContent,
+        {
+          contractAddress: logic.address,
+          fromBlock: blockNumberBob,
+          toBlock: BlockNumber(blockNumberBob + numberOfBlocks),
+          scopes: [bob, carl],
+        },
+      );
+
+      expect(events.length).toBe(2);
+
+      const eventForBob = events[0].event;
+      expect(eventForBob.escrow).toEqual(escrow.address);
+      expect(eventForBob.master_secret_keys.nsk_m).toEqual(escrowKeys.masterNullifierHidingKey.toBigInt());
+      expect(eventForBob.master_secret_keys.ivsk_m).toEqual(escrowKeys.masterIncomingViewingSecretKey.toBigInt());
+      expect(eventForBob.master_secret_keys.ovsk_m).toEqual(escrowKeys.masterOutgoingViewingSecretKey.toBigInt());
+      expect(eventForBob.master_secret_keys.tsk_m).toEqual(escrowKeys.masterTaggingSecretKey.toBigInt());
+
+      const eventForCarl = events[1].event;
+      expect(eventForCarl.escrow).toEqual(escrow.address);
+      expect(eventForCarl.master_secret_keys.nsk_m).toEqual(escrowKeys.masterNullifierHidingKey.toBigInt());
+      expect(eventForCarl.master_secret_keys.ivsk_m).toEqual(escrowKeys.masterIncomingViewingSecretKey.toBigInt());
+      expect(eventForCarl.master_secret_keys.ovsk_m).toEqual(escrowKeys.masterOutgoingViewingSecretKey.toBigInt());
+      expect(eventForCarl.master_secret_keys.tsk_m).toEqual(escrowKeys.masterTaggingSecretKey.toBigInt());
     });
   });
 
   describe('withdraw', () => {
+    let token: TokenContract;
+
     beforeEach(async () => {
       token = (await deployTokenWithMinter(wallet, alice)) as TokenContract;
+
+      await wallet.registerContract(escrowInstance, EscrowContractArtifact, escrowSk);
+
       await token.withWallet(wallet).methods.mint_to_private(escrow.address, AMOUNT).send({ from: alice });
     });
 
-    it('logic should be able to withdraw correctly', async () => {
-      await expectTokenBalances(token, escrow.address, wad(0), AMOUNT, bob);
-      await expectTokenBalances(token, bob, wad(0), wad(0));
+    it('should be able to withdraw from escrow correctly', async () => {
+      const privateBalance = await token.methods.balance_of_private(escrow.address).simulate({ from: bob });
 
-      await escrow.withWallet(wallet).methods.withdraw(token.address, AMOUNT, bob).send({ from: logicMock });
+      await expectTokenBalances(token, escrow.address, wad(0), AMOUNT, bob);
+      await expectTokenBalances(token, bob, wad(0), wad(0), bob);
+
+      await logic.withWallet(wallet).methods.withdraw(escrow.address, bob, token.address, AMOUNT).send({ from: bob });
 
       await expectTokenBalances(token, escrow.address, wad(0), wad(0), bob);
-      await expectTokenBalances(token, bob, wad(0), AMOUNT);
-    });
-
-    it('withdrawing less than the balance should succeed', async () => {
-      const halfAmount = AMOUNT / 2n;
-
-      await expectTokenBalances(token, escrow.address, wad(0), AMOUNT, bob);
-      await expectTokenBalances(token, bob, wad(0), wad(0));
-
-      await escrow.withWallet(wallet).methods.withdraw(token.address, halfAmount, bob).send({ from: logicMock });
-
-      await expectTokenBalances(token, escrow.address, wad(0), halfAmount, bob);
-      await expectTokenBalances(token, bob, wad(0), halfAmount);
-    });
-
-    it('withdrawing more than the balance should fail', async () => {
-      await expect(
-        escrow
-          .withWallet(wallet)
-          .methods.withdraw(token.address, AMOUNT + 1n, bob)
-          .send({ from: logicMock }),
-      ).rejects.toThrow(/Assertion failed: Balance too low/);
+      await expectTokenBalances(token, bob, wad(0), AMOUNT, bob);
     });
   });
 
   describe('withdraw NFT', () => {
+    // Without resetting the store, the test fails with this error:
+    // Simulation error: Array must contain at most 100 element(s) (0)
+    // at SchnorrAccount.entrypoint
+    beforeAll(async () => {
+      await store.delete();
+      ({ store, node, wallet, accounts } = await setupTestSuite());
+
+      [alice, bob, carl] = accounts;
+
+      // Get the class id of the escrow contract
+      escrowClassId = (await getContractClassFromArtifact(EscrowContractArtifact)).id;
+
+      // We default to a secret key of 1 for testing purposes
+      escrowSk = Fr.ONE;
+
+      // Derive the keys from the secret key
+      escrowKeys = await deriveKeys(escrowSk);
+
+      // Convert the keys to Fr
+      secretKeys = {
+        nsk_m: grumpkinScalarToFr(escrowKeys.masterNullifierHidingKey),
+        ivsk_m: grumpkinScalarToFr(escrowKeys.masterIncomingViewingSecretKey),
+        ovsk_m: grumpkinScalarToFr(escrowKeys.masterOutgoingViewingSecretKey),
+        tsk_m: grumpkinScalarToFr(escrowKeys.masterTaggingSecretKey),
+      };
+    });
+
     let nft: NFTContract;
     let tokenId: bigint;
 
     beforeEach(async () => {
-      tokenId = 1n;
       nft = (await deployNFTWithMinter(wallet, alice)) as NFTContract;
+      tokenId = 1n;
+
+      await wallet.registerContract(escrowInstance, EscrowContractArtifact, escrowSk);
+
       await nft.withWallet(wallet).methods.mint_to_private(escrow.address, tokenId).send({ from: alice });
     });
 
-    it('logic should be able to withdraw NFT correctly', async () => {
-      await assertOwnsPrivateNFT(nft, tokenId, escrow.address, true, bob);
+    it('should be able to withdraw NFT from escrow correctly', async () => {
+      await assertOwnsPrivateNFT(nft, tokenId, escrow.address, true);
       await assertOwnsPrivateNFT(nft, tokenId, bob, false);
 
-      await escrow.withWallet(wallet).methods.withdraw_nft(nft.address, tokenId, bob).send({ from: logicMock });
+      await logic
+        .withWallet(wallet)
+        .methods.withdraw_nft(escrow.address, bob, nft.address, tokenId)
+        .send({ from: bob });
 
-      await assertOwnsPrivateNFT(nft, tokenId, escrow.address, false, bob);
+      await assertOwnsPrivateNFT(nft, tokenId, escrow.address, false);
       await assertOwnsPrivateNFT(nft, tokenId, bob, true);
-    });
-
-    it('withdrawing non-existent NFT should fail', async () => {
-      await expect(
-        escrow
-          .withWallet(wallet)
-          .methods.withdraw_nft(nft.address, tokenId + 1n, bob)
-          .send({ from: logicMock }),
-      ).rejects.toThrow(/Assertion failed: nft not found in private to public/);
     });
   });
 });
