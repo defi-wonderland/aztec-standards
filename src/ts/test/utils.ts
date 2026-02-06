@@ -31,7 +31,7 @@ import { createStore } from '@aztec/kv-store/lmdb-v2';
 import { getPXEConfig } from '@aztec/pxe/server';
 import { type AztecLMDBStoreV2 } from '@aztec/kv-store/lmdb-v2';
 
-import { TokenContract, TokenContractArtifact } from '../../../src/artifacts/Token.js';
+import { TokenContract } from '../../../src/artifacts/Token.js';
 import { NFTContract } from '../../../src/artifacts/NFT.js';
 import { TestLogicContract } from '../../../src/artifacts/TestLogic.js';
 import { EscrowContract } from '../../../src/artifacts/Escrow.js';
@@ -484,88 +484,6 @@ export async function deriveContractAddressWithConstructor(
     initializationHash,
     saltedInitializationHash,
   };
-}
-
-/**
- * Deploys the Token contract as a vault with an initial deposit.
- * This requires precomputing the vault address to set up authwit before deployment.
- * @param wallet - The wallet to deploy the contract with.
- * @param deployer - The account that will deploy and provide the initial deposit.
- * @param assetContract - The asset token contract to use.
- * @param initialDeposit - The amount of assets to deposit initially (locked in vault).
- * @param depositor - The address that will do the initial deposit and sign the authwit.
- * @returns The deployed vault contract.
- */
-export async function deployVaultWithInitialDeposit(
-  wallet: Wallet,
-  deployer: AztecAddress,
-  assetContract: TokenContract,
-  initialDeposit: bigint,
-  depositor: AztecAddress,
-): Promise<TokenContract> {
-  const salt = Fr.random();
-
-  // Constructor args for constructor_with_asset_initial_deposit
-  const [name, symbol, decimals, asset, assetId, upgradeAuthority, depositAmount, depositOwner, nonce] = [
-    'VaultToken', // name
-    'VT', // symbol
-    6, // decimals
-    assetContract.address, // asset
-    1,
-    AztecAddress.ZERO, // upgrade_authority
-    initialDeposit, // initial_deposit
-    depositor, // depositor
-    0, // nonce
-  ];
-
-  const constructorArgs = [
-    name,
-    symbol,
-    decimals,
-    asset,
-    assetId,
-    upgradeAuthority,
-    depositAmount,
-    depositOwner,
-    nonce,
-  ];
-
-  // Derive the vault address before deployment
-  const { address: vaultAddress } = await deriveContractAddressWithConstructor(
-    TokenContractArtifact,
-    'constructor_with_asset_initial_deposit',
-    constructorArgs,
-    deployer,
-    salt,
-  );
-
-  // Set up authwit for the vault to transfer assets from deployer during constructor
-  // The constructor ALWAYS calls transfer_public_to_public, even when initial_deposit = 0
-  const transferAction = assetContract.methods.transfer_public_to_public(depositor, vaultAddress, initialDeposit, 0);
-  await setPublicAuthWit(vaultAddress, transferAction, depositor, wallet as TestWallet);
-
-  // Deploy the vault with initial deposit using the same constructor args
-  const vaultContract = await TokenContract.deployWithOpts(
-    { method: 'constructor_with_asset_initial_deposit', wallet },
-    name,
-    symbol,
-    decimals,
-    asset,
-    assetId,
-    upgradeAuthority,
-    depositAmount,
-    depositOwner,
-    nonce,
-  ).send({ from: deployer });
-
-  // Verify the address matches
-  if (!vaultContract.address.equals(vaultAddress)) {
-    throw new Error(
-      `Vault address mismatch: expected ${vaultAddress.toString()}, got ${vaultContract.address.toString()}`,
-    );
-  }
-
-  return vaultContract as TokenContract;
 }
 
 /**

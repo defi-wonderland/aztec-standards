@@ -1,21 +1,15 @@
 import {
   setupTestSuite,
   deployVaultAndAssetWithMinter,
-  deployVaultWithInitialDeposit,
   setPrivateAuthWit,
   setPublicAuthWit,
   expectTokenBalances,
-  MAX_U128_VALUE,
-  deployTokenWithMinter,
 } from './utils.js';
 
-const { Fr } = await import('@aztec/aztec.js/fields');
 import { AztecAddress } from '@aztec/aztec.js/addresses';
 import { type TestWallet } from '@aztec/test-wallet/server';
-const { Contract } = await import('@aztec/aztec.js/contracts');
 import { type AztecLMDBStoreV2 } from '@aztec/kv-store/lmdb-v2';
 import { type ContractFunctionInteraction } from '@aztec/aztec.js/contracts';
-const { TokenContractArtifact } = await import('../../../artifacts/Token.js');
 
 import { describe, it, expect, beforeAll, beforeEach, afterAll } from 'vitest';
 
