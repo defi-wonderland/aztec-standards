@@ -1,15 +1,21 @@
 import {
   setupTestSuite,
   deployVaultAndAssetWithMinter,
+  deployVaultWithInitialDeposit,
   setPrivateAuthWit,
   setPublicAuthWit,
   expectTokenBalances,
+  MAX_U128_VALUE,
+  deployTokenWithMinter,
 } from './utils.js';
 
+const { Fr } = await import('@aztec/aztec.js/fields');
 import { AztecAddress } from '@aztec/aztec.js/addresses';
 import { type TestWallet } from '@aztec/test-wallet/server';
+const { Contract } = await import('@aztec/aztec.js/contracts');
 import { type AztecLMDBStoreV2 } from '@aztec/kv-store/lmdb-v2';
 import { type ContractFunctionInteraction } from '@aztec/aztec.js/contracts';
+const { TokenContractArtifact } = await import('../../../artifacts/Token.js');
 
 import { describe, it, expect, beforeAll, beforeEach, afterAll } from 'vitest';
 
@@ -39,7 +45,7 @@ describe('Tokenized Vault', () => {
   async function callVaultWithPublicAuthWit(
     action: ContractFunctionInteraction,
     from: AztecAddress,
-    amount: number,
+    amount: number | bigint,
     options: { nonce?: number; caller?: AztecAddress } = {},
   ) {
     const { nonce = 0, caller = from } = options;
@@ -59,6 +65,31 @@ describe('Tokenized Vault', () => {
     const transferAuthWitness = await setPrivateAuthWit(vault.address, transfer, from, wallet);
     await action.with({ authWitnesses: [transferAuthWitness] }).send({ from: caller });
   }
+
+  async function callVaultWithPublicAuthWitFromWallet(
+    vault: TokenContract,
+    asset: TokenContract,
+    action: ContractFunctionInteraction,
+    wallet: TestWallet,
+    from: AztecAddress,
+    amount: number | bigint,
+    options: { nonce?: number; caller?: AztecAddress } = {},
+  ) {
+    const { nonce = 0, caller = from } = options;
+    const transfer = asset.methods.transfer_public_to_public(from, vault.address, amount, nonce);
+    await setPublicAuthWit(vault.address, transfer, from, wallet);
+    await action.send({ from: caller }).wait();
+  }
+
+  function publicBalance(token: TokenContract, address: AztecAddress, reader: AztecAddress): Promise<bigint> {
+    return token.methods.balance_of_public(address).simulate({ from: reader });
+  }
+
+  function totalShares(vaultContract: TokenContract, reader: AztecAddress): Promise<bigint> {
+    return vaultContract.methods.total_supply().simulate({ from: reader });
+  }
+
+  const scale = 1_000_000n; // 6 decimals
 
   async function mintAndDepositInPrivate(account: AztecAddress, mint: number, assets: number, shares: number) {
     // Mint some assets to Alice
@@ -134,9 +165,7 @@ describe('Tokenized Vault', () => {
         expect(await vault.methods.total_supply().simulate({ from: alice })).toBe(BigInt(sharesBob + sharesAlice));
 
         // Alice withdraws public assets by burning public shares
-        // TODO: call preview max withdraw function
-        // Cannot withdraw 14 due to rounding.
-        const maxWithdraw = assetsAlice + aliceEarnings;
+        const maxWithdraw = await vault.methods.max_withdraw(alice).simulate({ from: alice });
         await vault.methods.withdraw_public_to_public(alice, alice, maxWithdraw, 0).send({ from: alice });
 
         // Bob redeems public shares for public assets
@@ -189,9 +218,7 @@ describe('Tokenized Vault', () => {
         expect(await vault.methods.total_supply().simulate({ from: alice })).toBe(BigInt(sharesBob + sharesAlice));
 
         // Alice withdraws private assets by burning public shares
-        // TODO: call preview max withdraw function
-        // Cannot withdraw 14 due to rounding.
-        const maxWithdraw = assetsAlice + aliceEarnings;
+        const maxWithdraw = await vault.methods.max_withdraw(alice).simulate({ from: alice });
         await vault.methods.withdraw_public_to_private(alice, alice, maxWithdraw, 0).send({ from: alice });
 
         // Bob redeems private shares for public assets
@@ -245,9 +272,8 @@ describe('Tokenized Vault', () => {
         expect(await vault.methods.total_supply().simulate({ from: alice })).toBe(BigInt(sharesBob + sharesAlice));
 
         // Alice withdraws public assets by burning public shares
-        // TODO: call preview max withdraw function
-        // Cannot withdraw 14 due to rounding.
-        const maxWithdraw = assetsAlice + aliceEarnings;
+        const maxRedeemPriv = await vault.methods.balance_of_private(alice).simulate({ from: alice });
+        const maxWithdraw = await vault.methods.preview_redeem(maxRedeemPriv).simulate({ from: alice });
         await vault.methods
           .withdraw_private_to_public_exact(alice, alice, maxWithdraw, sharesAlice, 0)
           .send({ from: alice });
@@ -302,9 +328,8 @@ describe('Tokenized Vault', () => {
         expect(await vault.methods.total_supply().simulate({ from: alice })).toBe(BigInt(sharesBob + sharesAlice));
 
         // Alice withdraws public assets by burning public shares
-        // TODO: call preview max withdraw function
-        // Cannot withdraw 14 due to rounding.
-        const maxWithdraw = assetsAlice + aliceEarnings;
+        const maxRedeemPriv = await vault.methods.balance_of_private(alice).simulate({ from: alice });
+        const maxWithdraw = await vault.methods.preview_redeem(maxRedeemPriv).simulate({ from: alice });
         await vault.methods
           .withdraw_private_to_private(alice, alice, maxWithdraw, sharesAlice, 0)
           .send({ from: alice });
@@ -359,9 +384,8 @@ describe('Tokenized Vault', () => {
         expect(await vault.methods.total_supply().simulate({ from: alice })).toBe(BigInt(sharesBob + sharesAlice));
 
         // Alice withdraws public assets by burning public shares
-        // TODO: call preview max withdraw function
-        // Cannot withdraw 14 due to rounding.
-        const maxWithdraw = assetsAlice + aliceEarnings;
+        const maxRedeemPriv = await vault.methods.balance_of_private(alice).simulate({ from: alice });
+        const maxWithdraw = await vault.methods.preview_redeem(maxRedeemPriv).simulate({ from: alice });
         await vault.methods
           .withdraw_private_to_private_exact(alice, alice, maxWithdraw, sharesAlice, 0)
           .send({ from: alice });
@@ -418,9 +442,7 @@ describe('Tokenized Vault', () => {
         expect(await vault.methods.total_supply().simulate({ from: carl })).toBe(BigInt(sharesBob + sharesAlice));
 
         // Alice withdraws public assets by burning public shares
-        // TODO: call preview max withdraw function
-        // Cannot withdraw 14 due to rounding.
-        const maxWithdraw = 13;
+        const maxWithdraw = await vault.methods.max_withdraw(alice).simulate({ from: alice });
         const withdrawAction = vault.methods.withdraw_public_to_public(alice, alice, maxWithdraw, 0);
         await setPublicAuthWit(carl, withdrawAction, alice, wallet);
         await withdrawAction.send({ from: carl });
@@ -484,9 +506,7 @@ describe('Tokenized Vault', () => {
         expect(await vault.methods.total_supply().simulate({ from: carl })).toBe(BigInt(sharesBob + sharesAlice));
 
         // Alice withdraws private assets by burning public shares
-        // TODO: call preview max withdraw function
-        // Cannot withdraw 14 due to rounding.
-        const maxWithdraw = 13;
+        const maxWithdraw = await vault.methods.max_withdraw(alice).simulate({ from: alice });
         await vault.methods.withdraw_public_to_private(alice, alice, maxWithdraw, 0).send({ from: alice });
 
         // Bob redeems private shares for public assets
@@ -547,9 +567,8 @@ describe('Tokenized Vault', () => {
         expect(await vault.methods.total_supply().simulate({ from: carl })).toBe(BigInt(sharesBob + sharesAlice));
 
         // Alice withdraws public assets by burning public shares
-        // TODO: call preview max withdraw function
-        // Cannot withdraw 14 due to rounding.
-        const maxWithdraw = 13;
+        const maxRedeemPriv = await vault.methods.balance_of_private(alice).simulate({ from: alice });
+        const maxWithdraw = await vault.methods.preview_redeem(maxRedeemPriv).simulate({ from: alice });
         const withdrawAction = vault.methods.withdraw_private_to_public_exact(
           alice,
           alice,
@@ -619,9 +638,8 @@ describe('Tokenized Vault', () => {
         expect(await vault.methods.total_supply().simulate({ from: carl })).toBe(BigInt(sharesBob + sharesAlice));
 
         // Alice withdraws public assets by burning public shares
-        // TODO: call preview max withdraw function
-        // Cannot withdraw 14 due to rounding.
-        const maxWithdraw = 13;
+        const maxRedeemPriv = await vault.methods.balance_of_private(alice).simulate({ from: alice });
+        const maxWithdraw = await vault.methods.preview_redeem(maxRedeemPriv).simulate({ from: alice });
         const withdrawAction = vault.methods.withdraw_private_to_private(alice, alice, maxWithdraw, 9, 0);
         const withdrawAuthWitness = await setPrivateAuthWit(carl, withdrawAction, alice, wallet);
         await withdrawAction.with({ authWitnesses: [withdrawAuthWitness] }).send({ from: carl });
@@ -688,9 +706,8 @@ describe('Tokenized Vault', () => {
         expect(await vault.methods.total_supply().simulate({ from: carl })).toBe(BigInt(sharesBob + sharesAlice));
 
         // Alice withdraws public assets by burning public shares
-        // TODO: call preview max withdraw function
-        // Cannot withdraw 14 due to rounding.
-        const maxWithdraw = 13;
+        const maxRedeemPriv = await vault.methods.balance_of_private(alice).simulate({ from: alice });
+        const maxWithdraw = await vault.methods.preview_redeem(maxRedeemPriv).simulate({ from: alice });
         const withdrawAction = vault.methods.withdraw_private_to_private_exact(alice, alice, maxWithdraw, 9, 0);
         const withdrawAuthWitness = await setPrivateAuthWit(carl, withdrawAction, alice, wallet);
         await withdrawAction.with({ authWitnesses: [withdrawAuthWitness] }).send({ from: carl });
