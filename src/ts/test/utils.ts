@@ -16,6 +16,7 @@ import {
   DeployOptions,
   ContractFunctionInteraction,
   getContractClassFromArtifact,
+  getContractInstanceFromInstantiationParams,
 } from '@aztec/aztec.js/contracts';
 import { AuthWitness, type ContractFunctionInteractionCallIntent } from '@aztec/aztec.js/authorization';
 import { getDefaultInitializer, getInitializer } from '@aztec/stdlib/abi';
@@ -437,6 +438,7 @@ export async function deriveContractAddress(
 
 /**
  * Predicts the contract address for a given artifact with a specific constructor.
+ * Uses the v4 API `getContractInstanceFromInstantiationParams` for address derivation.
  * @param artifact - The contract artifact.
  * @param constructorName - The name of the constructor function to use.
  * @param constructorArgs - The arguments to pass to the constructor.
@@ -453,13 +455,17 @@ export async function deriveContractAddressWithConstructor(
   salt: Fr = Fr.random(),
   publicKeys?: PublicKeys,
 ) {
-  if (!publicKeys) {
-    publicKeys = PublicKeys.default();
-  }
+  // Use v4 API for contract instance derivation
+  const instance = await getContractInstanceFromInstantiationParams(artifact, {
+    constructorArtifact: constructorName,
+    constructorArgs,
+    salt,
+    deployer,
+    publicKeys,
+  });
 
-  const contractClass = await getContractClassFromArtifact(artifact);
-  const contractClassId = contractClass.id;
-
+  // For backward compatibility, compute initializationHash and saltedInitializationHash
+  // if they're needed by callers (though currently only address is used)
   const constructorArtifact = getInitializer(artifact, constructorName);
   if (!constructorArtifact) {
     throw new Error(`Constructor ${constructorName} not found in artifact`);
@@ -472,13 +478,12 @@ export async function deriveContractAddressWithConstructor(
     deployer,
   });
 
-  const address = await computeContractAddressFromInstance({
-    originalContractClassId: contractClassId,
-    saltedInitializationHash: saltedInitializationHash,
-    publicKeys: publicKeys,
-  });
-
-  return { address, salt, initializationHash, saltedInitializationHash };
+  return {
+    address: instance.address,
+    salt,
+    initializationHash,
+    saltedInitializationHash,
+  };
 }
 
 /**
@@ -501,7 +506,7 @@ export async function deployVaultWithInitialDeposit(
   const salt = Fr.random();
 
   // Constructor args for constructor_with_asset_initial_deposit
-  const constructorArgs = [
+  const [name, symbol, decimals, asset, assetId, upgradeAuthority, depositAmount, depositOwner, nonce] = [
     'VaultToken', // name
     'VT', // symbol
     6, // decimals
@@ -511,6 +516,18 @@ export async function deployVaultWithInitialDeposit(
     initialDeposit, // initial_deposit
     depositor, // depositor
     0, // nonce
+  ];
+
+  const constructorArgs = [
+    name,
+    symbol,
+    decimals,
+    asset,
+    assetId,
+    upgradeAuthority,
+    depositAmount,
+    depositOwner,
+    nonce,
   ];
 
   // Derive the vault address before deployment
@@ -527,19 +544,18 @@ export async function deployVaultWithInitialDeposit(
   const transferAction = assetContract.methods.transfer_public_to_public(depositor, vaultAddress, initialDeposit, 0);
   await setPublicAuthWit(vaultAddress, transferAction, depositor, wallet as TestWallet);
 
-  // Deploy the vault with initial deposit
-
+  // Deploy the vault with initial deposit using the same constructor args
   const vaultContract = await TokenContract.deployWithOpts(
     { method: 'constructor_with_asset_initial_deposit', wallet },
-    'VaultToken', // name
-    'VT', // symbol
-    6, // decimals
-    assetContract.address, // asset
-    1,
-    AztecAddress.ZERO, // upgrade_authority
-    initialDeposit, // initial_deposit
-    depositor, // depositor
-    0, // nonce
+    name,
+    symbol,
+    decimals,
+    asset,
+    assetId,
+    upgradeAuthority,
+    depositAmount,
+    depositOwner,
+    nonce,
   ).send({ from: deployer });
 
   // Verify the address matches

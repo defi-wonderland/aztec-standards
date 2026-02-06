@@ -66,55 +66,6 @@ describe('Tokenized Vault', () => {
     await action.with({ authWitnesses: [transferAuthWitness] }).send({ from: caller });
   }
 
-  async function callVaultWithPublicAuthWitFromWallet(
-    vault: TokenContract,
-    asset: TokenContract,
-    action: ContractFunctionInteraction,
-    wallet: TestWallet,
-    from: AztecAddress,
-    amount: number | bigint,
-    options: { nonce?: number; caller?: AztecAddress } = {},
-  ) {
-    const { nonce = 0, caller = from } = options;
-    const transfer = asset.methods.transfer_public_to_public(from, vault.address, amount, nonce);
-    await setPublicAuthWit(vault.address, transfer, from, wallet);
-    await action.send({ from: caller });
-  }
-
-  function publicBalance(token: TokenContract, address: AztecAddress, reader: AztecAddress): Promise<bigint> {
-    return token.methods.balance_of_public(address).simulate({ from: reader });
-  }
-
-  function totalShares(vaultContract: TokenContract, reader: AztecAddress): Promise<bigint> {
-    return vaultContract.methods.total_supply().simulate({ from: reader });
-  }
-
-  const scale = 1_000_000n; // 6 decimals
-
-  async function mintAndDepositInPrivate(account: AztecAddress, mint: number, assets: number, shares: number) {
-    // Mint some assets to Alice
-    await asset.methods.mint_to_private(account, mint).send({ from: alice });
-
-    // Alice deposits private assets, receives private shares
-    await callVaultWithPrivateAuthWit(
-      vault.methods.deposit_private_to_private(account, account, assets, shares, 0),
-      account,
-      assets,
-    );
-  }
-
-  async function mintAndDepositInPublic(account: AztecAddress, mint: number, assets: number) {
-    // Mint some assets to Alice
-    await asset.methods.mint_to_public(account, mint).send({ from: alice });
-
-    // Alice deposits public assets, receives public shares
-    await callVaultWithPublicAuthWit(
-      vault.methods.deposit_public_to_public(account, account, assets, 0),
-      account,
-      assets,
-    );
-  }
-
   beforeAll(async () => {
     ({ store, wallet, accounts } = await setupTestSuite());
 
