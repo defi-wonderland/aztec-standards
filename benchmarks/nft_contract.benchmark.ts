@@ -89,7 +89,8 @@ export default class NFTContractBenchmark extends Benchmark {
   }
 
   async teardown(context: NFTBenchmarkContext): Promise<void> {
+    // Stop the PXE to release the event loop (wallet is a TestWallet from setupTestSuite)
+    await (context.wallet as any).stop();
     await context.store.delete();
-    process.exit(0);
   }
 }

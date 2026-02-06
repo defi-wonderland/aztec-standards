@@ -128,7 +128,8 @@ export default class EscrowContractBenchmark extends Benchmark {
   }
 
   async teardown(context: EscrowBenchmarkContext): Promise<void> {
+    // Stop the PXE to release the event loop (wallet is a TestWallet from setupTestSuite)
+    await (context.wallet as any).stop();
     await context.store.delete();
-    process.exit(0);
   }
 }

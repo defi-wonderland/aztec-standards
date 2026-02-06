@@ -110,7 +110,8 @@ export default class LogicContractBenchmark extends Benchmark {
   }
 
   async teardown(context: LogicBenchmarkContext): Promise<void> {
+    // Stop the PXE to release the event loop (wallet is a TestWallet from setupTestSuite)
+    await (context.wallet as any).stop();
     await context.store.delete();
-    process.exit(0);
   }
 }
