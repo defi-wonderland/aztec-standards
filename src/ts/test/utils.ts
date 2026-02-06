@@ -30,7 +30,7 @@ import { createStore } from '@aztec/kv-store/lmdb-v2';
 import { getPXEConfig } from '@aztec/pxe/server';
 import { type AztecLMDBStoreV2 } from '@aztec/kv-store/lmdb-v2';
 
-import { TokenContract } from '../../../src/artifacts/Token.js';
+import { TokenContract, TokenContractArtifact } from '../../../src/artifacts/Token.js';
 import { NFTContract } from '../../../src/artifacts/NFT.js';
 import { TestLogicContract } from '../../../src/artifacts/TestLogic.js';
 import { EscrowContract } from '../../../src/artifacts/Escrow.js';
@@ -528,14 +528,19 @@ export async function deployVaultWithInitialDeposit(
   await setPublicAuthWit(vaultAddress, transferAction, depositor, wallet as TestWallet);
 
   // Deploy the vault with initial deposit
-  const vaultContract = await Contract.deploy(
-    wallet,
-    TokenContractArtifact,
-    constructorArgs,
-    'constructor_with_asset_initial_deposit',
-  )
-    .send({ contractAddressSalt: salt, from: deployer })
-    .deployed();
+
+  const vaultContract = await TokenContract.deployWithOpts(
+    { method: 'constructor_with_asset_initial_deposit', wallet },
+    'VaultToken', // name
+    'VT', // symbol
+    6, // decimals
+    assetContract.address, // asset
+    1,
+    AztecAddress.ZERO, // upgrade_authority
+    initialDeposit, // initial_deposit
+    depositor, // depositor
+    0, // nonce
+  ).send({ from: deployer });
 
   // Verify the address matches
   if (!vaultContract.address.equals(vaultAddress)) {

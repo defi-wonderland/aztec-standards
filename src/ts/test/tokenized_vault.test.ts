@@ -78,7 +78,7 @@ describe('Tokenized Vault', () => {
     const { nonce = 0, caller = from } = options;
     const transfer = asset.methods.transfer_public_to_public(from, vault.address, amount, nonce);
     await setPublicAuthWit(vault.address, transfer, from, wallet);
-    await action.send({ from: caller }).wait();
+    await action.send({ from: caller });
   }
 
   function publicBalance(token: TokenContract, address: AztecAddress, reader: AztecAddress): Promise<bigint> {
