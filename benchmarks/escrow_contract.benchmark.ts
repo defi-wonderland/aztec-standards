@@ -12,9 +12,9 @@ import { Benchmark, BenchmarkContext } from '@defi-wonderland/aztec-benchmark';
 import type { NamedBenchmarkedInteraction } from '@defi-wonderland/aztec-benchmark/dist/types.js';
 
 // Import artifacts
-import { TokenContract } from '../artifacts/Token.js';
-import { EscrowContract, EscrowContractArtifact } from '../artifacts/Escrow.js';
-import { NFTContract } from '../artifacts/NFT.js';
+import { TokenContract } from '../src/artifacts/Token.js';
+import { EscrowContract, EscrowContractArtifact } from '../src/artifacts/Escrow.js';
+import { NFTContract } from '../src/artifacts/NFT.js';
 
 // Import test utilities
 import { setupTestSuite, deployEscrow, deployTokenWithMinter, deployNFTWithMinter } from '../src/ts/test/utils.js';

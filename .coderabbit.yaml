@@ -112,10 +112,6 @@ reviews:
     biome:
       # Enable Biome tool
       enabled: true
-    # Hadolint tool configuration
-    hadolint:
-      # Enable Hadolint tool for Dockerfile linting
-      enabled: true
     # SwiftLint tool configuration
     swiftlint:
       # Enable SwiftLint tool
