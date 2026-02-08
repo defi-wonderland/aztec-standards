@@ -434,6 +434,8 @@ pub contract Token {
         _validate_minter(self.msg_sender().unwrap(), self.storage.minter.read());
 
         self.internal._mint_to_public(to, amount);
+
+        self.emit(Transfer { from: AztecAddress::zero(), to, amount });
     }
 
     /// @notice Finalizes a mint to a commitment
@@ -496,6 +498,8 @@ pub contract Token {
         self.internal._validate_from_public(from);
 
         self.internal._burn_public(from, amount);
+
+        self.emit(Transfer { from, to: AztecAddress::zero(), amount });
     }
 
     /// @notice Decreases the total supply by `amount`
