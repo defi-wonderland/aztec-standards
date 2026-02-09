@@ -1,6 +1,7 @@
 pub mod test;
 pub mod library;
 pub mod types;
+pub mod derivation;
 
 use aztec::macros::aztec;
 

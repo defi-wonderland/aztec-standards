@@ -7,7 +7,6 @@ use aztec::{
     },
     test::helpers::test_environment::TestEnvironment,
 };
-use escrow_contract::library::logic::MasterSecretKeys;
 
 pub unconstrained fn deploy_logic(
     env: &mut TestEnvironment,
@@ -25,14 +24,9 @@ pub unconstrained fn deploy_logic(
     logic_contract
 }
 
-pub unconstrained fn get_test_vector() -> (PublicKeys, MasterSecretKeys, PublicKeys, MasterSecretKeys) {
-    // secret keys derived using 1 as the seed
-    let master_secret_keys_1 = MasterSecretKeys {
-        nsk_m: 0x1c46232974b84af1ea0f3f8e02d68b205fa0fd765839bdd298d270c6f4d87190,
-        ivsk_m: 0x23077d282aa597e7a1c6ffb4a1069cffd9743e861451076740cf42cb632fec84,
-        ovsk_m: 0x0fd5dc80151e24e20e402fa82437be7483431347ca4aabde674cdb12598d0fc0,
-        tsk_m: 0x0d104e3f086a9c3127b4152bac929180c21c06f9539b62843f4971753dd4ecf9,
-    };
+pub unconstrained fn get_test_vector() -> (PublicKeys, Field, PublicKeys, Field) {
+    // Secret key 1: derived using 1 as the seed
+    let secret_key_1: Field = 1;
 
     let npk_x_1: Field = 0x0b6111daac402252e041933aad127a26c9851acb11ced405d8563435bb33e0b8;
     let npk_y_1: Field = 0x0ecf620002229630f89c4f06638c3155f7e331a98e3304d92f2b7e213250d3f6;
@@ -50,14 +44,9 @@ pub unconstrained fn get_test_vector() -> (PublicKeys, MasterSecretKeys, PublicK
         tpk_m: TpkM { inner: Point { x: tpk_x_1, y: tpk_y_1, is_infinite: false } },
     };
 
-    // secret keys derived using string "RANDOM_SECRET_KEY" left-padded to 32 bytes with spaces as the seed:
+    // Secret key 2: string "RANDOM_SECRET_KEY" left-padded to 32 bytes with spaces
     // 0x20202020202020202020202020202052414e444f4d5f5345435245545f4b4559
-    let master_secret_keys_2 = MasterSecretKeys {
-        nsk_m: 0x0e9600b209142cfe453ee5082e0eb5916b381f81a1967556afe1049c87cbb2ae,
-        ivsk_m: 0x01243994b0481f12305a17f6f12ed689e38c62d116efa1e2ff61718459f1d9b3,
-        ovsk_m: 0x14958e327b2cbdfd7c18add0d5fc376e533f9ee47f18f47259c862a0429deaa4,
-        tsk_m: 0x23c16c7e7fba57703aaf07ba75076c74d93747f2610e28689350b5e2f9061417,
-    };
+    let secret_key_2: Field = 0x20202020202020202020202020202052414e444f4d5f5345435245545f4b4559;
 
     let npk_x_2: Field = 0x00ecf1384fa9a5acdaddcf0ca577d12d80309aab813dcf96ea79fad43f3daad9;
     let npk_y_2: Field = 0x24c81884aece11096a3058433339dd0180756c44b4372951f169c939f569f4fb;
@@ -75,5 +64,5 @@ pub unconstrained fn get_test_vector() -> (PublicKeys, MasterSecretKeys, PublicK
         tpk_m: TpkM { inner: Point { x: tpk_x_2, y: tpk_y_2, is_infinite: false } },
     };
 
-    (public_keys_1, master_secret_keys_1, public_keys_2, master_secret_keys_2)
+    (public_keys_1, secret_key_1, public_keys_2, secret_key_2)
 }
