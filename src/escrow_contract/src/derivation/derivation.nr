@@ -1,13 +1,13 @@
 use bignum::bignum::to_field;
 use sha512::sha512;
 
+use crate::derivation::conversion::MasterSecretKeys;
+use crate::derivation::reduction::reduce_to_grumpkin_scalar;
+use crate::derivation::serialization::serialize_to_buffer;
 use aztec::protocol_types::constants::{
     GENERATOR_INDEX__IVSK_M, GENERATOR_INDEX__NSK_M, GENERATOR_INDEX__OVSK_M,
     GENERATOR_INDEX__TSK_M,
 };
-use crate::derivation::conversion::MasterSecretKeys;
-use crate::derivation::reduction::reduce_to_grumpkin_scalar;
-use crate::derivation::serialization::serialize_to_buffer;
 
 /// Derives a master secret key from a secret key and generator index
 /// using SHA512 followed by modular reduction to Fq
