@@ -140,6 +140,5 @@ export default class TokenContractBenchmark extends Benchmark {
 
   async teardown(context: TokenBenchmarkContext): Promise<void> {
     await context.store.delete();
-    process.exit(0);
   }
 }
