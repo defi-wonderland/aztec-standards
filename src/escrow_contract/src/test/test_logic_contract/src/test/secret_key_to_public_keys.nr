@@ -4,7 +4,7 @@ use aztec::test::helpers::test_environment::TestEnvironment;
 
 // We test public key derivation using two different secret keys.
 #[test]
-unconstrained fn secret_keys_to_public_keys_success() {
+unconstrained fn secret_key_to_public_keys_success() {
     let mut env = TestEnvironment::new();
 
     let logic_contract_address = logic_utils::deploy_logic(&mut env, 1);
@@ -15,7 +15,7 @@ unconstrained fn secret_keys_to_public_keys_success() {
     let caller = env.create_light_account();
     let public_keys_1 = env.call_private(
         caller,
-        TestLogic::at(logic_contract_address).secret_keys_to_public_keys(secret_key_1),
+        TestLogic::at(logic_contract_address).secret_key_to_public_keys(secret_key_1),
     );
 
     assert_eq(vector_public_keys_1.npk_m.inner.x, public_keys_1.npk_m.inner.x);
@@ -30,7 +30,7 @@ unconstrained fn secret_keys_to_public_keys_success() {
 
     let public_keys_2 = env.call_private(
         caller,
-        TestLogic::at(logic_contract_address).secret_keys_to_public_keys(secret_key_2),
+        TestLogic::at(logic_contract_address).secret_key_to_public_keys(secret_key_2),
     );
 
     assert_eq(vector_public_keys_2.npk_m.inner.x, public_keys_2.npk_m.inner.x);
@@ -46,7 +46,7 @@ unconstrained fn secret_keys_to_public_keys_success() {
 
 // Note that this test will fail since we use a different secret key to produce different public keys than expected
 #[test(should_fail)]
-unconstrained fn secret_keys_to_public_keys_fail() {
+unconstrained fn secret_key_to_public_keys_fail() {
     let mut env = TestEnvironment::new();
 
     let logic_contract_address = logic_utils::deploy_logic(&mut env, 1);
@@ -59,7 +59,7 @@ unconstrained fn secret_keys_to_public_keys_fail() {
     let caller = env.create_light_account();
     let public_keys_1 = env.call_private(
         caller,
-        TestLogic::at(logic_contract_address).secret_keys_to_public_keys(modified_secret_key),
+        TestLogic::at(logic_contract_address).secret_key_to_public_keys(modified_secret_key),
     );
 
     assert_eq(vector_public_keys_1, public_keys_1);

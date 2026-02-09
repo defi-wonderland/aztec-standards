@@ -91,7 +91,7 @@ contract TestLogic {
     /// @param secret_key The secret key used to derive master secret keys and public keys
     /// @return PublicKeys containing the derived public keys.
     #[external("private")]
-    fn secret_keys_to_public_keys(secret_key: Field) -> PublicKeys {
+    fn secret_key_to_public_keys(secret_key: Field) -> PublicKeys {
         secret_key_to_public_keys(secret_key)
     }
 }

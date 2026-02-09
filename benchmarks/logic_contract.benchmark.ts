@@ -76,7 +76,7 @@ export default class LogicContractBenchmark extends Benchmark {
       // Derive public keys from secret key
       {
         caller: deployer,
-        action: logicContract.withWallet(wallet).methods.secret_keys_to_public_keys(escrowSk),
+        action: logicContract.withWallet(wallet).methods.secret_key_to_public_keys(escrowSk),
       },
       // Check escrow correctness
       {
