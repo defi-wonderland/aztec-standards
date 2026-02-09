@@ -517,8 +517,8 @@ export type TransferEvent = {
  * and decodes them as Transfer events.
  *
  * Public events emitted via `self.emit(Transfer { from, to, amount })` are stored as
- * `PublicLog { contractAddress, fields }` where fields[0] is the event selector and
- * fields[1..] are the serialized event data.
+ * `PublicLog { contractAddress, fields }` with layout [from, to, amount, eventSelector].
+ * Logs are filtered by the Transfer event selector (0x70a1894e) to exclude non-Transfer logs.
  *
  * @param txHash - The transaction hash to query logs for.
  * @param contractAddress - The contract address to filter logs by.
@@ -530,19 +530,24 @@ export async function getTransferEvents(txHash: TxHash, contractAddress: AztecAd
     contractAddress,
   });
 
-  return response.logs.map((extLog) => {
-    const fields = extLog.log.fields;
-    // Public event field layout: [from, to, amount, eventSelector]
-    // fields[0] = from address
-    // fields[1] = to address
-    // fields[2] = amount (as Field, representing u128)
-    // fields[3] = event selector (ignored)
-    return {
-      from: AztecAddress.fromField(fields[0]),
-      to: AztecAddress.fromField(fields[1]),
-      amount: fields[2].toBigInt(),
-    };
-  });
+  // Transfer event selector: 0x70a1894e (sits at the end of the fields array)
+  const TRANSFER_SELECTOR = 0x70a1894en;
+
+  return response.logs
+    .filter((extLog) => {
+      const fields = extLog.log.fields;
+      // Only keep logs that match the Transfer event layout (4 fields, last is the selector)
+      return fields.length >= 4 && fields[3].toBigInt() === TRANSFER_SELECTOR;
+    })
+    .map((extLog) => {
+      const fields = extLog.log.fields;
+      // Public event field layout: [from, to, amount, eventSelector]
+      return {
+        from: AztecAddress.fromField(fields[0]),
+        to: AztecAddress.fromField(fields[1]),
+        amount: fields[2].toBigInt(),
+      };
+    });
 }
 
 /**
