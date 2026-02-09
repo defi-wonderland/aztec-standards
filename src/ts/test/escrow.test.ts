@@ -35,7 +35,6 @@ import {
   assertOwnsPrivateNFT,
   deployLogic,
   deployEscrowWithPublicKeysAndSalt,
-  grumpkinScalarToFr,
   deriveContractAddress,
 } from './utils.js';
 
@@ -79,12 +78,6 @@ describe('Escrow', () => {
   };
   let escrowSalt: Fr;
   let escrowClassId: Fr;
-  let secretKeys: {
-    nsk_m: Fr;
-    ivsk_m: Fr;
-    ovsk_m: Fr;
-    tsk_m: Fr;
-  };
 
   beforeAll(async () => {
     ({ store, node, wallet, accounts } = await setupTestSuite());
@@ -97,16 +90,8 @@ describe('Escrow', () => {
     // We default to a secret key of 1 for testing purposes
     escrowSk = Fr.ONE;
 
-    // Derive the keys from the secret key
+    // Derive the keys from the secret key (for deployment and verification)
     escrowKeys = await deriveKeys(escrowSk);
-
-    // Convert the keys to Fr
-    secretKeys = {
-      nsk_m: grumpkinScalarToFr(escrowKeys.masterNullifierHidingKey),
-      ivsk_m: grumpkinScalarToFr(escrowKeys.masterIncomingViewingSecretKey),
-      ovsk_m: grumpkinScalarToFr(escrowKeys.masterOutgoingViewingSecretKey),
-      tsk_m: grumpkinScalarToFr(escrowKeys.masterTaggingSecretKey),
-    };
   });
 
   beforeEach(async () => {
@@ -172,8 +157,8 @@ describe('Escrow', () => {
   });
 
   describe('secret_keys_to_public_keys', () => {
-    it('derives escrow public keys from private keys correctly', async () => {
-      const circuitPublicKeys = await logic.methods.secret_keys_to_public_keys(secretKeys).simulate({ from: alice });
+    it('derives escrow public keys from secret key correctly', async () => {
+      const circuitPublicKeys = await logic.methods.secret_keys_to_public_keys(escrowSk).simulate({ from: alice });
 
       expect(new Fr(circuitPublicKeys.npk_m.inner.x).toString()).toBe(
         escrowKeys.publicKeys.masterNullifierPublicKey.x.toString(),
@@ -204,9 +189,9 @@ describe('Escrow', () => {
 
   describe('get_escrow', () => {
     it('should be able to get escrow address correctly', async () => {
-      const escrow_address = await logic.methods.get_escrow(secretKeys).simulate({ from: alice });
+      const escrow_address = await logic.methods.get_escrow(escrowSk).simulate({ from: alice });
 
-      const publicKeys = await logic.methods.secret_keys_to_public_keys(secretKeys).simulate({ from: alice });
+      const publicKeys = await logic.methods.secret_keys_to_public_keys(escrowSk).simulate({ from: alice });
       const publicKeysObj = new PublicKeys(
         noirWrappedPointToPoint(publicKeys.npk_m),
         noirWrappedPointToPoint(publicKeys.ivpk_m),
@@ -222,9 +207,9 @@ describe('Escrow', () => {
     });
 
     it('get escrow with non zero deployer should fail', async () => {
-      const escrow_address = await logic.methods.get_escrow(secretKeys).simulate({ from: alice });
+      const escrow_address = await logic.methods.get_escrow(escrowSk).simulate({ from: alice });
 
-      const publicKeys = await logic.methods.secret_keys_to_public_keys(secretKeys).simulate({ from: alice });
+      const publicKeys = await logic.methods.secret_keys_to_public_keys(escrowSk).simulate({ from: alice });
       const publicKeysObj = new PublicKeys(
         noirWrappedPointToPoint(publicKeys.npk_m),
         noirWrappedPointToPoint(publicKeys.ivpk_m),
@@ -241,9 +226,9 @@ describe('Escrow', () => {
     });
 
     it('get escrow with incorrect salt should fail', async () => {
-      const escrow_address = await logic.methods.get_escrow(secretKeys).simulate({ from: alice });
+      const escrow_address = await logic.methods.get_escrow(escrowSk).simulate({ from: alice });
 
-      const publicKeys = await logic.methods.secret_keys_to_public_keys(secretKeys).simulate({ from: alice });
+      const publicKeys = await logic.methods.secret_keys_to_public_keys(escrowSk).simulate({ from: alice });
       const publicKeysObj = new PublicKeys(
         noirWrappedPointToPoint(publicKeys.npk_m),
         noirWrappedPointToPoint(publicKeys.ivpk_m),
@@ -265,7 +250,7 @@ describe('Escrow', () => {
   describe('share_escrow', () => {
     it('should be able to share escrow correctly', async () => {
       // Share the escrow contract with bob
-      const tx = await logic.methods.share_escrow(bob, escrow.address, secretKeys).send({ from: alice });
+      const tx = await logic.methods.share_escrow(bob, escrow.address, escrowSk).send({ from: alice });
       const blockNumber = tx.blockNumber!;
 
       const events = await wallet.getPrivateEvents<EscrowDetailsLogContent>(
@@ -282,18 +267,15 @@ describe('Escrow', () => {
       const event = events[0].event;
 
       expect(event.escrow).toEqual(escrow.address);
-      expect(event.master_secret_keys.nsk_m).toEqual(escrowKeys.masterNullifierHidingKey.toBigInt());
-      expect(event.master_secret_keys.ivsk_m).toEqual(escrowKeys.masterIncomingViewingSecretKey.toBigInt());
-      expect(event.master_secret_keys.ovsk_m).toEqual(escrowKeys.masterOutgoingViewingSecretKey.toBigInt());
-      expect(event.master_secret_keys.tsk_m).toEqual(escrowKeys.masterTaggingSecretKey.toBigInt());
+      expect(event.secret_key).toEqual(escrowSk.toBigInt());
     });
 
     it('share escrow with multiple recipients correctly', async () => {
       // Share the escrow contract with bob
-      const txForBob = await logic.methods.share_escrow(bob, escrow.address, secretKeys).send({ from: alice });
+      const txForBob = await logic.methods.share_escrow(bob, escrow.address, escrowSk).send({ from: alice });
       const blockNumberBob = txForBob.blockNumber!;
 
-      const txForCarl = await logic.methods.share_escrow(carl, escrow.address, secretKeys).send({ from: alice });
+      const txForCarl = await logic.methods.share_escrow(carl, escrow.address, escrowSk).send({ from: alice });
       const blockNumberCarl = txForCarl.blockNumber!;
 
       const numberOfBlocks = blockNumberCarl - blockNumberBob + 1;
@@ -313,17 +295,11 @@ describe('Escrow', () => {
 
       const eventForBob = events[0].event;
       expect(eventForBob.escrow).toEqual(escrow.address);
-      expect(eventForBob.master_secret_keys.nsk_m).toEqual(escrowKeys.masterNullifierHidingKey.toBigInt());
-      expect(eventForBob.master_secret_keys.ivsk_m).toEqual(escrowKeys.masterIncomingViewingSecretKey.toBigInt());
-      expect(eventForBob.master_secret_keys.ovsk_m).toEqual(escrowKeys.masterOutgoingViewingSecretKey.toBigInt());
-      expect(eventForBob.master_secret_keys.tsk_m).toEqual(escrowKeys.masterTaggingSecretKey.toBigInt());
+      expect(eventForBob.secret_key).toEqual(escrowSk.toBigInt());
 
       const eventForCarl = events[1].event;
       expect(eventForCarl.escrow).toEqual(escrow.address);
-      expect(eventForCarl.master_secret_keys.nsk_m).toEqual(escrowKeys.masterNullifierHidingKey.toBigInt());
-      expect(eventForCarl.master_secret_keys.ivsk_m).toEqual(escrowKeys.masterIncomingViewingSecretKey.toBigInt());
-      expect(eventForCarl.master_secret_keys.ovsk_m).toEqual(escrowKeys.masterOutgoingViewingSecretKey.toBigInt());
-      expect(eventForCarl.master_secret_keys.tsk_m).toEqual(escrowKeys.masterTaggingSecretKey.toBigInt());
+      expect(eventForCarl.secret_key).toEqual(escrowSk.toBigInt());
     });
   });
 
@@ -369,14 +345,6 @@ describe('Escrow', () => {
 
       // Derive the keys from the secret key
       escrowKeys = await deriveKeys(escrowSk);
-
-      // Convert the keys to Fr
-      secretKeys = {
-        nsk_m: grumpkinScalarToFr(escrowKeys.masterNullifierHidingKey),
-        ivsk_m: grumpkinScalarToFr(escrowKeys.masterIncomingViewingSecretKey),
-        ovsk_m: grumpkinScalarToFr(escrowKeys.masterOutgoingViewingSecretKey),
-        tsk_m: grumpkinScalarToFr(escrowKeys.masterTaggingSecretKey),
-      };
     });
 
     let nft: NFTContract;

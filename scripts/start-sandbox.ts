@@ -32,7 +32,7 @@ export async function startSandbox(): Promise<{ stop: () => Promise<void> }> {
   console.log('🚀 Starting Aztec sandbox');
 
   // Spawn sandbox process
-  const process = spawn('aztec', ['start', '--sandbox', '--port', '8080'], {
+  const process = spawn('aztec', ['start', '--local-network'], {
     stdio: 'pipe',
   });
 

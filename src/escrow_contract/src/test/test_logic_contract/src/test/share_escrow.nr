@@ -21,7 +21,7 @@ unconstrained fn share_escrow_success() {
     let recipient = env.create_light_account();
     let sender = env.create_light_account();
 
-    let (_, msk, _, _) = logic_utils::get_test_vector();
+    let (_, secret_key, _, _) = logic_utils::get_test_vector();
 
     let secret = 1;
     let escrow = escrow_utils::deploy_escrow_with_secret(&mut env, secret);
@@ -35,5 +35,5 @@ unconstrained fn share_escrow_success() {
 
     // This will fail with "Escrow salt mismatch" because we cannot make
     // the escrow salt equal the logic contract address in test environment
-    env.call_private(sender, TestLogic::at(logic).share_escrow(recipient, escrow, msk));
+    env.call_private(sender, TestLogic::at(logic).share_escrow(recipient, escrow, secret_key));
 }
