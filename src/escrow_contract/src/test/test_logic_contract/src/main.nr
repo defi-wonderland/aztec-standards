@@ -10,7 +10,7 @@ contract TestLogic {
         protocol_types::{address::AztecAddress, public_keys::PublicKeys},
         state_vars::public_immutable::PublicImmutable,
     };
-    use escrow_contract::derivation::keys::secret_key_to_public_keys;
+    use escrow_contract::derivation::keys;
     use escrow_contract::library::logic::{_get_escrow, _share_escrow, _withdraw, _withdraw_nft};
 
     /// @notice Data privately emitted to an account that will use the escrow
@@ -92,6 +92,6 @@ contract TestLogic {
     /// @return PublicKeys containing the derived public keys.
     #[external("private")]
     fn secret_key_to_public_keys(secret_key: Field) -> PublicKeys {
-        secret_key_to_public_keys(secret_key)
+        keys::secret_key_to_public_keys(secret_key)
     }
 }
