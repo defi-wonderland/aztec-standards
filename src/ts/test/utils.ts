@@ -20,6 +20,7 @@ import {
   getContractInstanceFromInstantiationParams,
 } from '@aztec/aztec.js/contracts';
 import { AuthWitness, type ContractFunctionInteractionCallIntent } from '@aztec/aztec.js/authorization';
+import { EventSelector, decodeFromAbi } from '@aztec/aztec.js/abi';
 import { getDefaultInitializer, getInitializer } from '@aztec/stdlib/abi';
 import {
   CompleteAddress,
@@ -516,10 +517,6 @@ export type TransferEvent = {
  * Queries the node for public logs emitted in a transaction by a specific contract,
  * and decodes them as Transfer events.
  *
- * Public events emitted via `self.emit(Transfer { from, to, amount })` are stored as
- * `PublicLog { contractAddress, fields }` with layout [from, to, amount, eventSelector].
- * Logs are filtered by the Transfer event selector (0x70a1894e) to exclude non-Transfer logs.
- *
  * @param txHash - The transaction hash to query logs for.
  * @param contractAddress - The contract address to filter logs by.
  * @returns An array of decoded TransferEvent objects.
@@ -530,23 +527,16 @@ export async function getTransferEvents(txHash: TxHash, contractAddress: AztecAd
     contractAddress,
   });
 
-  // Transfer event selector: 0x70a1894e (sits at the end of the fields array)
-  const TRANSFER_SELECTOR = 0x70a1894en;
+  const eventMetadata = TokenContract.events.Transfer;
 
   return response.logs
     .filter((extLog) => {
-      const fields = extLog.log.fields;
-      // Only keep logs that match the Transfer event layout (4 fields, last is the selector)
-      return fields.length >= 4 && fields[3].toBigInt() === TRANSFER_SELECTOR;
+      const logFields = extLog.log.getEmittedFields();
+      // Match the Transfer event selector (last field)
+      return EventSelector.fromField(logFields[logFields.length - 1]).equals(eventMetadata.eventSelector);
     })
     .map((extLog) => {
-      const fields = extLog.log.fields;
-      // Public event field layout: [from, to, amount, eventSelector]
-      return {
-        from: AztecAddress.fromField(fields[0]),
-        to: AztecAddress.fromField(fields[1]),
-        amount: fields[2].toBigInt(),
-      };
+      return decodeFromAbi([eventMetadata.abiType], extLog.log.fields) as TransferEvent;
     });
 }
 
@@ -567,9 +557,9 @@ export async function expectTransferEvents(
 
   expect(events.length).toBe(expected.length);
   for (let i = 0; i < expected.length; i++) {
-    expect(events[i].from.toString()).toBe(expected[i].from.toString());
-    expect(events[i].to.toString()).toBe(expected[i].to.toString());
-    expect(events[i].amount).toBe(expected[i].amount);
+    expect(events[i].from).toEqual(expected[i].from);
+    expect(events[i].to).toEqual(expected[i].to);
+    expect(events[i].amount).toEqual(expected[i].amount);
   }
 }
 

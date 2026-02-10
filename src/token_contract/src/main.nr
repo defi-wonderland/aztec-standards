@@ -875,7 +875,7 @@ pub contract Token {
         ));
 
         // Mint shares to the recipient
-        self.internal._mint_to_public(to, shares); // Emits Transfer event
+        self.internal._mint_to_public(to, shares);
     }
 
     /// @notice Deposits the underlying asset from a public balance and receives shares to a private balance
@@ -897,7 +897,7 @@ pub contract Token {
         _validate_from_private::<5>(self.context, from);
 
         // Validate in public that `assets` is sufficient for the requested shares
-        self.enqueue_self.settle_deposit_public_to_private_internal(from, assets, shares, _nonce); // Emits Transfer event
+        self.enqueue_self.settle_deposit_public_to_private_internal(from, assets, shares, _nonce);
         // Increase recipient's private balance with `shares`
         self.internal._increase_private_balance(to, shares);
     }
@@ -930,7 +930,7 @@ pub contract Token {
         ));
 
         // Validate in public that `assets` is sufficient for the requested shares
-        self.enqueue_self.settle_deposit_private_to_private_internal(assets, shares); // Emits Transfer event
+        self.enqueue_self.settle_deposit_private_to_private_internal(assets, shares);
 
         // Increase recipient's private balance with `shares`
         self.internal._increase_private_balance(to, shares);
@@ -960,7 +960,7 @@ pub contract Token {
         ));
 
         // Calculate and mint shares to the recipient in public
-        self.enqueue_self.settle_deposit_private_to_public_internal(to, assets); // Emits Transfer event
+        self.enqueue_self.settle_deposit_private_to_public_internal(to, assets);
     }
 
     /// @notice Deposits the underlying asset from a public balance and receives shares to a private balance
@@ -997,7 +997,7 @@ pub contract Token {
             assets,
             min_shares,
             _nonce,
-        ); // Emits Transfer event
+        );
     }
 
     /// @notice Deposits the underlying asset from a private balance and receives shares to a private balance
@@ -1041,7 +1041,7 @@ pub contract Token {
             partial_note.to_field(),
             assets,
             min_shares,
-        ); // Emits Transfer event
+        );
     }
 
     /* ======================= ISSUE ========================== */
@@ -1079,7 +1079,7 @@ pub contract Token {
         ));
 
         // Mint shares to the recipient
-        self.internal._mint_to_public(to, shares); // Emits Transfer event
+        self.internal._mint_to_public(to, shares);
 
         // Refund
         let change = max_assets - assets; // Reverts with underflow if invalid
@@ -1117,7 +1117,7 @@ pub contract Token {
         self.internal._increase_private_balance(to, shares);
 
         // Validate the amount of assets transferred and send back any excess
-        self.enqueue_self.settle_issue_public_to_private_internal(from, shares, max_assets, _nonce); // Emits Transfer event
+        self.enqueue_self.settle_issue_public_to_private_internal(from, shares, max_assets, _nonce);
     }
 
     /// @notice Issues exactly the requested shares to a public balance and receives the underlying asset from a private balance
@@ -1158,7 +1158,7 @@ pub contract Token {
             shares,
             max_assets,
             to,
-        ); // Emits Transfer event
+        );
     }
 
     /// @notice Issues exactly the requested shares to a private balance and receives the underlying asset from a private balance
@@ -1202,7 +1202,7 @@ pub contract Token {
             asset_commitment,
             shares,
             max_assets,
-        ); // Emits Transfer event
+        );
     }
 
     /* ====================== WITHDRAW ======================== */
@@ -1227,7 +1227,7 @@ pub contract Token {
 
         // Order matters: transfer after burning to neutralize ERC-777 reentrancy via the `tokens_received` hook.
         // Burn the sender's shares
-        self.internal._burn_public(from, shares); // Emits Transfer event
+        self.internal._burn_public(from, shares);
 
         // Transfer the assets to the recipient
         self.call(Token::at(self.storage.asset.read()).transfer_public_to_public(
@@ -1254,7 +1254,7 @@ pub contract Token {
 
         // Order matters: transfer after burning to neutralize ERC-777 reentrancy via the `tokens_received` hook.
         // Calculate and burn the sender's shares
-        self.enqueue_self.settle_withdraw_public_to_private_internal(from, assets); // Emits Transfer event
+        self.enqueue_self.settle_withdraw_public_to_private_internal(from, assets);
 
         // Transfer the assets to the recipient in private
         self.call(Token::at(self.storage.asset.read()).transfer_public_to_private(
@@ -1288,7 +1288,7 @@ pub contract Token {
 
         // Order matters: transfer after burning to neutralize ERC-777 reentrancy via the `tokens_received` hook.
         // Validate that the shares-assets ratio is correct
-        self.enqueue_self.settle_withdraw_private_to_private_internal(assets, shares); // Emits Transfer event
+        self.enqueue_self.settle_withdraw_private_to_private_internal(assets, shares);
 
         // Transfer the assets to the recipient in private
         self.call(Token::at(self.storage.asset.read()).transfer_public_to_private(
@@ -1334,7 +1334,7 @@ pub contract Token {
             assets,
             max_shares,
             to,
-        ); // Emits Transfer event
+        );
     }
 
     /// @notice Withdraws an amount of the underlying asset from a private balance to a private balance
@@ -1372,7 +1372,7 @@ pub contract Token {
             partial_note.to_field(),
             assets,
             max_shares,
-        ); // Emits Transfer event
+        );
 
         // Transfer the assets to the recipient in private
         self.call(Token::at(self.storage.asset.read()).transfer_public_to_private(
@@ -1400,7 +1400,7 @@ pub contract Token {
 
         // Order matters: transfer after burning to neutralize ERC-777 reentrancy via the `tokens_received` hook.
         // Burn the sender's shares
-        self.internal._burn_public(from, shares); // Emits Transfer event
+        self.internal._burn_public(from, shares);
 
         // Transfer the assets to the recipient
         self.call(Token::at(self.storage.asset.read()).transfer_public_to_public(
@@ -1424,7 +1424,7 @@ pub contract Token {
         self.internal._decrease_private_balance(from, shares, INITIAL_TRANSFER_CALL_MAX_NOTES);
 
         // Burn shares and redeem public assets
-        self.enqueue_self.settle_redeem_private_to_public_internal(to, shares); // Emits Transfer event
+        self.enqueue_self.settle_redeem_private_to_public_internal(to, shares);
     }
 
     /// @notice Redeems an amount of the shares from a private balance to a private balance
@@ -1461,7 +1461,7 @@ pub contract Token {
             asset_commitment,
             shares,
             min_assets,
-        ); // Emits Transfer event
+        );
 
         // Transfer min_assets to the recipient
         self.call(Token::at(self.storage.asset.read()).transfer_public_to_private(
@@ -1504,7 +1504,7 @@ pub contract Token {
             asset_commitment,
             shares,
             min_assets,
-        ); // Emits Transfer event
+        );
 
         // Transfer min_assets to the recipient
         self.call(Token::at(self.storage.asset.read()).transfer_public_to_private(
@@ -1642,7 +1642,7 @@ pub contract Token {
         let total_assets = self.internal._total_assets();
         let shares = self.internal._convert_to_shares(assets, total_assets, ROUND_UP);
 
-        self.internal._burn_public(from, shares); // Emits Transfer event
+        self.internal._burn_public(from, shares);
     }
 
     /// @notice Validates that the requested shares amount is valid for the given assets
@@ -1705,7 +1705,7 @@ pub contract Token {
         let total_assets = self.internal._total_assets() - assets;
         let shares = self.internal._convert_to_shares(assets, total_assets, ROUND_DOWN);
 
-        self.internal._mint_to_public(to, shares); // Emits Transfer event
+        self.internal._mint_to_public(to, shares);
     }
 
     /// @notice Validates that the requested shares amount is valid for the deposited assets
@@ -1948,7 +1948,7 @@ pub contract Token {
         let total_assets = self.internal._total_assets();
         let assets = self.internal._convert_to_assets(shares, total_assets - max_assets, ROUND_UP);
 
-        self.internal._mint_to_public(to, shares); // Emits Transfer event
+        self.internal._mint_to_public(to, shares);
 
         let change = max_assets - assets; // Reverts with underflow if invalid
         if change > 0 {
@@ -2049,7 +2049,7 @@ pub contract Token {
         let assets = self.internal._convert_to_assets(shares, total_assets, ROUND_DOWN);
 
         // Burn the sender's shares
-        self.internal._burn_public(from, shares); // Emits Transfer event
+        self.internal._burn_public(from, shares);
 
         let outstanding_assets = assets - min_assets; // Reverts with underflow if invalid
         if outstanding_assets > 0 {
