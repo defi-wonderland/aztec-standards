@@ -35,7 +35,7 @@
     "@aztec/test-wallet": "3.0.0-devnet.6-patch.1",
     "@defi-wonderland/aztec-benchmark": "3.0.0-devnet.20251212",
     "@types/node": "22.5.1",
-    "sha512": "https://github.com/noir-lang/sha512"
+    "sha512": "github:noir-lang/sha512#e1c3a72"
   },
   "devDependencies": {
     "@types/jest": "29.5.11",
