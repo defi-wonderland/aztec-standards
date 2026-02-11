@@ -1,4 +1,4 @@
-version: 1.0.0
+# yaml-language-server: $schema=https://coderabbit.ai/integrations/schema.v2.json
 tone_instructions: >
   Be direct and technical. Focus on security, correctness, and privacy
   implications in this Aztec/Noir smart contract codebase.
