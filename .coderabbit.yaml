@@ -20,7 +20,7 @@ reviews:
     - "!target/**"
     - "!node_modules/**"
     - "!store/**"
-    - "!store-*/**"
+    - "!pxe-*/**"
     - "!codegenCache.json"
     - "!yarn.lock"
     - "!benchmarks/*.json"
@@ -72,7 +72,6 @@ reviews:
     - path: "src/**/types/**/*.nr"
       instructions: >
         Custom Noir type definitions for Aztec contracts. Verify:
-        - Types implement required traits (NoteHash, Serialize, Deserialize).
         - Note types have correct field layouts for nullifier computation.
         - BalanceSet operations handle multi-note edge cases.
         - No unnecessary public exposure of private state types.
@@ -86,7 +85,6 @@ reviews:
         - Edge cases (zero amounts, max values, self-transfers).
         - Proper use of `env.advance_block_by(1)` after private operations.
         - `#[test(should_fail_with = "...")]` for expected failures with correct messages.
-        - All test functions must be `unconstrained fn`.
 
     - path: "src/**/test/utils.nr"
       instructions: >
@@ -102,8 +100,9 @@ reviews:
         - Tests use generated artifacts from the artifacts/ directory.
         - PXE setup and teardown in lifecycle hooks (beforeAll/afterAll).
         - Wallet management uses AccountWalletWithSecretKey.
-        - Transaction execution follows `.send().wait()` pattern.
+        - Transaction execution follows `.send().wait()` pattern (note: `.wait()` is dropped in v4).
         - Error handling tests verify revert messages.
+        - Flag tests that duplicate Noir unit test coverage to avoid redundancy.
 
     - path: "benchmarks/**/*.ts"
       instructions: >
@@ -126,6 +125,13 @@ reviews:
         - Dependencies match the project Aztec version (check package.json config.aztecVersion).
         - Workspace members in root Nargo.toml include all contract packages.
         - Package names follow snake_case naming conventions.
+
+    - path: "package.json"
+      instructions: >
+        Project configuration. Verify:
+        - All @aztec/* dependency versions are aligned with each other.
+        - packageManager field is present and matches the expected Yarn version.
+        - Node.js engine requirements are specified (>=22).
 
     - path: ".github/workflows/**"
       instructions: >
