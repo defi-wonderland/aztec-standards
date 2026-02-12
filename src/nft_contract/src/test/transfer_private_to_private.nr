@@ -1,6 +1,7 @@
 use crate::NFT;
 use crate::test::utils;
 use aztec::test::helpers::authwit as authwit_cheatcodes;
+use generic_proxy::GenericProxy;
 
 #[test]
 unconstrained fn nft_transfer_private_to_private_success() {
@@ -47,8 +48,8 @@ unconstrained fn nft_transfer_private_to_private_self_success() {
 unconstrained fn nft_transfer_private_to_private_authorized_success() {
     // Setup with account contracts and mint NFT to owner
     let token_id = 10000;
-    let (env, nft_contract_address, owner, _, recipient) =
-        utils::setup_and_mint_to_private(true, token_id);
+    let (env, nft_contract_address, owner, _, recipient, proxy) =
+        utils::setup_and_mint_to_private_with_proxy(token_id);
 
     // Verify initial ownership
     utils::assert_owns_private_nft(env, nft_contract_address, owner, token_id);
@@ -57,16 +58,18 @@ unconstrained fn nft_transfer_private_to_private_authorized_success() {
     let transfer_call_interface =
         NFT::at(nft_contract_address).transfer_private_to_private(owner, recipient, token_id, 1);
 
-    // Add authorization witness from owner to recipient
-    authwit_cheatcodes::add_private_authwit_from_call(
-        env,
-        owner,
-        recipient,
-        transfer_call_interface,
-    );
+    // Add authorization witness from owner to proxy
+    authwit_cheatcodes::add_private_authwit_from_call(env, owner, proxy, transfer_call_interface);
 
-    // Impersonate recipient to perform the authorized transfer
-    env.call_private(recipient, transfer_call_interface);
+    // Owner calls via proxy so msg_sender is proxy (triggering authwit) but owner's notes remain in scope
+    env.call_private(
+        owner,
+        GenericProxy::at(proxy).forward_private_4(
+            transfer_call_interface.target_contract,
+            transfer_call_interface.selector,
+            transfer_call_interface.args,
+        ),
+    );
 
     // Verify ownership transfer
     utils::assert_private_nft_nullified(env, nft_contract_address, owner, token_id);
@@ -95,38 +98,52 @@ unconstrained fn nft_transfer_private_to_private_non_existent_fail() {
 unconstrained fn nft_transfer_private_to_private_unauthorized_fail() {
     // Setup with account contracts
     let token_id = 10000;
-    let (env, nft_contract_address, owner, _, recipient) =
-        utils::setup_and_mint_to_private(true, token_id);
+    let (env, nft_contract_address, owner, _, recipient, proxy) =
+        utils::setup_and_mint_to_private_with_proxy(token_id);
 
     // Create transfer interface with non-zero nonce
     let transfer_call_interface =
         NFT::at(nft_contract_address).transfer_private_to_private(owner, recipient, token_id, 1);
 
-    // Impersonate recipient but DON'T add authorization witness
-    env.call_private(recipient, transfer_call_interface);
+    // Owner calls via proxy but DON'T add authorization witness
+    env.call_private(
+        owner,
+        GenericProxy::at(proxy).forward_private_4(
+            transfer_call_interface.target_contract,
+            transfer_call_interface.selector,
+            transfer_call_interface.args,
+        ),
+    );
 }
 
 #[test(should_fail_with = "Unknown auth witness for message hash")]
 unconstrained fn nft_transfer_private_to_private_wrong_authwit_fail() {
     // Setup with account contracts
     let token_id = 10000;
-    let (env, nft_contract_address, owner, _, recipient) =
-        utils::setup_and_mint_to_private(true, token_id);
+    let (env, nft_contract_address, owner, _, _, proxy) =
+        utils::setup_and_mint_to_private_with_proxy(token_id);
 
     // Create transfer interface with non-zero nonce
     let transfer_call_interface =
-        NFT::at(nft_contract_address).transfer_private_to_private(owner, recipient, token_id, 1);
+        NFT::at(nft_contract_address).transfer_private_to_private(owner, owner, token_id, 1);
 
-    // Add authorization witness but to the wrong address (owner instead of recipient)
+    // Add authorization witness but to the wrong address (owner instead of proxy)
     authwit_cheatcodes::add_private_authwit_from_call(
         env,
         owner,
-        owner, // Wrong address - should be recipient
+        owner, // Wrong address - should be proxy
         transfer_call_interface,
     );
 
-    // Impersonate recipient
-    env.call_private(recipient, transfer_call_interface);
+    // Owner calls via proxy
+    env.call_private(
+        owner,
+        GenericProxy::at(proxy).forward_private_4(
+            transfer_call_interface.target_contract,
+            transfer_call_interface.selector,
+            transfer_call_interface.args,
+        ),
+    );
 }
 
 #[test(should_fail_with = "nft not found in private to public")]

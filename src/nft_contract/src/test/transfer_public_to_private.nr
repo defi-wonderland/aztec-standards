@@ -4,6 +4,7 @@ use aztec::{
     oracle::random::random, protocol::address::AztecAddress,
     test::helpers::authwit as authwit_cheatcodes,
 };
+use generic_proxy::GenericProxy;
 
 #[test]
 unconstrained fn nft_transfer_public_to_private_success() {
@@ -31,23 +32,25 @@ unconstrained fn nft_transfer_public_to_private_success() {
 unconstrained fn nft_transfer_public_to_private_authorized_success() {
     // Setup with account contracts (needed for authwits) and mint NFT to owner
     let token_id = 10000;
-    let (env, nft_contract_address, owner, _, recipient) =
-        utils::setup_and_mint_to_public(true, token_id);
+    let (env, nft_contract_address, owner, _, recipient, proxy) =
+        utils::setup_and_mint_to_public_with_proxy(token_id);
 
     // Create the transfer call interface
     let transfer_call_interface =
         NFT::at(nft_contract_address).transfer_public_to_private(owner, recipient, token_id, 1);
 
-    // Add authorization witness from owner to recipient
-    authwit_cheatcodes::add_private_authwit_from_call(
-        env,
-        owner,
-        recipient,
-        transfer_call_interface,
-    );
+    // Add authorization witness from owner to proxy
+    authwit_cheatcodes::add_private_authwit_from_call(env, owner, proxy, transfer_call_interface);
 
-    // Impersonate recipient to perform the authorized transfer
-    env.call_private(recipient, transfer_call_interface);
+    // Owner calls via proxy so msg_sender is proxy (triggering authwit) but owner's notes remain in scope
+    env.call_private(
+        owner,
+        GenericProxy::at(proxy).forward_private_4(
+            transfer_call_interface.target_contract,
+            transfer_call_interface.selector,
+            transfer_call_interface.args,
+        ),
+    );
 
     // Verify the NFT is no longer owned publicly by owner
     utils::assert_owns_public_nft(env, nft_contract_address, AztecAddress::zero(), token_id);
@@ -77,8 +80,8 @@ unconstrained fn nft_transfer_public_to_private_not_owned_fail() {
 unconstrained fn nft_transfer_public_to_private_unauthorized_fail() {
     // Setup with account contracts for proper authorization testing
     let token_id = 10000;
-    let (env, nft_contract_address, owner, _, recipient) =
-        utils::setup_and_mint_to_public(true, token_id);
+    let (env, nft_contract_address, owner, _, recipient, proxy) =
+        utils::setup_and_mint_to_public_with_proxy(token_id);
 
     // Create transfer interface with non-zero nonce (indicating authorization needed)
     let transfer_call_interface = NFT::at(nft_contract_address).transfer_public_to_private(
@@ -88,8 +91,13 @@ unconstrained fn nft_transfer_public_to_private_unauthorized_fail() {
         random(),
     );
 
-    // Impersonate recipient but DON'T add authorization witness
-    // This test verifies that without an authorization witness (authwit),
-    // the recipient cannot transfer the NFT on behalf of the owner
-    env.call_private(recipient, transfer_call_interface);
+    // Owner calls via proxy but DON'T add authorization witness
+    env.call_private(
+        owner,
+        GenericProxy::at(proxy).forward_private_4(
+            transfer_call_interface.target_contract,
+            transfer_call_interface.selector,
+            transfer_call_interface.args,
+        ),
+    );
 }
