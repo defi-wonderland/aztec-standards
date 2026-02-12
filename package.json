@@ -32,7 +32,7 @@
     "@aztec/pxe": "4.0.0-nightly.20260211",
     "@aztec/stdlib": "4.0.0-nightly.20260211",
     "@aztec/test-wallet": "4.0.0-nightly.20260211",
-    "@defi-wonderland/aztec-benchmark": "github:defi-wonderland/aztec-benchmark#chore/v4"
+    "@defi-wonderland/aztec-benchmark": "github:defi-wonderland/aztec-benchmark#feat/upgrade-nightly.20260211"
   },
   "devDependencies": {
     "@commitlint/cli": "20.3.1",
