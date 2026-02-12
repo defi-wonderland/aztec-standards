@@ -6,7 +6,6 @@ import { AztecAddress } from '@aztec/aztec.js/addresses';
 import { type TestWallet } from '@aztec/test-wallet/server';
 import { BlockNumber } from '@aztec/foundation/branded-types';
 import { ContractDeployer } from '@aztec/aztec.js/deployment';
-import { type AztecLMDBStoreV2 } from '@aztec/kv-store/lmdb-v2';
 import { Fr, type GrumpkinScalar, Point } from '@aztec/aztec.js/fields';
 import {
   getContractInstanceFromInstantiationParams,
@@ -53,7 +52,7 @@ const noirWrappedPointToPoint = (wrapped: NoirWrappedPoint) =>
   new Point(new Fr(wrapped.inner.x), new Fr(wrapped.inner.y), !!wrapped.inner.is_infinite);
 
 describe('Escrow', () => {
-  let store: AztecLMDBStoreV2;
+  let cleanup: () => Promise<void>;
   let node: AztecNode;
 
   let wallet: TestWallet;
@@ -87,7 +86,7 @@ describe('Escrow', () => {
   };
 
   beforeAll(async () => {
-    ({ store, node, wallet, accounts } = await setupTestSuite());
+    ({ cleanup, node, wallet, accounts } = await setupTestSuite());
 
     [alice, bob, carl] = accounts;
 
@@ -131,7 +130,7 @@ describe('Escrow', () => {
   });
 
   afterAll(async () => {
-    await store.delete();
+    await cleanup();
   });
 
   describe('Deployment', () => {
@@ -352,12 +351,12 @@ describe('Escrow', () => {
   });
 
   describe('withdraw NFT', () => {
-    // Without resetting the store, the test fails with this error:
+    // Without resetting the PXE, the test fails with this error:
     // Simulation error: Array must contain at most 100 element(s) (0)
     // at SchnorrAccount.entrypoint
     beforeAll(async () => {
-      await store.delete();
-      ({ store, node, wallet, accounts } = await setupTestSuite());
+      await cleanup();
+      ({ cleanup, node, wallet, accounts } = await setupTestSuite());
 
       [alice, bob, carl] = accounts;
 

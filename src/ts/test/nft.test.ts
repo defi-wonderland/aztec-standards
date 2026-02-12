@@ -10,7 +10,6 @@ import { Fr } from '@aztec/aztec.js/fields';
 import { AztecAddress } from '@aztec/aztec.js/addresses';
 import { type TestWallet } from '@aztec/test-wallet/server';
 import { ContractDeployer } from '@aztec/aztec.js/deployment';
-import { type AztecLMDBStoreV2 } from '@aztec/kv-store/lmdb-v2';
 import { getContractInstanceFromInstantiationParams } from '@aztec/aztec.js/contracts';
 import {
   ContractFunctionInteractionCallIntent,
@@ -24,7 +23,7 @@ import { NFTContract, NFTContractArtifact } from '../../../src/artifacts/NFT.js'
 const TEST_TIMEOUT = 300_000;
 
 describe('NFT', () => {
-  let store: AztecLMDBStoreV2;
+  let cleanup: () => Promise<void>;
   let wallet: TestWallet;
   let accounts: AztecAddress[];
 
@@ -35,7 +34,7 @@ describe('NFT', () => {
   let nft: NFTContract;
 
   beforeAll(async () => {
-    ({ store, wallet, accounts } = await setupTestSuite());
+    ({ cleanup, wallet, accounts } = await setupTestSuite());
 
     [alice, bob, carl] = accounts;
   });
@@ -45,7 +44,7 @@ describe('NFT', () => {
   });
 
   afterAll(async () => {
-    await store.delete();
+    await cleanup();
   });
 
   it(

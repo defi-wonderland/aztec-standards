@@ -27,9 +27,7 @@ import {
   computeContractAddressFromInstance,
 } from '@aztec/stdlib/contract';
 
-import { createStore } from '@aztec/kv-store/lmdb-v2';
 import { getPXEConfig } from '@aztec/pxe/server';
-import { type AztecLMDBStoreV2 } from '@aztec/kv-store/lmdb-v2';
 
 import { TokenContract } from '../../../src/artifacts/Token.js';
 import { NFTContract } from '../../../src/artifacts/NFT.js';
@@ -40,41 +38,44 @@ import { expect } from 'vitest';
 
 export const logger = createLogger('aztec:aztec-standards');
 
+import { randomBytes } from 'node:crypto';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { rmSync } from 'node:fs';
+
 const { NODE_URL = 'http://localhost:8080' } = process.env;
 const node = createAztecNodeClient(NODE_URL);
 await waitForNode(node);
-const { PXE_VERSION = '2' } = process.env;
-const pxeVersion = parseInt(PXE_VERSION);
-const l1Contracts = await node.getL1ContractAddresses();
 const config = getPXEConfig();
-let fullConfig = { ...config, l1Contracts };
 
 /**
- * Setup the store, node, wallet and accounts
- * @param suffix - optional - The suffix to use for the store directory.
+ * Setup the node, wallet and accounts.
+ * Lets createPXE handle store creation and l1Contracts fetching internally.
  * @param proverEnabled - optional - Whether to enable the prover, used for benchmarking.
- * @returns The store, node, wallet and accounts
+ * @returns The node, wallet, accounts, and a cleanup function.
  */
-export const setupTestSuite = async (suffix?: string, proverEnabled: boolean = false) => {
-  const storeDir = suffix ? `store-${suffix}` : 'store';
+export const setupTestSuite = async (proverEnabled: boolean = false) => {
+  const dataDirectory = join(tmpdir(), `aztec-standards-${randomBytes(8).toString('hex')}`);
+  const pxeConfig = { ...config, dataDirectory, proverEnabled };
 
-  fullConfig = { ...fullConfig, dataDirectory: storeDir, dataStoreMapSizeKb: 1e6 };
-
-  // Create the store for manual cleanups
-  const store: AztecLMDBStoreV2 = await createStore('pxe_data', pxeVersion, {
-    dataDirectory: storeDir,
-    dataStoreMapSizeKb: 1e6,
-  });
-
-  const wallet: TestWallet = await TestWallet.create(node, { ...fullConfig, proverEnabled }, { store });
+  const wallet: TestWallet = await TestWallet.create(node, pxeConfig);
 
   const accounts: AztecAddress[] = await registerInitialLocalNetworkAccountsInWallet(wallet);
 
+  const cleanup = async () => {
+    await wallet.stop();
+    try {
+      rmSync(dataDirectory, { recursive: true, force: true });
+    } catch {
+      // ignore cleanup errors
+    }
+  };
+
   return {
-    store,
     node,
     wallet,
     accounts,
+    cleanup,
   };
 };
 

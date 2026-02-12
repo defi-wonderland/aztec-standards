@@ -11,13 +11,12 @@ import { describe, it, expect, beforeAll, beforeEach, afterAll } from 'vitest';
 
 import { setupTestSuite, AMOUNT, deployTokenWithMinter, initializeTransferCommitment } from './utils.js';
 
-import { type AztecLMDBStoreV2 } from '@aztec/kv-store/lmdb-v2';
 import { TokenContractArtifact, TokenContract } from '../../../src/artifacts/Token.js';
 
 const TEST_TIMEOUT = 300_000;
 
 describe('Token', () => {
-  let store: AztecLMDBStoreV2;
+  let cleanup: () => Promise<void>;
 
   let wallet: TestWallet;
   let accounts: AztecAddress[];
@@ -29,7 +28,7 @@ describe('Token', () => {
   let token: TokenContract;
 
   beforeAll(async () => {
-    ({ store, wallet, accounts } = await setupTestSuite());
+    ({ cleanup, wallet, accounts } = await setupTestSuite());
 
     [alice, bob, carl] = accounts;
   });
@@ -39,7 +38,7 @@ describe('Token', () => {
   });
 
   afterAll(async () => {
-    await store.delete();
+    await cleanup();
   });
 
   it(
