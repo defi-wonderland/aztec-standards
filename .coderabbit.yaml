@@ -108,7 +108,7 @@ reviews:
     - path: "benchmarks/**/*.ts"
       instructions: >
         Performance benchmark files. Ensure benchmark operations are realistic
-        and cover critical paths (mint, transfer, burn) for each contract type.
+        and cover critical paths (i.e. mint, transfer, burn) for each contract type.
 
     - path: "src/escrow_contract/**/*.nr"
       instructions: >
