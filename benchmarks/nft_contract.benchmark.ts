@@ -87,9 +87,4 @@ export default class NFTContractBenchmark extends Benchmark {
 
     return methods.filter(Boolean);
   }
-
-  async teardown(context: NFTBenchmarkContext): Promise<void> {
-    await context.store.delete();
-    process.exit(0);
-  }
 }

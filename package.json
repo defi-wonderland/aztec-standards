@@ -10,6 +10,7 @@
   "type": "module",
   "scripts": {
     "postinstall": "husky",
+    "build": "bash scripts/build-package.sh",
     "clean": "rm -rf ./src/artifacts ./target codegenCache.json",
     "codegen": "aztec codegen target --outdir src/artifacts -f",
     "compile": "aztec compile",
@@ -18,8 +19,7 @@
     "test:nr": "aztec test",
     "lint:prettier": "prettier '**/*.{js,ts}' --write",
     "bench": "NODE_NO_WARNINGS=1 aztec-benchmark --suffix _base",
-    "ccc": "yarn clean && yarn compile && yarn codegen",
-    "generate-release-artifacts": "tsc artifacts/*.ts --outDir dist/ --skipLibCheck --target es2020 --module nodenext --moduleResolution nodenext --resolveJsonModule --declaration"
+    "ccc": "yarn clean && yarn compile && yarn codegen"
   },
   "lint-staged": {
     "*.ts": "prettier --write -u"
@@ -32,7 +32,7 @@
     "@aztec/pxe": "4.0.0-nightly.20260204",
     "@aztec/stdlib": "4.0.0-nightly.20260204",
     "@aztec/test-wallet": "4.0.0-nightly.20260204",
-    "@defi-wonderland/aztec-benchmark": "github:defi-wonderland/aztec-benchmark#chore/v4"
+    "@defi-wonderland/aztec-benchmark": "https://github.com/defi-wonderland/aztec-benchmark/releases/download/prerelease-65a679a/defi-wonderland-aztec-benchmark-4.0.0-devnet.1-patch.0-prerelease.65a679a.tgz"
   },
   "devDependencies": {
     "@commitlint/cli": "20.3.1",
