@@ -26,8 +26,7 @@ unconstrained fn burn_private_on_behalf_of_other() {
     let burn_amount = mint_amount / 10;
 
     // Burn on behalf of other
-    let burn_call =
-        Token::at(token_contract_address).burn_private(owner, burn_amount, random());
+    let burn_call = Token::at(token_contract_address).burn_private(owner, burn_amount, random());
     authwit_cheatcodes::add_private_authwit_from_call(env, owner, proxy, burn_call);
     // Burn tokens via proxy -- trait-based: call.via_proxy(address) returns a proxy PrivateCall
     env.call_private(owner, burn_call.via_proxy(proxy));
@@ -56,8 +55,7 @@ unconstrained fn burn_private_failure_on_behalf_of_other_more_than_balance() {
 
     // Burn more than balance
     let burn_amount = mint_amount * (10 as u128);
-    let burn_call =
-        Token::at(token_contract_address).burn_private(owner, burn_amount, random());
+    let burn_call = Token::at(token_contract_address).burn_private(owner, burn_amount, random());
     authwit_cheatcodes::add_private_authwit_from_call(env, owner, proxy, burn_call);
     env.call_private(owner, burn_call.via_proxy(proxy));
 }
@@ -69,8 +67,7 @@ unconstrained fn burn_private_failure_on_behalf_of_other_without_approval() {
 
     let burn_amount = mint_amount / (10 as u128);
     // Burn on behalf of other without adding authwit
-    let burn_call =
-        Token::at(token_contract_address).burn_private(owner, burn_amount, random());
+    let burn_call = Token::at(token_contract_address).burn_private(owner, burn_amount, random());
     env.call_private(owner, burn_call.via_proxy(proxy));
 }
 
@@ -80,8 +77,7 @@ unconstrained fn burn_private_failure_on_behalf_of_other_wrong_designated_caller
         utils::setup_and_mint_to_public_with_proxy();
 
     let burn_amount = mint_amount / (10 as u128);
-    let burn_call =
-        Token::at(token_contract_address).burn_private(owner, burn_amount, random());
+    let burn_call = Token::at(token_contract_address).burn_private(owner, burn_amount, random());
     // Add authwit with wrong caller (owner instead of proxy)
     authwit_cheatcodes::add_private_authwit_from_call(env, owner, owner, burn_call);
     env.call_private(owner, burn_call.via_proxy(proxy));

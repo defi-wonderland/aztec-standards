@@ -28,10 +28,6 @@ pub trait ViaProxy<R> {
 // forward_private_3 serializes (AztecAddress, FunctionSelector, [Field; 3]) = 5 fields
 impl<let M: u32> ViaProxy<PrivateCall<17, 5, ()>> for PrivateCall<M, 3, ()> {
     fn via_proxy(self, proxy: AztecAddress) -> PrivateCall<17, 5, ()> {
-        GenericProxy::at(proxy).forward_private_3(
-            self.target_contract,
-            self.selector,
-            self.args,
-        )
+        GenericProxy::at(proxy).forward_private_3(self.target_contract, self.selector, self.args)
     }
 }
