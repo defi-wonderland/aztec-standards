@@ -28,6 +28,7 @@ import {
 } from '@aztec/stdlib/contract';
 
 import { getPXEConfig } from '@aztec/pxe/server';
+import { Barretenberg } from '@aztec/bb.js';
 
 import { TokenContract } from '../../../src/artifacts/Token.js';
 import { NFTContract } from '../../../src/artifacts/NFT.js';
@@ -55,6 +56,12 @@ const config = getPXEConfig();
  * @returns The node, wallet, accounts, and a cleanup function.
  */
 export const setupTestSuite = async (proverEnabled: boolean = false) => {
+  // Reset Barretenberg singleton so a fresh socket is created. Needed when aztec-benchmark's
+  // cleanup destroys all sockets (including the prover's), causing EPIPE on the next benchmark.
+  if (proverEnabled) {
+    await Barretenberg.destroySingleton();
+  }
+
   const dataDirectory = join(tmpdir(), `aztec-standards-${randomBytes(8).toString('hex')}`);
   const pxeConfig = { ...config, dataDirectory, proverEnabled };
 
