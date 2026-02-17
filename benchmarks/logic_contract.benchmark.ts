@@ -110,6 +110,5 @@ export default class LogicContractBenchmark extends Benchmark {
 
   async teardown(context: LogicBenchmarkContext): Promise<void> {
     await context.cleanup();
-    process.exit(0);
   }
 }
