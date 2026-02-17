@@ -404,6 +404,26 @@ pub unconstrained fn authorize_transfer_public_to_public(
     );
 }
 
+// While authwits authorize a contract to perform an action, spending private notes still requires
+// knowledge of the note secrets. For private tokens, the note owner must be involved in the
+// transaction -- they cannot simply give another user an authwit and have that user spend the notes
+// independently. We deploy a proxy contract so that msg_sender in the target differs from the
+// caller, which is the condition that triggers authwit validation. We can't use another account for
+// this, since different scopes are enforced by TXE.
+pub unconstrained fn setup_and_mint_to_private_with_proxy() -> (TestEnvironment, AztecAddress, AztecAddress, AztecAddress, AztecAddress) {
+    let (mut env, token_contract_address, owner, recipient) =
+        setup_and_mint_to_private_without_minter(/* with_account_contracts */ true);
+    let proxy = env.deploy("@generic_proxy/GenericProxy").without_initializer();
+    (env, token_contract_address, owner, recipient, proxy)
+}
+
+pub unconstrained fn setup_and_mint_to_public_with_proxy() -> (TestEnvironment, AztecAddress, AztecAddress, AztecAddress, AztecAddress) {
+    let (mut env, token_contract_address, owner, recipient) =
+        setup_and_mint_to_public_without_minter(/* with_account_contracts */ true);
+    let proxy = env.deploy("@generic_proxy/GenericProxy").without_initializer();
+    (env, token_contract_address, owner, recipient, proxy)
+}
+
 /// @notice Returns the u128 maximum value
 pub unconstrained fn max_u128() -> u128 {
     (0 as u128).wrapping_sub(1)

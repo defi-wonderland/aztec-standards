@@ -1,10 +1,9 @@
 import { defineConfig } from 'vitest/config';
-import { fileURLToPath } from 'node:url';
+import { createRequire } from 'node:module';
 import { dirname, resolve as pathResolve } from 'node:path';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
-const nobleUtilsPath = pathResolve(__dirname, 'node_modules/@noble/hashes/esm/utils.js');
+const require = createRequire(import.meta.url);
+const nobleUtilsPath = require.resolve('@noble/hashes/utils');
 
 export default defineConfig({
   resolve: {

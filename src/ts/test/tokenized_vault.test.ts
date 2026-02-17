@@ -8,7 +8,6 @@ import {
 
 import { AztecAddress } from '@aztec/aztec.js/addresses';
 import { type TestWallet } from '@aztec/test-wallet/server';
-import { type AztecLMDBStoreV2 } from '@aztec/kv-store/lmdb-v2';
 import { type ContractFunctionInteraction } from '@aztec/aztec.js/contracts';
 
 import { describe, it, expect, beforeAll, beforeEach, afterAll } from 'vitest';
@@ -18,7 +17,7 @@ import { TokenContract } from '../../../src/artifacts/Token.js';
 const TEST_TIMEOUT = 300_000;
 
 describe('Tokenized Vault', () => {
-  let store: AztecLMDBStoreV2;
+  let cleanup: () => Promise<void>;
   let wallet: TestWallet;
   let accounts: AztecAddress[];
   let alice: AztecAddress;
@@ -61,7 +60,7 @@ describe('Tokenized Vault', () => {
   }
 
   beforeAll(async () => {
-    ({ store, wallet, accounts } = await setupTestSuite());
+    ({ cleanup, wallet, accounts } = await setupTestSuite());
 
     [alice, bob, carl] = accounts;
   });
@@ -72,7 +71,7 @@ describe('Tokenized Vault', () => {
   });
 
   afterAll(async () => {
-    await store.delete();
+    await cleanup();
   });
 
   describe('Successful interactions, no authwits.', () => {
