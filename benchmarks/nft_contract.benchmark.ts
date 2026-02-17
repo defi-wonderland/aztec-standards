@@ -26,10 +26,7 @@ export default class NFTContractBenchmark extends Benchmark {
   async setup(): Promise<NFTBenchmarkContext> {
     const { cleanup, wallet, accounts } = await setupTestSuite(true);
     const [deployer] = accounts;
-    const deployedBaseContract = await deployNFTWithMinter(wallet, deployer, {
-      universalDeploy: true,
-      from: deployer,
-    });
+    const deployedBaseContract = await deployNFTWithMinter(wallet, deployer);
     const nftContract = NFTContract.at(deployedBaseContract.address, wallet);
     return { cleanup, wallet, deployer, accounts, nftContract };
   }
