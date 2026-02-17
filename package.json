@@ -1,6 +1,6 @@
 {
   "name": "@defi-wonderland/aztec-standards",
-  "version": "4.0.0-nightly.20260204",
+  "version": "4.0.0-devnet.1-patch.0",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/defi-wonderland/aztec-standards.git"
@@ -10,6 +10,7 @@
   "type": "module",
   "scripts": {
     "postinstall": "husky",
+    "build": "bash scripts/build-package.sh",
     "clean": "rm -rf ./src/artifacts ./target codegenCache.json",
     "codegen": "aztec codegen target --outdir src/artifacts -f",
     "compile": "aztec compile",
@@ -18,21 +19,20 @@
     "test:nr": "aztec test",
     "lint:prettier": "prettier '**/*.{js,ts}' --write",
     "bench": "NODE_NO_WARNINGS=1 aztec-benchmark --suffix _base",
-    "ccc": "yarn clean && yarn compile && yarn codegen",
-    "generate-release-artifacts": "tsc artifacts/*.ts --outDir dist/ --skipLibCheck --target es2020 --module nodenext --moduleResolution nodenext --resolveJsonModule --declaration"
+    "ccc": "yarn clean && yarn compile && yarn codegen"
   },
   "lint-staged": {
     "*.ts": "prettier --write -u"
   },
   "dependencies": {
-    "@aztec/accounts": "4.0.0-nightly.20260204",
-    "@aztec/aztec.js": "4.0.0-nightly.20260204",
-    "@aztec/noir-contracts.js": "4.0.0-nightly.20260204",
-    "@aztec/protocol-contracts": "4.0.0-nightly.20260204",
-    "@aztec/pxe": "4.0.0-nightly.20260204",
-    "@aztec/stdlib": "4.0.0-nightly.20260204",
-    "@aztec/test-wallet": "4.0.0-nightly.20260204",
-    "@defi-wonderland/aztec-benchmark": "github:defi-wonderland/aztec-benchmark#chore/v4"
+    "@aztec/accounts": "4.0.0-devnet.1-patch.0",
+    "@aztec/aztec.js": "4.0.0-devnet.1-patch.0",
+    "@aztec/noir-contracts.js": "4.0.0-devnet.1-patch.0",
+    "@aztec/protocol-contracts": "4.0.0-devnet.1-patch.0",
+    "@aztec/pxe": "4.0.0-devnet.1-patch.0",
+    "@aztec/stdlib": "4.0.0-devnet.1-patch.0",
+    "@aztec/test-wallet": "4.0.0-devnet.1-patch.0",
+    "@defi-wonderland/aztec-benchmark": "4.0.0-devnet.1-patch.0"
   },
   "devDependencies": {
     "@commitlint/cli": "20.3.1",
@@ -46,7 +46,7 @@
     "vitest": "4.0.17"
   },
   "config": {
-    "aztecVersion": "4.0.0-nightly.20260204"
+    "aztecVersion": "4.0.0-devnet.1-patch.0"
   },
   "packageManager": "yarn@1.22.22+sha512.a6b2f7906b721bba3d67d4aff083df04dad64c399707841b7acf00f6b133b7ac24255f2652fa22ae3534329dc6180534e98d17432037ff6fd140556e2bb3137e"
 }

@@ -54,47 +54,8 @@ jobs:
             exit 1
           fi
 
-      - name: Compile artifacts to JS
-        run: |
-          mkdir -p dist/
-          yarn tsc artifacts/*.ts --outDir dist/ --skipLibCheck --target es2020 --module nodenext --moduleResolution nodenext --resolveJsonModule --declaration
-
-      - name: Inspect contracts
-        run: |
-          for f in target/*.json; do
-            [ -f "$f" ] || continue
-            aztec inspect-contract "$f"
-          done
-
-      # TODO: We do several things here:
-      # 1. Create artifacts directory
-      # 2. Copy compiled JS artifacts to artifacts/
-      # 3. Copy compiled Noir contracts (target/) to package root
-      # 4. Copy deployments.json to package root (if exists)
-      # 5. Copy README.md and LICENSE to package root
-      # 6. Create trimmed package.json
-      - name: Prepare files for release
-        run: |
-          VERSION=${{ github.event.inputs.version }}
-          mkdir -p export/${{ env.PROJECT_NAME }}/artifacts
-
-          # Copy the compiled JS files to artifacts/
-          cp -r dist/artifacts/* export/${{ env.PROJECT_NAME }}/artifacts/
-
-          # Copy compiled Noir contracts to package root
-          cp -r target export/${{ env.PROJECT_NAME }}/
-
-          # Copy deployments.json if it exists
-          if [ -f "src/deployments.json" ]; then
-            cp src/deployments.json export/${{ env.PROJECT_NAME }}/
-          else
-            echo "src/deployments.json not found, skipping copy"
-          fi
-          
-          cp README.md export/${{ env.PROJECT_NAME }}/
-          cp LICENSE export/${{ env.PROJECT_NAME }}/
-
-          cat package.json | jq --arg v "$VERSION" 'del(.scripts, .jest, ."lint-staged", .packageManager, .devDependencies, .dependencies, .engines, .resolutions) | .version=$v' > export/${{ env.PROJECT_NAME }}/package.json
+      - name: Build package
+        run: yarn build
 
       - name: Publish to NPM
         run: cd export/${{ env.PROJECT_NAME }} && npm publish --access public --tag latest
