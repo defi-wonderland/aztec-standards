@@ -1,6 +1,5 @@
 import type { Wallet } from '@aztec/aztec.js/wallet';
 import { AztecAddress } from '@aztec/aztec.js/addresses';
-import type { AztecLMDBStoreV2 } from '@aztec/kv-store/lmdb-v2';
 import type { ContractFunctionInteractionCallIntent } from '@aztec/aztec.js/authorization';
 
 import { parseUnits } from 'viem';
@@ -13,7 +12,7 @@ import { deployTokenWithMinter, initializeTransferCommitment, setupTestSuite } f
 
 // Extend the BenchmarkContext from the new package
 interface TokenBenchmarkContext extends BenchmarkContext {
-  store: AztecLMDBStoreV2;
+  cleanup: () => Promise<void>;
   wallet: Wallet;
   deployer: AztecAddress;
   accounts: AztecAddress[];
@@ -36,7 +35,7 @@ export default class TokenContractBenchmark extends Benchmark {
    */
 
   async setup(): Promise<TokenBenchmarkContext> {
-    const { store, wallet, accounts } = await setupTestSuite('bench-token', true);
+    const { cleanup, wallet, accounts } = await setupTestSuite(true);
     const [deployer] = accounts;
     const deployedBaseContract = await deployTokenWithMinter(wallet, deployer);
     const tokenContract = TokenContract.at(deployedBaseContract.address, wallet);
@@ -61,7 +60,7 @@ export default class TokenContractBenchmark extends Benchmark {
 
     const commitments = [commitment_1, commitment_2];
 
-    return { store, wallet, deployer, accounts, tokenContract, commitments };
+    return { cleanup, wallet, deployer, accounts, tokenContract, commitments };
   }
 
   /**
@@ -136,5 +135,9 @@ export default class TokenContractBenchmark extends Benchmark {
     ];
 
     return methods.filter(Boolean);
+  }
+
+  async teardown(context: TokenBenchmarkContext): Promise<void> {
+    await context.cleanup();
   }
 }
