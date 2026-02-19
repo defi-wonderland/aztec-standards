@@ -44,8 +44,16 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { rmSync } from 'node:fs';
 
-const { NODE_URL = 'http://localhost:8080' } = process.env;
-const node = createAztecNodeClient(NODE_URL);
+/** Default port for Aztec local network. */
+export const LOCAL_NETWORK_DEFAULT_PORT = 8080;
+export const DEFAULT_NODE_URL = `http://localhost:${LOCAL_NETWORK_DEFAULT_PORT}`;
+
+/** Returns the Aztec node URL. Reads NODE_URL from env; defaults to localhost:8080. */
+export function getNodeUrl(): string {
+  return process.env.NODE_URL ?? DEFAULT_NODE_URL;
+}
+
+const node = createAztecNodeClient(getNodeUrl());
 await waitForNode(node);
 const config = getPXEConfig();
 
