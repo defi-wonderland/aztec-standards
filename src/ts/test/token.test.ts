@@ -114,7 +114,7 @@ describe('Token', () => {
 
     const mintTx = await token.methods.mint_to_public(alice, AMOUNT).send({ from: alice });
 
-    // Assert mint event: Transfer(0x0, alice, AMOUNT)
+    // mint_to_public: Transfer(0x0, alice, AMOUNT)
     await expectTransferEvents(mintTx.txHash, token.address, [{ from: AztecAddress.ZERO, to: alice, amount: AMOUNT }]);
 
     // alice has tokens in public
@@ -138,7 +138,7 @@ describe('Token', () => {
       .methods.transfer_public_to_commitment(alice, commitment as bigint, AMOUNT, 0)
       .send({ from: alice });
 
-    // Assert commitment transfer event: Transfer(alice, PRIVATE_ADDRESS, AMOUNT)
+    // transfer_public_to_commitment: Transfer(alice, PRIVATE, AMOUNT)
     await expectTransferEvents(commitmentTx.txHash, token.address, [
       { from: alice, to: PRIVATE_ADDRESS, amount: AMOUNT },
     ]);
@@ -156,7 +156,7 @@ describe('Token', () => {
     // Mint tokens to Alice in public
     const mintTx = await token.withWallet(wallet).methods.mint_to_public(alice, AMOUNT).send({ from: alice });
 
-    // Assert mint event
+    // mint_to_public: Transfer(0x0, alice, AMOUNT)
     await expectTransferEvents(mintTx.txHash, token.address, [{ from: AztecAddress.ZERO, to: alice, amount: AMOUNT }]);
 
     // build transfer public to public call
@@ -183,7 +183,7 @@ describe('Token', () => {
     // Carl submits the action, using alice's authwit
     const transferTx = await action.send({ from: carl, authWitnesses: [authWitness] });
 
-    // Assert public transfer event: Transfer(alice, bob, AMOUNT)
+    // transfer_public_to_public: Transfer(alice, bob, AMOUNT)
     await expectTransferEvents(transferTx.txHash, token.address, [{ from: alice, to: bob, amount: AMOUNT }]);
 
     // Check balances, alice to should 0
@@ -196,7 +196,7 @@ describe('Token', () => {
     // setup balances
     const mintTx = await token.withWallet(wallet).methods.mint_to_public(alice, AMOUNT).send({ from: alice });
 
-    // Assert mint event
+    // mint_to_public: Transfer(0x0, alice, AMOUNT)
     await expectTransferEvents(mintTx.txHash, token.address, [{ from: AztecAddress.ZERO, to: alice, amount: AMOUNT }]);
 
     const toPrivateTx = await token
@@ -204,7 +204,7 @@ describe('Token', () => {
       .methods.transfer_public_to_private(alice, alice, AMOUNT, 0)
       .send({ from: alice });
 
-    // Assert transfer_public_to_private event: decrease_public_balance_internal emits Transfer(alice, PRIVATE_ADDRESS, AMOUNT)
+    // transfer_public_to_private: Transfer(alice, PRIVATE, AMOUNT)
     await expectTransferEvents(toPrivateTx.txHash, token.address, [
       { from: alice, to: PRIVATE_ADDRESS, amount: AMOUNT },
     ]);
@@ -230,7 +230,7 @@ describe('Token', () => {
 
     const privateTx = await action.send({ from: carl, authWitnesses: [witness] });
 
-    // transfer_private_to_private is purely private: no public events emitted
+    // transfer_private_to_private: (no public events)
     await expectTransferEvents(privateTx.txHash, token.address, []);
 
     expect(await token.methods.balance_of_private(alice).simulate({ from: alice })).toBe(0n);

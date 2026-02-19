@@ -589,6 +589,11 @@ export async function getTransferEvents(txHash: TxHash, contractAddress: AztecAd
  * Asserts that the Transfer events emitted by a specific contract in a transaction
  * match the expected events exactly (count and content, order-sensitive).
  *
+ * Comment convention above expectTransferEvents calls: `operation: [emitter ]Transfer(from, to, amount)[ + ...]`
+ * - Single emitter: `// mint_to_public: Transfer(0x0, alice, AMOUNT)`
+ * - Multi-emitter: `// deposit_public_to_public: asset Transfer(from, vault, assets) + vault Transfer(0x0, to, shares)`
+ * - No events: `// transfer_private_to_private: (no public events)`
+ *
  * @param txHash - The transaction hash to query logs for.
  * @param contractAddress - The contract address to filter logs by.
  * @param expected - The expected Transfer events in order.
