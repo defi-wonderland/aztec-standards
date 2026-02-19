@@ -1,3 +1,5 @@
+pub mod proxy_utils;
+
 use aztec::macros::aztec;
 
 #[aztec]
