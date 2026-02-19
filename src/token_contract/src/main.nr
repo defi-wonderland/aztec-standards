@@ -1,5 +1,4 @@
 pub mod test;
-pub mod types;
 
 use aztec::macros::aztec;
 
@@ -32,7 +31,7 @@ pub contract Token {
     // contract instance registry
     use contract_instance_registry::ContractInstanceRegistry;
     // private balance library
-    use crate::types::balance_set::BalanceSet;
+    use balance_set::BalanceSet;
 
     // gas-optimized max notes for initial transfer call
     global INITIAL_TRANSFER_CALL_MAX_NOTES: u32 = 2;

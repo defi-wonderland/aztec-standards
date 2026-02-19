@@ -1,10 +1,9 @@
 use crate::Token;
-use crate::types::balance_set::BalanceSet;
 use aztec::{
     note::{constants::MAX_NOTES_PER_PAGE, note_viewer_options::NoteViewerOptions},
     oracle::random::random,
     protocol::{address::AztecAddress, traits::Packable},
-    state_vars::OwnedStateVariable,
+    state_vars::{OwnedStateVariable, PrivateSet},
     test::helpers::test_environment::TestEnvironment,
 };
 use aztec::test::helpers::authwit as authwit_cheatcodes;
@@ -344,8 +343,9 @@ pub unconstrained fn get_private_balance_notes(
         let options =
             NoteViewerOptions::<UintNote, <UintNote as Packable>::N>::new().set_offset(offset);
         let private_balances_slot = Token::storage_layout().private_balances.slot;
-        let set: BalanceSet<_> = OwnedStateVariable::new(context, private_balances_slot, account);
-        let notes: BoundedVec<UintNote, MAX_NOTES_PER_PAGE> = set.set.view_notes(options);
+        let set: PrivateSet<UintNote, _> =
+            OwnedStateVariable::new(context, private_balances_slot, account);
+        let notes: BoundedVec<UintNote, MAX_NOTES_PER_PAGE> = set.view_notes(options);
         notes
     });
 

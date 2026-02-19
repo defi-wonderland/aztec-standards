@@ -235,6 +235,43 @@ export async function deployVaultAndAssetWithMinter(
   return [vaultContract, assetContract];
 }
 
+/**
+ * Deploys a vault with an optional initial deposit for inflation-attack protection.
+ */
+export async function deployVaultWithInitialDeposit(
+  wallet: Wallet,
+  deployer: AztecAddress,
+  assetContract: TokenContract,
+  initialDeposit: bigint,
+  depositor: AztecAddress,
+  options?: DeployOptions,
+): Promise<TokenContract> {
+  const vaultContract = (await TokenContract.deployWithOpts(
+    { method: 'constructor_with_asset', wallet },
+    'VaultToken',
+    'VT',
+    6,
+    assetContract.address,
+    1,
+    AztecAddress.ZERO,
+  ).send({ ...options, from: deployer })) as TokenContract;
+
+  if (initialDeposit > 0n) {
+    const transfer = assetContract.methods.transfer_public_to_public(
+      depositor,
+      vaultContract.address,
+      initialDeposit,
+      0,
+    );
+    await setPublicAuthWit(vaultContract.address, transfer, depositor, wallet as TestWallet);
+    await vaultContract.methods
+      .deposit_public_to_public(depositor, vaultContract.address, initialDeposit, 0)
+      .send({ from: depositor });
+  }
+
+  return vaultContract;
+}
+
 // --- Escrow Utils ---
 
 /**
