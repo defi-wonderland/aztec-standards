@@ -1,7 +1,7 @@
 use crate::Escrow;
 use crate::test::utils as escrow_utils;
 use aztec::oracle::get_contract_instance::get_contract_instance;
-use aztec::protocol_types::{address::AztecAddress, traits::FromField};
+use aztec::protocol::{address::AztecAddress, traits::FromField};
 use nft::{NFT, test::utils as nft_utils};
 
 // #[test]

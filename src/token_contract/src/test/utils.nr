@@ -1,16 +1,15 @@
 use crate::Token;
-use crate::types::balance_set::BalanceSet;
 use aztec::{
     note::{constants::MAX_NOTES_PER_PAGE, note_viewer_options::NoteViewerOptions},
     oracle::random::random,
-    protocol_types::{address::AztecAddress, traits::Packable},
-    state_vars::owned_state_variable::OwnedStateVariable,
+    protocol::{address::AztecAddress, traits::Packable},
+    state_vars::{OwnedStateVariable, PrivateSet},
     test::helpers::test_environment::TestEnvironment,
 };
 use aztec::test::helpers::authwit as authwit_cheatcodes;
 use std::ops::WrappingSub;
 use std::test::OracleMock;
-use uint_note::uint_note::UintNote;
+use uint_note::UintNote;
 
 pub global mint_amount: u128 = 10_000 as u128;
 
@@ -344,8 +343,9 @@ pub unconstrained fn get_private_balance_notes(
         let options =
             NoteViewerOptions::<UintNote, <UintNote as Packable>::N>::new().set_offset(offset);
         let private_balances_slot = Token::storage_layout().private_balances.slot;
-        let set: BalanceSet<_> = OwnedStateVariable::new(context, private_balances_slot, account);
-        let notes: BoundedVec<UintNote, MAX_NOTES_PER_PAGE> = set.set.view_notes(options);
+        let set: PrivateSet<UintNote, _> =
+            OwnedStateVariable::new(context, private_balances_slot, account);
+        let notes: BoundedVec<UintNote, MAX_NOTES_PER_PAGE> = set.view_notes(options);
         notes
     });
 
@@ -402,6 +402,26 @@ pub unconstrained fn authorize_transfer_public_to_public(
         caller,
         transfer_public_to_public_call_interface,
     );
+}
+
+// While authwits authorize a contract to perform an action, spending private notes still requires
+// knowledge of the note secrets. For private tokens, the note owner must be involved in the
+// transaction -- they cannot simply give another user an authwit and have that user spend the notes
+// independently. We deploy a proxy contract so that msg_sender in the target differs from the
+// caller, which is the condition that triggers authwit validation. We can't use another account for
+// this, since different scopes are enforced by TXE.
+pub unconstrained fn setup_and_mint_to_private_with_proxy() -> (TestEnvironment, AztecAddress, AztecAddress, AztecAddress, AztecAddress) {
+    let (mut env, token_contract_address, owner, recipient) =
+        setup_and_mint_to_private_without_minter(/* with_account_contracts */ true);
+    let proxy = env.deploy("@generic_proxy/GenericProxy").without_initializer();
+    (env, token_contract_address, owner, recipient, proxy)
+}
+
+pub unconstrained fn setup_and_mint_to_public_with_proxy() -> (TestEnvironment, AztecAddress, AztecAddress, AztecAddress, AztecAddress) {
+    let (mut env, token_contract_address, owner, recipient) =
+        setup_and_mint_to_public_without_minter(/* with_account_contracts */ true);
+    let proxy = env.deploy("@generic_proxy/GenericProxy").without_initializer();
+    (env, token_contract_address, owner, recipient, proxy)
 }
 
 /// @notice Returns the u128 maximum value

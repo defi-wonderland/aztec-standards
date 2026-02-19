@@ -1,7 +1,6 @@
 import type { Wallet } from '@aztec/aztec.js/wallet';
 import { AztecAddress } from '@aztec/aztec.js/addresses';
 import { AuthWitness } from '@aztec/aztec.js/authorization';
-import type { AztecLMDBStoreV2 } from '@aztec/kv-store/lmdb-v2';
 import type { ContractFunctionInteractionCallIntent } from '@aztec/aztec.js/authorization';
 
 import { parseUnits } from 'viem';
@@ -9,7 +8,7 @@ import { parseUnits } from 'viem';
 // Import the new Benchmark base class and context
 import { Benchmark, BenchmarkContext } from '@defi-wonderland/aztec-benchmark';
 
-import { TokenContract } from '../artifacts/Token.js';
+import { TokenContract } from '../src/artifacts/Token.js';
 import {
   deployVaultAndAssetWithMinter,
   setPrivateAuthWit,
@@ -19,7 +18,7 @@ import {
 
 // Extend the BenchmarkContext from the new package
 interface TokenBenchmarkContext extends BenchmarkContext {
-  store: AztecLMDBStoreV2;
+  cleanup: () => Promise<void>;
   wallet: Wallet;
   deployer: AztecAddress;
   accounts: AztecAddress[];
@@ -42,7 +41,7 @@ export default class TokenContractBenchmark extends Benchmark {
    * Creates wallet, gets accounts, and deploys the contract.
    */
   async setup(): Promise<TokenBenchmarkContext> {
-    const { store, wallet, accounts } = await setupTestSuite('bench-tokenized-vault', true);
+    const { cleanup, wallet, accounts } = await setupTestSuite(true);
     const [deployer] = accounts;
     const [deployedBaseContract, deployedAssetContract] = await deployVaultAndAssetWithMinter(wallet, deployer);
     const vaultContract = TokenContract.at(deployedBaseContract.address, wallet);
@@ -50,10 +49,10 @@ export default class TokenContractBenchmark extends Benchmark {
     const assetMethods = assetContract.withWallet(wallet).methods;
 
     // Mint initial asset supply to the deployer
-    await assetContract.withWallet(wallet).methods.mint_to_public(deployer, amt(100)).send({ from: deployer }).wait();
+    await assetContract.withWallet(wallet).methods.mint_to_public(deployer, amt(100)).send({ from: deployer });
     for (let i = 0; i < 6; i++) {
       // 1 Note per benchmark test so that a single full Note is used in each.
-      await assetContract.withWallet(wallet).methods.mint_to_private(deployer, amt(1)).send({ from: deployer }).wait();
+      await assetContract.withWallet(wallet).methods.mint_to_private(deployer, amt(1)).send({ from: deployer });
     }
 
     // Initialize shares total supply by depositing 1 asset and sending 1 share to the zero address
@@ -62,8 +61,7 @@ export default class TokenContractBenchmark extends Benchmark {
     await vaultContract
       .withWallet(wallet)
       .methods.deposit_public_to_public(deployer, AztecAddress.ZERO, amt(1), 1234)
-      .send({ from: deployer })
-      .wait();
+      .send({ from: deployer });
 
     /* ======================= PUBLIC AUTHWITS ========================== */
 
@@ -97,7 +95,7 @@ export default class TokenContractBenchmark extends Benchmark {
       authWitnesses.push(authWitness);
     }
 
-    return { store, wallet, deployer, accounts, vaultContract, assetContract, authWitnesses };
+    return { cleanup, wallet, deployer, accounts, vaultContract, assetContract, authWitnesses };
   }
 
   /**
@@ -240,7 +238,6 @@ export default class TokenContractBenchmark extends Benchmark {
   }
 
   async teardown(context: TokenBenchmarkContext): Promise<void> {
-    await context.store.delete();
-    process.exit(0);
+    await context.cleanup();
   }
 }

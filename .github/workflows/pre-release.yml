@@ -1,0 +1,14 @@
+name: Pre-Release
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  pre-release:
+    uses: defi-wonderland/aztec-ci-actions/.github/workflows/pre-release.yml@v0
+    with:
+      package-dir: export/@defi-wonderland/aztec-standards
+    secrets: inherit
+    permissions:
+      contents: write

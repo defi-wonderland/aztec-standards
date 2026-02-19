@@ -1,6 +1,8 @@
 node_modules
 target/
 artifacts/
+export/
+dist/
 log/
 .vscode
 .DS_Store

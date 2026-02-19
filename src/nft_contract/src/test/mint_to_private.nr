@@ -1,6 +1,6 @@
 use crate::NFT;
 use crate::test::utils;
-use aztec::protocol_types::address::AztecAddress;
+use aztec::protocol::address::AztecAddress;
 
 #[test]
 unconstrained fn nft_mint_to_private_success() {
