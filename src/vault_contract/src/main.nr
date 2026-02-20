@@ -11,10 +11,8 @@ pub contract TokenizedVault {
         context::PrivateContext,
         macros::{functions::{external, initializer, internal, only_self, view}, storage::storage},
         protocol::{
-            address::AztecAddress,
-            constants::CONTRACT_INSTANCE_REGISTRY_CONTRACT_ADDRESS,
-            contract_class_id::ContractClassId,
-            traits::FromField,
+            address::AztecAddress, constants::CONTRACT_INSTANCE_REGISTRY_CONTRACT_ADDRESS,
+            contract_class_id::ContractClassId, traits::FromField,
         },
         state_vars::PublicImmutable,
     };
@@ -75,7 +73,12 @@ pub contract TokenizedVault {
 
     /// @notice Deposits private assets and mints public shares
     #[external("private")]
-    fn deposit_private_to_public(from: AztecAddress, to: AztecAddress, assets: u128, _nonce: Field) {
+    fn deposit_private_to_public(
+        from: AztecAddress,
+        to: AztecAddress,
+        assets: u128,
+        _nonce: Field,
+    ) {
         _validate_from_private::<4>(self.context, from);
 
         self.call(Token::at(self.storage.asset.read()).transfer_private_to_public(
@@ -298,7 +301,8 @@ pub contract TokenizedVault {
 
     #[internal("public")]
     fn _convert_to_shares(assets: u128, total_assets: u128, rounding: bool) -> u128 {
-        let mul_term = assets * (self.internal._share_total_supply() + self.storage.vault_offset.read());
+        let mul_term =
+            assets * (self.internal._share_total_supply() + self.storage.vault_offset.read());
         let denominator = total_assets + 1;
         let mut shares = mul_term / denominator;
         if (rounding == ROUND_UP) & (mul_term % denominator > 0) {

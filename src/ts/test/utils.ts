@@ -31,6 +31,7 @@ import { getPXEConfig } from '@aztec/pxe/server';
 import { Barretenberg } from '@aztec/bb.js';
 
 import { TokenContract } from '../../../src/artifacts/Token.js';
+import { TokenizedVaultContract } from '../../../src/artifacts/TokenizedVault.js';
 import { NFTContract } from '../../../src/artifacts/NFT.js';
 import { TestLogicContract } from '../../../src/artifacts/TestLogic.js';
 import { EscrowContract } from '../../../src/artifacts/Escrow.js';
@@ -210,7 +211,11 @@ export async function deployVaultAndAssetWithMinter(
   wallet: Wallet,
   deployer: AztecAddress,
   options?: DeployOptions,
-): Promise<[Contract, Contract]> {
+): Promise<{
+  vaultContract: TokenizedVaultContract;
+  assetContract: TokenContract;
+  vaultTokenContract: TokenContract;
+}> {
   const assetContract = await TokenContract.deployWithOpts(
     { method: 'constructor_with_minter', wallet },
     'PrivateToken',
@@ -220,17 +225,26 @@ export async function deployVaultAndAssetWithMinter(
     AztecAddress.ZERO,
   ).send({ ...options, from: deployer });
 
-  const vaultContract = await TokenContract.deployWithOpts(
-    { method: 'constructor_with_asset', wallet },
+  const vaultTokenContract = await TokenContract.deployWithOpts(
+    { method: 'constructor_with_minter', wallet },
     'VaultToken',
     'VT',
     6,
+    deployer,
+    AztecAddress.ZERO,
+  ).send({ ...options, from: deployer });
+
+  const vaultContract = await TokenizedVaultContract.deployWithOpts(
+    { method: 'constructor', wallet },
     assetContract.address,
+    vaultTokenContract.address,
     1,
     AztecAddress.ZERO,
   ).send({ ...options, from: deployer });
 
-  return [vaultContract, assetContract];
+  await vaultTokenContract.methods.set_minter(vaultContract.address).send({ from: deployer });
+
+  return { vaultContract, assetContract, vaultTokenContract };
 }
 
 /**
@@ -243,16 +257,28 @@ export async function deployVaultWithInitialDeposit(
   initialDeposit: bigint,
   depositor: AztecAddress,
   options?: DeployOptions,
-): Promise<TokenContract> {
-  const vaultContract = (await TokenContract.deployWithOpts(
-    { method: 'constructor_with_asset', wallet },
+): Promise<{
+  vaultContract: TokenizedVaultContract;
+  vaultTokenContract: TokenContract;
+}> {
+  const vaultTokenContract = await TokenContract.deployWithOpts(
+    { method: 'constructor_with_minter', wallet },
     'VaultToken',
     'VT',
     6,
+    deployer,
+    AztecAddress.ZERO,
+  ).send({ ...options, from: deployer });
+
+  const vaultContract = await TokenizedVaultContract.deployWithOpts(
+    { method: 'constructor', wallet },
     assetContract.address,
+    vaultTokenContract.address,
     1,
     AztecAddress.ZERO,
-  ).send({ ...options, from: deployer })) as TokenContract;
+  ).send({ ...options, from: deployer });
+
+  await vaultTokenContract.methods.set_minter(vaultContract.address).send({ from: deployer });
 
   if (initialDeposit > 0n) {
     const transfer = assetContract.methods.transfer_public_to_public(
@@ -263,11 +289,11 @@ export async function deployVaultWithInitialDeposit(
     );
     await setPublicAuthWit(vaultContract.address, transfer, depositor, wallet as TestWallet);
     await vaultContract.methods
-      .deposit_public_to_public(depositor, vaultContract.address, initialDeposit, 0)
+      .deposit_public_to_public(depositor, AztecAddress.ZERO, initialDeposit, 0)
       .send({ from: depositor });
   }
 
-  return vaultContract;
+  return { vaultContract, vaultTokenContract };
 }
 
 // --- Escrow Utils ---
