@@ -1,7 +1,7 @@
 import { Fr } from '@aztec/aztec.js/fields';
 import { type AztecNode } from '@aztec/aztec.js/node';
 import { AztecAddress } from '@aztec/aztec.js/addresses';
-import { type TestWallet } from '@aztec/test-wallet/server';
+import { type EmbeddedWallet } from '@aztec/wallets/embedded';
 import { ContractDeployer } from '@aztec/aztec.js/deployment';
 import { SetPublicAuthwitContractInteraction } from '@aztec/aztec.js/authorization';
 import { type ContractFunctionInteractionCallIntent } from '@aztec/aztec.js/authorization';
@@ -18,7 +18,7 @@ const TEST_TIMEOUT = 300_000;
 describe('Token', () => {
   let cleanup: () => Promise<void>;
 
-  let wallet: TestWallet;
+  let wallet: EmbeddedWallet;
   let accounts: AztecAddress[];
 
   let alice: AztecAddress;

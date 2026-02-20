@@ -3,7 +3,7 @@ import { deriveKeys } from '@aztec/stdlib/keys';
 import { PublicKeys } from '@aztec/aztec.js/keys';
 import { type AztecNode } from '@aztec/aztec.js/node';
 import { AztecAddress } from '@aztec/aztec.js/addresses';
-import { type TestWallet } from '@aztec/test-wallet/server';
+import { type EmbeddedWallet } from '@aztec/wallets/embedded';
 import { BlockNumber } from '@aztec/foundation/branded-types';
 import { ContractDeployer } from '@aztec/aztec.js/deployment';
 import { Fr, type GrumpkinScalar, Point } from '@aztec/aztec.js/fields';
@@ -55,7 +55,7 @@ describe('Escrow', () => {
   let cleanup: () => Promise<void>;
   let node: AztecNode;
 
-  let wallet: TestWallet;
+  let wallet: EmbeddedWallet;
   let accounts: AztecAddress[];
 
   let alice: AztecAddress;

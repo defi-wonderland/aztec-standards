@@ -9,7 +9,7 @@ import {
 } from './utils.js';
 
 import { AztecAddress } from '@aztec/aztec.js/addresses';
-import { type TestWallet } from '@aztec/test-wallet/server';
+import { type EmbeddedWallet } from '@aztec/wallets/embedded';
 import { type ContractFunctionInteraction } from '@aztec/aztec.js/contracts';
 
 import { describe, it, expect, beforeAll, beforeEach, afterAll } from 'vitest';
@@ -20,7 +20,7 @@ const TEST_TIMEOUT = 300_000;
 
 describe('Tokenized Vault', () => {
   let cleanup: () => Promise<void>;
-  let wallet: TestWallet;
+  let wallet: EmbeddedWallet;
   let accounts: AztecAddress[];
   let alice: AztecAddress;
   let bob: AztecAddress;
@@ -65,7 +65,7 @@ describe('Tokenized Vault', () => {
     vaultContract: TokenContract,
     assetContract: TokenContract,
     action: ContractFunctionInteraction,
-    wallet: TestWallet,
+    wallet: EmbeddedWallet,
     from: AztecAddress,
     amount: bigint,
   ) {

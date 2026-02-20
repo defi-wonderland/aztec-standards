@@ -8,7 +8,7 @@ import {
 
 import { Fr } from '@aztec/aztec.js/fields';
 import { AztecAddress } from '@aztec/aztec.js/addresses';
-import { type TestWallet } from '@aztec/test-wallet/server';
+import { type EmbeddedWallet } from '@aztec/wallets/embedded';
 import { ContractDeployer } from '@aztec/aztec.js/deployment';
 import { getContractInstanceFromInstantiationParams } from '@aztec/aztec.js/contracts';
 import {
@@ -24,7 +24,7 @@ const TEST_TIMEOUT = 300_000;
 
 describe('NFT', () => {
   let cleanup: () => Promise<void>;
-  let wallet: TestWallet;
+  let wallet: EmbeddedWallet;
   let accounts: AztecAddress[];
 
   let alice: AztecAddress;

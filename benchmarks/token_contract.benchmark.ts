@@ -1,6 +1,7 @@
 import type { Wallet } from '@aztec/aztec.js/wallet';
 import { AztecAddress } from '@aztec/aztec.js/addresses';
 import type { ContractFunctionInteractionCallIntent } from '@aztec/aztec.js/authorization';
+import { Fr } from '@aztec/aztec.js/fields';
 
 import { parseUnits } from 'viem';
 
@@ -44,7 +45,9 @@ export default class TokenContractBenchmark extends Benchmark {
     const [alice] = accounts;
     const owner = alice;
     // We need an account manager to decrypt the private logs in the initializeTransferCommitment function
-    const commitmentRecipientAccountManager = await wallet.createAccount();
+    const secret = Fr.random();
+    const salt = Fr.random();
+    const commitmentRecipientAccountManager = await wallet.createSchnorrAccount(secret, salt);
     const commitment_1 = await initializeTransferCommitment(
       tokenContract,
       alice,
