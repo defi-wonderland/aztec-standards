@@ -3,7 +3,7 @@ use aztec::test::helpers::authwit as authwit_cheatcodes;
 use generic_proxy::GenericProxy;
 use token_contract::Token;
 
-#[test(should_fail_with = "Trying to read from uninitialized PublicImmutable")]
+#[test(should_fail_with = "Failed calling external resolver")]
 unconstrained fn issue_private_to_public_exact_without_shares() {
     let (env, vault_address, owner, recipient, _asset_address) =
         utils::setup_vault_without_shares();

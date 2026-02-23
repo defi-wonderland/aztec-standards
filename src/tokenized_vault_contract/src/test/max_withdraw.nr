@@ -135,7 +135,14 @@ unconstrained fn max_withdraw_updates_after_withdrawal() {
     let withdraw_amount: u128 = deposit_amount / 2;
 
     // Authorize vault to burn shares from owner on the shares token (1:1 ratio, so shares == withdraw_amount)
-    utils::authorize_burn_public(env, shares_address, vault_address, owner, withdraw_amount, 0);
+    utils::authorize_burn_public(
+        env,
+        shares_address,
+        vault_address,
+        owner,
+        withdraw_amount,
+        0,
+    );
     env.call_public(
         owner,
         TokenizedVault::at(vault_address).withdraw_public_to_public(

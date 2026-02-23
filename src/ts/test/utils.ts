@@ -319,7 +319,7 @@ export async function deployVaultWithInitialDeposit(
       .send({ from: deployer });
   } else {
     // Just set shares without initial deposit
-    await vaultContract.methods.set_shares(sharesContract.address).send({ from: deployer });
+    await vaultContract.methods.set_shares_token(sharesContract.address).send({ from: deployer });
   }
 
   return [vaultContract as TokenizedVaultContract, sharesContract as TokenContract];
