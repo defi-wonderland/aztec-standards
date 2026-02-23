@@ -9,6 +9,7 @@ import { parseUnits } from 'viem';
 import { Benchmark, BenchmarkContext } from '@defi-wonderland/aztec-benchmark';
 
 import { TokenContract } from '../src/artifacts/Token.js';
+import { TokenizedVaultContract } from '../src/artifacts/TokenizedVault.js';
 import {
   deployVaultAndAssetWithMinter,
   setPrivateAuthWit,
@@ -22,9 +23,11 @@ interface TokenBenchmarkContext extends BenchmarkContext {
   wallet: Wallet;
   deployer: AztecAddress;
   accounts: AztecAddress[];
-  vaultContract: TokenContract;
+  vaultContract: TokenizedVaultContract;
   assetContract: TokenContract;
+  sharesContract: TokenContract;
   authWitnesses: AuthWitness[];
+  burnAuthWitnesses: AuthWitness[];
 }
 
 // --- Helper Functions ---
@@ -37,22 +40,22 @@ function amt(x: bigint | number | string) {
 // Use export default class extending Benchmark
 export default class TokenContractBenchmark extends Benchmark {
   /**
-   * Sets up the benchmark environment for the TokenContract.
-   * Creates wallet, gets accounts, and deploys the contract.
+   * Sets up the benchmark environment for the TokenizedVault.
+   * Creates wallet, gets accounts, and deploys the vault + asset + shares contracts.
    */
   async setup(): Promise<TokenBenchmarkContext> {
     const { cleanup, wallet, accounts } = await setupTestSuite(true);
     const [deployer] = accounts;
-    const [deployedBaseContract, deployedAssetContract] = await deployVaultAndAssetWithMinter(wallet, deployer);
-    const vaultContract = TokenContract.at(deployedBaseContract.address, wallet);
-    const assetContract = TokenContract.at(deployedAssetContract.address, wallet);
+    const bob = accounts[1];
+    const [vaultContract, assetContract, sharesContract] = await deployVaultAndAssetWithMinter(wallet, deployer);
     const assetMethods = assetContract.withWallet(wallet).methods;
+    const sharesMethods = sharesContract.withWallet(wallet).methods;
 
     // Mint initial asset supply to the deployer
-    await assetContract.withWallet(wallet).methods.mint_to_public(deployer, amt(100)).send({ from: deployer });
+    await assetMethods.mint_to_public(deployer, amt(100)).send({ from: deployer });
     for (let i = 0; i < 6; i++) {
       // 1 Note per benchmark test so that a single full Note is used in each.
-      await assetContract.withWallet(wallet).methods.mint_to_private(deployer, amt(1)).send({ from: deployer });
+      await assetMethods.mint_to_private(deployer, amt(1)).send({ from: deployer });
     }
 
     // Initialize shares total supply by depositing 1 asset and sending 1 share to the zero address
@@ -63,7 +66,7 @@ export default class TokenContractBenchmark extends Benchmark {
       .methods.deposit_public_to_public(deployer, AztecAddress.ZERO, amt(1), 1234)
       .send({ from: deployer });
 
-    /* ======================= PUBLIC AUTHWITS ========================== */
+    /* ======================= PUBLIC ASSET AUTHWITS ========================== */
 
     // Set public authwitness for the `transfer_public_to_public` method on the Asset contract to be used by the
     // Tokenized Vault's following methods:
@@ -78,7 +81,7 @@ export default class TokenContractBenchmark extends Benchmark {
       await setPublicAuthWit(vaultContract.address, action, deployer, wallet);
     }
 
-    /* ======================= PRIVATE AUTHWITS ========================= */
+    /* ======================= PRIVATE ASSET AUTHWITS ========================= */
 
     // Prepare private authwitness for the `transfer_private_to_public` method on the Asset contract to be used by the
     // Tokenized Vault's following methods:
@@ -95,18 +98,59 @@ export default class TokenContractBenchmark extends Benchmark {
       authWitnesses.push(authWitness);
     }
 
-    return { cleanup, wallet, deployer, accounts, vaultContract, assetContract, authWitnesses };
+    /* ======================= PUBLIC BURN AUTHWITS (shares) =================== */
+
+    // Set public authwitness for the `burn_public` method on the Shares contract
+    // to be used by the Vault's withdraw/redeem methods that burn public shares.
+    // Each uses a unique nonce (200-203) since authwits are consumed on use.
+    // 1. withdraw_public_to_public (nonce 200)
+    // 2. withdraw_public_to_private (nonce 201, burn happens in settlement)
+    // 3. redeem_public_to_public (nonce 202)
+    // 4. redeem_public_to_private_exact (nonce 203, burn happens in settlement)
+    for (let i = 0; i < 4; i++) {
+      const nonce = 200 + i;
+      action = sharesMethods.burn_public(bob, amt(1), nonce);
+      await setPublicAuthWit(vaultContract.address, action, bob, wallet);
+    }
+
+    /* ======================= PRIVATE BURN AUTHWITS (shares) ================== */
+
+    // Prepare private authwitness for the `burn_private` method on the Shares contract
+    // to be used by the Vault's withdraw/redeem methods that burn private shares.
+    // Each uses a unique nonce (300-304) since authwits are consumed on use.
+    // 1. withdraw_private_to_private (nonce 300)
+    // 2. withdraw_private_to_public_exact (nonce 301)
+    // 3. withdraw_private_to_private_exact (nonce 302)
+    // 4. redeem_private_to_public (nonce 303)
+    // 5. redeem_private_to_private_exact (nonce 304)
+    const burnAuthWitnesses: AuthWitness[] = [];
+    for (let i = 0; i < 5; i++) {
+      const nonce = 300 + i;
+      action = sharesMethods.burn_private(bob, amt(1), nonce);
+      const authWitness = await setPrivateAuthWit(vaultContract.address, action, bob, wallet);
+      burnAuthWitnesses.push(authWitness);
+    }
+
+    return {
+      cleanup,
+      wallet,
+      deployer,
+      accounts,
+      vaultContract,
+      assetContract,
+      sharesContract,
+      authWitnesses,
+      burnAuthWitnesses,
+    };
   }
 
   /**
-   * Returns the list of TokenContract methods to be benchmarked.
+   * Returns the list of TokenizedVault methods to be benchmarked.
    */
   getMethods(context: TokenBenchmarkContext): ContractFunctionInteractionCallIntent[] {
-    const { vaultContract, deployer, accounts, authWitnesses, wallet } = context;
+    const { vaultContract, deployer, accounts, authWitnesses, burnAuthWitnesses, wallet } = context;
     const alice = deployer;
     const bob = accounts[1];
-    const aliceAddress = alice;
-    const bobAddress = bob;
 
     let publicNonce = 0;
     let privateNonce = 100;
@@ -115,41 +159,39 @@ export default class TokenContractBenchmark extends Benchmark {
       // Deposit methods
       {
         caller: alice,
-        action: vaultContract
-          .withWallet(wallet)
-          .methods.deposit_public_to_public(aliceAddress, bobAddress, amt(1), publicNonce++),
+        action: vaultContract.withWallet(wallet).methods.deposit_public_to_public(alice, bob, amt(1), publicNonce++),
       },
       {
         caller: alice,
         action: vaultContract
           .withWallet(wallet)
-          .methods.deposit_public_to_private(aliceAddress, bobAddress, amt(1), amt(1), publicNonce++),
+          .methods.deposit_public_to_private(alice, bob, amt(1), amt(1), publicNonce++),
       },
       {
         caller: alice,
         action: vaultContract
           .withWallet(wallet)
-          .methods.deposit_private_to_private(aliceAddress, bobAddress, amt(1), amt(1), privateNonce++)
+          .methods.deposit_private_to_private(alice, bob, amt(1), amt(1), privateNonce++)
           .with({ authWitnesses: [authWitnesses[0]] }),
       },
       {
         caller: alice,
         action: vaultContract
           .withWallet(wallet)
-          .methods.deposit_private_to_public(aliceAddress, bobAddress, amt(1), privateNonce++)
+          .methods.deposit_private_to_public(alice, bob, amt(1), privateNonce++)
           .with({ authWitnesses: [authWitnesses[1]] }),
       },
       {
         caller: alice,
         action: vaultContract
           .withWallet(wallet)
-          .methods.deposit_public_to_private_exact(aliceAddress, bobAddress, amt(1), amt(1), publicNonce++),
+          .methods.deposit_public_to_private_exact(alice, bob, amt(1), amt(1), publicNonce++),
       },
       {
         caller: alice,
         action: vaultContract
           .withWallet(wallet)
-          .methods.deposit_private_to_private_exact(aliceAddress, bobAddress, amt(1), amt(1), privateNonce++)
+          .methods.deposit_private_to_private_exact(alice, bob, amt(1), amt(1), privateNonce++)
           .with({ authWitnesses: [authWitnesses[2]] }),
       },
 
@@ -158,79 +200,87 @@ export default class TokenContractBenchmark extends Benchmark {
         caller: alice,
         action: vaultContract
           .withWallet(wallet)
-          .methods.issue_public_to_public(aliceAddress, bobAddress, amt(1), amt(1), publicNonce++),
+          .methods.issue_public_to_public(alice, bob, amt(1), amt(1), publicNonce++),
       },
       {
         caller: alice,
         action: vaultContract
           .withWallet(wallet)
-          .methods.issue_public_to_private(aliceAddress, bobAddress, amt(1), amt(1), publicNonce++),
+          .methods.issue_public_to_private(alice, bob, amt(1), amt(1), publicNonce++),
       },
       {
         caller: alice,
         action: vaultContract
           .withWallet(wallet)
-          .methods.issue_private_to_public_exact(aliceAddress, bobAddress, amt(1), amt(1), privateNonce++)
+          .methods.issue_private_to_public_exact(alice, bob, amt(1), amt(1), privateNonce++)
           .with({ authWitnesses: [authWitnesses[3]] }),
       },
       {
         caller: alice,
         action: vaultContract
           .withWallet(wallet)
-          .methods.issue_private_to_private_exact(aliceAddress, bobAddress, amt(1), amt(1), privateNonce++)
+          .methods.issue_private_to_private_exact(alice, bob, amt(1), amt(1), privateNonce++)
           .with({ authWitnesses: [authWitnesses[4]] }),
       },
 
       // Withdraw methods
+      // Nonces 200-202/300-302 are used for burn authwits on the shares token.
+      // The vault passes _nonce through to shares.burn_public/burn_private.
       {
         caller: bob,
-        action: vaultContract.withWallet(wallet).methods.withdraw_public_to_public(bobAddress, aliceAddress, amt(1), 0),
+        action: vaultContract.withWallet(wallet).methods.withdraw_public_to_public(bob, alice, amt(1), 200),
+      },
+      {
+        caller: bob,
+        action: vaultContract.withWallet(wallet).methods.withdraw_public_to_private(bob, alice, amt(1), 201),
       },
       {
         caller: bob,
         action: vaultContract
           .withWallet(wallet)
-          .methods.withdraw_public_to_private(bobAddress, aliceAddress, amt(1), 0),
+          .methods.withdraw_private_to_private(bob, alice, amt(1), amt(1), 300)
+          .with({ authWitnesses: [burnAuthWitnesses[0]] }),
       },
       {
         caller: bob,
         action: vaultContract
           .withWallet(wallet)
-          .methods.withdraw_private_to_private(bobAddress, aliceAddress, amt(1), amt(1), 0),
+          .methods.withdraw_private_to_public_exact(bob, alice, amt(1), amt(1), 301)
+          .with({ authWitnesses: [burnAuthWitnesses[1]] }),
       },
       {
         caller: bob,
         action: vaultContract
           .withWallet(wallet)
-          .methods.withdraw_private_to_public_exact(bobAddress, aliceAddress, amt(1), amt(1), 0),
-      },
-      {
-        caller: bob,
-        action: vaultContract
-          .withWallet(wallet)
-          .methods.withdraw_private_to_private_exact(bobAddress, aliceAddress, amt(1), amt(1), 0),
+          .methods.withdraw_private_to_private_exact(bob, alice, amt(1), amt(1), 302)
+          .with({ authWitnesses: [burnAuthWitnesses[2]] }),
       },
 
       // Redeem methods
+      // Nonces 202-203/303-304 are used for burn authwits on the shares token.
       {
         caller: bob,
-        action: vaultContract.withWallet(wallet).methods.redeem_public_to_public(bobAddress, aliceAddress, amt(1), 0),
-      },
-      {
-        caller: bob,
-        action: vaultContract.withWallet(wallet).methods.redeem_private_to_public(bobAddress, aliceAddress, amt(1), 0),
-      },
-      {
-        caller: bob,
-        action: vaultContract
-          .withWallet(wallet)
-          .methods.redeem_private_to_private_exact(bobAddress, aliceAddress, amt(1), amt(1), 0),
+        action: vaultContract.withWallet(wallet).methods.redeem_public_to_public(bob, alice, amt(1), 202),
       },
       {
         caller: bob,
         action: vaultContract
           .withWallet(wallet)
-          .methods.redeem_public_to_private_exact(bobAddress, aliceAddress, amt(1), amt(1), 0),
+          .methods.redeem_private_to_public(bob, alice, amt(1), 303)
+          .with({ authWitnesses: [burnAuthWitnesses[3]] }),
+      },
+      {
+        caller: bob,
+        action: vaultContract
+          .withWallet(wallet)
+          .methods.redeem_private_to_private_exact(bob, alice, amt(1), amt(1), 304)
+          .with({ authWitnesses: [burnAuthWitnesses[4]] }),
+      },
+      {
+        caller: bob,
+        action: vaultContract
+          .withWallet(wallet)
+          .methods.redeem_public_to_private_exact(bob, alice, amt(1), amt(1), 203),
       },
     ];
 
