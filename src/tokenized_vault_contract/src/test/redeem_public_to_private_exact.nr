@@ -37,25 +37,14 @@ unconstrained fn redeem_public_to_private_exact_success() {
     let shares_to_burn: u128 = deposit_amount;
     let min_assets: u128 = deposit_amount;
 
-    // Authorize the vault to burn shares from the user's public balance on the shares token
-    utils::authorize_burn_public(
+    utils::redeem_public_to_private_exact(
         env,
-        shares_address,
         vault_address,
+        shares_address,
         deposit_recipient,
+        recipient,
         shares_to_burn,
-        0,
-    );
-
-    env.call_private(
-        deposit_recipient,
-        TokenizedVault::at(vault_address).redeem_public_to_private_exact(
-            deposit_recipient,
-            recipient,
-            shares_to_burn,
-            min_assets,
-            0,
-        ),
+        min_assets,
     );
 
     // All shares are burnt
@@ -98,25 +87,14 @@ unconstrained fn redeem_public_to_private_exact_after_yield() {
     let shares_to_burn: u128 = deposit_amount;
     let min_assets: u128 = deposit_amount + 1;
 
-    // Authorize the vault to burn shares from the user's public balance on the shares token
-    utils::authorize_burn_public(
+    utils::redeem_public_to_private_exact(
         env,
-        shares_address,
         vault_address,
+        shares_address,
         deposit_recipient,
+        recipient,
         shares_to_burn,
-        0,
-    );
-
-    env.call_private(
-        deposit_recipient,
-        TokenizedVault::at(vault_address).redeem_public_to_private_exact(
-            deposit_recipient,
-            recipient,
-            shares_to_burn,
-            min_assets,
-            0,
-        ),
+        min_assets,
     );
 
     // All shares are burnt
@@ -154,25 +132,14 @@ unconstrained fn redeem_public_to_private_exact_request_fewer_assets() {
     let shares_to_burn: u128 = deposit_amount;
     let min_assets: u128 = deposit_amount - 1;
 
-    // Authorize the vault to burn shares from the user's public balance on the shares token
-    utils::authorize_burn_public(
+    utils::redeem_public_to_private_exact(
         env,
-        shares_address,
         vault_address,
+        shares_address,
         deposit_recipient,
+        recipient,
         shares_to_burn,
-        0,
-    );
-
-    env.call_private(
-        deposit_recipient,
-        TokenizedVault::at(vault_address).redeem_public_to_private_exact(
-            deposit_recipient,
-            recipient,
-            shares_to_burn,
-            min_assets,
-            0,
-        ),
+        min_assets,
     );
 
     // The deposit_recipient receives change, since he sent 1 share too many
@@ -212,25 +179,14 @@ unconstrained fn redeem_public_to_private_exact_request_too_many_assets() {
     let shares_to_burn: u128 = deposit_amount - 1;
     let min_assets: u128 = deposit_amount;
 
-    // Authorize the vault to burn shares from the user's public balance on the shares token
-    utils::authorize_burn_public(
+    utils::redeem_public_to_private_exact(
         env,
-        shares_address,
         vault_address,
+        shares_address,
         deposit_recipient,
+        recipient,
         shares_to_burn,
-        0,
-    );
-
-    env.call_private(
-        deposit_recipient,
-        TokenizedVault::at(vault_address).redeem_public_to_private_exact(
-            deposit_recipient,
-            recipient,
-            shares_to_burn,
-            min_assets,
-            0,
-        ),
+        min_assets,
     );
 }
 
@@ -371,7 +327,6 @@ unconstrained fn redeem_public_to_private_exact_on_behalf_of_other_success() {
         vault_address,
         deposit_recipient,
         shares_to_burn,
-        0,
     );
 
     // Withdraw

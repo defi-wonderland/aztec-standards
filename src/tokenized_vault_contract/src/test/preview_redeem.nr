@@ -33,20 +33,9 @@ unconstrained fn preview_redeem_success() {
     let preview_redeem_shares =
         env.view_public(TokenizedVault::at(vault_address).preview_redeem(assets_to_redeem));
 
-    // Authorize vault to burn shares from owner on the shares token
     let shares_to_burn: u128 = deposit_amount;
-    utils::authorize_burn_public(env, shares_address, vault_address, owner, shares_to_burn, 0);
 
-    // Redeem
-    env.call_public(
-        owner,
-        TokenizedVault::at(vault_address).redeem_public_to_public(
-            owner,
-            recipient,
-            shares_to_burn,
-            0,
-        ),
-    );
+    utils::redeem_public_to_public(env, vault_address, shares_address, owner, recipient, shares_to_burn);
 
     // Check recipient received assets (1:1 ratio)
     utils::check_public_balance(env, asset_address, recipient, assets_to_redeem);
@@ -90,18 +79,7 @@ unconstrained fn preview_redeem_with_yield_accrued_success() {
         "preview_redeem should return the expected assets",
     );
 
-    // Authorize vault to burn shares from owner on the shares token
-    utils::authorize_burn_public(env, shares_address, vault_address, owner, shares_to_burn, 0);
-
-    env.call_public(
-        owner,
-        TokenizedVault::at(vault_address).redeem_public_to_public(
-            owner,
-            recipient,
-            shares_to_burn,
-            0,
-        ),
-    );
+    utils::redeem_public_to_public(env, vault_address, shares_address, owner, recipient, shares_to_burn);
 
     // Check recipient received the expected assets
     utils::check_public_balance(env, asset_address, recipient, expected_assets);

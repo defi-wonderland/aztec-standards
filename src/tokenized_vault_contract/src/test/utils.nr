@@ -113,7 +113,6 @@ pub unconstrained fn setup_with_vault_initial_deposit(
         vault_address,
         owner,
         initial_deposit,
-        0,
     );
 
     // Set shares and make initial deposit (admin-only, one-shot)
@@ -216,9 +215,8 @@ pub unconstrained fn authorize_transfer_public_to_public(
     caller: AztecAddress,
     from: AztecAddress,
     amount: u128,
-    nonce: Field,
 ) {
-    let call_interface = Token::at(token).transfer_public_to_public(from, caller, amount, nonce);
+    let call_interface = Token::at(token).transfer_public_to_public(from, caller, amount, 0);
     authwit_cheatcodes::add_public_authwit_from_call(env, from, caller, call_interface);
 }
 
@@ -228,9 +226,8 @@ pub unconstrained fn authorize_transfer_private_to_public(
     caller: AztecAddress,
     from: AztecAddress,
     amount: u128,
-    nonce: Field,
 ) {
-    let call_interface = Token::at(token).transfer_private_to_public(from, caller, amount, nonce);
+    let call_interface = Token::at(token).transfer_private_to_public(from, caller, amount, 0);
     authwit_cheatcodes::add_private_authwit_from_call(env, from, caller, call_interface);
 }
 
@@ -241,9 +238,8 @@ pub unconstrained fn authorize_burn_public(
     vault: AztecAddress,
     from: AztecAddress,
     amount: u128,
-    nonce: Field,
 ) {
-    let call_interface = Token::at(shares_token).burn_public(from, amount, nonce);
+    let call_interface = Token::at(shares_token).burn_public(from, amount, 0);
     authwit_cheatcodes::add_public_authwit_from_call(env, from, vault, call_interface);
 }
 
@@ -254,10 +250,185 @@ pub unconstrained fn authorize_burn_private(
     vault: AztecAddress,
     from: AztecAddress,
     amount: u128,
-    nonce: Field,
 ) {
-    let call_interface = Token::at(shares_token).burn_private(from, amount, nonce);
+    let call_interface = Token::at(shares_token).burn_private(from, amount, 0);
     authwit_cheatcodes::add_private_authwit_from_call(env, from, vault, call_interface);
+}
+
+// ====================== Redeem helpers ======================
+
+pub unconstrained fn redeem_public_to_public(
+    env: TestEnvironment,
+    vault_address: AztecAddress,
+    shares_address: AztecAddress,
+    from: AztecAddress,
+    to: AztecAddress,
+    shares: u128,
+) {
+    authorize_burn_public(env, shares_address, vault_address, from, shares);
+    env.call_public(
+        from,
+        TokenizedVault::at(vault_address).redeem_public_to_public(from, to, shares, 0),
+    );
+}
+
+pub unconstrained fn redeem_public_to_private_exact(
+    env: TestEnvironment,
+    vault_address: AztecAddress,
+    shares_address: AztecAddress,
+    from: AztecAddress,
+    to: AztecAddress,
+    shares: u128,
+    min_assets: u128,
+) {
+    authorize_burn_public(env, shares_address, vault_address, from, shares);
+    env.call_private(
+        from,
+        TokenizedVault::at(vault_address).redeem_public_to_private_exact(
+            from,
+            to,
+            shares,
+            min_assets,
+            0,
+        ),
+    );
+}
+
+pub unconstrained fn redeem_private_to_public(
+    env: TestEnvironment,
+    vault_address: AztecAddress,
+    shares_address: AztecAddress,
+    from: AztecAddress,
+    to: AztecAddress,
+    shares: u128,
+) {
+    authorize_burn_private(env, shares_address, vault_address, from, shares);
+    env.call_private(
+        from,
+        TokenizedVault::at(vault_address).redeem_private_to_public(from, to, shares, 0),
+    );
+}
+
+pub unconstrained fn redeem_private_to_private_exact(
+    env: TestEnvironment,
+    vault_address: AztecAddress,
+    shares_address: AztecAddress,
+    from: AztecAddress,
+    to: AztecAddress,
+    shares: u128,
+    min_assets: u128,
+) {
+    authorize_burn_private(env, shares_address, vault_address, from, shares);
+    env.call_private(
+        from,
+        TokenizedVault::at(vault_address).redeem_private_to_private_exact(
+            from,
+            to,
+            shares,
+            min_assets,
+            0,
+        ),
+    );
+}
+
+// ====================== Withdraw helpers ======================
+
+pub unconstrained fn withdraw_public_to_public(
+    env: TestEnvironment,
+    vault_address: AztecAddress,
+    shares_address: AztecAddress,
+    from: AztecAddress,
+    to: AztecAddress,
+    assets: u128,
+    shares_to_burn: u128,
+) {
+    authorize_burn_public(env, shares_address, vault_address, from, shares_to_burn);
+    env.call_public(
+        from,
+        TokenizedVault::at(vault_address).withdraw_public_to_public(from, to, assets, 0),
+    );
+}
+
+pub unconstrained fn withdraw_public_to_private(
+    env: TestEnvironment,
+    vault_address: AztecAddress,
+    shares_address: AztecAddress,
+    from: AztecAddress,
+    to: AztecAddress,
+    assets: u128,
+    shares_to_burn: u128,
+) {
+    authorize_burn_public(env, shares_address, vault_address, from, shares_to_burn);
+    env.call_private(
+        from,
+        TokenizedVault::at(vault_address).withdraw_public_to_private(from, to, assets, 0),
+    );
+}
+
+pub unconstrained fn withdraw_private_to_private(
+    env: TestEnvironment,
+    vault_address: AztecAddress,
+    shares_address: AztecAddress,
+    from: AztecAddress,
+    to: AztecAddress,
+    assets: u128,
+    shares_to_burn: u128,
+) {
+    authorize_burn_private(env, shares_address, vault_address, from, shares_to_burn);
+    env.call_private(
+        from,
+        TokenizedVault::at(vault_address).withdraw_private_to_private(
+            from,
+            to,
+            assets,
+            shares_to_burn,
+            0,
+        ),
+    );
+}
+
+pub unconstrained fn withdraw_private_to_public_exact(
+    env: TestEnvironment,
+    vault_address: AztecAddress,
+    shares_address: AztecAddress,
+    from: AztecAddress,
+    to: AztecAddress,
+    assets: u128,
+    shares_to_burn: u128,
+) {
+    authorize_burn_private(env, shares_address, vault_address, from, shares_to_burn);
+    env.call_private(
+        from,
+        TokenizedVault::at(vault_address).withdraw_private_to_public_exact(
+            from,
+            to,
+            assets,
+            shares_to_burn,
+            0,
+        ),
+    );
+}
+
+pub unconstrained fn withdraw_private_to_private_exact(
+    env: TestEnvironment,
+    vault_address: AztecAddress,
+    shares_address: AztecAddress,
+    from: AztecAddress,
+    to: AztecAddress,
+    assets: u128,
+    shares_to_burn: u128,
+) {
+    authorize_burn_private(env, shares_address, vault_address, from, shares_to_burn);
+    env.call_private(
+        from,
+        TokenizedVault::at(vault_address).withdraw_private_to_private_exact(
+            from,
+            to,
+            assets,
+            shares_to_burn,
+            0,
+        ),
+    );
 }
 
 // ====================== Deposit helpers ======================
@@ -274,7 +445,7 @@ pub unconstrained fn mint_and_deposit_public_to_public(
     env.call_public(minter, Token::at(asset_address).mint_to_public(minter, amount));
 
     // Authorize the vault to use the caller's assets
-    authorize_transfer_public_to_public(env, asset_address, vault_address, minter, amount, 0);
+    authorize_transfer_public_to_public(env, asset_address, vault_address, minter, amount);
 
     // Deposit
     env.call_public(
@@ -295,7 +466,7 @@ pub unconstrained fn mint_and_deposit_public_to_private(
     env.call_public(minter, Token::at(asset_address).mint_to_public(minter, amount));
 
     // Authorize the vault to use the caller's assets
-    authorize_transfer_public_to_public(env, asset_address, vault_address, minter, amount, 0);
+    authorize_transfer_public_to_public(env, asset_address, vault_address, minter, amount);
 
     // Deposit
     env.call_private(

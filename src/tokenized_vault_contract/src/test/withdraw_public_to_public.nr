@@ -38,24 +38,14 @@ unconstrained fn withdraw_public_to_public_success() {
         deposit_amount,
     );
 
-    // Authorize the vault to burn shares from the depositor on the shares token
-    utils::authorize_burn_public(
+    utils::withdraw_public_to_public(
         env,
-        shares_address,
         vault_address,
+        shares_address,
         deposit_recipient,
+        recipient,
         deposit_amount,
-        0,
-    );
-
-    env.call_public(
-        deposit_recipient,
-        TokenizedVault::at(vault_address).withdraw_public_to_public(
-            deposit_recipient,
-            recipient,
-            deposit_amount,
-            0,
-        ),
+        deposit_amount,
     );
 
     // All shares are burnt
@@ -94,25 +84,14 @@ unconstrained fn withdraw_public_to_public_after_yield() {
     let yield_amount: u128 = 2; // Using 2 instead of 1 avoids rounding issues from anti-inflation logic: 1 goes to the user, 1 stays in the vault.
     env.call_public(owner, Token::at(asset_address).mint_to_public(vault_address, yield_amount));
 
-    // Authorize the vault to burn shares from the depositor on the shares token
-    utils::authorize_burn_public(
+    utils::withdraw_public_to_public(
         env,
-        shares_address,
         vault_address,
+        shares_address,
         deposit_recipient,
+        recipient,
+        deposit_amount + 1,
         deposit_amount,
-        0,
-    );
-
-    // Withdraw
-    env.call_public(
-        deposit_recipient,
-        TokenizedVault::at(vault_address).withdraw_public_to_public(
-            deposit_recipient,
-            recipient,
-            deposit_amount + 1,
-            0,
-        ),
     );
 
     // All shares are burnt
@@ -236,7 +215,6 @@ unconstrained fn withdraw_public_to_public_on_behalf_of_other_success() {
         vault_address,
         deposit_recipient,
         deposit_amount,
-        0,
     );
 
     // Withdraw

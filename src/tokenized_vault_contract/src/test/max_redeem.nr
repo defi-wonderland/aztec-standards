@@ -71,7 +71,6 @@ unconstrained fn max_redeem_different_per_owner() {
         vault_address,
         recipient,
         recipient_deposit,
-        0,
     );
     env.call_public(
         recipient,
@@ -122,16 +121,13 @@ unconstrained fn max_redeem_updates_after_redemption() {
     // Redeem half the shares
     let redeem_amount: u128 = deposit_amount / 2;
 
-    // Authorize vault to burn shares from owner on the shares token (exact amount to be burned)
-    utils::authorize_burn_public(env, shares_address, vault_address, owner, redeem_amount, 0);
-    env.call_public(
+    utils::redeem_public_to_public(
+        env,
+        vault_address,
+        shares_address,
         owner,
-        TokenizedVault::at(vault_address).redeem_public_to_public(
-            owner,
-            recipient,
-            redeem_amount,
-            0,
-        ),
+        recipient,
+        redeem_amount,
     );
 
     // max_redeem should be reduced

@@ -1,7 +1,8 @@
 use crate::{
     test::utils::{
-        authorize_burn_public, authorize_transfer_public_to_public, check_public_balance,
-        check_total_supply, get_public_balance, get_total_supply, setup_with_vault_initial_deposit,
+        authorize_transfer_public_to_public, check_public_balance, check_total_supply,
+        get_public_balance, get_total_supply, redeem_public_to_public,
+        setup_with_vault_initial_deposit,
     },
     TokenizedVault,
 };
@@ -51,7 +52,6 @@ unconstrained fn vault_with_initial_deposit_subsequent_deposits_work() {
         vault_address,
         owner,
         second_deposit,
-        0,
     );
 
     env.call_public(
@@ -93,7 +93,6 @@ unconstrained fn vault_with_initial_deposit_yield_distribution() {
         vault_address,
         owner,
         deposit_amount,
-        0,
     );
 
     env.call_public(
@@ -110,25 +109,14 @@ unconstrained fn vault_with_initial_deposit_yield_distribution() {
     let yield_amount: u128 = 200;
     env.call_public(owner, Token::at(asset_address).mint_to_public(vault_address, yield_amount));
 
-    // Authorize vault to burn shares from recipient on the shares token
-    authorize_burn_public(
+    // Recipient redeems their shares
+    redeem_public_to_public(
         env,
-        shares_address,
         vault_address,
+        shares_address,
+        recipient,
         recipient,
         deposit_amount,
-        0,
-    );
-
-    // Now recipient redeems their shares
-    env.call_public(
-        recipient,
-        TokenizedVault::at(vault_address).redeem_public_to_public(
-            recipient,
-            recipient,
-            deposit_amount,
-            0,
-        ),
     );
 
     // Recipient should have received more than deposit_amount due to yield

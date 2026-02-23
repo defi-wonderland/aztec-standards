@@ -33,18 +33,14 @@ unconstrained fn preview_withdraw_success() {
     let preview_withdraw_assets =
         env.view_public(TokenizedVault::at(vault_address).preview_withdraw(shares_to_withdraw));
 
-    // Authorize vault to burn shares from owner on the shares token
-    utils::authorize_burn_public(env, shares_address, vault_address, owner, deposit_amount, 0);
-
-    // Withdraw
-    env.call_public(
+    utils::withdraw_public_to_public(
+        env,
+        vault_address,
+        shares_address,
         owner,
-        TokenizedVault::at(vault_address).withdraw_public_to_public(
-            owner,
-            recipient,
-            deposit_amount,
-            0,
-        ),
+        recipient,
+        deposit_amount,
+        deposit_amount,
     );
 
     // Check recipient received assets (1:1 ratio)
@@ -94,18 +90,14 @@ unconstrained fn preview_withdraw_with_yield_accrued_success() {
         "preview_withdraw should return the expected shares",
     );
 
-    // Authorize vault to burn shares from owner on the shares token
-    utils::authorize_burn_public(env, shares_address, vault_address, owner, deposit_amount, 0);
-
-    // Withdraw
-    env.call_public(
+    utils::withdraw_public_to_public(
+        env,
+        vault_address,
+        shares_address,
         owner,
-        TokenizedVault::at(vault_address).withdraw_public_to_public(
-            owner,
-            recipient,
-            expected_assets_to_withdraw,
-            0,
-        ),
+        recipient,
+        expected_assets_to_withdraw,
+        deposit_amount,
     );
 
     // Check recipient received assets
