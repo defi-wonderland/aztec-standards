@@ -1,9 +1,9 @@
-use crate::TokenizedVault;
 use crate::test::utils::{self, mint_amount};
-use token_contract::Token;
-use aztec::test::helpers::test_environment::TestEnvironment;
+use crate::TokenizedVault;
 use aztec::test::helpers::authwit as authwit_cheatcodes;
+use aztec::test::helpers::test_environment::TestEnvironment;
 use generic_proxy::GenericProxy;
+use token_contract::Token;
 
 #[test(should_fail_with = "Trying to read from uninitialized PublicImmutable")]
 unconstrained fn deposit_public_to_private_without_asset() {

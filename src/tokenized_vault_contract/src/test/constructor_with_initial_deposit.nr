@@ -111,7 +111,14 @@ unconstrained fn vault_with_initial_deposit_yield_distribution() {
     env.call_public(owner, Token::at(asset_address).mint_to_public(vault_address, yield_amount));
 
     // Authorize vault to burn shares from recipient on the shares token
-    authorize_burn_public(env, shares_address, vault_address, recipient, deposit_amount, 0);
+    authorize_burn_public(
+        env,
+        shares_address,
+        vault_address,
+        recipient,
+        deposit_amount,
+        0,
+    );
 
     // Now recipient redeems their shares
     env.call_public(

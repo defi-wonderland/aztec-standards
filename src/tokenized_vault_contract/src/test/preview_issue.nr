@@ -110,8 +110,7 @@ unconstrained fn preview_issue_zero_amount() {
         utils::setup_with_vault(false);
 
     // Preview issue with zero shares
-    let preview_issue_assets =
-        env.view_public(TokenizedVault::at(vault_address).preview_issue(0));
+    let preview_issue_assets = env.view_public(TokenizedVault::at(vault_address).preview_issue(0));
 
     // Zero shares should require zero assets
     assert(preview_issue_assets == 0, "Zero shares should return zero assets");

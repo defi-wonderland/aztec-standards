@@ -68,8 +68,7 @@ unconstrained fn max_withdraw_increases_with_yield() {
     env.call_public(owner, Token::at(asset_address).mint_to_public(vault_address, yield_amount));
 
     // max_withdraw should increase because each share is now worth more assets
-    let final_max_withdraw =
-        env.view_public(TokenizedVault::at(vault_address).max_withdraw(owner));
+    let final_max_withdraw = env.view_public(TokenizedVault::at(vault_address).max_withdraw(owner));
 
     assert(final_max_withdraw > initial_max_withdraw, "max_withdraw should increase after yield");
 }
@@ -148,8 +147,7 @@ unconstrained fn max_withdraw_updates_after_withdrawal() {
     );
 
     // max_withdraw should be reduced
-    let final_max_withdraw =
-        env.view_public(TokenizedVault::at(vault_address).max_withdraw(owner));
+    let final_max_withdraw = env.view_public(TokenizedVault::at(vault_address).max_withdraw(owner));
 
     assert(
         final_max_withdraw < initial_max_withdraw,

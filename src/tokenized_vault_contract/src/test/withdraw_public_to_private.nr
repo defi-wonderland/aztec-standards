@@ -1,9 +1,9 @@
-use crate::TokenizedVault;
-use token_contract::Token;
 use crate::test::utils::{self, mint_amount};
+use crate::TokenizedVault;
 use aztec::test::helpers::authwit as authwit_cheatcodes;
 use aztec::test::helpers::test_environment::TestEnvironment;
 use generic_proxy::GenericProxy;
+use token_contract::Token;
 
 #[test(should_fail_with = "Trying to read from uninitialized PublicImmutable")]
 unconstrained fn withdraw_public_to_private_without_asset() {
@@ -45,7 +45,14 @@ unconstrained fn withdraw_public_to_private_success() {
     );
 
     // Authorize the vault to burn shares from the depositor on the shares token (public burn in settlement)
-    utils::authorize_burn_public(env, shares_address, vault_address, deposit_recipient, deposit_amount, 0);
+    utils::authorize_burn_public(
+        env,
+        shares_address,
+        vault_address,
+        deposit_recipient,
+        deposit_amount,
+        0,
+    );
 
     env.call_private(
         deposit_recipient,
@@ -94,7 +101,14 @@ unconstrained fn withdraw_public_to_private_after_yield() {
     env.call_public(owner, Token::at(asset_address).mint_to_public(vault_address, yield_amount));
 
     // Authorize the vault to burn shares from the depositor on the shares token (public burn in settlement)
-    utils::authorize_burn_public(env, shares_address, vault_address, deposit_recipient, deposit_amount, 0);
+    utils::authorize_burn_public(
+        env,
+        shares_address,
+        vault_address,
+        deposit_recipient,
+        deposit_amount,
+        0,
+    );
 
     // Withdraw
     env.call_private(
@@ -178,13 +192,8 @@ unconstrained fn withdraw_public_to_private_on_behalf_of_wrong_caller() {
     );
 
     // Authorize someone to call withdraw_public_to_private (but authorize owner, not proxy)
-    let withdraw_public_to_private_call_interface =
-        TokenizedVault::at(vault_address).withdraw_public_to_private(
-            deposit_recipient,
-            recipient,
-            deposit_amount,
-            0,
-        );
+    let withdraw_public_to_private_call_interface = TokenizedVault::at(vault_address)
+        .withdraw_public_to_private(deposit_recipient, recipient, deposit_amount, 0);
     authwit_cheatcodes::add_private_authwit_from_call(
         env,
         deposit_recipient,
@@ -246,7 +255,14 @@ unconstrained fn withdraw_public_to_private_on_behalf_of_other_success() {
     );
 
     // Authwit 2: Authorize the vault to burn shares from deposit_recipient on the shares token (public burn in settlement)
-    utils::authorize_burn_public(env, shares_address, vault_address, deposit_recipient, deposit_amount, 0);
+    utils::authorize_burn_public(
+        env,
+        shares_address,
+        vault_address,
+        deposit_recipient,
+        deposit_amount,
+        0,
+    );
 
     // Withdraw
     env.call_private(

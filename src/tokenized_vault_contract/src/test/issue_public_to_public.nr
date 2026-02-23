@@ -1,7 +1,7 @@
 use crate::{test::utils::{self, mint_amount}, TokenizedVault};
-use token_contract::Token;
-use aztec::test::helpers::test_environment::TestEnvironment;
 use aztec::test::helpers::authwit as authwit_cheatcodes;
+use aztec::test::helpers::test_environment::TestEnvironment;
+use token_contract::Token;
 
 #[test(should_fail_with = "Trying to read from uninitialized PublicImmutable")]
 unconstrained fn issue_public_to_public_without_asset() {
@@ -241,13 +241,7 @@ unconstrained fn issue_public_to_public_on_behalf_of_wrong_caller() {
     // Issue shares
     env.call_public(
         recipient,
-        TokenizedVault::at(vault_address).issue_public_to_public(
-            owner,
-            recipient,
-            0,
-            max_assets,
-            0,
-        ),
+        TokenizedVault::at(vault_address).issue_public_to_public(owner, recipient, 0, max_assets, 0),
     );
 }
 
@@ -273,14 +267,8 @@ unconstrained fn issue_public_to_public_on_behalf_of_other_success() {
 
     // Authorize the recipient to call issue_public_to_public
     let requested_shares: u128 = max_assets;
-    let issue_public_to_public_call_interface =
-        TokenizedVault::at(vault_address).issue_public_to_public(
-            owner,
-            recipient,
-            requested_shares,
-            max_assets,
-            0,
-        );
+    let issue_public_to_public_call_interface = TokenizedVault::at(vault_address)
+        .issue_public_to_public(owner, recipient, requested_shares, max_assets, 0);
     authwit_cheatcodes::add_public_authwit_from_call(
         env,
         owner,

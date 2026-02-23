@@ -1,8 +1,8 @@
-use crate::TokenizedVault;
 use crate::test::utils::{self, mint_amount};
-use token_contract::Token;
-use aztec::test::helpers::test_environment::TestEnvironment;
+use crate::TokenizedVault;
 use aztec::test::helpers::authwit as authwit_cheatcodes;
+use aztec::test::helpers::test_environment::TestEnvironment;
+use token_contract::Token;
 
 #[test(should_fail_with = "Trying to read from uninitialized PublicImmutable")]
 unconstrained fn deposit_public_to_public_without_asset() {
@@ -15,12 +15,7 @@ unconstrained fn deposit_public_to_public_without_asset() {
     // Deposit should fail because the PublicImmutable asset was not initialized
     env.call_public(
         owner,
-        TokenizedVault::at(vault_address).deposit_public_to_public(
-            owner,
-            recipient,
-            mint_amount,
-            0,
-        ),
+        TokenizedVault::at(vault_address).deposit_public_to_public(owner, recipient, mint_amount, 0),
     );
 }
 

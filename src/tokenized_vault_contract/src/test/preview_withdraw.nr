@@ -84,9 +84,8 @@ unconstrained fn preview_withdraw_with_yield_accrued_success() {
     let expected_assets_to_withdraw: u128 = deposit_amount + 1;
 
     // Preview withdraw before withdraw
-    let preview_withdraw_shares = env.view_public(
-        TokenizedVault::at(vault_address).preview_withdraw(expected_assets_to_withdraw),
-    );
+    let preview_withdraw_shares = env.view_public(TokenizedVault::at(vault_address)
+        .preview_withdraw(expected_assets_to_withdraw));
 
     // Withdraw all shares
     let expected_shares_to_burn: u128 = deposit_amount;

@@ -1,9 +1,9 @@
-use crate::TokenizedVault;
 use crate::test::utils::{self, mint_amount};
-use token_contract::Token;
-use aztec::test::helpers::test_environment::TestEnvironment;
+use crate::TokenizedVault;
 use aztec::test::helpers::authwit as authwit_cheatcodes;
+use aztec::test::helpers::test_environment::TestEnvironment;
 use generic_proxy::GenericProxy;
+use token_contract::Token;
 
 #[test(should_fail_with = "Trying to read from uninitialized PublicImmutable")]
 unconstrained fn redeem_private_to_public_without_asset() {
@@ -16,12 +16,7 @@ unconstrained fn redeem_private_to_public_without_asset() {
     // Withdrawal should fail because the PublicImmutable asset was not initialized
     env.call_private(
         owner,
-        TokenizedVault::at(vault_address).redeem_private_to_public(
-            owner,
-            recipient,
-            mint_amount,
-            0,
-        ),
+        TokenizedVault::at(vault_address).redeem_private_to_public(owner, recipient, mint_amount, 0),
     );
 }
 
@@ -47,7 +42,14 @@ unconstrained fn redeem_private_to_public_success() {
     let requested_shares: u128 = deposit_amount;
 
     // Authorize the vault to burn shares from the user's private balance on the shares token
-    utils::authorize_burn_private(env, shares_address, vault_address, deposit_recipient, requested_shares, 0);
+    utils::authorize_burn_private(
+        env,
+        shares_address,
+        vault_address,
+        deposit_recipient,
+        requested_shares,
+        0,
+    );
 
     env.call_private(
         deposit_recipient,
@@ -99,7 +101,14 @@ unconstrained fn redeem_private_to_public_after_yield() {
     let requested_shares: u128 = deposit_amount;
 
     // Authorize the vault to burn shares from the user's private balance on the shares token
-    utils::authorize_burn_private(env, shares_address, vault_address, deposit_recipient, requested_shares, 0);
+    utils::authorize_burn_private(
+        env,
+        shares_address,
+        vault_address,
+        deposit_recipient,
+        requested_shares,
+        0,
+    );
 
     env.call_private(
         deposit_recipient,
@@ -184,13 +193,8 @@ unconstrained fn redeem_private_to_public_on_behalf_of_wrong_caller() {
 
     // Authorize someone to call redeem_private_to_public on the vault
     let requested_shares: u128 = deposit_amount;
-    let redeem_private_to_public_call_interface =
-        TokenizedVault::at(vault_address).redeem_private_to_public(
-            deposit_recipient,
-            recipient,
-            requested_shares,
-            0,
-        );
+    let redeem_private_to_public_call_interface = TokenizedVault::at(vault_address)
+        .redeem_private_to_public(deposit_recipient, recipient, requested_shares, 0);
     authwit_cheatcodes::add_private_authwit_from_call(
         env,
         deposit_recipient,
@@ -253,7 +257,14 @@ unconstrained fn redeem_private_to_public_on_behalf_of_other_success() {
     );
 
     // Authorize the vault to burn shares from deposit_recipient's private balance on the shares token
-    utils::authorize_burn_private(env, shares_address, vault_address, deposit_recipient, requested_shares, 0);
+    utils::authorize_burn_private(
+        env,
+        shares_address,
+        vault_address,
+        deposit_recipient,
+        requested_shares,
+        0,
+    );
 
     // Withdraw
     env.call_private(

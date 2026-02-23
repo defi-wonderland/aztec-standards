@@ -1,8 +1,8 @@
 use crate::{test::utils::{self, mint_amount}, TokenizedVault};
-use token_contract::Token;
-use aztec::test::helpers::test_environment::TestEnvironment;
 use aztec::test::helpers::authwit as authwit_cheatcodes;
+use aztec::test::helpers::test_environment::TestEnvironment;
 use generic_proxy::GenericProxy;
+use token_contract::Token;
 
 #[test(should_fail_with = "Trying to read from uninitialized PublicImmutable")]
 unconstrained fn issue_private_to_private_exact_without_asset() {
@@ -302,14 +302,8 @@ unconstrained fn issue_private_to_private_exact_on_behalf_of_other_success() {
     // At the first deposit 1 share = 1 asset
     let max_assets = deposit_amount;
     let requested_shares = deposit_amount;
-    let issue_private_to_private_exact_call_interface =
-        TokenizedVault::at(vault_address).issue_private_to_private_exact(
-            owner,
-            recipient,
-            requested_shares,
-            max_assets,
-            0,
-        );
+    let issue_private_to_private_exact_call_interface = TokenizedVault::at(vault_address)
+        .issue_private_to_private_exact(owner, recipient, requested_shares, max_assets, 0);
     authwit_cheatcodes::add_private_authwit_from_call(
         env,
         owner,

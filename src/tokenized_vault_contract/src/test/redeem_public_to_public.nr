@@ -1,8 +1,8 @@
-use crate::TokenizedVault;
 use crate::test::utils::{self, mint_amount};
-use token_contract::Token;
-use aztec::test::helpers::test_environment::TestEnvironment;
+use crate::TokenizedVault;
 use aztec::test::helpers::authwit as authwit_cheatcodes;
+use aztec::test::helpers::test_environment::TestEnvironment;
+use token_contract::Token;
 
 #[test(should_fail_with = "Trying to read from uninitialized PublicImmutable")]
 unconstrained fn redeem_public_to_public_without_asset() {
@@ -15,12 +15,7 @@ unconstrained fn redeem_public_to_public_without_asset() {
     // Withdrawal should fail because the PublicImmutable asset was not initialized
     env.call_public(
         owner,
-        TokenizedVault::at(vault_address).redeem_public_to_public(
-            owner,
-            recipient,
-            mint_amount,
-            0,
-        ),
+        TokenizedVault::at(vault_address).redeem_public_to_public(owner, recipient, mint_amount, 0),
     );
 }
 
@@ -46,7 +41,14 @@ unconstrained fn redeem_public_to_public_success() {
     let requested_shares: u128 = deposit_amount;
 
     // Authorize the vault to burn shares from the user's public balance on the shares token
-    utils::authorize_burn_public(env, shares_address, vault_address, deposit_recipient, requested_shares, 0);
+    utils::authorize_burn_public(
+        env,
+        shares_address,
+        vault_address,
+        deposit_recipient,
+        requested_shares,
+        0,
+    );
 
     env.call_public(
         deposit_recipient,
@@ -98,7 +100,14 @@ unconstrained fn redeem_public_to_public_after_yield() {
     let requested_shares: u128 = deposit_amount;
 
     // Authorize the vault to burn shares from the user's public balance on the shares token
-    utils::authorize_burn_public(env, shares_address, vault_address, deposit_recipient, requested_shares, 0);
+    utils::authorize_burn_public(
+        env,
+        shares_address,
+        vault_address,
+        deposit_recipient,
+        requested_shares,
+        0,
+    );
 
     env.call_public(
         deposit_recipient,
@@ -228,7 +237,14 @@ unconstrained fn redeem_public_to_public_on_behalf_of_other_success() {
     );
 
     // Authorize the vault to burn shares from deposit_recipient's public balance on the shares token
-    utils::authorize_burn_public(env, shares_address, vault_address, deposit_recipient, requested_shares, 0);
+    utils::authorize_burn_public(
+        env,
+        shares_address,
+        vault_address,
+        deposit_recipient,
+        requested_shares,
+        0,
+    );
 
     // Withdraw
     env.call_public(

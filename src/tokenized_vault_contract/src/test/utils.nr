@@ -1,11 +1,8 @@
 use crate::TokenizedVault;
-use token_contract::Token;
-use aztec::{
-    protocol::address::AztecAddress,
-    test::helpers::test_environment::TestEnvironment,
-};
+use aztec::{protocol::address::AztecAddress, test::helpers::test_environment::TestEnvironment};
 use aztec::test::helpers::authwit as authwit_cheatcodes;
 use std::ops::WrappingSub;
+use token_contract::Token;
 
 pub global mint_amount: u128 = 10_000 as u128;
 
@@ -185,10 +182,7 @@ pub unconstrained fn check_total_supply(
     assert(total_supply == expected_total_supply, "Total supply is not correct");
 }
 
-pub unconstrained fn get_total_supply(
-    env: TestEnvironment,
-    token_address: AztecAddress,
-) -> u128 {
+pub unconstrained fn get_total_supply(env: TestEnvironment, token_address: AztecAddress) -> u128 {
     env.view_public(Token::at(token_address).total_supply())
 }
 
@@ -202,8 +196,7 @@ pub unconstrained fn authorize_transfer_public_to_public(
     amount: u128,
     nonce: Field,
 ) {
-    let call_interface =
-        Token::at(token).transfer_public_to_public(from, caller, amount, nonce);
+    let call_interface = Token::at(token).transfer_public_to_public(from, caller, amount, nonce);
     authwit_cheatcodes::add_public_authwit_from_call(env, from, caller, call_interface);
 }
 
@@ -215,8 +208,7 @@ pub unconstrained fn authorize_transfer_private_to_public(
     amount: u128,
     nonce: Field,
 ) {
-    let call_interface =
-        Token::at(token).transfer_private_to_public(from, caller, amount, nonce);
+    let call_interface = Token::at(token).transfer_private_to_public(from, caller, amount, nonce);
     authwit_cheatcodes::add_private_authwit_from_call(env, from, caller, call_interface);
 }
 
@@ -265,12 +257,7 @@ pub unconstrained fn mint_and_deposit_public_to_public(
     // Deposit
     env.call_public(
         minter,
-        TokenizedVault::at(vault_address).deposit_public_to_public(
-            minter,
-            recipient,
-            amount,
-            0,
-        ),
+        TokenizedVault::at(vault_address).deposit_public_to_public(minter, recipient, amount, 0),
     );
 }
 

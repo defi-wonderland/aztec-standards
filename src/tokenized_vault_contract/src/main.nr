@@ -11,10 +11,8 @@ pub contract TokenizedVault {
         context::PrivateContext,
         macros::{functions::{external, initializer, internal, only_self, view}, storage::storage},
         protocol::{
-            address::AztecAddress,
-            constants::CONTRACT_INSTANCE_REGISTRY_CONTRACT_ADDRESS,
-            contract_class_id::ContractClassId,
-            traits::FromField,
+            address::AztecAddress, constants::CONTRACT_INSTANCE_REGISTRY_CONTRACT_ADDRESS,
+            contract_class_id::ContractClassId, traits::FromField,
         },
         state_vars::PublicImmutable,
     };
@@ -104,12 +102,7 @@ pub contract TokenizedVault {
         );
 
         // Transfer the assets from the sender to the vault
-        self.call(Token::at(asset).transfer_public_to_public(
-            from,
-            to,
-            initial_deposit,
-            _nonce,
-        ));
+        self.call(Token::at(asset).transfer_public_to_public(from, to, initial_deposit, _nonce));
 
         // Mint shares to this contract address (permanently locked)
         self.call(Token::at(shares).mint_to_public(to, deposit_shares));
@@ -143,7 +136,8 @@ pub contract TokenizedVault {
         let total_assets = self.internal._total_assets();
         let total_supply = self.internal._total_supply_of_shares();
         let vault_offset = self.storage.vault_offset.read();
-        let shares = _convert_to_shares(assets, total_assets, total_supply, vault_offset, ROUND_DOWN);
+        let shares =
+            _convert_to_shares(assets, total_assets, total_supply, vault_offset, ROUND_DOWN);
 
         // Order matters: transfer before minting to neutralize ERC-777 reentrancy via the `tokens_to_send` hook.
         // Take the assets from the sender
@@ -678,7 +672,8 @@ pub contract TokenizedVault {
         let total_assets = self.internal._total_assets();
         let total_supply = self.internal._total_supply_of_shares();
         let vault_offset = self.storage.vault_offset.read();
-        let assets = _convert_to_assets(shares, total_assets, total_supply, vault_offset, ROUND_DOWN);
+        let assets =
+            _convert_to_assets(shares, total_assets, total_supply, vault_offset, ROUND_DOWN);
 
         // Order matters: burn before transferring to neutralize ERC-777 reentrancy via the `tokens_received` hook.
         // Burn the sender's shares on the shares token
@@ -910,11 +905,18 @@ pub contract TokenizedVault {
     #[external("public")]
     #[view]
     fn max_withdraw(owner: AztecAddress) -> u128 {
-        let owner_shares = self.view(Token::at(self.storage.shares.read()).balance_of_public(owner));
+        let owner_shares =
+            self.view(Token::at(self.storage.shares.read()).balance_of_public(owner));
         let total_assets = self.internal._total_assets();
         let total_supply = self.internal._total_supply_of_shares();
         let vault_offset = self.storage.vault_offset.read();
-        _convert_to_assets(owner_shares, total_assets, total_supply, vault_offset, ROUND_DOWN)
+        _convert_to_assets(
+            owner_shares,
+            total_assets,
+            total_supply,
+            vault_offset,
+            ROUND_DOWN,
+        )
     }
 
     /// @dev Allows an on-chain or off-chain user to simulate the effects of their withdraw at the current block, given current on-chain conditions.
@@ -1005,7 +1007,8 @@ pub contract TokenizedVault {
         let total_assets = total_assets_post + assets;
         let total_supply = total_supply_post + shares;
         let vault_offset = self.storage.vault_offset.read();
-        let min_shares = _convert_to_shares(assets, total_assets, total_supply, vault_offset, ROUND_UP);
+        let min_shares =
+            _convert_to_shares(assets, total_assets, total_supply, vault_offset, ROUND_UP);
 
         assert(min_shares <= shares, "Insufficient shares burnt");
     }
@@ -1021,7 +1024,8 @@ pub contract TokenizedVault {
         let total_supply = total_supply_post + shares;
         let total_assets = self.internal._total_assets();
         let vault_offset = self.storage.vault_offset.read();
-        let assets = _convert_to_assets(shares, total_assets, total_supply, vault_offset, ROUND_DOWN);
+        let assets =
+            _convert_to_assets(shares, total_assets, total_supply, vault_offset, ROUND_DOWN);
 
         // Transfer the assets to the recipient
         self.call(Token::at(self.storage.asset.read()).transfer_public_to_public(
@@ -1044,7 +1048,8 @@ pub contract TokenizedVault {
         let total_assets = total_assets_post - assets;
         let total_supply = self.internal._total_supply_of_shares();
         let vault_offset = self.storage.vault_offset.read();
-        let shares = _convert_to_shares(assets, total_assets, total_supply, vault_offset, ROUND_DOWN);
+        let shares =
+            _convert_to_shares(assets, total_assets, total_supply, vault_offset, ROUND_DOWN);
 
         // Mint shares to the recipient on the shares token
         self.call(Token::at(self.storage.shares.read()).mint_to_public(to, shares));
@@ -1068,7 +1073,8 @@ pub contract TokenizedVault {
         let total_supply = total_supply_post - shares;
         let total_assets = self.internal._total_assets(); // Assets not transferred yet
         let vault_offset = self.storage.vault_offset.read();
-        let max_shares = _convert_to_shares(assets, total_assets, total_supply, vault_offset, ROUND_DOWN);
+        let max_shares =
+            _convert_to_shares(assets, total_assets, total_supply, vault_offset, ROUND_DOWN);
 
         assert(shares <= max_shares, "Too many shares requested");
 
@@ -1094,7 +1100,8 @@ pub contract TokenizedVault {
         let total_assets = total_assets_post - assets;
         let total_supply = total_supply_post - shares;
         let vault_offset = self.storage.vault_offset.read();
-        let max_shares = _convert_to_shares(assets, total_assets, total_supply, vault_offset, ROUND_DOWN);
+        let max_shares =
+            _convert_to_shares(assets, total_assets, total_supply, vault_offset, ROUND_DOWN);
 
         assert(shares <= max_shares, "Too many shares requested");
     }
@@ -1177,7 +1184,8 @@ pub contract TokenizedVault {
         let total_assets = total_assets_post - assets;
         let total_supply = total_supply_post - min_shares;
         let vault_offset = self.storage.vault_offset.read();
-        let max_shares = _convert_to_shares(assets, total_assets, total_supply, vault_offset, ROUND_DOWN);
+        let max_shares =
+            _convert_to_shares(assets, total_assets, total_supply, vault_offset, ROUND_DOWN);
 
         let outstanding_shares = max_shares - min_shares; // Reverts with underflow if invalid
         if outstanding_shares > 0 {
@@ -1210,7 +1218,8 @@ pub contract TokenizedVault {
         let total_supply = total_supply_post - min_shares;
         let total_assets = self.internal._total_assets();
         let vault_offset = self.storage.vault_offset.read();
-        let max_shares = _convert_to_shares(assets, total_assets, total_supply, vault_offset, ROUND_DOWN);
+        let max_shares =
+            _convert_to_shares(assets, total_assets, total_supply, vault_offset, ROUND_DOWN);
         let outstanding_shares = max_shares - min_shares; // Reverts with underflow if invalid
 
         // Order matters: transfer before minting to neutralize ERC-777 reentrancy via the `tokens_to_send` hook.
@@ -1313,7 +1322,8 @@ pub contract TokenizedVault {
         let total_supply = total_supply_post + shares;
         let total_assets = total_assets_post + min_assets;
         let vault_offset = self.storage.vault_offset.read();
-        let assets = _convert_to_assets(shares, total_assets, total_supply, vault_offset, ROUND_DOWN);
+        let assets =
+            _convert_to_assets(shares, total_assets, total_supply, vault_offset, ROUND_DOWN);
 
         let outstanding_assets = assets - min_assets; // Reverts with underflow if invalid
         if outstanding_assets > 0 {
@@ -1347,7 +1357,8 @@ pub contract TokenizedVault {
         let total_assets = total_assets_post + min_assets;
         let total_supply = self.internal._total_supply_of_shares();
         let vault_offset = self.storage.vault_offset.read();
-        let assets = _convert_to_assets(shares, total_assets, total_supply, vault_offset, ROUND_DOWN);
+        let assets =
+            _convert_to_assets(shares, total_assets, total_supply, vault_offset, ROUND_DOWN);
 
         // Burn the sender's shares on the shares token (requires authwit)
         self.call(Token::at(self.storage.shares.read()).burn_public(from, shares, _nonce));

@@ -1,9 +1,9 @@
-use crate::TokenizedVault;
-use token_contract::Token;
 use crate::test::utils::{self, mint_amount};
+use crate::TokenizedVault;
 use aztec::test::helpers::authwit as authwit_cheatcodes;
 use aztec::test::helpers::test_environment::TestEnvironment;
 use generic_proxy::GenericProxy;
+use token_contract::Token;
 
 #[test(should_fail_with = "Trying to read from uninitialized PublicImmutable")]
 unconstrained fn withdraw_private_to_private_without_asset() {
@@ -48,7 +48,14 @@ unconstrained fn withdraw_private_to_private_success() {
     let shares_to_burn: u128 = deposit_amount;
 
     // Authorize the vault to burn shares from the depositor on the shares token (private burn)
-    utils::authorize_burn_private(env, shares_address, vault_address, deposit_recipient, shares_to_burn, 0);
+    utils::authorize_burn_private(
+        env,
+        shares_address,
+        vault_address,
+        deposit_recipient,
+        shares_to_burn,
+        0,
+    );
 
     env.call_private(
         deposit_recipient,
@@ -101,7 +108,14 @@ unconstrained fn withdraw_private_to_private_after_yield() {
     let shares_to_burn: u128 = deposit_amount;
 
     // Authorize the vault to burn shares from the depositor on the shares token (private burn)
-    utils::authorize_burn_private(env, shares_address, vault_address, deposit_recipient, shares_to_burn, 0);
+    utils::authorize_burn_private(
+        env,
+        shares_address,
+        vault_address,
+        deposit_recipient,
+        shares_to_burn,
+        0,
+    );
 
     env.call_private(
         deposit_recipient,
@@ -150,7 +164,14 @@ unconstrained fn withdraw_private_to_private_request_fewer_assets() {
     let requested_assets: u128 = deposit_amount - 1;
 
     // Authorize the vault to burn shares from the depositor on the shares token (private burn)
-    utils::authorize_burn_private(env, shares_address, vault_address, deposit_recipient, shares_to_burn, 0);
+    utils::authorize_burn_private(
+        env,
+        shares_address,
+        vault_address,
+        deposit_recipient,
+        shares_to_burn,
+        0,
+    );
 
     env.call_private(
         deposit_recipient,
@@ -198,7 +219,14 @@ unconstrained fn withdraw_private_to_private_request_too_many_assets() {
     let shares_to_burn: u128 = deposit_amount - 1;
 
     // Authorize the vault to burn shares from the depositor on the shares token (private burn)
-    utils::authorize_burn_private(env, shares_address, vault_address, deposit_recipient, shares_to_burn, 0);
+    utils::authorize_burn_private(
+        env,
+        shares_address,
+        vault_address,
+        deposit_recipient,
+        shares_to_burn,
+        0,
+    );
 
     env.call_private(
         deposit_recipient,
@@ -273,14 +301,9 @@ unconstrained fn withdraw_private_to_private_on_behalf_of_wrong_caller() {
 
     // Authorize someone to call withdraw_private_to_private (but authorize owner, not proxy)
     let shares_to_burn: u128 = deposit_amount;
-    let withdraw_private_to_private_call_interface =
-        TokenizedVault::at(vault_address).withdraw_private_to_private(
-            deposit_recipient,
-            recipient,
-            deposit_amount,
-            shares_to_burn,
-            0,
-        );
+    let withdraw_private_to_private_call_interface = TokenizedVault::at(vault_address)
+        .withdraw_private_to_private(deposit_recipient, recipient, deposit_amount, shares_to_burn, 0
+            );
     authwit_cheatcodes::add_private_authwit_from_call(
         env,
         deposit_recipient,
@@ -345,7 +368,14 @@ unconstrained fn withdraw_private_to_private_on_behalf_of_other_success() {
     );
 
     // Authwit 2: Authorize the vault to burn shares from deposit_recipient on the shares token (private burn)
-    utils::authorize_burn_private(env, shares_address, vault_address, deposit_recipient, shares_to_burn, 0);
+    utils::authorize_burn_private(
+        env,
+        shares_address,
+        vault_address,
+        deposit_recipient,
+        shares_to_burn,
+        0,
+    );
 
     // Withdraw
     env.call_private(

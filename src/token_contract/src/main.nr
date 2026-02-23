@@ -705,4 +705,3 @@ pub contract Token {
     }
 
 }
-
