@@ -26,62 +26,73 @@ pub contract TokenizedVault {
     // Maximum value for a u128 (2**128 - 1)
     global MAX_U128_VALUE: u128 = 340282366920938463463374607431768211455;
 
+    /// @param admin The address with permission to set the shares token (one-time setup)
     /// @param asset The underlying asset token address
     /// @param shares The shares token address (minter must be this vault)
     /// @param vault_offset The offset used to prevent inflation attacks
     /// @param upgrade_authority The address with permission to upgrade the contract
     #[storage]
     struct Storage<Context> {
+        admin: PublicImmutable<AztecAddress, Context>,
         asset: PublicImmutable<AztecAddress, Context>,
         shares: PublicImmutable<AztecAddress, Context>,
         vault_offset: PublicImmutable<u128, Context>,
         upgrade_authority: PublicImmutable<AztecAddress, Context>,
     }
 
-    /// @notice Initializes the vault with asset, shares, and configuration
-    /// @dev Not marked as #[initializer] to allow two-step deployment: deploy without initializer
-    ///      to get the vault address, then deploy shares token with vault as minter, then call this.
-    ///      PublicImmutable.initialize() ensures each storage slot can only be set once.
+    /// @notice Initializes the vault with asset, offset, and configuration
+    /// @dev The admin must call set_shares() after deploying the shares token with this vault as minter.
+    ///      The vault address can be precomputed before shares exists since shares is not a constructor arg.
+    /// @param admin The address with permission to set the shares token (one-time setup)
     /// @param asset The underlying asset token address
-    /// @param shares The shares token address (minter must be this vault)
     /// @param vault_offset The offset used to prevent inflation attacks (typically 1)
     /// @param upgrade_authority The address of the upgrade authority (zero address if not upgradeable)
     #[external("public")]
+    #[initializer]
     fn constructor(
+        admin: AztecAddress,
         asset: AztecAddress,
-        shares: AztecAddress,
         vault_offset: u128,
         upgrade_authority: AztecAddress,
     ) {
+        self.storage.admin.initialize(admin);
         self.storage.asset.initialize(asset);
-        self.storage.shares.initialize(shares);
         self.storage.vault_offset.initialize(vault_offset);
         self.storage.upgrade_authority.initialize(upgrade_authority);
     }
 
-    /// @notice Initializes the vault with an initial deposit for inflation-attack protection
-    /// @dev See `constructor` for why this is not marked as #[initializer].
-    /// @param asset The underlying asset token address
+    /// @notice Sets the shares token address (one-time, admin-only, immutable after set)
+    /// @dev Must be called after deploying the shares token with this vault as minter.
+    ///      PublicImmutable.initialize() ensures this can only ever be set once -- any subsequent
+    ///      call will revert. All vault operations read shares via PublicImmutable.read() which
+    ///      reverts if shares has not been initialized, so the vault is inoperable until this is called.
     /// @param shares The shares token address (minter must be this vault)
-    /// @param vault_offset The offset used to prevent inflation attacks (typically 1)
-    /// @param upgrade_authority The address of the upgrade authority (zero address if not upgradeable)
+    #[external("public")]
+    fn set_shares_token(shares: AztecAddress) {
+        let admin = self.storage.admin.read();
+        assert(self.msg_sender().eq(admin), "caller is not admin");
+        self.storage.shares.initialize(shares);
+    }
+
+    /// @notice Sets the shares token and makes an initial deposit for inflation-attack protection
+    /// @dev Must be called after deploying the shares token with this vault as minter.
+    ///      PublicImmutable.initialize() ensures this can only ever be set once -- any subsequent
+    ///      call will revert. All vault operations read shares via PublicImmutable.read() which
+    ///      reverts if shares has not been initialized, so the vault is inoperable until this is called.
+    /// @param shares The shares token address (minter must be this vault)
     /// @param initial_deposit The initial deposit amount of the asset
     /// @param depositor The address of the initial depositor of the assets
     /// @param _nonce The nonce used for authwitness for the transfer of the initial deposit
     #[external("public")]
-    fn constructor_with_initial_deposit(
-        asset: AztecAddress,
+    fn set_shares_token_with_initial_deposit(
         shares: AztecAddress,
-        vault_offset: u128,
-        upgrade_authority: AztecAddress,
         initial_deposit: u128,
         depositor: AztecAddress,
         _nonce: Field,
     ) {
-        self.storage.asset.initialize(asset);
+        let admin = self.storage.admin.read();
+        assert(self.msg_sender().eq(admin), "caller is not admin");
         self.storage.shares.initialize(shares);
-        self.storage.vault_offset.initialize(vault_offset);
-        self.storage.upgrade_authority.initialize(upgrade_authority);
 
         // Caller deposits assets, shares are minted to this contract and are permanently locked.
         let from = depositor;
@@ -91,6 +102,7 @@ pub contract TokenizedVault {
         // ignored at this point to ensure the asset<>share conversion is 1:1 for the initial deposit.
         let total_assets: u128 = 0;
         let total_supply: u128 = 0;
+        let vault_offset = self.storage.vault_offset.read();
 
         // Calculate shares to mint for the initial deposit.
         let deposit_shares = _convert_to_shares(
@@ -102,6 +114,7 @@ pub contract TokenizedVault {
         );
 
         // Transfer the assets from the sender to the vault
+        let asset = self.storage.asset.read();
         self.call(Token::at(asset).transfer_public_to_public(from, to, initial_deposit, _nonce));
 
         // Mint shares to this contract address (permanently locked)
@@ -796,6 +809,14 @@ pub contract TokenizedVault {
      * ======================= VAULT VIEW ========================
      * ======================================================== */
 
+    /// @notice Returns the admin address
+    /// @return The address of the admin
+    #[external("public")]
+    #[view]
+    fn admin() -> AztecAddress {
+        self.storage.admin.read()
+    }
+
     /// @notice Returns the underlying asset address
     /// @return The address of the underlying asset
     #[external("public")]
@@ -984,9 +1005,8 @@ pub contract TokenizedVault {
     #[only_self]
     fn settle_withdraw_public_to_private_internal(from: AztecAddress, assets: u128, _nonce: Field) {
         // No pre-applied state changes to shares (public burn happens here)
-        // Asset balance already decreased by transfer_public_to_private enqueue
-        let total_assets_post = self.internal._total_assets();
-        let total_assets = total_assets_post + assets;
+        // Asset balance NOT yet decreased (transfer_public_to_private enqueue runs after this)
+        let total_assets = self.internal._total_assets();
         let total_supply = self.internal._total_supply_of_shares();
         let vault_offset = self.storage.vault_offset.read();
         let shares = _convert_to_shares(assets, total_assets, total_supply, vault_offset, ROUND_UP);
@@ -1001,10 +1021,10 @@ pub contract TokenizedVault {
     #[external("public")]
     #[only_self]
     fn settle_withdraw_private_to_private_internal(assets: u128, shares: u128) {
-        // Pre-applied: shares.decrease_total_supply(shares), asset.decrease_public_balance(self, assets)
-        let total_assets_post = self.internal._total_assets();
+        // Pre-applied: shares.decrease_total_supply(shares)
+        // Asset balance NOT yet decreased (transfer_public_to_private enqueue runs after this)
+        let total_assets = self.internal._total_assets();
         let total_supply_post = self.internal._total_supply_of_shares();
-        let total_assets = total_assets_post + assets;
         let total_supply = total_supply_post + shares;
         let vault_offset = self.storage.vault_offset.read();
         let min_shares =
@@ -1152,11 +1172,11 @@ pub contract TokenizedVault {
         assets: u128,
         max_shares: u128,
     ) {
-        // Pre-applied: shares.decrease_total_supply(max_shares), asset.decrease_public_balance(self, assets)
+        // Pre-applied: shares.decrease_total_supply(max_shares)
+        // Asset balance NOT yet decreased (transfer_public_to_private enqueue runs after this)
         let total_supply_post = self.internal._total_supply_of_shares();
-        let total_assets_post = self.internal._total_assets();
+        let total_assets = self.internal._total_assets();
         let total_supply = total_supply_post + max_shares;
-        let total_assets = total_assets_post + assets;
         let vault_offset = self.storage.vault_offset.read();
         let shares = _convert_to_shares(assets, total_assets, total_supply, vault_offset, ROUND_UP);
 
@@ -1316,11 +1336,11 @@ pub contract TokenizedVault {
         shares: u128,
         min_assets: u128,
     ) {
-        // Pre-applied: shares.decrease_total_supply(shares), asset.decrease_public_balance(self, min_assets)
+        // Pre-applied: shares.decrease_total_supply(shares)
+        // Asset balance NOT yet decreased (transfer_public_to_private enqueue runs after this)
         let total_supply_post = self.internal._total_supply_of_shares();
-        let total_assets_post = self.internal._total_assets();
+        let total_assets = self.internal._total_assets();
         let total_supply = total_supply_post + shares;
-        let total_assets = total_assets_post + min_assets;
         let vault_offset = self.storage.vault_offset.read();
         let assets =
             _convert_to_assets(shares, total_assets, total_supply, vault_offset, ROUND_DOWN);
@@ -1351,10 +1371,9 @@ pub contract TokenizedVault {
         min_assets: u128,
         _nonce: Field,
     ) {
-        // Pre-applied: asset.decrease_public_balance(self, min_assets) from transfer_public_to_private
         // No pre-applied changes to shares total_supply (public burn happens here)
-        let total_assets_post = self.internal._total_assets();
-        let total_assets = total_assets_post + min_assets;
+        // Asset balance NOT yet decreased (transfer_public_to_private enqueue runs after this)
+        let total_assets = self.internal._total_assets();
         let total_supply = self.internal._total_supply_of_shares();
         let vault_offset = self.storage.vault_offset.read();
         let assets =

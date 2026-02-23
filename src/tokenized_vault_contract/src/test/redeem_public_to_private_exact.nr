@@ -1,19 +1,14 @@
 use crate::test::utils::{self, mint_amount};
 use crate::TokenizedVault;
 use aztec::test::helpers::authwit as authwit_cheatcodes;
-use aztec::test::helpers::test_environment::TestEnvironment;
 use generic_proxy::GenericProxy;
 use token_contract::Token;
 
 #[test(should_fail_with = "Trying to read from uninitialized PublicImmutable")]
-unconstrained fn redeem_public_to_private_exact_without_asset() {
-    let mut env = TestEnvironment::new();
-    let owner = env.create_light_account();
-    let recipient = env.create_light_account();
-    let vault_address =
-        env.deploy("@tokenized_vault_contract/TokenizedVault").without_initializer();
+unconstrained fn redeem_public_to_private_exact_without_shares() {
+    let (env, vault_address, owner, recipient, _asset_address) =
+        utils::setup_vault_without_shares();
 
-    // Withdrawal should fail because the PublicImmutable asset was not initialized
     env.call_private(
         owner,
         TokenizedVault::at(vault_address).redeem_public_to_private_exact(owner, recipient, 0, 0, 0),

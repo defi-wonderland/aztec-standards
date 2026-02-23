@@ -828,7 +828,16 @@ describe('Tokenized Vault', () => {
           expect(vaultAfterVictim).toBe(attackerAssetsToSend + totalVictimDeposits);
 
           // 4) Attacker redeems their 1 private share
-          await vaultContract.methods.redeem_private_to_public(attacker, attacker, 1n, 0).send({ from: attacker });
+          const burnAuthWit = await setPrivateAuthWit(
+            vaultContract.address,
+            sharesContract.methods.burn_private(attacker, 1n, 0),
+            attacker,
+            wallet,
+          );
+          await vaultContract.methods
+            .redeem_private_to_public(attacker, attacker, 1n, 0)
+            .with({ authWitnesses: [burnAuthWit] })
+            .send({ from: attacker });
 
           const supplyAfterRedeem = await totalShares(sharesContract, attacker);
           expect(supplyAfterRedeem).toBe(0n);
@@ -936,7 +945,16 @@ describe('Tokenized Vault', () => {
           expect(vaultAfterVictim - vaultAfterAttacker).toBe(totalVictimDeposits);
 
           // 4) Attacker redeems their 1 private share
-          await vaultContract.methods.redeem_private_to_public(attacker, attacker, 1n, 0).send({ from: attacker });
+          const burnAuthWit = await setPrivateAuthWit(
+            vaultContract.address,
+            sharesContract.methods.burn_private(attacker, 1n, 0),
+            attacker,
+            wallet,
+          );
+          await vaultContract.methods
+            .redeem_private_to_public(attacker, attacker, 1n, 0)
+            .with({ authWitnesses: [burnAuthWit] })
+            .send({ from: attacker });
 
           const supplyAfterRedeem = await totalShares(sharesContract, attacker);
           expect(supplyAfterRedeem).toBeGreaterThan(0n);

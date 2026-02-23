@@ -119,11 +119,11 @@ unconstrained fn max_redeem_updates_after_redemption() {
     let initial_max_redeem = env.view_public(TokenizedVault::at(vault_address).max_redeem(owner));
     assert(initial_max_redeem == deposit_amount, "Initial max_redeem incorrect");
 
-    // Authorize vault to burn shares from owner on the shares token
-    utils::authorize_burn_public(env, shares_address, vault_address, owner, deposit_amount, 0);
-
     // Redeem half the shares
     let redeem_amount: u128 = deposit_amount / 2;
+
+    // Authorize vault to burn shares from owner on the shares token (exact amount to be burned)
+    utils::authorize_burn_public(env, shares_address, vault_address, owner, redeem_amount, 0);
     env.call_public(
         owner,
         TokenizedVault::at(vault_address).redeem_public_to_public(
