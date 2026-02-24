@@ -14,3 +14,7 @@ store-*
 .cursor/*
 !.cursor/rules/
 !.cursor/rules/**
+
+pxe_data_*
+wallet_data_*
+

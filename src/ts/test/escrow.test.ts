@@ -340,7 +340,7 @@ describe('Escrow', () => {
     it('should be able to withdraw from escrow correctly', async () => {
       const privateBalance = await token.methods.balance_of_private(escrow.address).simulate({ from: bob });
 
-      await expectTokenBalances(token, escrow.address, wad(0), AMOUNT, bob);
+      await expectTokenBalances(token, escrow.address, wad(0), AMOUNT, escrow.address);
       await expectTokenBalances(token, bob, wad(0), wad(0), bob);
 
       await logic.withWallet(wallet).methods.withdraw(escrow.address, bob, token.address, AMOUNT).send({ from: bob });
