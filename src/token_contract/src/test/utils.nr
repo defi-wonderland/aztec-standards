@@ -6,7 +6,6 @@ use aztec::{
     state_vars::{OwnedStateVariable, PrivateSet},
     test::helpers::test_environment::TestEnvironment,
 };
-use aztec::test::helpers::authwit as authwit_cheatcodes;
 use std::ops::WrappingSub;
 use std::test::OracleMock;
 use uint_note::UintNote;
@@ -102,19 +101,6 @@ pub unconstrained fn deploy_token_with_minter(
     token_contract_address
 }
 
-pub unconstrained fn setup_and_mint_to_public_with_minter(
-    with_account_contracts: bool,
-) -> (TestEnvironment, AztecAddress, AztecAddress, AztecAddress, AztecAddress) {
-    // Setup
-    let (env, token_contract_address, owner, recipient, minter) =
-        setup_with_minter(with_account_contracts);
-
-    // Mint some tokens
-    env.call_public(minter, Token::at(token_contract_address).mint_to_public(owner, mint_amount));
-
-    (env, token_contract_address, owner, recipient, minter)
-}
-
 pub unconstrained fn setup_and_mint_to_public_without_minter(
     with_account_contracts: bool,
 ) -> (TestEnvironment, AztecAddress, AztecAddress, AztecAddress) {
@@ -163,22 +149,6 @@ pub unconstrained fn mint_to_private(
     let _ = OracleMock::mock("getRandomField").returns(note_randomness);
 
     env.call_private(caller, Token::at(token_contract_address).mint_to_private(recipient, amount));
-}
-
-pub unconstrained fn transfer_in_private(
-    env: TestEnvironment,
-    from: AztecAddress,
-    token_contract_address: AztecAddress,
-    recipient: AztecAddress,
-    amount: u128,
-) {
-    let note_randomness = random();
-    let _ = OracleMock::mock("getRandomField").returns(note_randomness);
-
-    env.call_private(
-        from,
-        Token::at(token_contract_address).transfer_private_to_private(from, recipient, amount, 0),
-    );
 }
 
 pub unconstrained fn check_public_balance(
@@ -253,58 +223,6 @@ pub unconstrained fn get_private_balance_notes(
     });
 
     notes
-}
-
-/// @notice Retrieves whether a commitment has been stored in the storage of the target contract
-pub unconstrained fn _commitment_storage_read(
-    env: TestEnvironment,
-    target_contract_address: AztecAddress,
-    commitment: Field,
-) -> bool {
-    // set target contract address
-    let value = env.public_context_at(target_contract_address, |context| {
-        let value: bool = context.storage_read(commitment);
-        value
-    });
-    value
-}
-
-/// @notice Sets private authwit for the `transfer_private_to_public` method. `caller` is also the recipient.
-pub unconstrained fn authorize_transfer_private_to_public(
-    env: TestEnvironment,
-    token: AztecAddress,
-    caller: AztecAddress,
-    from: AztecAddress,
-    amount: u128,
-    nonce: Field,
-) {
-    let transfer_private_to_public_call_interface =
-        Token::at(token).transfer_private_to_public(from, caller, amount, nonce);
-    authwit_cheatcodes::add_private_authwit_from_call(
-        env,
-        from,
-        caller,
-        transfer_private_to_public_call_interface,
-    );
-}
-
-/// @notice Sets public authwit for the `transfer_private_to_public` method. `caller` is also the recipient.
-pub unconstrained fn authorize_transfer_public_to_public(
-    env: TestEnvironment,
-    token: AztecAddress,
-    caller: AztecAddress,
-    from: AztecAddress,
-    amount: u128,
-    nonce: Field,
-) {
-    let transfer_public_to_public_call_interface =
-        Token::at(token).transfer_public_to_public(from, caller, amount, nonce);
-    authwit_cheatcodes::add_public_authwit_from_call(
-        env,
-        from,
-        caller,
-        transfer_public_to_public_call_interface,
-    );
 }
 
 // While authwits authorize a contract to perform an action, spending private notes still requires

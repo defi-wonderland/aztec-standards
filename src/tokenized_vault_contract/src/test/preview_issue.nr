@@ -58,7 +58,7 @@ unconstrained fn issue_public_to_public_success() {
 #[test]
 unconstrained fn preview_issue_with_yield_accrued_success() {
     // Setup with asset token
-    let (env, vault_address, owner, recipient, asset_address, shares_address) =
+    let (env, vault_address, owner, recipient, asset_address, _shares_address) =
         utils::setup_with_vault(false);
 
     // Mint some asset tokens to the vault contract

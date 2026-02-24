@@ -1,7 +1,6 @@
 use crate::TokenizedVault;
 use aztec::{protocol::address::AztecAddress, test::helpers::test_environment::TestEnvironment};
 use aztec::test::helpers::authwit as authwit_cheatcodes;
-use std::ops::WrappingSub;
 use token_contract::Token;
 
 pub global mint_amount: u128 = 10_000 as u128;
@@ -481,7 +480,3 @@ pub unconstrained fn mint_and_deposit_public_to_private(
     );
 }
 
-/// @notice Returns the u128 maximum value
-pub unconstrained fn max_u128() -> u128 {
-    (0 as u128).wrapping_sub(1)
-}
