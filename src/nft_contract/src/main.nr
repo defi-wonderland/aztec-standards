@@ -39,6 +39,7 @@ pub contract NFT {
     /// @param nft_exists A map from token ID to a boolean indicating if the NFT exists
     /// @param public_owners A map from token ID to the public owner of the NFT
     /// @param minter The address that can mint
+    /// @param upgrade_authority The address that can upgrade the contract
     #[storage]
     struct Storage<Context> {
         symbol: PublicImmutable<FieldCompressedString, Context>,
@@ -54,6 +55,7 @@ pub contract NFT {
     /// @param name The name of the NFT
     /// @param symbol The symbol of the NFT
     /// @param minter The address of the minter
+    /// @param upgrade_authority The address of the upgrade authority
     #[external("public")]
     #[initializer]
     fn constructor_with_minter(
@@ -265,8 +267,8 @@ pub contract NFT {
     }
 
     /// @notice Initializes the public token owner from zero address
+    /// @param to The address of the new owner
     /// @param token_id The id of the token to update
-    /// @param exists The new exists value
     #[external("public")]
     #[only_self]
     fn update_public_token_owner_from_zero_internal(to: AztecAddress, token_id: Field) {
@@ -431,7 +433,6 @@ pub contract NFT {
      * ======================================================== */
 
     /// @notice Stores a commitment in storage
-    /// @param context The context of the public call
     /// @param commitment The commitment to store
     #[internal("public")]
     fn _store_commitment_in_storage(commitment: PartialNFTNote) {
@@ -439,9 +440,6 @@ pub contract NFT {
     }
 
     /// @notice Initializes a transfer commitment
-    /// @param context The context of the private call
-    /// @param private_nfts The private owner
-    /// @param from The address of the sender
     /// @param to The address of the recipient
     /// @param completer The address that can complete the commitment
     /// @return commitment The partial nft note utilized for the transfer commitment (privacy entrance)
@@ -462,8 +460,6 @@ pub contract NFT {
     }
 
     /// @notice Updates the private token owner
-    /// @param private_nft_set The private owner
-    /// @param from The address of the sender
     /// @param to The address of the recipient
     /// @param token_id The id of the token to update
     #[internal("private")]
@@ -475,7 +471,7 @@ pub contract NFT {
     }
 
     /// @notice Removes the private token owner
-    /// @param private_nft_set The private owner
+    /// @param from The address of the owner
     /// @param token_id The id of the token to remove
     #[internal("private")]
     fn _remove_private_token_owner(from: AztecAddress, token_id: Field) {
@@ -486,7 +482,6 @@ pub contract NFT {
     }
 
     /// @notice Updates the public token owner
-    /// @param public_owners The public owners map
     /// @param to The address of the recipient
     /// @param token_id The id of the token to update
     #[internal("public")]
@@ -496,7 +491,6 @@ pub contract NFT {
 
     /// @notice Transfers a token to a commitment
     /// @dev Asserts that a commitment is valid, and completes it
-    /// @param context The context of the public call
     /// @param commitment The commitment to complete
     /// @param token_id The id of the token to transfer
     /// @param completer The address that is authorized to complete this commitment
@@ -511,7 +505,6 @@ pub contract NFT {
     }
 
     /// @notice Validates that the caller is the owner of a token
-    /// @param public_owners The public owners map
     /// @param from The address of the sender
     /// @param token_id The id of the token to validate
     #[internal("public")]

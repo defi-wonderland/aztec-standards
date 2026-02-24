@@ -4,8 +4,9 @@ import { Aes128 } from '@aztec/foundation/crypto/aes128';
 import { deriveEcdhSharedSecret } from '@aztec/stdlib/logs';
 import { type Wallet, AccountManager } from '@aztec/aztec.js/wallet';
 import { Fr, type GrumpkinScalar, Point } from '@aztec/aztec.js/fields';
-import { createAztecNodeClient, waitForNode } from '@aztec/aztec.js/node';
+import { createAztecNodeClient, waitForNode, type AztecNode } from '@aztec/aztec.js/node';
 import { type ContractInstanceWithAddress } from '@aztec/aztec.js/contracts';
+import { TxHash } from '@aztec/aztec.js/tx';
 import { PRIVATE_LOG_CIPHERTEXT_LEN, DomainSeparator } from '@aztec/constants';
 import { poseidon2HashWithSeparator } from '@aztec/foundation/crypto/poseidon';
 import { EmbeddedWallet } from '@aztec/wallets/embedded';
@@ -24,6 +25,7 @@ import {
   SetPublicAuthwitContractInteraction,
   type ContractFunctionInteractionCallIntent,
 } from '@aztec/aztec.js/authorization';
+import { EventSelector, decodeFromAbi } from '@aztec/aztec.js/abi';
 import { getDefaultInitializer, getInitializer } from '@aztec/stdlib/abi';
 import {
   CompleteAddress,
@@ -544,6 +546,77 @@ export async function deriveContractAddressWithConstructor(
  */
 export function grumpkinScalarToFr(scalar: GrumpkinScalar) {
   return new Fr(scalar.toBigInt());
+}
+
+// --- Transfer Event Utils ---
+
+/**
+ * Sentinel address used in Transfer events to represent the private side of a balance change.
+ * Must match the PRIVATE_ADDRESS_MAGIC_VALUE in the Noir contract:
+ * sha224sum 'PRIVATE_ADDRESS'
+ */
+export const PRIVATE_ADDRESS = AztecAddress.fromBigInt(0x1ea7e01501975545617c2e694d931cb576b691a4a867fed81ebd3264n);
+
+/** Represents a decoded Transfer event. */
+export type TransferEvent = {
+  from: AztecAddress;
+  to: AztecAddress;
+  amount: bigint;
+};
+
+/**
+ * Queries the node for public logs emitted in a transaction by a specific contract,
+ * and decodes them as Transfer events.
+ *
+ * @param txHash - The transaction hash to query logs for.
+ * @param contractAddress - The contract address to filter logs by.
+ * @returns An array of decoded TransferEvent objects.
+ */
+export async function getTransferEvents(txHash: TxHash, contractAddress: AztecAddress): Promise<TransferEvent[]> {
+  const response = await node.getPublicLogs({
+    txHash,
+    contractAddress,
+  });
+
+  const eventMetadata = TokenContract.events.Transfer;
+
+  return response.logs
+    .filter((extLog) => {
+      const logFields = extLog.log.getEmittedFields();
+      // Match the Transfer event selector (last field)
+      return EventSelector.fromField(logFields[logFields.length - 1]).equals(eventMetadata.eventSelector);
+    })
+    .map((extLog) => {
+      return decodeFromAbi([eventMetadata.abiType], extLog.log.fields) as TransferEvent;
+    });
+}
+
+/**
+ * Asserts that the Transfer events emitted by a specific contract in a transaction
+ * match the expected events exactly (count and content, order-sensitive).
+ *
+ * Comment convention above expectTransferEvents calls: `operation: [emitter ]Transfer(from, to, amount)[ + ...]`
+ * - Single emitter: `// mint_to_public: Transfer(0x0, alice, AMOUNT)`
+ * - Multi-emitter: `// deposit_public_to_public: asset Transfer(from, vault, assets) + vault Transfer(0x0, to, shares)`
+ * - No events: `// transfer_private_to_private: (no public events)`
+ *
+ * @param txHash - The transaction hash to query logs for.
+ * @param contractAddress - The contract address to filter logs by.
+ * @param expected - The expected Transfer events in order.
+ */
+export async function expectTransferEvents(
+  txHash: TxHash,
+  contractAddress: AztecAddress,
+  expected: TransferEvent[],
+): Promise<void> {
+  const events = await getTransferEvents(txHash, contractAddress);
+
+  expect(events.length).toBe(expected.length);
+  for (let i = 0; i < expected.length; i++) {
+    expect(events[i].from).toEqual(expected[i].from);
+    expect(events[i].to).toEqual(expected[i].to);
+    expect(events[i].amount).toEqual(expected[i].amount);
+  }
 }
 
 // Private Log Utils ---
