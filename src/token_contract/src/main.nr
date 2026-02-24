@@ -10,7 +10,11 @@ pub contract Token {
             assert_current_call_valid_authwit, assert_current_call_valid_authwit_public,
         },
         context::PrivateContext,
-        macros::{functions::{external, initializer, internal, only_self, view}, storage::storage},
+        macros::{
+            events::event,
+            functions::{external, initializer, internal, only_self, view},
+            storage::storage,
+        },
         messages::message_delivery::MessageDelivery,
         protocol::{
             address::AztecAddress,
@@ -33,6 +37,18 @@ pub contract Token {
     global INITIAL_TRANSFER_CALL_MAX_NOTES: u32 = 2;
     // max notes transfer for recursive transfer call if initial max notes are exceeded
     global RECURSIVE_TRANSFER_CALL_MAX_NOTES: u32 = 8;
+
+    // Sentinel address used in Transfer events to represent the private side of a balance change.
+    // sha224sum 'PRIVATE_ADDRESS'
+    global PRIVATE_ADDRESS_MAGIC_VALUE: AztecAddress =
+        AztecAddress::from_field(0x1ea7e01501975545617c2e694d931cb576b691a4a867fed81ebd3264);
+
+    #[event]
+    struct Transfer {
+        from: AztecAddress,
+        to: AztecAddress,
+        amount: u128,
+    }
 
     /// @param name The name of the token
     /// @param symbol The symbol of the token
@@ -264,6 +280,8 @@ pub contract Token {
 
         self.internal._decrease_public_balance(from, amount);
         self.internal._increase_public_balance(to, amount);
+
+        self.emit(Transfer { from, to, amount });
     }
 
     /// @notice Finalizes a transfer of token `amount` from public balance of `from` to a commitment of `to`
@@ -291,6 +309,8 @@ pub contract Token {
             completer,
             amount,
         );
+
+        self.emit(Transfer { from, to: PRIVATE_ADDRESS_MAGIC_VALUE, amount });
     }
 
     /// @notice Increases the public balance of `to` by `amount`
@@ -300,6 +320,8 @@ pub contract Token {
     #[only_self]
     fn increase_public_balance_internal(to: AztecAddress, amount: u128) {
         self.internal._increase_public_balance(to, amount);
+
+        self.emit(Transfer { from: PRIVATE_ADDRESS_MAGIC_VALUE, to, amount });
     }
 
     /// @notice Decreases the public balance of `from` by `amount`
@@ -309,6 +331,8 @@ pub contract Token {
     #[only_self]
     fn decrease_public_balance_internal(from: AztecAddress, amount: u128) {
         self.internal._decrease_public_balance(from, amount);
+
+        self.emit(Transfer { from, to: PRIVATE_ADDRESS_MAGIC_VALUE, amount });
     }
 
     /** ==========================================================
@@ -409,6 +433,8 @@ pub contract Token {
             completer,
             amount,
         );
+
+        self.emit(Transfer { from: AztecAddress::zero(), to: PRIVATE_ADDRESS_MAGIC_VALUE, amount });
     }
 
     /// @notice Internal function to increase the total supply by `amount`
@@ -417,6 +443,8 @@ pub contract Token {
     #[only_self]
     fn increase_total_supply_internal(amount: u128) {
         self.internal._increase_total_supply(amount);
+
+        self.emit(Transfer { from: AztecAddress::zero(), to: PRIVATE_ADDRESS_MAGIC_VALUE, amount });
     }
 
     /** ==========================================================
@@ -453,6 +481,8 @@ pub contract Token {
     #[only_self]
     fn decrease_total_supply_internal(amount: u128) {
         self.internal._decrease_total_supply(amount);
+
+        self.emit(Transfer { from: PRIVATE_ADDRESS_MAGIC_VALUE, to: AztecAddress::zero(), amount });
     }
 
     /** ==========================================================
@@ -607,6 +637,8 @@ pub contract Token {
     fn _mint_to_public(to: AztecAddress, amount: u128) {
         self.internal._increase_public_balance(to, amount);
         self.internal._increase_total_supply(amount);
+
+        self.emit(Transfer { from: AztecAddress::zero(), to, amount });
     }
 
     /// @notice Mints tokens to a private balance and enqueues a public call to increase the total supply
@@ -629,6 +661,8 @@ pub contract Token {
     fn _burn_public(from: AztecAddress, amount: u128) {
         self.internal._decrease_public_balance(from, amount);
         self.internal._decrease_total_supply(amount);
+
+        self.emit(Transfer { from, to: AztecAddress::zero(), amount });
     }
 
     /// @notice Burns tokens from a private balance and enqueues a public call to decrease the total supply
