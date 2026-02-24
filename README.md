@@ -28,11 +28,11 @@ We published the [AIP-20 Aztec Token Standard](https://forum.aztec.network/t/req
 
 ## Tokenized Vault Contract
 
-The `Token` contract can be configured to function as a Tokenized Vault, allowing it to issue yield-bearing shares that represent deposits of an underlying asset. To enable this mode, deploy the contract using the `constructor_with_asset()` initializer. The underlying `asset` contract must be an AIP-20–compliant token, and the vault itself issues AIP-20–compliant share tokens to depositors.
+The `TokenizedVault` contract is a standalone yield-bearing vault that holds an underlying AIP-20 asset and issues AIP-20 share tokens to depositors. The vault and shares token are separate contracts — the vault manages deposit/withdraw/redeem logic while delegating share token operations (mint, burn, transfer) to an external AIP-20 `Token` contract configured with the vault as its minter.
 
 We published the [AIP-4626: Tokenized Vault Standard](https://forum.aztec.network/t/request-for-comments-aip-4626-tokenized-vault/8079) to the forum. Feel free to review and discuss the specification there.
 
-📖 **[View detailed Tokenized Vault documentation](src/token_contract/README.md#aip-4626-aztec-tokenized-vault-standard)**
+📖 **[View detailed Tokenized Vault documentation](src/tokenized_vault_contract/README.md)**
 
 ## NFT Contract
 
