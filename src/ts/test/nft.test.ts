@@ -108,7 +108,9 @@ describe('NFT', () => {
     TEST_TIMEOUT,
   );
 
-  it(
+  // Skipped: requires `additionalScopes` (not yet available) so bob's PXE can
+  // discover alice's private notes when bob submits the tx.
+  it.skip(
     'transfers NFT from private to public with authorization',
     async () => {
       const tokenId = 1n;
@@ -140,7 +142,9 @@ describe('NFT', () => {
 
   // --- Transfer tests: private to public with commitment ---
 
-  it(
+  // Skipped: requires `additionalScopes` (not yet available) so bob's PXE can
+  // discover alice's private notes when bob submits the tx.
+  it.skip(
     'transfers NFT from private to public with commitment and authorization',
     async () => {
       const tokenId = 1n;
