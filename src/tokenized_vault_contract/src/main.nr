@@ -183,11 +183,12 @@ pub contract TokenizedVault {
     ) {
         _validate_from_private::<5>(self.context, from);
 
+        // Validate in public that `assets` is sufficient for the requested shares
+        // Order matters: enqueue settlement first so asset transfer executes before shares total_supply increase
+        self.enqueue_self.settle_deposit_public_to_private_internal(from, assets, shares, _nonce);
+
         // Mint shares to the recipient's private balance
         self.call(Token::at(self.storage.shares.read()).mint_to_private(to, shares));
-
-        // Validate in public that `assets` is sufficient for the requested shares
-        self.enqueue_self.settle_deposit_public_to_private_internal(from, assets, shares, _nonce);
     }
 
     /// @notice Deposits the underlying asset from a private balance and receives shares to a private balance
@@ -270,15 +271,13 @@ pub contract TokenizedVault {
     ) {
         _validate_from_private::<5>(self.context, from);
 
-        // Mint min_shares to the recipient's private balance
-        self.call(Token::at(self.storage.shares.read()).mint_to_private(to, min_shares));
-
         // Initialize commitment on the shares token that allows to mint outstanding shares to the recipient in public
         let partial_note = self.call(Token::at(self.storage.shares.read())
             .initialize_transfer_commitment(to, self.address));
 
         // Mint any outstanding shares without revealing the recipient and updates the shares total supply
         // Reverts if min_shares is greater than allowed
+        // Order matters: enqueue settlement first so asset transfer executes before shares total_supply increase
         self.enqueue_self.settle_deposit_public_to_private_exact_internal(
             from,
             partial_note,
@@ -286,6 +285,9 @@ pub contract TokenizedVault {
             min_shares,
             _nonce,
         );
+
+        // Mint min_shares to the recipient's private balance
+        self.call(Token::at(self.storage.shares.read()).mint_to_private(to, min_shares));
     }
 
     /// @notice Deposits the underlying asset from a private balance and receives shares to a private balance
@@ -398,11 +400,12 @@ pub contract TokenizedVault {
     ) {
         _validate_from_private::<5>(self.context, from);
 
+        // Validate the amount of assets transferred and send back any excess
+        // Order matters: enqueue settlement first so asset transfer executes before shares total_supply increase
+        self.enqueue_self.settle_issue_public_to_private_internal(from, shares, max_assets, _nonce);
+
         // Mint shares to the recipient's private balance
         self.call(Token::at(self.storage.shares.read()).mint_to_private(to, shares));
-
-        // Validate the amount of assets transferred and send back any excess
-        self.enqueue_self.settle_issue_public_to_private_internal(from, shares, max_assets, _nonce);
     }
 
     /// @notice Issues exactly the requested shares to a public balance and receives the underlying asset from a private balance
@@ -1088,9 +1091,8 @@ pub contract TokenizedVault {
         shares: u128,
         _nonce: Field,
     ) {
-        // Pre-applied: shares.increase_total_supply(shares) from mint_to_private
-        let total_supply_post = self.internal._total_supply_of_shares();
-        let total_supply = total_supply_post - shares;
+        // No pre-applied state changes: shares.increase_total_supply(shares) enqueues after this
+        let total_supply = self.internal._total_supply_of_shares();
         let total_assets = self.internal._total_assets(); // Assets not transferred yet
         let vault_offset = self.storage.vault_offset.read();
         let max_shares =
@@ -1232,10 +1234,9 @@ pub contract TokenizedVault {
         min_shares: u128,
         _nonce: Field,
     ) {
-        // Pre-applied: shares.increase_total_supply(min_shares) from mint_to_private
+        // No pre-applied state changes: shares.increase_total_supply(min_shares) enqueues after this
         // Assets not transferred yet
-        let total_supply_post = self.internal._total_supply_of_shares();
-        let total_supply = total_supply_post - min_shares;
+        let total_supply = self.internal._total_supply_of_shares();
         let total_assets = self.internal._total_assets();
         let vault_offset = self.storage.vault_offset.read();
         let max_shares =
@@ -1406,10 +1407,9 @@ pub contract TokenizedVault {
         max_assets: u128,
         _nonce: Field,
     ) {
-        // Pre-applied: shares.increase_total_supply(shares) from mint_to_private
+        // No pre-applied state changes: shares.increase_total_supply(shares) enqueues after this
         // Assets not transferred yet
-        let total_supply_post = self.internal._total_supply_of_shares();
-        let total_supply = total_supply_post - shares;
+        let total_supply = self.internal._total_supply_of_shares();
         let total_assets = self.internal._total_assets();
         let vault_offset = self.storage.vault_offset.read();
         let assets = _convert_to_assets(shares, total_assets, total_supply, vault_offset, ROUND_UP);

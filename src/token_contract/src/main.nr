@@ -419,15 +419,6 @@ pub contract Token {
         self.internal._increase_total_supply(amount);
     }
 
-    /// @notice Internal function to mint tokens to a public balance
-    /// @param to The address of the recipient
-    /// @param amount The amount of tokens to mint
-    #[external("public")]
-    #[only_self]
-    fn mint_to_public_internal(to: AztecAddress, amount: u128) {
-        self.internal._mint_to_public(to, amount);
-    }
-
     /** ==========================================================
      * ======================= BURNABLE ==========================
      * ======================================================== */
@@ -462,15 +453,6 @@ pub contract Token {
     #[only_self]
     fn decrease_total_supply_internal(amount: u128) {
         self.internal._decrease_total_supply(amount);
-    }
-
-    /// @notice Burns tokens from a public balance without validation
-    /// @param from The address from which to burn the tokens
-    /// @param amount The amount of tokens to burn
-    #[external("public")]
-    #[only_self]
-    fn burn_public_internal(from: AztecAddress, amount: u128) {
-        self.internal._burn_public(from, amount);
     }
 
     /** ==========================================================
