@@ -32,7 +32,6 @@ unconstrained fn deposit_public_to_public_success() {
         vault_address,
         owner,
         deposit_amount,
-        0,
     );
 
     // Deposit
@@ -80,7 +79,6 @@ unconstrained fn deposit_public_to_public_after_yield() {
         vault_address,
         owner,
         deposit_amount,
-        0,
     );
 
     // Deposit
@@ -151,7 +149,6 @@ unconstrained fn deposit_public_to_public_on_behalf_of_wrong_caller() {
         vault_address,
         owner,
         deposit_amount,
-        0,
     );
 
     // Deposit
@@ -183,7 +180,6 @@ unconstrained fn deposit_public_to_public_on_behalf_of_other_success() {
         vault_address,
         owner,
         deposit_amount,
-        0,
     );
 
     // Authorize the recipient to call deposit_public_to_public

@@ -39,7 +39,6 @@ unconstrained fn deposit_public_to_private_success() {
         vault_address,
         owner,
         deposit_amount,
-        0,
     );
 
     // Deposit
@@ -90,7 +89,6 @@ unconstrained fn deposit_public_to_private_after_yield() {
         vault_address,
         owner,
         deposit_amount,
-        0,
     );
 
     // Deposit
@@ -141,7 +139,6 @@ unconstrained fn deposit_public_to_private_request_fewer_shares() {
         vault_address,
         owner,
         deposit_amount,
-        0,
     );
 
     // Deposit
@@ -188,7 +185,6 @@ unconstrained fn deposit_public_to_private_request_too_many_shares() {
         vault_address,
         owner,
         deposit_amount,
-        0,
     );
 
     // Deposit
@@ -249,7 +245,6 @@ unconstrained fn deposit_public_to_private_on_behalf_of_wrong_caller() {
         vault_address,
         owner,
         deposit_amount,
-        0,
     );
 
     // Deposit
@@ -293,7 +288,6 @@ unconstrained fn deposit_public_to_private_on_behalf_of_other_success() {
         vault_address,
         owner,
         deposit_amount,
-        0,
     );
 
     // Authorize the proxy to call deposit_public_to_private on behalf of owner

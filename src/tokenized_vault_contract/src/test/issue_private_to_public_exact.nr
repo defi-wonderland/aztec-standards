@@ -38,7 +38,6 @@ unconstrained fn issue_private_to_public_exact_success() {
         vault_address,
         owner,
         deposit_amount,
-        0,
     );
 
     // Issue shares
@@ -90,7 +89,6 @@ unconstrained fn issue_private_to_public_exact_after_yield() {
         vault_address,
         owner,
         deposit_amount,
-        0,
     );
 
     // Issue shares
@@ -137,7 +135,6 @@ unconstrained fn issue_private_to_public_exact_too_many_assets() {
         vault_address,
         owner,
         max_deposit,
-        0,
     );
 
     // Issue shares
@@ -185,7 +182,6 @@ unconstrained fn issue_private_to_public_exact_request_too_many_shares() {
         vault_address,
         owner,
         deposit_amount,
-        0,
     );
 
     // Issue shares
@@ -247,7 +243,6 @@ unconstrained fn issue_private_to_public_exact_on_behalf_of_wrong_caller() {
         vault_address,
         owner,
         deposit_amount,
-        0,
     );
 
     // Issue shares
@@ -290,7 +285,6 @@ unconstrained fn issue_private_to_public_exact_on_behalf_of_other_success() {
         vault_address,
         owner,
         deposit_amount,
-        0,
     );
 
     // Authorize the recipient to call issue_private_to_public_exact

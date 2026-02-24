@@ -39,7 +39,6 @@ unconstrained fn deposit_public_to_private_exact_success() {
         vault_address,
         owner,
         deposit_amount,
-        0,
     );
 
     // Deposit
@@ -90,7 +89,6 @@ unconstrained fn deposit_public_to_private_exact_after_yield() {
         vault_address,
         owner,
         deposit_amount,
-        0,
     );
 
     // Deposit
@@ -141,7 +139,6 @@ unconstrained fn deposit_public_to_private_exact_request_fewer_shares() {
         vault_address,
         owner,
         deposit_amount,
-        0,
     );
 
     // Deposit
@@ -187,7 +184,6 @@ unconstrained fn deposit_public_to_private_exact_request_too_many_shares() {
         vault_address,
         owner,
         deposit_amount,
-        0,
     );
 
     // Deposit
@@ -246,7 +242,6 @@ unconstrained fn deposit_public_to_private_exact_on_behalf_of_wrong_caller() {
         vault_address,
         owner,
         deposit_amount,
-        0,
     );
 
     // Deposit
@@ -289,7 +284,6 @@ unconstrained fn deposit_public_to_private_exact_on_behalf_of_other_success() {
         vault_address,
         owner,
         deposit_amount,
-        0,
     );
 
     // Authorize the recipient to call deposit_public_to_private_exact

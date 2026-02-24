@@ -26,7 +26,6 @@ unconstrained fn preview_deposit_success() {
         vault_address,
         owner,
         deposit_amount,
-        0,
     );
 
     // Preview deposit before deposit
@@ -75,7 +74,6 @@ unconstrained fn preview_deposit_with_yield_accrued_success() {
         vault_address,
         owner,
         deposit_amount,
-        0,
     );
 
     // Preview deposit before deposit

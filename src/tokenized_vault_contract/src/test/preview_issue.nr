@@ -25,7 +25,6 @@ unconstrained fn issue_public_to_public_success() {
         vault_address,
         owner,
         max_assets,
-        0,
     );
 
     // At the first issue 1 share = 1 asset
@@ -78,7 +77,6 @@ unconstrained fn preview_issue_with_yield_accrued_success() {
         vault_address,
         owner,
         max_assets,
-        0,
     );
 
     let requested_shares: u128 = max_assets / 2; // The initial rate, when shares' supply is still 0, is given by the amount of assets held by the vault + 1. Since yield = 1, the rate is 1:2.

@@ -30,7 +30,6 @@ unconstrained fn issue_public_to_public_success() {
         vault_address,
         owner,
         max_assets,
-        0,
     );
 
     // Issue
@@ -75,7 +74,6 @@ unconstrained fn issue_public_to_public_with_change_success() {
         vault_address,
         owner,
         max_assets,
-        0,
     );
 
     // Issue shares
@@ -126,7 +124,6 @@ unconstrained fn issue_public_to_public_after_yield() {
         vault_address,
         owner,
         max_assets,
-        0,
     );
 
     // Issue shares
@@ -170,7 +167,6 @@ unconstrained fn issue_public_to_public_request_too_many_shares() {
         vault_address,
         owner,
         max_assets,
-        0,
     );
 
     // Issue shares
@@ -229,7 +225,6 @@ unconstrained fn issue_public_to_public_on_behalf_of_wrong_caller() {
         vault_address,
         owner,
         max_assets,
-        0,
     );
 
     // Issue shares
@@ -256,7 +251,6 @@ unconstrained fn issue_public_to_public_on_behalf_of_other_success() {
         vault_address,
         owner,
         max_assets,
-        0,
     );
 
     // Authorize the recipient to call issue_public_to_public
