@@ -141,7 +141,7 @@ describe('Tokenized Vault', () => {
         await expectTransferEvents(depositTx, asset.address, [
           { from: alice, to: vault.address, amount: BigInt(assetsAlice) },
         ]);
-        await expectTransferEvents(depositTx, vault.address, [
+        await expectTransferEvents(depositTx, shares.address, [
           { from: AztecAddress.ZERO, to: alice, amount: BigInt(sharesAlice) },
         ]);
 
@@ -158,7 +158,7 @@ describe('Tokenized Vault', () => {
           bob,
           assetsBob,
         );
-        await expectTransferEvents(issueTx, vault.address, [
+        await expectTransferEvents(issueTx, shares.address, [
           { from: AztecAddress.ZERO, to: bob, amount: BigInt(sharesBob) },
         ]);
 
@@ -179,7 +179,7 @@ describe('Tokenized Vault', () => {
           .withdraw_public_to_public(alice, alice, maxWithdraw, 0)
           .send({ from: alice });
         const withdrawShares = BigInt(sharesAlice); // shares = convert_to_shares(maxWithdraw, ROUND_UP) = sharesAlice
-        await expectTransferEvents(withdrawTx.txHash, vault.address, [
+        await expectTransferEvents(withdrawTx.txHash, shares.address, [
           { from: alice, to: AztecAddress.ZERO, amount: withdrawShares },
         ]);
         await expectTransferEvents(withdrawTx.txHash, asset.address, [
@@ -190,7 +190,7 @@ describe('Tokenized Vault', () => {
         // redeem_public_to_public: vault Transfer(from, 0x0, shares) + asset Transfer(vault, to, assets)
         await authorizeBurnPublic(bob, sharesBob);
         const redeemTx = await vault.methods.redeem_public_to_public(bob, bob, sharesBob, 0).send({ from: bob });
-        await expectTransferEvents(redeemTx.txHash, vault.address, [
+        await expectTransferEvents(redeemTx.txHash, shares.address, [
           { from: bob, to: AztecAddress.ZERO, amount: BigInt(sharesBob) },
         ]);
         await expectTransferEvents(redeemTx.txHash, asset.address, [
@@ -233,7 +233,7 @@ describe('Tokenized Vault', () => {
         await expectTransferEvents(depositTx, asset.address, [
           { from: PRIVATE_ADDRESS, to: vault.address, amount: BigInt(assetsAlice) },
         ]);
-        await expectTransferEvents(depositTx, vault.address, [
+        await expectTransferEvents(depositTx, shares.address, [
           { from: AztecAddress.ZERO, to: alice, amount: BigInt(sharesAlice) },
         ]);
 
@@ -248,7 +248,7 @@ describe('Tokenized Vault', () => {
           bob,
           assetsBob,
         );
-        await expectTransferEvents(issueTx, vault.address, [
+        await expectTransferEvents(issueTx, shares.address, [
           { from: AztecAddress.ZERO, to: bob, amount: BigInt(sharesBob) },
         ]);
 
@@ -268,7 +268,7 @@ describe('Tokenized Vault', () => {
         const withdrawTx = await vault.methods
           .withdraw_public_to_private(alice, alice, maxWithdraw, 0)
           .send({ from: alice });
-        await expectTransferEvents(withdrawTx.txHash, vault.address, [
+        await expectTransferEvents(withdrawTx.txHash, shares.address, [
           { from: alice, to: AztecAddress.ZERO, amount: BigInt(sharesAlice) },
         ]);
         await expectTransferEvents(withdrawTx.txHash, asset.address, [
@@ -283,7 +283,7 @@ describe('Tokenized Vault', () => {
         const redeemTx = await vault.methods
           .redeem_public_to_private_exact(bob, bob, sharesBob, minAssets, 0)
           .send({ from: bob });
-        await expectTransferEvents(redeemTx.txHash, vault.address, [
+        await expectTransferEvents(redeemTx.txHash, shares.address, [
           { from: bob, to: AztecAddress.ZERO, amount: BigInt(sharesBob) },
         ]);
         await expectTransferEvents(redeemTx.txHash, asset.address, [
@@ -319,7 +319,7 @@ describe('Tokenized Vault', () => {
         await expectTransferEvents(depositTx, asset.address, [
           { from: alice, to: vault.address, amount: BigInt(assetsAlice) },
         ]);
-        await expectTransferEvents(depositTx, vault.address, [
+        await expectTransferEvents(depositTx, shares.address, [
           { from: AztecAddress.ZERO, to: PRIVATE_ADDRESS, amount: BigInt(sharesAlice) },
         ]);
 
@@ -334,7 +334,7 @@ describe('Tokenized Vault', () => {
           bob,
           assetsBob,
         );
-        await expectTransferEvents(issueTx, vault.address, [
+        await expectTransferEvents(issueTx, shares.address, [
           { from: AztecAddress.ZERO, to: PRIVATE_ADDRESS, amount: BigInt(sharesBob) },
         ]);
 
@@ -357,7 +357,7 @@ describe('Tokenized Vault', () => {
           .withdraw_private_to_public_exact(alice, alice, maxWithdraw, sharesAlice, 0)
           .with({ authWitnesses: [burnAuthWit] })
           .send({ from: alice });
-        await expectTransferEvents(withdrawTx.txHash, vault.address, [
+        await expectTransferEvents(withdrawTx.txHash, shares.address, [
           { from: PRIVATE_ADDRESS, to: AztecAddress.ZERO, amount: BigInt(sharesAlice) },
         ]);
         await expectTransferEvents(withdrawTx.txHash, asset.address, [
@@ -371,7 +371,7 @@ describe('Tokenized Vault', () => {
           .redeem_private_to_public(bob, bob, sharesBob, 0)
           .with({ authWitnesses: [burnAuthWitBob] })
           .send({ from: bob });
-        await expectTransferEvents(redeemTx.txHash, vault.address, [
+        await expectTransferEvents(redeemTx.txHash, shares.address, [
           { from: PRIVATE_ADDRESS, to: AztecAddress.ZERO, amount: BigInt(sharesBob) },
         ]);
         await expectTransferEvents(redeemTx.txHash, asset.address, [
@@ -413,7 +413,7 @@ describe('Tokenized Vault', () => {
         await expectTransferEvents(depositTx, asset.address, [
           { from: PRIVATE_ADDRESS, to: vault.address, amount: BigInt(assetsAlice) },
         ]);
-        await expectTransferEvents(depositTx, vault.address, [
+        await expectTransferEvents(depositTx, shares.address, [
           { from: AztecAddress.ZERO, to: PRIVATE_ADDRESS, amount: BigInt(sharesAlice) },
         ]);
 
@@ -428,7 +428,7 @@ describe('Tokenized Vault', () => {
           bob,
           assetsBob,
         );
-        await expectTransferEvents(issueTx, vault.address, [
+        await expectTransferEvents(issueTx, shares.address, [
           { from: AztecAddress.ZERO, to: PRIVATE_ADDRESS, amount: BigInt(sharesBob) },
         ]);
 
@@ -450,7 +450,7 @@ describe('Tokenized Vault', () => {
           .withdraw_private_to_private(alice, alice, maxWithdraw, sharesAlice, 0)
           .with({ authWitnesses: [burnAuthWit] })
           .send({ from: alice });
-        await expectTransferEvents(withdrawTx.txHash, vault.address, [
+        await expectTransferEvents(withdrawTx.txHash, shares.address, [
           { from: PRIVATE_ADDRESS, to: AztecAddress.ZERO, amount: BigInt(sharesAlice) },
         ]);
         await expectTransferEvents(withdrawTx.txHash, asset.address, [
@@ -465,7 +465,7 @@ describe('Tokenized Vault', () => {
           .redeem_private_to_private_exact(bob, bob, sharesBob, assetsBob, 0)
           .with({ authWitnesses: [burnAuthWitBob] })
           .send({ from: bob });
-        await expectTransferEvents(redeemTx.txHash, vault.address, [
+        await expectTransferEvents(redeemTx.txHash, shares.address, [
           { from: PRIVATE_ADDRESS, to: AztecAddress.ZERO, amount: BigInt(sharesBob) },
         ]);
 
@@ -499,7 +499,7 @@ describe('Tokenized Vault', () => {
           { from: PRIVATE_ADDRESS, to: vault.address, amount: BigInt(assetsAlice) },
         ]);
         // For the first deposit, max_shares = sharesAlice (since total_supply is 0)
-        await expectTransferEvents(depositAliceTx, vault.address, [
+        await expectTransferEvents(depositAliceTx, shares.address, [
           { from: AztecAddress.ZERO, to: PRIVATE_ADDRESS, amount: BigInt(sharesAlice) },
         ]);
 
@@ -538,7 +538,7 @@ describe('Tokenized Vault', () => {
           .withdraw_private_to_private_exact(alice, alice, maxWithdraw, sharesAlice, 0)
           .with({ authWitnesses: [burnAuthWit] })
           .send({ from: alice });
-        await expectTransferEvents(withdrawAliceTx.txHash, vault.address, [
+        await expectTransferEvents(withdrawAliceTx.txHash, shares.address, [
           { from: PRIVATE_ADDRESS, to: AztecAddress.ZERO, amount: BigInt(sharesAlice) },
         ]);
         await expectTransferEvents(withdrawAliceTx.txHash, asset.address, [
@@ -553,7 +553,7 @@ describe('Tokenized Vault', () => {
           .withdraw_private_to_public_exact(bob, bob, assetsBob, sharesBob, 0)
           .with({ authWitnesses: [burnAuthWitBob] })
           .send({ from: bob });
-        await expectTransferEvents(withdrawBobTx.txHash, vault.address, [
+        await expectTransferEvents(withdrawBobTx.txHash, shares.address, [
           { from: PRIVATE_ADDRESS, to: AztecAddress.ZERO, amount: BigInt(sharesBob) },
         ]);
         await expectTransferEvents(withdrawBobTx.txHash, asset.address, [
@@ -590,7 +590,7 @@ describe('Tokenized Vault', () => {
         await expectTransferEvents(depositTx, asset.address, [
           { from: alice, to: vault.address, amount: BigInt(assetsAlice) },
         ]);
-        await expectTransferEvents(depositTx, vault.address, [
+        await expectTransferEvents(depositTx, shares.address, [
           { from: AztecAddress.ZERO, to: alice, amount: BigInt(sharesAlice) },
         ]);
 
@@ -601,7 +601,7 @@ describe('Tokenized Vault', () => {
         const issueAction = vault.methods.issue_public_to_public(bob, bob, sharesBob, assetsBob, 0);
         await setPublicAuthWit(carl, issueAction, bob, wallet);
         const issueTx = await callVaultWithPublicAuthWit(issueAction, bob, assetsBob, { caller: carl });
-        await expectTransferEvents(issueTx, vault.address, [
+        await expectTransferEvents(issueTx, shares.address, [
           { from: AztecAddress.ZERO, to: bob, amount: BigInt(sharesBob) },
         ]);
 
@@ -622,7 +622,7 @@ describe('Tokenized Vault', () => {
         const withdrawAction = vault.methods.withdraw_public_to_public(alice, alice, maxWithdraw, 0);
         await setPublicAuthWit(carl, withdrawAction, alice, wallet);
         const withdrawTx = await withdrawAction.send({ from: carl });
-        await expectTransferEvents(withdrawTx.txHash, vault.address, [
+        await expectTransferEvents(withdrawTx.txHash, shares.address, [
           { from: alice, to: AztecAddress.ZERO, amount: BigInt(sharesAlice) },
         ]);
         await expectTransferEvents(withdrawTx.txHash, asset.address, [
@@ -634,7 +634,7 @@ describe('Tokenized Vault', () => {
         const redeemAction = vault.methods.redeem_public_to_public(bob, bob, sharesBob, 0);
         await setPublicAuthWit(carl, redeemAction, bob, wallet);
         const redeemTx = await redeemAction.send({ from: carl });
-        await expectTransferEvents(redeemTx.txHash, vault.address, [
+        await expectTransferEvents(redeemTx.txHash, shares.address, [
           { from: bob, to: AztecAddress.ZERO, amount: BigInt(sharesBob) },
         ]);
         await expectTransferEvents(redeemTx.txHash, asset.address, [
@@ -674,7 +674,7 @@ describe('Tokenized Vault', () => {
         await expectTransferEvents(depositTx, asset.address, [
           { from: PRIVATE_ADDRESS, to: vault.address, amount: BigInt(assetsAlice) },
         ]);
-        await expectTransferEvents(depositTx, vault.address, [
+        await expectTransferEvents(depositTx, shares.address, [
           { from: AztecAddress.ZERO, to: alice, amount: BigInt(sharesAlice) },
         ]);
 
@@ -690,7 +690,7 @@ describe('Tokenized Vault', () => {
           assetsBob,
           { caller: carl },
         );
-        await expectTransferEvents(issueTx, vault.address, [
+        await expectTransferEvents(issueTx, shares.address, [
           { from: AztecAddress.ZERO, to: bob, amount: BigInt(sharesBob) },
         ]);
 
@@ -711,7 +711,7 @@ describe('Tokenized Vault', () => {
         const withdrawTx = await vault.methods
           .withdraw_public_to_private(alice, alice, maxWithdraw, 0)
           .send({ from: alice });
-        await expectTransferEvents(withdrawTx.txHash, vault.address, [
+        await expectTransferEvents(withdrawTx.txHash, shares.address, [
           { from: alice, to: AztecAddress.ZERO, amount: BigInt(sharesAlice) },
         ]);
         await expectTransferEvents(withdrawTx.txHash, asset.address, [
@@ -724,7 +724,7 @@ describe('Tokenized Vault', () => {
         const redeemTx = await vault.methods
           .redeem_public_to_private_exact(bob, bob, sharesBob, minAssets, 0)
           .send({ from: bob });
-        await expectTransferEvents(redeemTx.txHash, vault.address, [
+        await expectTransferEvents(redeemTx.txHash, shares.address, [
           { from: bob, to: AztecAddress.ZERO, amount: BigInt(sharesBob) },
         ]);
         await expectTransferEvents(redeemTx.txHash, asset.address, [
@@ -764,7 +764,7 @@ describe('Tokenized Vault', () => {
         await expectTransferEvents(depositTx, asset.address, [
           { from: alice, to: vault.address, amount: BigInt(assetsAlice) },
         ]);
-        await expectTransferEvents(depositTx, vault.address, [
+        await expectTransferEvents(depositTx, shares.address, [
           { from: AztecAddress.ZERO, to: PRIVATE_ADDRESS, amount: BigInt(sharesAlice) },
         ]);
 
@@ -780,7 +780,7 @@ describe('Tokenized Vault', () => {
           assetsBob,
           { caller: carl },
         );
-        await expectTransferEvents(issueTx, vault.address, [
+        await expectTransferEvents(issueTx, shares.address, [
           { from: AztecAddress.ZERO, to: PRIVATE_ADDRESS, amount: BigInt(sharesBob) },
         ]);
 
@@ -810,7 +810,7 @@ describe('Tokenized Vault', () => {
         const withdrawTx = await withdrawAction
           .with({ authWitnesses: [withdrawAuthWitness, burnAuthWit] })
           .send({ from: carl });
-        await expectTransferEvents(withdrawTx.txHash, vault.address, [
+        await expectTransferEvents(withdrawTx.txHash, shares.address, [
           { from: PRIVATE_ADDRESS, to: AztecAddress.ZERO, amount: BigInt(sharesAlice) },
         ]);
         await expectTransferEvents(withdrawTx.txHash, asset.address, [
@@ -824,7 +824,7 @@ describe('Tokenized Vault', () => {
         const redeemTx = await redeemAction
           .with({ authWitnesses: [redeemAuthWitness, burnAuthWitBob] })
           .send({ from: carl });
-        await expectTransferEvents(redeemTx.txHash, vault.address, [
+        await expectTransferEvents(redeemTx.txHash, shares.address, [
           { from: PRIVATE_ADDRESS, to: AztecAddress.ZERO, amount: BigInt(sharesBob) },
         ]);
         await expectTransferEvents(redeemTx.txHash, asset.address, [
@@ -864,7 +864,7 @@ describe('Tokenized Vault', () => {
         await expectTransferEvents(depositTx, asset.address, [
           { from: PRIVATE_ADDRESS, to: vault.address, amount: BigInt(assetsAlice) },
         ]);
-        await expectTransferEvents(depositTx, vault.address, [
+        await expectTransferEvents(depositTx, shares.address, [
           { from: AztecAddress.ZERO, to: PRIVATE_ADDRESS, amount: BigInt(sharesAlice) },
         ]);
 
@@ -880,7 +880,7 @@ describe('Tokenized Vault', () => {
           assetsBob,
           { caller: carl },
         );
-        await expectTransferEvents(issueTx, vault.address, [
+        await expectTransferEvents(issueTx, shares.address, [
           { from: AztecAddress.ZERO, to: PRIVATE_ADDRESS, amount: BigInt(sharesBob) },
         ]);
 
@@ -904,7 +904,7 @@ describe('Tokenized Vault', () => {
         const withdrawTx = await withdrawAction
           .with({ authWitnesses: [withdrawAuthWitness, burnAuthWit] })
           .send({ from: carl });
-        await expectTransferEvents(withdrawTx.txHash, vault.address, [
+        await expectTransferEvents(withdrawTx.txHash, shares.address, [
           { from: PRIVATE_ADDRESS, to: AztecAddress.ZERO, amount: BigInt(sharesAlice) },
         ]);
         await expectTransferEvents(withdrawTx.txHash, asset.address, [
@@ -918,7 +918,7 @@ describe('Tokenized Vault', () => {
         const redeemTx = await redeemAction
           .with({ authWitnesses: [redeemAuthWitness, burnAuthWitBob] })
           .send({ from: carl });
-        await expectTransferEvents(redeemTx.txHash, vault.address, [
+        await expectTransferEvents(redeemTx.txHash, shares.address, [
           { from: PRIVATE_ADDRESS, to: AztecAddress.ZERO, amount: BigInt(sharesBob) },
         ]);
 
@@ -955,7 +955,7 @@ describe('Tokenized Vault', () => {
         await expectTransferEvents(depositTx, asset.address, [
           { from: PRIVATE_ADDRESS, to: vault.address, amount: BigInt(assetsAlice) },
         ]);
-        await expectTransferEvents(depositTx, vault.address, [
+        await expectTransferEvents(depositTx, shares.address, [
           { from: AztecAddress.ZERO, to: PRIVATE_ADDRESS, amount: BigInt(sharesAlice) },
         ]);
 
@@ -995,7 +995,7 @@ describe('Tokenized Vault', () => {
         const withdrawTx = await withdrawAction
           .with({ authWitnesses: [withdrawAuthWitness, burnAuthWit] })
           .send({ from: carl });
-        await expectTransferEvents(withdrawTx.txHash, vault.address, [
+        await expectTransferEvents(withdrawTx.txHash, shares.address, [
           { from: PRIVATE_ADDRESS, to: AztecAddress.ZERO, amount: BigInt(sharesAlice) },
         ]);
         await expectTransferEvents(withdrawTx.txHash, asset.address, [
@@ -1009,7 +1009,7 @@ describe('Tokenized Vault', () => {
         const withdrawBobTx = await publicWithdrawAction
           .with({ authWitnesses: [publicWithdrawAuthWitness, burnAuthWitBob] })
           .send({ from: carl });
-        await expectTransferEvents(withdrawBobTx.txHash, vault.address, [
+        await expectTransferEvents(withdrawBobTx.txHash, shares.address, [
           { from: PRIVATE_ADDRESS, to: AztecAddress.ZERO, amount: BigInt(sharesBob) },
         ]);
         await expectTransferEvents(withdrawBobTx.txHash, asset.address, [
