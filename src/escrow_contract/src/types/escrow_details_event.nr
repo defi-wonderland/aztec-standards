@@ -1,7 +1,8 @@
 use aztec::{
-    event::{event_interface::EventInterface, event_selector::EventSelector},
-    protocol_types::{address::AztecAddress, traits::{Serialize, ToField}},
+    event::{event_interface::EventInterface, EventSelector},
+    protocol::{address::AztecAddress, traits::{Serialize, ToField}},
 };
+use serde::writer::Writer;
 
 /// @notice Master secret keys
 /// @dev These keys are used to derive the public keys for the escrow contract
@@ -20,7 +21,16 @@ impl Serialize for MasterSecretKeys {
     let N: u32 = 4;
 
     fn serialize(self) -> [Field; Self::N] {
-        [self.nsk_m, self.ivsk_m, self.ovsk_m, self.tsk_m]
+        let mut writer: Writer<Self::N> = Writer::new();
+        self.stream_serialize(&mut writer);
+        writer.finish()
+    }
+
+    fn stream_serialize<let M: u32>(self, writer: &mut Writer<M>) {
+        writer.write(self.nsk_m);
+        writer.write(self.ivsk_m);
+        writer.write(self.ovsk_m);
+        writer.write(self.tsk_m);
     }
 }
 
@@ -37,13 +47,14 @@ impl Serialize for EscrowDetailsLogContent {
     let N: u32 = 5;
 
     fn serialize(self) -> [Field; Self::N] {
-        [
-            self.escrow.to_field(),
-            self.master_secret_keys.nsk_m,
-            self.master_secret_keys.ivsk_m,
-            self.master_secret_keys.ovsk_m,
-            self.master_secret_keys.tsk_m,
-        ]
+        let mut writer: Writer<Self::N> = Writer::new();
+        self.stream_serialize(&mut writer);
+        writer.finish()
+    }
+
+    fn stream_serialize<let M: u32>(self, writer: &mut Writer<M>) {
+        writer.write(self.escrow.to_field());
+        self.master_secret_keys.stream_serialize(writer);
     }
 }
 

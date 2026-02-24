@@ -1,9 +1,10 @@
 use crate::{test::utils::{self, mint_amount}, Token};
 use aztec::test::helpers::authwit as authwit_cheatcodes;
+use generic_proxy::GenericProxy;
 
-#[test(should_fail_with = "No contract instance found for address 0x0000000000000000000000000000000000000000000000000000000000000000")]
+#[test(should_fail_with = "Trying to read from uninitialized PublicImmutable")]
 unconstrained fn issue_private_to_public_exact_without_asset() {
-    let (env, vault_address, owner, recipient, _) = utils::setup_with_minter(true);
+    let (mut env, vault_address, owner, recipient, _) = utils::setup_with_minter(true);
 
     // Issue should fail because the PublicImmutable asset was not initialized
     env.call_private(
@@ -21,7 +22,7 @@ unconstrained fn issue_private_to_public_exact_without_asset() {
 #[test]
 unconstrained fn issue_private_to_public_exact_success() {
     // Setup with asset token
-    let (env, vault_address, owner, recipient, asset_address) = utils::setup_with_asset(true);
+    let (mut env, vault_address, owner, recipient, asset_address) = utils::setup_with_asset(true);
 
     // Mint some asset tokens to owner
     let deposit_amount: u128 = mint_amount;
@@ -68,7 +69,7 @@ unconstrained fn issue_private_to_public_exact_success() {
 #[test]
 unconstrained fn issue_private_to_public_exact_after_yield() {
     // Setup with asset token
-    let (env, vault_address, owner, recipient, asset_address) = utils::setup_with_asset(true);
+    let (mut env, vault_address, owner, recipient, asset_address) = utils::setup_with_asset(true);
 
     // Mint some asset tokens to the vault contract
     let yield_amount: u128 = 1;
@@ -118,7 +119,7 @@ unconstrained fn issue_private_to_public_exact_after_yield() {
 #[test]
 unconstrained fn issue_private_to_public_exact_too_many_assets() {
     // Setup with asset token
-    let (env, vault_address, owner, recipient, asset_address) = utils::setup_with_asset(true);
+    let (mut env, vault_address, owner, recipient, asset_address) = utils::setup_with_asset(true);
 
     // Mint some asset tokens to owner
     let max_deposit: u128 = mint_amount;
@@ -165,7 +166,7 @@ unconstrained fn issue_private_to_public_exact_too_many_assets() {
 #[test(should_fail_with = "Assertion failed: attempt to subtract with overflow ")]
 unconstrained fn issue_private_to_public_exact_request_too_many_shares() {
     // Setup with asset token
-    let (env, vault_address, owner, recipient, asset_address) = utils::setup_with_asset(true);
+    let (mut env, vault_address, owner, recipient, asset_address) = utils::setup_with_asset(true);
 
     // Mint some asset tokens to owner
     let deposit_amount: u128 = mint_amount;
@@ -201,7 +202,7 @@ unconstrained fn issue_private_to_public_exact_request_too_many_shares() {
 #[test(should_fail_with = "Unknown auth witness for message hash ")]
 unconstrained fn issue_private_to_public_exact_without_asset_approval() {
     // Setup with asset token
-    let (env, vault_address, owner, recipient, asset_address) = utils::setup_with_asset(true);
+    let (mut env, vault_address, owner, recipient, asset_address) = utils::setup_with_asset(true);
 
     // Mint some asset tokens to owner
     let deposit_amount: u128 = mint_amount;
@@ -225,7 +226,7 @@ unconstrained fn issue_private_to_public_exact_without_asset_approval() {
 #[test(should_fail_with = "Unknown auth witness for message hash ")]
 unconstrained fn issue_private_to_public_exact_on_behalf_of_wrong_caller() {
     // Setup with asset token
-    let (env, vault_address, owner, recipient, asset_address) = utils::setup_with_asset(true);
+    let (mut env, vault_address, owner, recipient, asset_address) = utils::setup_with_asset(true);
 
     // Mint some asset tokens to owner
     let deposit_amount: u128 = mint_amount;
@@ -245,14 +246,21 @@ unconstrained fn issue_private_to_public_exact_on_behalf_of_wrong_caller() {
     // Issue shares
     // At the first deposit 1 share = 1 asset
     let max_assets = deposit_amount;
-    env.call_private(
+    let proxy = env.deploy("@generic_proxy/GenericProxy").without_initializer();
+    let call_interface = Token::at(vault_address).issue_private_to_public_exact(
+        owner,
         recipient,
-        Token::at(vault_address).issue_private_to_public_exact(
-            owner,
-            recipient,
-            deposit_amount,
-            max_assets,
-            0,
+        deposit_amount,
+        max_assets,
+        0,
+    );
+    // No authwit added from owner to proxy
+    env.call_private(
+        owner,
+        GenericProxy::at(proxy).forward_private_5(
+            call_interface.target_contract,
+            call_interface.selector,
+            call_interface.args,
         ),
     );
 }
@@ -260,7 +268,7 @@ unconstrained fn issue_private_to_public_exact_on_behalf_of_wrong_caller() {
 #[test]
 unconstrained fn issue_private_to_public_exact_on_behalf_of_other_success() {
     // Setup with asset token
-    let (env, vault_address, owner, recipient, asset_address) = utils::setup_with_asset(true);
+    let (mut env, vault_address, owner, recipient, asset_address) = utils::setup_with_asset(true);
 
     // Mint some asset tokens to owner
     let deposit_amount: u128 = mint_amount;

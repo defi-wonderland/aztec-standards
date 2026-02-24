@@ -53,7 +53,7 @@ unconstrained fn transfer_public_to_commitment_external_orchestration() {
     utils::check_private_balance(env, token_contract_address, recipient, mint_amount);
 }
 
-#[test(should_fail_with = "Invalid partial note or completer 'context.nullifier_exists(validity_commitment, context.this_address())'")]
+#[test(should_fail_with = "Invalid partial note or completer 'context.nullifier_exists_unsafe(validity_commitment, context.this_address())'")]
 unconstrained fn transfer_public_to_commitment_transfer_not_initialized() {
     // Setup without account contracts. We are not using authwits here, so dummy accounts are enough
     let (mut env, token_contract_address, owner, _) =

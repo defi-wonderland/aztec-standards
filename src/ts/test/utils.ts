@@ -1,12 +1,12 @@
-import { Note } from '@aztec/aztec.js/note';
 import { createLogger } from '@aztec/aztec.js/log';
 import { AztecAddress } from '@aztec/aztec.js/addresses';
 import { Aes128 } from '@aztec/foundation/crypto/aes128';
 import { deriveEcdhSharedSecret } from '@aztec/stdlib/logs';
 import { type Wallet, AccountManager } from '@aztec/aztec.js/wallet';
 import { Fr, type GrumpkinScalar, Point } from '@aztec/aztec.js/fields';
-import { createAztecNodeClient, waitForNode } from '@aztec/aztec.js/node';
+import { createAztecNodeClient, waitForNode, type AztecNode } from '@aztec/aztec.js/node';
 import { type ContractInstanceWithAddress } from '@aztec/aztec.js/contracts';
+import { TxHash } from '@aztec/aztec.js/tx';
 import { PRIVATE_LOG_CIPHERTEXT_LEN, GeneratorIndex } from '@aztec/constants';
 import { poseidon2HashWithSeparator } from '@aztec/foundation/crypto/poseidon';
 import { registerInitialLocalNetworkAccountsInWallet, TestWallet } from '@aztec/test-wallet/server';
@@ -17,9 +17,11 @@ import {
   DeployOptions,
   ContractFunctionInteraction,
   getContractClassFromArtifact,
+  getContractInstanceFromInstantiationParams,
 } from '@aztec/aztec.js/contracts';
 import { AuthWitness, type ContractFunctionInteractionCallIntent } from '@aztec/aztec.js/authorization';
-import { getDefaultInitializer } from '@aztec/stdlib/abi';
+import { EventSelector, decodeFromAbi } from '@aztec/aztec.js/abi';
+import { getDefaultInitializer, getInitializer } from '@aztec/stdlib/abi';
 import {
   CompleteAddress,
   computeInitializationHash,
@@ -27,59 +29,71 @@ import {
   computeContractAddressFromInstance,
 } from '@aztec/stdlib/contract';
 
-import { createStore } from '@aztec/kv-store/lmdb-v2';
 import { getPXEConfig } from '@aztec/pxe/server';
-import { type AztecLMDBStoreV2 } from '@aztec/kv-store/lmdb-v2';
+import { Barretenberg } from '@aztec/bb.js';
 
-import { TokenContract, TokenContractArtifact } from '../../../artifacts/Token.js';
-import { NFTContract, NFTContractArtifact } from '../../../artifacts/NFT.js';
-import { TestLogicContractArtifact, TestLogicContract } from '../../../artifacts/TestLogic.js';
-import { EscrowContractArtifact, EscrowContract } from '../../../artifacts/Escrow.js';
+import { TokenContract } from '../../../src/artifacts/Token.js';
+import { NFTContract } from '../../../src/artifacts/NFT.js';
+import { TestLogicContract } from '../../../src/artifacts/TestLogic.js';
+import { EscrowContract } from '../../../src/artifacts/Escrow.js';
+
+import { expect } from 'vitest';
 
 export const logger = createLogger('aztec:aztec-standards');
+
+import { randomBytes } from 'node:crypto';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { rmSync } from 'node:fs';
 
 const { NODE_URL = 'http://localhost:8080' } = process.env;
 const node = createAztecNodeClient(NODE_URL);
 await waitForNode(node);
-const { PXE_VERSION = '2' } = process.env;
-const pxeVersion = parseInt(PXE_VERSION);
-const l1Contracts = await node.getL1ContractAddresses();
 const config = getPXEConfig();
-let fullConfig = { ...config, l1Contracts };
 
 /**
- * Setup the store, node, wallet and accounts
- * @param suffix - optional - The suffix to use for the store directory.
+ * Setup the node, wallet and accounts.
+ * Lets createPXE handle store creation and l1Contracts fetching internally.
  * @param proverEnabled - optional - Whether to enable the prover, used for benchmarking.
- * @returns The store, node, wallet and accounts
+ * @returns The node, wallet, accounts, and a cleanup function.
  */
-export const setupTestSuite = async (suffix?: string, proverEnabled: boolean = false) => {
-  const storeDir = suffix ? `store-${suffix}` : 'store';
+export const setupTestSuite = async (proverEnabled: boolean = false) => {
+  // Reset Barretenberg singleton so a fresh socket is created. Needed when aztec-benchmark's
+  // cleanup destroys all sockets (including the prover's), causing EPIPE on the next benchmark.
+  if (proverEnabled) {
+    await Barretenberg.destroySingleton();
+  }
 
-  fullConfig = { ...fullConfig, dataDirectory: storeDir, dataStoreMapSizeKb: 1e6 };
+  const dataDirectory = join(tmpdir(), `aztec-standards-${randomBytes(8).toString('hex')}`);
+  const pxeConfig = { ...config, dataDirectory, proverEnabled };
 
-  // Create the store for manual cleanups
-  const store: AztecLMDBStoreV2 = await createStore('pxe_data', pxeVersion, {
-    dataDirectory: storeDir,
-    dataStoreMapSizeKb: 1e6,
-  });
-
-  const wallet: TestWallet = await TestWallet.create(node, { ...fullConfig, proverEnabled }, { store });
+  const wallet: TestWallet = await TestWallet.create(node, pxeConfig);
 
   const accounts: AztecAddress[] = await registerInitialLocalNetworkAccountsInWallet(wallet);
 
+  const cleanup = async () => {
+    await wallet.stop();
+    try {
+      rmSync(dataDirectory, { recursive: true, force: true });
+    } catch {
+      // ignore cleanup errors
+    }
+  };
+
   return {
-    store,
     node,
     wallet,
     accounts,
+    cleanup,
   };
 };
 
+// --- Constants ---
+
+// Maximum value for a u128 (2**128 - 1)
+export const MAX_U128_VALUE = 340282366920938463463374607431768211455n;
+
 // --- Token Utils ---
-export const expectUintNote = (note: Note, amount: bigint, owner: AztecAddress) => {
-  expect(note.items[0]).toEqual(new Fr(amount));
-};
 
 export const expectTokenBalances = async (
   token: TokenContract,
@@ -115,14 +129,14 @@ export const wad = (n: number = 1) => AMOUNT * BigInt(n);
  * @returns A deployed contract instance.
  */
 export async function deployTokenWithMinter(wallet: Wallet, deployer: AztecAddress, options?: DeployOptions) {
-  const contract = await Contract.deploy(
-    wallet,
-    TokenContractArtifact,
-    ['PrivateToken', 'PT', 18, deployer, AztecAddress.ZERO],
-    'constructor_with_minter',
-  )
-    .send({ ...options, from: deployer })
-    .deployed();
+  const contract = await TokenContract.deployWithOpts(
+    { method: 'constructor_with_minter', wallet },
+    'PrivateToken',
+    'PT',
+    18,
+    deployer,
+    AztecAddress.ZERO,
+  ).send({ ...options, from: deployer });
   return contract;
 }
 
@@ -133,14 +147,15 @@ export async function deployTokenWithMinter(wallet: Wallet, deployer: AztecAddre
  * @returns A deployed contract instance.
  */
 export async function deployTokenWithInitialSupply(wallet: Wallet, deployer: AztecAddress, options?: DeployOptions) {
-  const contract = await Contract.deploy(
-    wallet,
-    TokenContractArtifact,
-    ['PrivateToken', 'PT', 18, 0, deployer, deployer],
-    'constructor_with_initial_supply',
-  )
-    .send({ ...options, from: deployer })
-    .deployed();
+  const contract = await TokenContract.deployWithOpts(
+    { method: 'constructor_with_initial_supply', wallet },
+    'PrivateToken',
+    'PT',
+    18,
+    0,
+    deployer,
+    deployer,
+  ).send({ ...options, from: deployer });
   return contract;
 }
 
@@ -175,17 +190,13 @@ export async function assertOwnsPrivateNFT(
 
 // Deploy NFT contract with a minter
 export async function deployNFTWithMinter(wallet: TestWallet, deployer: AztecAddress, options?: DeployOptions) {
-  const contract = await Contract.deploy(
-    wallet,
-    NFTContractArtifact,
-    ['TestNFT', 'TNFT', deployer, deployer],
-    'constructor_with_minter',
-  )
-    .send({
-      ...options,
-      from: deployer,
-    })
-    .deployed();
+  const contract = await NFTContract.deployWithOpts(
+    { method: 'constructor_with_minter', wallet },
+    'TestNFT',
+    'TNFT',
+    deployer,
+    deployer,
+  ).send({ ...options, from: deployer });
   return contract;
 }
 
@@ -202,25 +213,63 @@ export async function deployVaultAndAssetWithMinter(
   deployer: AztecAddress,
   options?: DeployOptions,
 ): Promise<[Contract, Contract]> {
-  const assetContract = await Contract.deploy(
-    wallet,
-    TokenContractArtifact,
-    ['PrivateToken', 'PT', 6, deployer, AztecAddress.ZERO],
-    'constructor_with_minter',
-  )
-    .send({ ...options, from: deployer })
-    .deployed();
+  const assetContract = await TokenContract.deployWithOpts(
+    { method: 'constructor_with_minter', wallet },
+    'PrivateToken',
+    'PT',
+    6,
+    deployer,
+    AztecAddress.ZERO,
+  ).send({ ...options, from: deployer });
 
-  const vaultContract = await Contract.deploy(
-    wallet,
-    TokenContractArtifact,
-    ['VaultToken', 'VT', 6, assetContract.address, AztecAddress.ZERO],
-    'constructor_with_asset',
-  )
-    .send({ ...options, from: deployer })
-    .deployed();
+  const vaultContract = await TokenContract.deployWithOpts(
+    { method: 'constructor_with_asset', wallet },
+    'VaultToken',
+    'VT',
+    6,
+    assetContract.address,
+    1,
+    AztecAddress.ZERO,
+  ).send({ ...options, from: deployer });
 
   return [vaultContract, assetContract];
+}
+
+/**
+ * Deploys a vault with an optional initial deposit for inflation-attack protection.
+ */
+export async function deployVaultWithInitialDeposit(
+  wallet: Wallet,
+  deployer: AztecAddress,
+  assetContract: TokenContract,
+  initialDeposit: bigint,
+  depositor: AztecAddress,
+  options?: DeployOptions,
+): Promise<TokenContract> {
+  const vaultContract = (await TokenContract.deployWithOpts(
+    { method: 'constructor_with_asset', wallet },
+    'VaultToken',
+    'VT',
+    6,
+    assetContract.address,
+    1,
+    AztecAddress.ZERO,
+  ).send({ ...options, from: deployer })) as TokenContract;
+
+  if (initialDeposit > 0n) {
+    const transfer = assetContract.methods.transfer_public_to_public(
+      depositor,
+      vaultContract.address,
+      initialDeposit,
+      0,
+    );
+    await setPublicAuthWit(vaultContract.address, transfer, depositor, wallet as TestWallet);
+    await vaultContract.methods
+      .deposit_public_to_public(depositor, vaultContract.address, initialDeposit, 0)
+      .send({ from: depositor });
+  }
+
+  return vaultContract;
 }
 
 // --- Escrow Utils ---
@@ -240,19 +289,16 @@ export async function deployEscrow(
   wallet: Wallet,
   deployer: AztecAddress,
   salt: Fr = Fr.random(),
-  args: unknown[] = [],
-  constructor?: string,
 ): Promise<{ contract: EscrowContract; instance: ContractInstanceWithAddress }> {
-  const { contract, instance } = await Contract.deployWithPublicKeys(
-    publicKeys,
-    wallet,
-    EscrowContractArtifact,
-    args,
-    constructor,
-  )
-    .send({ contractAddressSalt: salt, universalDeploy: true, from: deployer })
-    .wait();
-  return { contract: contract as EscrowContract, instance };
+  const contract = await EscrowContract.deployWithPublicKeys(publicKeys, wallet).send({
+    contractAddressSalt: salt,
+    universalDeploy: true,
+    from: deployer,
+  });
+
+  // Get the instance from the node after deployment
+  const instance = (await node.getContract(contract.address)) as ContractInstanceWithAddress;
+  return { contract, instance };
 }
 
 // --- General Utils ---
@@ -284,7 +330,7 @@ export async function setPublicAuthWit(
     },
     true,
   );
-  await validateAction.send().wait();
+  await validateAction.send();
 }
 
 /**
@@ -302,7 +348,7 @@ export async function initializeTransferCommitment(
   completer: AztecAddress,
 ) {
   // Workaround because we could not get the commitment from the simulation, so we decrypt the private log instead
-  const tx = await token.methods.initialize_transfer_commitment(to.address, completer).send({ from: caller }).wait();
+  const tx = await token.methods.initialize_transfer_commitment(to.address, completer).send({ from: caller });
   const txEffect = await node.getTxEffect(tx.txHash);
   if (!txEffect?.data.privateLogs) {
     throw new Error('No private logs found');
@@ -337,7 +383,7 @@ export async function initializeTransferCommitmentNFT(
   completer: AztecAddress,
 ) {
   // Workaround because we could not get the commitment from the simulation, so we decrypt the private log instead
-  const tx = await nft.methods.initialize_transfer_commitment(to.address, completer).send({ from: caller }).wait();
+  const tx = await nft.methods.initialize_transfer_commitment(to.address, completer).send({ from: caller });
   const txEffect = await node.getTxEffect(tx.txHash);
   if (!txEffect?.data.privateLogs) {
     throw new Error('No private logs found');
@@ -367,10 +413,11 @@ export async function initializeTransferCommitmentNFT(
  * @returns A deployed contract instance.
  */
 export async function deployLogic(wallet: Wallet, deployer: AztecAddress, escrowClassId: Fr) {
-  const contract = await Contract.deploy(wallet, TestLogicContractArtifact, [escrowClassId], 'constructor')
-    .send({ from: deployer })
-    .deployed();
-  return contract as TestLogicContract;
+  const contract = await TestLogicContract.deployWithOpts({ method: 'constructor', wallet }, escrowClassId).send({
+    from: deployer,
+  });
+
+  return contract;
 }
 
 /**
@@ -388,13 +435,13 @@ export async function deployEscrowWithPublicKeysAndSalt(
   wallet: Wallet,
   deployer: AztecAddress,
   salt: Fr = Fr.random(),
-  args: unknown[] = [],
-  constructor?: string,
 ): Promise<EscrowContract> {
-  const contract = await Contract.deployWithPublicKeys(publicKeys, wallet, EscrowContractArtifact, args, constructor)
-    .send({ contractAddressSalt: salt, universalDeploy: true, from: deployer })
-    .deployed();
-  return contract as EscrowContract;
+  const contract = await EscrowContract.deployWithPublicKeys(publicKeys, wallet).send({
+    contractAddressSalt: salt,
+    universalDeploy: true,
+    from: deployer,
+  });
+  return contract;
 }
 
 /**
@@ -437,12 +484,133 @@ export async function deriveContractAddress(
 }
 
 /**
+ * Predicts the contract address for a given artifact with a specific constructor.
+ * Uses the v4 API `getContractInstanceFromInstantiationParams` for address derivation.
+ * @param artifact - The contract artifact.
+ * @param constructorName - The name of the constructor function to use.
+ * @param constructorArgs - The arguments to pass to the constructor.
+ * @param deployer - The address of the deployer.
+ * @param salt - The salt to use for the contract address.
+ * @param publicKeys - The public keys to use for the contract.
+ * @returns The predicted contract address and salt.
+ */
+export async function deriveContractAddressWithConstructor(
+  artifact: any,
+  constructorName: string,
+  constructorArgs: any[],
+  deployer: AztecAddress,
+  salt: Fr = Fr.random(),
+  publicKeys?: PublicKeys,
+) {
+  // Use v4 API for contract instance derivation
+  const instance = await getContractInstanceFromInstantiationParams(artifact, {
+    constructorArtifact: constructorName,
+    constructorArgs,
+    salt,
+    deployer,
+    publicKeys,
+  });
+
+  // For backward compatibility, compute initializationHash and saltedInitializationHash
+  // if they're needed by callers (though currently only address is used)
+  const constructorArtifact = getInitializer(artifact, constructorName);
+  if (!constructorArtifact) {
+    throw new Error(`Constructor ${constructorName} not found in artifact`);
+  }
+
+  const initializationHash = await computeInitializationHash(constructorArtifact, constructorArgs);
+  const saltedInitializationHash = await computeSaltedInitializationHash({
+    initializationHash,
+    salt,
+    deployer,
+  });
+
+  return {
+    address: instance.address,
+    salt,
+    initializationHash,
+    saltedInitializationHash,
+  };
+}
+
+/**
  * Converts a GrumpkinScalar to an Fr.
  * @param scalar - The GrumpkinScalar to convert.
  * @returns The converted Fr.
  */
 export function grumpkinScalarToFr(scalar: GrumpkinScalar) {
   return new Fr(scalar.toBigInt());
+}
+
+// --- Transfer Event Utils ---
+
+/**
+ * Sentinel address used in Transfer events to represent the private side of a balance change.
+ * Must match the PRIVATE_ADDRESS_MAGIC_VALUE in the Noir contract:
+ * sha224sum 'PRIVATE_ADDRESS'
+ */
+export const PRIVATE_ADDRESS = AztecAddress.fromBigInt(0x1ea7e01501975545617c2e694d931cb576b691a4a867fed81ebd3264n);
+
+/** Represents a decoded Transfer event. */
+export type TransferEvent = {
+  from: AztecAddress;
+  to: AztecAddress;
+  amount: bigint;
+};
+
+/**
+ * Queries the node for public logs emitted in a transaction by a specific contract,
+ * and decodes them as Transfer events.
+ *
+ * @param txHash - The transaction hash to query logs for.
+ * @param contractAddress - The contract address to filter logs by.
+ * @returns An array of decoded TransferEvent objects.
+ */
+export async function getTransferEvents(txHash: TxHash, contractAddress: AztecAddress): Promise<TransferEvent[]> {
+  const response = await node.getPublicLogs({
+    txHash,
+    contractAddress,
+  });
+
+  const eventMetadata = TokenContract.events.Transfer;
+
+  return response.logs
+    .filter((extLog) => {
+      const logFields = extLog.log.getEmittedFields();
+      // Match the Transfer event selector (last field)
+      return EventSelector.fromField(logFields[logFields.length - 1]).equals(eventMetadata.eventSelector);
+    })
+    .map((extLog) => {
+      return decodeFromAbi([eventMetadata.abiType], extLog.log.fields) as TransferEvent;
+    });
+}
+
+/**
+ * Asserts that the Transfer events emitted by a specific contract in a transaction
+ * match the expected events exactly (count and content, order-sensitive).
+ *
+ * Comment convention above expectTransferEvents calls: `operation: [emitter ]Transfer(from, to, amount)[ + ...]`
+ * - Single emitter: `// mint_to_public: Transfer(0x0, alice, AMOUNT)`
+ * - Multi-emitter: `// deposit_public_to_public: asset Transfer(from, vault, assets) + vault Transfer(0x0, to, shares)`
+ * - No events: `// transfer_private_to_private: (no public events)`
+ *
+ * @param txHash - The transaction hash to query logs for.
+ * @param contractAddress - The contract address to filter logs by.
+ * @param expected - The expected Transfer events in order.
+ */
+export async function expectTransferEvents(
+  txHash: TxHash,
+  contractAddress: AztecAddress,
+  expected: TransferEvent[],
+): Promise<void> {
+  const events = await getTransferEvents(txHash, contractAddress);
+
+  expect(events.length).toBe(expected.length);
+  for (let i = 0; i < expected.length; i++) {
+    expect(events[i].from).toEqual(expected[i].from);
+    expect(events[i].to).toEqual(expected[i].to);
+    expect(events[i].amount).toEqual(expected[i].amount);
+  }
 }
 
 // Private Log Utils ---

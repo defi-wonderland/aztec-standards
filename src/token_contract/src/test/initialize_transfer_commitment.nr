@@ -1,7 +1,7 @@
 use crate::test::utils;
 use crate::Token;
-use aztec::{oracle::random::random, protocol_types::{address::AztecAddress, traits::FromField}};
-use uint_note::uint_note::PartialUintNote;
+use aztec::{oracle::random::random, protocol::{address::AztecAddress, traits::FromField}};
+use uint_note::PartialUintNote;
 
 #[test]
 unconstrained fn initialize_transfer_commitment() {
@@ -18,7 +18,7 @@ unconstrained fn initialize_transfer_commitment() {
         PartialUintNote::from_field(commitment).compute_validity_commitment(owner);
     assert(
         env.public_context(|context| {
-            context.nullifier_exists(validity_commitment, token_contract_address)
+            context.nullifier_exists_unsafe(validity_commitment, token_contract_address)
         }),
         "validity nullifier should exist",
     );
@@ -46,7 +46,7 @@ unconstrained fn initialize_transfer_commitment_and_complete_with_incorrect_comp
         PartialUintNote::from_field(commitment).compute_validity_commitment(recipient);
     assert(
         !env.public_context(|context| {
-            context.nullifier_exists(validity_commitment, token_contract_address)
+            context.nullifier_exists_unsafe(validity_commitment, token_contract_address)
         }),
         "validity nullifier should not exist",
     );

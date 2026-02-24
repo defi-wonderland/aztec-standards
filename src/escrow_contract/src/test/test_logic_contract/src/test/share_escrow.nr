@@ -1,7 +1,7 @@
 use crate::test::utils as logic_utils;
 use crate::TestLogic;
 use aztec::{
-    oracle::get_contract_instance::get_contract_instance, protocol_types::traits::ToField,
+    oracle::get_contract_instance::get_contract_instance, protocol::traits::ToField,
     test::helpers::test_environment::TestEnvironment,
 };
 use escrow_contract::test::utils as escrow_utils;

@@ -1,7 +1,7 @@
 use crate::Escrow;
 use crate::test::utils as escrow_utils;
 use aztec::oracle::get_contract_instance::get_contract_instance;
-use aztec::protocol_types::{address::AztecAddress, traits::FromField};
+use aztec::protocol::{address::AztecAddress, traits::FromField};
 use token::{test::utils as token_utils, Token};
 
 // TODO: Fix error "No public key registered for address 0x0000000000000000000000000000000000000000000000000000000000000001."
