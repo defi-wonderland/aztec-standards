@@ -19,7 +19,11 @@ import {
   getContractClassFromArtifact,
   getContractInstanceFromInstantiationParams,
 } from '@aztec/aztec.js/contracts';
-import { AuthWitness, type ContractFunctionInteractionCallIntent } from '@aztec/aztec.js/authorization';
+import {
+  AuthWitness,
+  SetPublicAuthwitContractInteraction,
+  type ContractFunctionInteractionCallIntent,
+} from '@aztec/aztec.js/authorization';
 import { getDefaultInitializer, getInitializer } from '@aztec/stdlib/abi';
 import {
   CompleteAddress,
@@ -321,7 +325,8 @@ export async function setPublicAuthWit(
   authorizer: AztecAddress,
   wallet: EmbeddedWallet,
 ) {
-  const validateAction = await wallet.setPublicAuthWit(
+  const validateAction = await SetPublicAuthwitContractInteraction.create(
+    wallet,
     authorizer,
     {
       caller: caller,
@@ -329,7 +334,7 @@ export async function setPublicAuthWit(
     },
     true,
   );
-  await validateAction.send();
+  await validateAction.send({ from: authorizer });
 }
 
 /**
