@@ -345,7 +345,7 @@ describe('Escrow', () => {
 
       await logic.withWallet(wallet).methods.withdraw(escrow.address, bob, token.address, AMOUNT).send({ from: bob });
 
-      await expectTokenBalances(token, escrow.address, wad(0), wad(0), bob);
+      await expectTokenBalances(token, escrow.address, wad(0), wad(0), escrow.address);
       await expectTokenBalances(token, bob, wad(0), AMOUNT, bob);
     });
   });
