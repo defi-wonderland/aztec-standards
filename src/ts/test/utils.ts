@@ -619,6 +619,70 @@ export async function expectTransferEvents(
   }
 }
 
+// --- NFT Transfer Event Utils ---
+
+/** Represents a decoded NFT Transfer event. */
+export type NFTTransferEvent = {
+  from: AztecAddress;
+  to: AztecAddress;
+  token_id: bigint;
+};
+
+/**
+ * Queries the node for public logs emitted in a transaction by a specific NFT contract,
+ * and decodes them as Transfer events.
+ *
+ * @param txHash - The transaction hash to query logs for.
+ * @param contractAddress - The NFT contract address to filter logs by.
+ * @returns An array of decoded NFTTransferEvent objects.
+ */
+export async function getNFTTransferEvents(txHash: TxHash, contractAddress: AztecAddress): Promise<NFTTransferEvent[]> {
+  const response = await node.getPublicLogs({
+    txHash,
+    contractAddress,
+  });
+
+  const eventMetadata = NFTContract.events.Transfer;
+
+  return response.logs
+    .filter((extLog) => {
+      const logFields = extLog.log.getEmittedFields();
+      // Match the Transfer event selector (last field)
+      return EventSelector.fromField(logFields[logFields.length - 1]).equals(eventMetadata.eventSelector);
+    })
+    .map((extLog) => {
+      return decodeFromAbi([eventMetadata.abiType], extLog.log.fields) as NFTTransferEvent;
+    });
+}
+
+/**
+ * Asserts that the Transfer events emitted by a specific NFT contract in a transaction
+ * match the expected events exactly (count and content, order-sensitive).
+ *
+ * Comment convention above expectNFTTransferEvents calls: `operation: Transfer(from, to, tokenId)`
+ * - Mint to public:   `// mint_to_public: Transfer(0x0, alice, TOKEN_ID)`
+ * - Mint to private:  `// mint_to_private: Transfer(0x0, PRIVATE, TOKEN_ID)`
+ * - No events:        `// transfer_private_to_commitment: (no public events)`
+ *
+ * @param txHash - The transaction hash to query logs for.
+ * @param contractAddress - The NFT contract address to filter logs by.
+ * @param expected - The expected Transfer events in order.
+ */
+export async function expectNFTTransferEvents(
+  txHash: TxHash,
+  contractAddress: AztecAddress,
+  expected: NFTTransferEvent[],
+): Promise<void> {
+  const events = await getNFTTransferEvents(txHash, contractAddress);
+
+  expect(events.length).toBe(expected.length);
+  for (let i = 0; i < expected.length; i++) {
+    expect(events[i].from).toEqual(expected[i].from);
+    expect(events[i].to).toEqual(expected[i].to);
+    expect(events[i].token_id).toEqual(expected[i].token_id);
+  }
+}
+
 // Private Log Utils ---
 
 // Constants from Noir code

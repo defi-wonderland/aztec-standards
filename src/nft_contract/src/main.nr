@@ -11,7 +11,11 @@ pub contract NFT {
             assert_current_call_valid_authwit, assert_current_call_valid_authwit_public,
         },
         context::PrivateContext,
-        macros::{functions::{external, initializer, internal, only_self, view}, storage::storage},
+        macros::{
+            events::event,
+            functions::{external, initializer, internal, only_self, view},
+            storage::storage,
+        },
         messages::message_delivery::MessageDelivery,
         note::{
             constants::MAX_NOTES_PER_PAGE, note_getter_options::NoteGetterOptions,
@@ -49,6 +53,18 @@ pub contract NFT {
         public_owners: Map<Field, PublicMutable<AztecAddress, Context>, Context>,
         minter: PublicImmutable<AztecAddress, Context>,
         upgrade_authority: PublicImmutable<AztecAddress, Context>,
+    }
+
+    // Sentinel address used in Transfer events to represent the private side of a balance change.
+    // sha224sum 'PRIVATE_ADDRESS'
+    global PRIVATE_ADDRESS_MAGIC_VALUE: AztecAddress =
+        AztecAddress::from_field(0x1ea7e01501975545617c2e694d931cb576b691a4a867fed81ebd3264);
+
+    #[event]
+    struct Transfer {
+        from: AztecAddress,
+        to: AztecAddress,
+        token_id: Field,
     }
 
     /// @dev Initializes the token with a minter
@@ -174,7 +190,7 @@ pub contract NFT {
     ) {
         _validate_from_private::<4>(self.context, from);
 
-        self.enqueue_self.update_public_token_owner_internal(from, AztecAddress::zero(), token_id);
+        self.enqueue_self.transfer_public_to_private_internal(from, token_id);
         self.internal._update_private_token_owner(to, token_id);
     }
 
@@ -210,6 +226,7 @@ pub contract NFT {
         self.internal._validate_public_token_owner(from, token_id);
 
         self.internal._update_public_token_owner(to, token_id);
+        self.emit(Transfer { from, to, token_id });
     }
 
     /// @notice Transfers a token to a commitment
@@ -231,6 +248,7 @@ pub contract NFT {
         self.internal._update_public_token_owner(AztecAddress::zero(), token_id);
         let completer = self.msg_sender();
         self.internal._transfer_token_to_commitment(commitment.to_field(), token_id, completer);
+        self.emit(Transfer { from, to: PRIVATE_ADDRESS_MAGIC_VALUE, token_id });
     }
 
     /// @notice Stores a commitment in storage
@@ -255,15 +273,15 @@ pub contract NFT {
         self.internal._transfer_token_to_commitment(commitment, token_id, completer);
     }
 
-    /// @notice Updates the public token owner
+    /// @notice Clears the public owner and emits a Transfer event for a public-to-private transfer
     /// @param from The address of the sender
-    /// @param to The address of the recipient
-    /// @param token_id The id of the token to update
+    /// @param token_id The id of the token to transfer
     #[external("public")]
     #[only_self]
-    fn update_public_token_owner_internal(from: AztecAddress, to: AztecAddress, token_id: Field) {
+    fn transfer_public_to_private_internal(from: AztecAddress, token_id: Field) {
         self.internal._validate_public_token_owner(from, token_id);
-        self.internal._update_public_token_owner(to, token_id);
+        self.internal._update_public_token_owner(AztecAddress::zero(), token_id);
+        self.emit(Transfer { from, to: PRIVATE_ADDRESS_MAGIC_VALUE, token_id });
     }
 
     /// @notice Initializes the public token owner from zero address
@@ -273,16 +291,29 @@ pub contract NFT {
     #[only_self]
     fn update_public_token_owner_from_zero_internal(to: AztecAddress, token_id: Field) {
         self.internal._update_public_token_owner(to, token_id);
+        self.emit(Transfer { from: PRIVATE_ADDRESS_MAGIC_VALUE, to, token_id });
     }
 
-    /// @notice Sets the existence of a token
-    /// @dev Asserts token does not exist when setting `exists` to true (minting) and that token exists when setting `exists` to false (burning)
-    /// @param token_id The id of the token to set
-    /// @param exists The new exists value
+    /// @notice Finalizes a mint to private by registering the token and emitting a Transfer event
+    /// @param token_id The id of the token to mint
     #[external("public")]
     #[only_self]
-    fn set_nft_exists_internal(token_id: Field, exists: bool) {
-        self.internal._set_nft_exists(token_id, exists);
+    fn mint_to_private_internal(token_id: Field) {
+        self.internal._set_nft_exists(token_id, true);
+        self.emit(
+            Transfer { from: AztecAddress::zero(), to: PRIVATE_ADDRESS_MAGIC_VALUE, token_id },
+        );
+    }
+
+    /// @notice Finalizes a burn from private by deregistering the token and emitting a Transfer event
+    /// @param token_id The id of the token to burn
+    #[external("public")]
+    #[only_self]
+    fn burn_private_internal(token_id: Field) {
+        self.internal._set_nft_exists(token_id, false);
+        self.emit(
+            Transfer { from: PRIVATE_ADDRESS_MAGIC_VALUE, to: AztecAddress::zero(), token_id },
+        );
     }
 
     /** ==========================================================
@@ -352,7 +383,7 @@ pub contract NFT {
         assert(token_id != 0, "zero token ID not supported");
         _validate_minter(self.msg_sender(), self.storage.minter.read());
 
-        self.enqueue_self.set_nft_exists_internal(token_id, true);
+        self.enqueue_self.mint_to_private_internal(token_id);
         self.storage.private_nfts.at(to).insert(NFTNote { token_id }).deliver(
             MessageDelivery.ONCHAIN_CONSTRAINED,
         );
@@ -369,6 +400,7 @@ pub contract NFT {
 
         self.internal._set_nft_exists(token_id, true);
         self.storage.public_owners.at(token_id).write(to);
+        self.emit(Transfer { from: AztecAddress::zero(), to, token_id });
     }
 
     /** ==========================================================
@@ -385,7 +417,7 @@ pub contract NFT {
         _validate_from_private::<3>(self.context, from);
 
         self.internal._remove_private_token_owner(from, token_id);
-        self.enqueue_self.set_nft_exists_internal(token_id, false);
+        self.enqueue_self.burn_private_internal(token_id);
     }
 
     /// @notice Burns a token from a public address
@@ -400,6 +432,7 @@ pub contract NFT {
         self.internal._validate_public_token_owner(from, token_id);
         self.internal._update_public_token_owner(AztecAddress::zero(), token_id);
         self.internal._set_nft_exists(token_id, false);
+        self.emit(Transfer { from, to: AztecAddress::zero(), token_id });
     }
 
     /** ==========================================================
