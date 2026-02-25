@@ -7,9 +7,10 @@ import { Fr, type GrumpkinScalar, Point } from '@aztec/aztec.js/fields';
 import { createAztecNodeClient, waitForNode, type AztecNode } from '@aztec/aztec.js/node';
 import { type ContractInstanceWithAddress } from '@aztec/aztec.js/contracts';
 import { TxHash } from '@aztec/aztec.js/tx';
-import { PRIVATE_LOG_CIPHERTEXT_LEN, GeneratorIndex } from '@aztec/constants';
+import { PRIVATE_LOG_CIPHERTEXT_LEN, DomainSeparator } from '@aztec/constants';
 import { poseidon2HashWithSeparator } from '@aztec/foundation/crypto/poseidon';
-import { registerInitialLocalNetworkAccountsInWallet, TestWallet } from '@aztec/test-wallet/server';
+import { EmbeddedWallet } from '@aztec/wallets/embedded';
+import { registerInitialLocalNetworkAccountsInWallet } from '@aztec/wallets/testing';
 import { deriveMasterIncomingViewingSecretKey, PublicKeys, computeAddressSecret } from '@aztec/stdlib/keys';
 
 import {
@@ -19,7 +20,11 @@ import {
   getContractClassFromArtifact,
   getContractInstanceFromInstantiationParams,
 } from '@aztec/aztec.js/contracts';
-import { AuthWitness, type ContractFunctionInteractionCallIntent } from '@aztec/aztec.js/authorization';
+import {
+  AuthWitness,
+  SetPublicAuthwitContractInteraction,
+  type ContractFunctionInteractionCallIntent,
+} from '@aztec/aztec.js/authorization';
 import { EventSelector, decodeFromAbi } from '@aztec/aztec.js/abi';
 import { getDefaultInitializer, getInitializer } from '@aztec/stdlib/abi';
 import {
@@ -46,8 +51,16 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { rmSync } from 'node:fs';
 
-const { NODE_URL = 'http://localhost:8080' } = process.env;
-const node = createAztecNodeClient(NODE_URL);
+/** Default port for Aztec local network. */
+export const LOCAL_NETWORK_DEFAULT_PORT = 8080;
+export const DEFAULT_NODE_URL = `http://localhost:${LOCAL_NETWORK_DEFAULT_PORT}`;
+
+/** Returns the Aztec node URL. Reads NODE_URL from env; defaults to localhost:8080. */
+export function getNodeUrl(): string {
+  return process.env.NODE_URL ?? DEFAULT_NODE_URL;
+}
+
+const node = createAztecNodeClient(getNodeUrl());
 await waitForNode(node);
 const config = getPXEConfig();
 
@@ -67,7 +80,7 @@ export const setupTestSuite = async (proverEnabled: boolean = false) => {
   const dataDirectory = join(tmpdir(), `aztec-standards-${randomBytes(8).toString('hex')}`);
   const pxeConfig = { ...config, dataDirectory, proverEnabled };
 
-  const wallet: TestWallet = await TestWallet.create(node, pxeConfig);
+  const wallet: EmbeddedWallet = await EmbeddedWallet.create(node, { pxeConfig });
 
   const accounts: AztecAddress[] = await registerInitialLocalNetworkAccountsInWallet(wallet);
 
@@ -189,7 +202,7 @@ export async function assertOwnsPrivateNFT(
 }
 
 // Deploy NFT contract with a minter
-export async function deployNFTWithMinter(wallet: TestWallet, deployer: AztecAddress, options?: DeployOptions) {
+export async function deployNFTWithMinter(wallet: EmbeddedWallet, deployer: AztecAddress, options?: DeployOptions) {
   const contract = await NFTContract.deployWithOpts(
     { method: 'constructor_with_minter', wallet },
     'TestNFT',
@@ -263,7 +276,7 @@ export async function deployVaultWithInitialDeposit(
       initialDeposit,
       0,
     );
-    await setPublicAuthWit(vaultContract.address, transfer, depositor, wallet as TestWallet);
+    await setPublicAuthWit(vaultContract.address, transfer, depositor, wallet as EmbeddedWallet);
     await vaultContract.methods
       .deposit_public_to_public(depositor, vaultContract.address, initialDeposit, 0)
       .send({ from: depositor });
@@ -307,7 +320,7 @@ export async function setPrivateAuthWit(
   caller: AztecAddress,
   action: ContractFunctionInteraction,
   authorizer: AztecAddress,
-  wallet: TestWallet,
+  wallet: EmbeddedWallet,
 ): Promise<AuthWitness> {
   const intent: ContractFunctionInteractionCallIntent = {
     caller: caller,
@@ -320,9 +333,10 @@ export async function setPublicAuthWit(
   caller: AztecAddress,
   action: ContractFunctionInteraction,
   authorizer: AztecAddress,
-  wallet: TestWallet,
+  wallet: EmbeddedWallet,
 ) {
-  const validateAction = await wallet.setPublicAuthWit(
+  const validateAction = await SetPublicAuthwitContractInteraction.create(
+    wallet,
     authorizer,
     {
       caller: caller,
@@ -330,7 +344,7 @@ export async function setPublicAuthWit(
     },
     true,
   );
-  await validateAction.send();
+  await validateAction.send({ from: authorizer });
 }
 
 /**
@@ -659,8 +673,8 @@ async function deriveAesSymmetricKeyAndIv(
 ): Promise<{ key: Uint8Array; iv: Uint8Array }> {
   // Generate two random 256-bit values using Poseidon2 with different separators
   const kShift = index << 8;
-  const separator1 = kShift + GeneratorIndex.SYMMETRIC_KEY;
-  const separator2 = kShift + GeneratorIndex.SYMMETRIC_KEY_2;
+  const separator1 = kShift + DomainSeparator.SYMMETRIC_KEY;
+  const separator2 = kShift + DomainSeparator.SYMMETRIC_KEY_2;
 
   const rand1 = await poseidon2HashWithSeparator([sharedSecret.x, sharedSecret.y], separator1);
   const rand2 = await poseidon2HashWithSeparator([sharedSecret.x, sharedSecret.y], separator2);

@@ -3,7 +3,7 @@ import { deriveKeys } from '@aztec/stdlib/keys';
 import { PublicKeys } from '@aztec/aztec.js/keys';
 import { type AztecNode } from '@aztec/aztec.js/node';
 import { AztecAddress } from '@aztec/aztec.js/addresses';
-import { type TestWallet } from '@aztec/test-wallet/server';
+import { type EmbeddedWallet } from '@aztec/wallets/embedded';
 import { BlockNumber } from '@aztec/foundation/branded-types';
 import { ContractDeployer } from '@aztec/aztec.js/deployment';
 import { Fr, type GrumpkinScalar, Point } from '@aztec/aztec.js/fields';
@@ -55,7 +55,7 @@ describe('Escrow', () => {
   let cleanup: () => Promise<void>;
   let node: AztecNode;
 
-  let wallet: TestWallet;
+  let wallet: EmbeddedWallet;
   let accounts: AztecAddress[];
 
   let alice: AztecAddress;
@@ -340,12 +340,12 @@ describe('Escrow', () => {
     it('should be able to withdraw from escrow correctly', async () => {
       const privateBalance = await token.methods.balance_of_private(escrow.address).simulate({ from: bob });
 
-      await expectTokenBalances(token, escrow.address, wad(0), AMOUNT, bob);
+      await expectTokenBalances(token, escrow.address, wad(0), AMOUNT, escrow.address);
       await expectTokenBalances(token, bob, wad(0), wad(0), bob);
 
       await logic.withWallet(wallet).methods.withdraw(escrow.address, bob, token.address, AMOUNT).send({ from: bob });
 
-      await expectTokenBalances(token, escrow.address, wad(0), wad(0), bob);
+      await expectTokenBalances(token, escrow.address, wad(0), wad(0), escrow.address);
       await expectTokenBalances(token, bob, wad(0), AMOUNT, bob);
     });
   });

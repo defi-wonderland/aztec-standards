@@ -137,7 +137,7 @@ reviews:
       instructions: >
         CI/CD workflows. Ensure:
         - Aztec version is detected dynamically from package.json config.
-        - Docker and sandbox setup steps are present for integration tests.
+        - Local network setup steps are present for integration tests.
         - Test commands match package.json scripts.
         - Concurrency groups prevent duplicate runs.
         - Node.js version matches project requirements (>=22).
