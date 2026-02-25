@@ -1258,10 +1258,9 @@
     "@crate-crypto/node-eth-kzg-win32-arm64-msvc" "0.10.0"
     "@crate-crypto/node-eth-kzg-win32-x64-msvc" "0.10.0"
 
-"@defi-wonderland/aztec-benchmark@4.0.0-devnet.2-patch.1":
+"@defi-wonderland/aztec-benchmark@defi-wonderland/aztec-benchmark#feat/circuit-gate-details":
   version "4.0.0-devnet.2-patch.1"
-  resolved "https://registry.yarnpkg.com/@defi-wonderland/aztec-benchmark/-/aztec-benchmark-4.0.0-devnet.2-patch.1.tgz#a291dad485bdc38ca30a087db5e7405eb729388d"
-  integrity sha512-++6E0FLaUUVYHGIYw+uvgx2xYVU0fkgFzwW0w3EJintvw8KsiU30pe6kk2/QGbtfbe08BdiCNNawfDrOU3oFiw==
+  resolved "https://codeload.github.com/defi-wonderland/aztec-benchmark/tar.gz/aa67384e7ebd8ee2f6fd6c9c79d6da14ffb2e1c0"
   dependencies:
     "@actions/core" "1.10.1"
     "@actions/exec" "1.1.1"
