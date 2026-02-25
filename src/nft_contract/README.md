@@ -125,11 +125,11 @@ fn transfer_public_to_private(
 ```rust
 /// @notice Initializes a transfer commitment to be used for transfers
 /// @dev Returns a partial nft note that can be used to execute transfers
-/// @param from The address of the sender
 /// @param to The address of the recipient
+/// @param completer The address allowed to complete the partial note
 /// @return commitment The partial nft note utilized for the transfer commitment (privacy entrance)
 #[private]
-fn initialize_transfer_commitment(from: AztecAddress, to: AztecAddress) -> Field { /* ... */ }
+fn initialize_transfer_commitment(to: AztecAddress, completer: AztecAddress) -> Field { /* ... */ }
 ```
 
 ### mint_to_private

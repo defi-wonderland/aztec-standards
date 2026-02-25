@@ -82,7 +82,7 @@ unconstrained fn nft_transfer_private_to_commitment_authorized_success() {
     utils::check_commitment_is_stored(env, nft_contract_address, commitment);
 }
 
-#[test(should_fail_with = "nft not found in private to public")]
+#[test(should_fail_with = "nft not found")]
 unconstrained fn nft_transfer_private_to_commitment_non_existent_fail() {
     // Setup but don't mint any NFT
     let (env, nft_contract_address, owner, _, recipient) = utils::setup_with_minter(false);
@@ -178,7 +178,7 @@ unconstrained fn nft_transfer_private_to_commitment_wrong_authwit_fail() {
     );
 }
 
-#[test(should_fail_with = "nft not found in private to public")]
+#[test(should_fail_with = "nft not found")]
 unconstrained fn nft_transfer_private_to_commitment_public_nft_fail() {
     // Setup and mint NFT to owner in public state
     let token_id = 10000;

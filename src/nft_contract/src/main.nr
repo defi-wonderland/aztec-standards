@@ -10,7 +10,7 @@ pub contract NFT {
         authwit::auth::{
             assert_current_call_valid_authwit, assert_current_call_valid_authwit_public,
         },
-        context::{PrivateContext, PublicContext},
+        context::PrivateContext,
         macros::{functions::{external, initializer, internal, only_self, view}, storage::storage},
         messages::message_delivery::MessageDelivery,
         note::{
@@ -206,7 +206,7 @@ pub contract NFT {
         token_id: Field,
         _nonce: Field,
     ) {
-        _validate_from_public(self.context, from);
+        self.internal._validate_from_public(from);
         self.internal._validate_public_token_owner(from, token_id);
 
         self.internal._update_public_token_owner(to, token_id);
@@ -225,7 +225,7 @@ pub contract NFT {
         commitment: Field,
         _nonce: Field,
     ) {
-        _validate_from_public(self.context, from);
+        self.internal._validate_from_public(from);
         self.internal._validate_public_token_owner(from, token_id);
 
         self.internal._update_public_token_owner(AztecAddress::zero(), token_id);
@@ -276,18 +276,13 @@ pub contract NFT {
     }
 
     /// @notice Sets the existence of a token
-    /// @dev Asserts token does not exist when setting `exists` to true (minting) and that token exist when setting `exists` to false (burning)
+    /// @dev Asserts token does not exist when setting `exists` to true (minting) and that token exists when setting `exists` to false (burning)
     /// @param token_id The id of the token to set
     /// @param exists The new exists value
     #[external("public")]
     #[only_self]
     fn set_nft_exists_internal(token_id: Field, exists: bool) {
-        if exists {
-            assert(!self.storage.nft_exists.at(token_id).read(), "token already exists");
-        } else {
-            assert(self.storage.nft_exists.at(token_id).read(), "token does not exist");
-        }
-        self.storage.nft_exists.at(token_id).write(exists);
+        self.internal._set_nft_exists(token_id, exists);
     }
 
     /** ==========================================================
@@ -371,9 +366,8 @@ pub contract NFT {
     fn mint_to_public(to: AztecAddress, token_id: Field) {
         assert(token_id != 0, "zero token ID not supported");
         _validate_minter(self.msg_sender(), self.storage.minter.read());
-        assert(!self.storage.nft_exists.at(token_id).read(), "token already exists");
 
-        self.storage.nft_exists.at(token_id).write(true);
+        self.internal._set_nft_exists(token_id, true);
         self.storage.public_owners.at(token_id).write(to);
     }
 
@@ -401,11 +395,11 @@ pub contract NFT {
     /// @param _nonce The nonce used for authwitness
     #[external("public")]
     fn burn_public(from: AztecAddress, token_id: Field, _nonce: Field) {
-        _validate_from_public(self.context, from);
+        self.internal._validate_from_public(from);
 
         self.internal._validate_public_token_owner(from, token_id);
         self.internal._update_public_token_owner(AztecAddress::zero(), token_id);
-        self.storage.nft_exists.at(token_id).write(false);
+        self.internal._set_nft_exists(token_id, false);
     }
 
     /** ==========================================================
@@ -431,6 +425,20 @@ pub contract NFT {
     /** ==========================================================
      * ================= TOKEN LIBRARIES =========================
      * ======================================================== */
+
+    /// @notice Sets the existence of a token
+    /// @dev Asserts token does not exist when setting `exists` to true (minting) and that token exists when setting `exists` to false (burning)
+    /// @param token_id The id of the token to set
+    /// @param exists The new exists value
+    #[internal("public")]
+    fn _set_nft_exists(token_id: Field, exists: bool) {
+        if exists {
+            assert(!self.storage.nft_exists.at(token_id).read(), "token already exists");
+        } else {
+            assert(self.storage.nft_exists.at(token_id).read(), "token does not exist");
+        }
+        self.storage.nft_exists.at(token_id).write(exists);
+    }
 
     /// @notice Stores a commitment in storage
     /// @param commitment The commitment to store
@@ -478,7 +486,7 @@ pub contract NFT {
         let notes = self.storage.private_nfts.at(from).pop_notes(NoteGetterOptions::new()
             .select(NFTNote::properties().token_id, Comparator.EQ, token_id)
             .set_limit(1));
-        assert(notes.len() == 1, "nft not found in private to public");
+        assert(notes.len() == 1, "nft not found");
     }
 
     /// @notice Updates the public token owner
@@ -536,12 +544,11 @@ pub contract NFT {
     }
 
     /// @notice Validates that the caller possesses authwit from the `from` address or the caller is the `from` address
-    /// @param context The context of the public call
     /// @param from The address of the sender
-    #[contract_library_method]
-    unconstrained fn _validate_from_public(context: PublicContext, from: AztecAddress) {
-        if (!from.eq(context.maybe_msg_sender().unwrap())) {
-            assert_current_call_valid_authwit_public(context, from);
+    #[internal("public")]
+    fn _validate_from_public(from: AztecAddress) {
+        if (!from.eq(self.msg_sender())) {
+            assert_current_call_valid_authwit_public(self.context, from);
         }
     }
 }
