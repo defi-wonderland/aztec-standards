@@ -14,6 +14,8 @@ jobs:
 
   benchmark:
     uses: defi-wonderland/aztec-benchmark/.github/workflows/pr-benchmark.yml@feat/circuit-gate-details
+    with:
+      circuit-details: true
     permissions:
       contents: read
       pull-requests: write
