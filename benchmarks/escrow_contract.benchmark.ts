@@ -2,9 +2,7 @@
 import { Fr } from '@aztec/aztec.js/fields';
 import { deriveKeys } from '@aztec/stdlib/keys';
 import type { Wallet } from '@aztec/aztec.js/wallet';
-import { type AztecNode } from '@aztec/aztec.js/node';
 import { AztecAddress } from '@aztec/aztec.js/addresses';
-import type { AztecLMDBStoreV2 } from '@aztec/kv-store/lmdb-v2';
 import type { ContractFunctionInteractionCallIntent } from '@aztec/aztec.js/authorization';
 
 // Import the new Benchmark base class and context
@@ -12,17 +10,16 @@ import { Benchmark, BenchmarkContext } from '@defi-wonderland/aztec-benchmark';
 import type { NamedBenchmarkedInteraction } from '@defi-wonderland/aztec-benchmark/dist/types.js';
 
 // Import artifacts
-import { TokenContract } from '../artifacts/Token.js';
-import { EscrowContract, EscrowContractArtifact } from '../artifacts/Escrow.js';
-import { NFTContract } from '../artifacts/NFT.js';
+import { TokenContract } from '../src/artifacts/Token.js';
+import { EscrowContract, EscrowContractArtifact } from '../src/artifacts/Escrow.js';
+import { NFTContract } from '../src/artifacts/NFT.js';
 
 // Import test utilities
 import { setupTestSuite, deployEscrow, deployTokenWithMinter, deployNFTWithMinter } from '../src/ts/test/utils.js';
 
 // Extend the BenchmarkContext from the new package
 interface EscrowBenchmarkContext extends BenchmarkContext {
-  store: AztecLMDBStoreV2;
-  node: AztecNode;
+  cleanup: () => Promise<void>;
   wallet: Wallet;
   deployer: AztecAddress;
   accounts: AztecAddress[];
@@ -40,7 +37,7 @@ export default class EscrowContractBenchmark extends Benchmark {
    * Creates wallet, gets accounts, and deploys the contract.
    */
   async setup(): Promise<EscrowBenchmarkContext> {
-    const { store, node, wallet, accounts } = await setupTestSuite('bench-escrow', true);
+    const { cleanup, wallet, accounts } = await setupTestSuite(true);
     const [deployer, logicMock] = accounts;
 
     // Setup escrow
@@ -69,18 +66,15 @@ export default class EscrowContractBenchmark extends Benchmark {
     await tokenContract
       .withWallet(wallet)
       .methods.mint_to_private(escrowContract.address, tokenAmount)
-      .send({ from: deployer })
-      .wait();
+      .send({ from: deployer });
     const tokenId = 1;
     await nftContract
       .withWallet(wallet)
       .methods.mint_to_private(escrowContract.address, tokenId)
-      .send({ from: deployer })
-      .wait();
+      .send({ from: deployer });
 
     return {
-      store,
-      node,
+      cleanup,
       wallet,
       deployer,
       accounts,
@@ -128,6 +122,6 @@ export default class EscrowContractBenchmark extends Benchmark {
   }
 
   async teardown(context: EscrowBenchmarkContext): Promise<void> {
-    await context.store.delete();
+    await context.cleanup();
   }
 }

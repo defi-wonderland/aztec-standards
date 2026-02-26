@@ -1,19 +1,19 @@
 import type { Wallet } from '@aztec/aztec.js/wallet';
 import { AztecAddress } from '@aztec/aztec.js/addresses';
-import type { AztecLMDBStoreV2 } from '@aztec/kv-store/lmdb-v2';
 import type { ContractFunctionInteractionCallIntent } from '@aztec/aztec.js/authorization';
+import { Fr } from '@aztec/aztec.js/fields';
 
 import { parseUnits } from 'viem';
 
 // Import the new Benchmark base class and context
 import { Benchmark, BenchmarkContext } from '@defi-wonderland/aztec-benchmark';
 
-import { TokenContract } from '../artifacts/Token.js';
+import { TokenContract } from '../src/artifacts/Token.js';
 import { deployTokenWithMinter, initializeTransferCommitment, setupTestSuite } from '../src/ts/test/utils.js';
 
 // Extend the BenchmarkContext from the new package
 interface TokenBenchmarkContext extends BenchmarkContext {
-  store: AztecLMDBStoreV2;
+  cleanup: () => Promise<void>;
   wallet: Wallet;
   deployer: AztecAddress;
   accounts: AztecAddress[];
@@ -36,7 +36,7 @@ export default class TokenContractBenchmark extends Benchmark {
    */
 
   async setup(): Promise<TokenBenchmarkContext> {
-    const { store, wallet, accounts } = await setupTestSuite('bench-token', true);
+    const { cleanup, wallet, accounts } = await setupTestSuite(true);
     const [deployer] = accounts;
     const deployedBaseContract = await deployTokenWithMinter(wallet, deployer);
     const tokenContract = TokenContract.at(deployedBaseContract.address, wallet);
@@ -45,7 +45,9 @@ export default class TokenContractBenchmark extends Benchmark {
     const [alice] = accounts;
     const owner = alice;
     // We need an account manager to decrypt the private logs in the initializeTransferCommitment function
-    const commitmentRecipientAccountManager = await wallet.createAccount();
+    const secret = Fr.random();
+    const salt = Fr.random();
+    const commitmentRecipientAccountManager = await wallet.createSchnorrAccount(secret, salt);
     const commitment_1 = await initializeTransferCommitment(
       tokenContract,
       alice,
@@ -61,7 +63,7 @@ export default class TokenContractBenchmark extends Benchmark {
 
     const commitments = [commitment_1, commitment_2];
 
-    return { store, wallet, deployer, accounts, tokenContract, commitments };
+    return { cleanup, wallet, deployer, accounts, tokenContract, commitments };
   }
 
   /**
@@ -139,6 +141,6 @@ export default class TokenContractBenchmark extends Benchmark {
   }
 
   async teardown(context: TokenBenchmarkContext): Promise<void> {
-    await context.store.delete();
+    await context.cleanup();
   }
 }

@@ -7,8 +7,8 @@ contract TestLogic {
     // aztec library
     use aztec::{
         macros::{events::event, functions::{external, initializer}, storage::storage},
-        protocol_types::{address::AztecAddress, public_keys::PublicKeys},
-        state_vars::public_immutable::PublicImmutable,
+        protocol::{address::AztecAddress, public_keys::PublicKeys},
+        state_vars::PublicImmutable,
     };
     use escrow_contract::derivation::keys;
     use escrow_contract::library::logic::{_get_escrow, _share_escrow, _withdraw, _withdraw_nft};

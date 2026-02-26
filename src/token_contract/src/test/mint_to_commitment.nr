@@ -95,7 +95,7 @@ unconstrained fn mint_to_private_failure_total_supply_overflow() {
     );
 }
 
-#[test(should_fail_with = "Invalid partial note or completer 'context.nullifier_exists(validity_commitment, context.this_address())'")]
+#[test(should_fail_with = "Invalid partial note or completer 'context.nullifier_exists_unsafe(validity_commitment, context.this_address())'")]
 unconstrained fn mint_to_private_failure_invalid_commitments_random() {
     let (mut env, token_contract_address, _, _, minter) = utils::setup_with_minter(false);
 
@@ -107,7 +107,7 @@ unconstrained fn mint_to_private_failure_invalid_commitments_random() {
     );
 }
 
-#[test(should_fail_with = "Invalid partial note or completer 'context.nullifier_exists(validity_commitment, context.this_address())'")]
+#[test(should_fail_with = "Invalid partial note or completer 'context.nullifier_exists_unsafe(validity_commitment, context.this_address())'")]
 unconstrained fn mint_to_private_failure_invalid_commitments_zero() {
     let (mut env, token_contract_address, _, _, minter) = utils::setup_with_minter(false);
 

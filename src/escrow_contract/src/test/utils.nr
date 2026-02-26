@@ -1,6 +1,6 @@
 use aztec::{
     oracle::random::random,
-    protocol_types::{address::AztecAddress, traits::ToField},
+    protocol::{address::AztecAddress, traits::ToField},
     test::helpers::{
         test_environment::TestEnvironment, txe_oracles as cheatcodes, utils::ContractDeployment,
     },

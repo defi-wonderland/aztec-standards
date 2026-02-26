@@ -1,17 +1,16 @@
 import type { Wallet } from '@aztec/aztec.js/wallet';
 import { AztecAddress } from '@aztec/aztec.js/addresses';
-import { type AztecLMDBStoreV2 } from '@aztec/kv-store/lmdb-v2';
 import type { ContractFunctionInteractionCallIntent } from '@aztec/aztec.js/authorization';
 
 // Import the new Benchmark base class and context
 import { Benchmark, BenchmarkContext } from '@defi-wonderland/aztec-benchmark';
 
-import { NFTContract } from '../artifacts/NFT.js';
+import { NFTContract } from '../src/artifacts/NFT.js';
 import { deployNFTWithMinter, setupTestSuite } from '../src/ts/test/utils.js';
 
 // Extend the BenchmarkContext from the new package
 interface NFTBenchmarkContext extends BenchmarkContext {
-  store: AztecLMDBStoreV2;
+  cleanup: () => Promise<void>;
   wallet: Wallet;
   deployer: AztecAddress;
   accounts: AztecAddress[];
@@ -25,14 +24,11 @@ export default class NFTContractBenchmark extends Benchmark {
    * Creates wallet, gets accounts, and deploys the contract.
    */
   async setup(): Promise<NFTBenchmarkContext> {
-    const { store, wallet, accounts } = await setupTestSuite('bench-nft', true);
+    const { cleanup, wallet, accounts } = await setupTestSuite(true);
     const [deployer] = accounts;
-    const deployedBaseContract = await deployNFTWithMinter(wallet, deployer, {
-      universalDeploy: true,
-      from: deployer,
-    });
+    const deployedBaseContract = await deployNFTWithMinter(wallet, deployer);
     const nftContract = NFTContract.at(deployedBaseContract.address, wallet);
-    return { store, wallet, deployer, accounts, nftContract };
+    return { cleanup, wallet, deployer, accounts, nftContract };
   }
 
   /**
@@ -89,6 +85,6 @@ export default class NFTContractBenchmark extends Benchmark {
   }
 
   async teardown(context: NFTBenchmarkContext): Promise<void> {
-    await context.store.delete();
+    await context.cleanup();
   }
 }

@@ -4,7 +4,21 @@
 
 Aztec Standards is a comprehensive collection of reusable, standardized contracts for the Aztec Network. It provides a robust foundation of token primitives and utilities that support both private and public operations, empowering developers to build innovative privacy-preserving applications with ease.
 
+## Development
+
+**Prerequisite**: Start an Aztec local network in a separate terminal:
+```bash
+aztec start --local-network
+```
+
+**Tests**: `yarn test` runs Noir and JS tests. JS tests expect the network to be running at `http://localhost:8080` (or `NODE_URL`).
+
+**Benchmarks**: `yarn bench` connects to the same running network.
+
+Set `NODE_URL` to override the default (e.g. `http://localhost:9000`).
+
 ## Table of Contents
+- [Development](#development)
 - [Dripper Contract](#dripper-contract)
 - [Token Contract](#token-contract)
 - [Tokenized Vault Contract](#tokenized-vault-contract)

@@ -3,7 +3,7 @@ use aztec::{
     context::PrivateContext,
     event::event_emission::emit_event_in_private,
     messages::message_delivery::MessageDelivery,
-    protocol_types::{
+    protocol::{
         address::AztecAddress,
         contract_class_id::ContractClassId,
         contract_instance::ContractInstance,
@@ -64,7 +64,7 @@ pub fn _share_escrow(
 
     emit_event_in_private(context, event_struct).deliver_to(
         account,
-        MessageDelivery.CONSTRAINED_ONCHAIN,
+        MessageDelivery.ONCHAIN_CONSTRAINED,
     );
 }
 

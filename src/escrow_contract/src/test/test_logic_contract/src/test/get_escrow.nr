@@ -2,7 +2,7 @@ use crate::test::utils as logic_utils;
 use crate::TestLogic;
 use aztec::{
     oracle::get_contract_instance::get_contract_instance,
-    protocol_types::{
+    protocol::{
         address::AztecAddress,
         contract_instance::ContractInstance,
         traits::{FromField, ToField},

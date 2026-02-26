@@ -1,6 +1,6 @@
 use crate::TestLogic;
 use aztec::{
-    protocol_types::{
+    protocol::{
         address::AztecAddress,
         point::Point,
         public_keys::{IvpkM, NpkM, OvpkM, PublicKeys, TpkM},

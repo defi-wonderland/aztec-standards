@@ -1,5 +1,4 @@
 pub mod test;
-pub mod types;
 
 use aztec::macros::aztec;
 
@@ -11,27 +10,28 @@ pub contract Token {
             assert_current_call_valid_authwit, assert_current_call_valid_authwit_public,
         },
         context::PrivateContext,
-        macros::{functions::{external, initializer, internal, only_self, view}, storage::storage},
+        macros::{
+            events::event,
+            functions::{external, initializer, internal, only_self, view},
+            storage::storage,
+        },
         messages::message_delivery::MessageDelivery,
-        protocol_types::{
+        protocol::{
             address::AztecAddress,
             constants::CONTRACT_INSTANCE_REGISTRY_CONTRACT_ADDRESS,
             contract_class_id::ContractClassId,
             traits::{FromField, ToField},
         },
-        state_vars::{
-            Map, Owned, public_immutable::PublicImmutable, public_mutable::PublicMutable,
-            StateVariable,
-        },
+        state_vars::{Map, Owned, PublicImmutable, PublicMutable, StateVariable},
     };
     // note library
-    use uint_note::uint_note::{PartialUintNote, UintNote};
+    use uint_note::{PartialUintNote, UintNote};
     // compression library
     use compressed_string::FieldCompressedString;
     // contract instance registry
     use contract_instance_registry::ContractInstanceRegistry;
     // private balance library
-    use crate::types::balance_set::BalanceSet;
+    use balance_set::BalanceSet;
 
     // gas-optimized max notes for initial transfer call
     global INITIAL_TRANSFER_CALL_MAX_NOTES: u32 = 2;
@@ -44,6 +44,18 @@ pub contract Token {
 
     // Maximum value for a u128 (2**128 - 1)
     global MAX_U128_VALUE: u128 = 340282366920938463463374607431768211455;
+
+    // Sentinel address used in Transfer events to represent the private side of a balance change.
+    // sha224sum 'PRIVATE_ADDRESS'
+    global PRIVATE_ADDRESS_MAGIC_VALUE: AztecAddress =
+        AztecAddress::from_field(0x1ea7e01501975545617c2e694d931cb576b691a4a867fed81ebd3264);
+
+    #[event]
+    struct Transfer {
+        from: AztecAddress,
+        to: AztecAddress,
+        amount: u128,
+    }
 
     /// @param name The name of the token
     /// @param symbol The symbol of the token
@@ -247,7 +259,7 @@ pub contract Token {
         self.enqueue_self.increase_public_balance_internal(to, amount);
 
         // Only the sender will be able to complete the partial note
-        let completer = self.msg_sender().unwrap();
+        let completer = self.msg_sender();
         let commitment = self.internal._initialize_transfer_commitment(to, completer);
         commitment.to_field()
     }
@@ -290,7 +302,7 @@ pub contract Token {
 
         self.internal._decrease_private_balance(from, amount, INITIAL_TRANSFER_CALL_MAX_NOTES);
 
-        let completer = self.msg_sender().unwrap();
+        let completer = self.msg_sender();
         PartialUintNote::from_field(commitment).complete_from_private(
             self.context,
             completer,
@@ -361,6 +373,8 @@ pub contract Token {
 
         self.internal._decrease_public_balance(from, amount);
         self.internal._increase_public_balance(to, amount);
+
+        self.emit(Transfer { from, to, amount });
     }
 
     /// @notice Finalizes a transfer of token `amount` from public balance of `from` to a commitment of `to`
@@ -382,12 +396,14 @@ pub contract Token {
 
         self.internal._decrease_public_balance(from, amount);
 
-        let completer = self.msg_sender().unwrap();
+        let completer = self.msg_sender();
         self.internal._increase_commitment_balance(
             PartialUintNote::from_field(commitment),
             completer,
             amount,
         );
+
+        self.emit(Transfer { from, to: PRIVATE_ADDRESS_MAGIC_VALUE, amount });
     }
 
     /// @notice Increases the public balance of `to` by `amount`
@@ -397,6 +413,8 @@ pub contract Token {
     #[only_self]
     fn increase_public_balance_internal(to: AztecAddress, amount: u128) {
         self.internal._increase_public_balance(to, amount);
+
+        self.emit(Transfer { from: PRIVATE_ADDRESS_MAGIC_VALUE, to, amount });
     }
 
     /// @notice Decreases the public balance of `from` by `amount`
@@ -406,6 +424,8 @@ pub contract Token {
     #[only_self]
     fn decrease_public_balance_internal(from: AztecAddress, amount: u128) {
         self.internal._decrease_public_balance(from, amount);
+
+        self.emit(Transfer { from, to: PRIVATE_ADDRESS_MAGIC_VALUE, amount });
     }
 
     /** ==========================================================
@@ -475,7 +495,7 @@ pub contract Token {
     /// @param amount The amount of tokens to mint
     #[external("private")]
     fn mint_to_private(to: AztecAddress, amount: u128) {
-        _validate_minter(self.msg_sender().unwrap(), self.storage.minter.read());
+        _validate_minter(self.msg_sender(), self.storage.minter.read());
 
         self.internal._mint_to_private(to, amount);
     }
@@ -486,7 +506,7 @@ pub contract Token {
     /// @param amount The amount of tokens to mint
     #[external("public")]
     fn mint_to_public(to: AztecAddress, amount: u128) {
-        _validate_minter(self.msg_sender().unwrap(), self.storage.minter.read());
+        _validate_minter(self.msg_sender(), self.storage.minter.read());
 
         self.internal._mint_to_public(to, amount);
     }
@@ -497,7 +517,7 @@ pub contract Token {
     /// @param amount The amount of tokens to mint
     #[external("public")]
     fn mint_to_commitment(commitment: Field, amount: u128) {
-        let sender = self.msg_sender().unwrap();
+        let sender = self.msg_sender();
         _validate_minter(sender, self.storage.minter.read());
         let completer = sender;
         self.internal._increase_total_supply(amount);
@@ -506,6 +526,8 @@ pub contract Token {
             completer,
             amount,
         );
+
+        self.emit(Transfer { from: AztecAddress::zero(), to: PRIVATE_ADDRESS_MAGIC_VALUE, amount });
     }
 
     /// @notice Internal function to increase the total supply by `amount`
@@ -514,6 +536,8 @@ pub contract Token {
     #[only_self]
     fn increase_total_supply_internal(amount: u128) {
         self.internal._increase_total_supply(amount);
+
+        self.emit(Transfer { from: AztecAddress::zero(), to: PRIVATE_ADDRESS_MAGIC_VALUE, amount });
     }
 
     /// @notice Internal function to mint tokens to a public balance
@@ -559,6 +583,8 @@ pub contract Token {
     #[only_self]
     fn decrease_total_supply_internal(amount: u128) {
         self.internal._decrease_total_supply(amount);
+
+        self.emit(Transfer { from: PRIVATE_ADDRESS_MAGIC_VALUE, to: AztecAddress::zero(), amount });
     }
 
     /// @notice Burns tokens from a public balance without validation
@@ -583,8 +609,6 @@ pub contract Token {
     }
 
     /// @notice Decreases the private balance of `account` by `amount` and emits a private balance note with the change to account
-    /// @param context The private context
-    /// @param private_balances The storage pointer to the private balances
     /// @param account The address of the account to decrease the balance of
     /// @param amount The amount of tokens to decrease the balance by
     /// @param max_notes The maximum number of notes to process in a single call
@@ -594,22 +618,20 @@ pub contract Token {
         let change = self.internal._subtract_balance(account, amount, max_notes);
         // Increases `change` to the private balance of `account`, and emits a private balance note to account
         self.storage.private_balances.at(account).add(change).deliver(
-            MessageDelivery.CONSTRAINED_ONCHAIN,
+            MessageDelivery.ONCHAIN_CONSTRAINED,
         );
     }
 
-    /// @notice Updates the given storage pointer `private_balances` to increase the private balance of `to` by `amount`
-    /// @param private_balances The storage pointer to the private balances
+    /// @notice Increases the private balance of `to` by `amount`
     /// @param to The address of the recipient
     /// @param amount The amount of tokens to increase the balance by
     #[internal("private")]
     fn _increase_private_balance(to: AztecAddress, amount: u128) {
         // Increases `amount` to the private balance of `to`, and emits a private balance note to `to` from `from`
-        self.storage.private_balances.at(to).add(amount).deliver(MessageDelivery.CONSTRAINED_ONCHAIN);
+        self.storage.private_balances.at(to).add(amount).deliver(MessageDelivery.ONCHAIN_CONSTRAINED);
     }
 
-    /// @notice Updates the given storage pointer `public_balances` to increase the public balance of `to` by `amount`
-    /// @param public_balances The storage pointer to the public balances
+    /// @notice Increases the public balance of `to` by `amount`
     /// @param to The address of the recipient
     /// @param amount The amount of tokens to increase the balance by
     #[internal("public")]
@@ -620,8 +642,7 @@ pub contract Token {
         self.storage.public_balances.at(to).write(new_balance);
     }
 
-    /// @notice Updates the given storage pointer `public_balances` to decrease the public balance of `from` by `amount`
-    /// @param public_balances The storage pointer to the public balances
+    /// @notice Decreases the public balance of `from` by `amount`
     /// @param from The address of the account to decrease the balance of
     /// @param amount The amount of tokens to decrease the balance by
     #[internal("public")]
@@ -634,7 +655,6 @@ pub contract Token {
 
     /// @notice Completes a partial note
     /// @dev Completes a partial note and increases the balance of the commitment by `amount`
-    /// @param context The context of the public call
     /// @param commitment The partial note representing the commitment (privacy entrance)
     /// @param completer The address used to compute the validity commitment
     /// @param amount The amount of tokens to increase the balance of the commitment by
@@ -649,8 +669,6 @@ pub contract Token {
 
     /// @notice Subtracts balance from private balance
     /// @dev Subtracts amount from private balance and returns the change to the owner, recursively if necessary
-    /// @param context The private context
-    /// @param private_balances The storage pointer to the private balances
     /// @param account The address of the account to subtract the balance from
     /// @param amount The amount of tokens to subtract
     /// @param max_notes The maximum number of notes to process in a single call
@@ -673,8 +691,7 @@ pub contract Token {
         }
     }
 
-    /// @notice Increases the given storage pointer `total_supply` by `amount`
-    /// @param total_supply The storage pointer to the total supply
+    /// @notice Increases the total supply by `amount`
     /// @param amount The amount of tokens to increase the total supply by
     #[internal("public")]
     fn _increase_total_supply(amount: u128) {
@@ -682,8 +699,7 @@ pub contract Token {
         self.storage.total_supply.write(new_supply);
     }
 
-    /// @notice Decreases the given storage pointer `total_supply` by `amount`
-    /// @param total_supply The storage pointer to the total supply
+    /// @notice Decreases the total supply by `amount`
     /// @param amount The amount to decrease the total supply by
     #[internal("public")]
     fn _decrease_total_supply(amount: u128) {
@@ -692,8 +708,6 @@ pub contract Token {
     }
 
     /// @notice Initializes a transfer commitment to be used for transfers/mints
-    /// @param context The context of the private call
-    /// @param private_balances The storage pointer to the private balances
     /// @param to The address of the recipient
     /// @param completer The address used to compute the validity commitment
     /// @return The partial note that can be used to execute the transfer/mint
@@ -714,19 +728,17 @@ pub contract Token {
     }
 
     /// @notice Mints tokens to a public balance and increases the total supply
-    /// @param public_balances The storage pointer to the public balances
-    /// @param total_supply The storage pointer to the total supply
     /// @param to The address of the recipient
     /// @param amount The amount of tokens to mint
     #[internal("public")]
     fn _mint_to_public(to: AztecAddress, amount: u128) {
         self.internal._increase_public_balance(to, amount);
         self.internal._increase_total_supply(amount);
+
+        self.emit(Transfer { from: AztecAddress::zero(), to, amount });
     }
 
     /// @notice Mints tokens to a private balance and enqueues a public call to increase the total supply
-    /// @param context The private context
-    /// @param private_balances The storage pointer to the private balances
     /// @param to The address of the recipient
     /// @param amount The amount of tokens to mint
     #[internal("private")]
@@ -736,19 +748,17 @@ pub contract Token {
     }
 
     /// @notice Burns tokens from a public balance and decreases the total supply
-    /// @param public_balances The storage pointer to the public balances
-    /// @param total_supply The storage pointer to the total supply
     /// @param from The address to burn tokens from
     /// @param amount The amount of tokens to burn
     #[internal("public")]
     fn _burn_public(from: AztecAddress, amount: u128) {
         self.internal._decrease_public_balance(from, amount);
         self.internal._decrease_total_supply(amount);
+
+        self.emit(Transfer { from, to: AztecAddress::zero(), amount });
     }
 
     /// @notice Burns tokens from a private balance and enqueues a public call to decrease the total supply
-    /// @param context The private context
-    /// @param private_balances The storage pointer to the private balances
     /// @param from The address to burn tokens from
     /// @param amount The amount of tokens to burn
     #[internal("private")]
@@ -770,7 +780,7 @@ pub contract Token {
         let upgrade_authority = self.storage.upgrade_authority.read();
 
         assert(!upgrade_authority.eq(AztecAddress::zero()), "upgrade authority not set");
-        assert(self.msg_sender().unwrap().eq(upgrade_authority), "caller is not upgrade authority");
+        assert(self.msg_sender().eq(upgrade_authority), "caller is not upgrade authority");
 
         self.call(ContractInstanceRegistry::at(CONTRACT_INSTANCE_REGISTRY_CONTRACT_ADDRESS).update(
             ContractClassId::from_field(new_contract_class_id),
@@ -786,7 +796,7 @@ pub contract Token {
     /// @param from The address of the sender
     #[contract_library_method]
     fn _validate_from_private<let N: u32>(context: &mut PrivateContext, from: AztecAddress) {
-        if (!from.eq(context.msg_sender().unwrap())) {
+        if (!from.eq(context.maybe_msg_sender().unwrap())) {
             assert_current_call_valid_authwit::<N>(context, from);
         }
     }
@@ -796,7 +806,7 @@ pub contract Token {
     /// @param from The address of the sender
     #[internal("public")]
     fn _validate_from_public(from: AztecAddress) {
-        if (!from.eq(self.msg_sender().unwrap())) {
+        if (!from.eq(self.msg_sender())) {
             assert_current_call_valid_authwit_public(self.context, from);
         }
     }
@@ -1626,6 +1636,14 @@ pub contract Token {
         assert(min_shares <= shares, "Insufficient shares burnt");
 
         self.internal._decrease_total_supply(shares);
+
+        self.emit(
+            Transfer {
+                from: PRIVATE_ADDRESS_MAGIC_VALUE,
+                to: AztecAddress::zero(),
+                amount: shares,
+            },
+        );
     }
 
     /// @notice Withdraws assets to a public balance for a given amount of shares
@@ -1647,6 +1665,14 @@ pub contract Token {
             assets,
             0,
         ));
+
+        self.emit(
+            Transfer {
+                from: PRIVATE_ADDRESS_MAGIC_VALUE,
+                to: AztecAddress::zero(),
+                amount: shares,
+            },
+        );
     }
 
     /// @notice Mints shares to a public balance for a given amount of assets
@@ -1690,6 +1716,14 @@ pub contract Token {
 
         // Finalize minting shares by increasing total supply
         self.internal._increase_total_supply(shares);
+
+        self.emit(
+            Transfer {
+                from: AztecAddress::zero(),
+                to: PRIVATE_ADDRESS_MAGIC_VALUE,
+                amount: shares,
+            },
+        );
     }
 
     /// @notice Validates that the requested shares amount is valid for the deposited assets
@@ -1705,6 +1739,14 @@ pub contract Token {
 
         // Finalize minting shares by increasing total supply
         self.internal._increase_total_supply(shares);
+
+        self.emit(
+            Transfer {
+                from: AztecAddress::zero(),
+                to: PRIVATE_ADDRESS_MAGIC_VALUE,
+                amount: shares,
+            },
+        );
     }
 
     /// @notice Decreases shares total supply and refunds excess shares via commitment
@@ -1743,6 +1785,14 @@ pub contract Token {
             assets,
             0,
         ));
+
+        self.emit(
+            Transfer {
+                from: PRIVATE_ADDRESS_MAGIC_VALUE,
+                to: AztecAddress::zero(),
+                amount: shares,
+            },
+        );
     }
 
     /// @notice Decreases shares total supply and refunds excess shares via commitment
@@ -1770,6 +1820,14 @@ pub contract Token {
 
         // Finalize burning shares by decreasing total supply
         self.internal._decrease_total_supply(shares);
+
+        self.emit(
+            Transfer {
+                from: PRIVATE_ADDRESS_MAGIC_VALUE,
+                to: AztecAddress::zero(),
+                amount: shares,
+            },
+        );
     }
 
     /// @notice Increases shares total supply and issues outstanding shares via commitment
@@ -1796,6 +1854,14 @@ pub contract Token {
         }
 
         self.internal._increase_total_supply(max_shares);
+
+        self.emit(
+            Transfer {
+                from: AztecAddress::zero(),
+                to: PRIVATE_ADDRESS_MAGIC_VALUE,
+                amount: max_shares,
+            },
+        );
     }
 
     /// @notice Increases shares total supply and issues outstanding shares via commitment
@@ -1835,6 +1901,14 @@ pub contract Token {
         }
 
         self.internal._increase_total_supply(max_shares);
+
+        self.emit(
+            Transfer {
+                from: AztecAddress::zero(),
+                to: PRIVATE_ADDRESS_MAGIC_VALUE,
+                amount: max_shares,
+            },
+        );
     }
 
     /// @notice Refunds excess assets to the sender via commitment while validating the shares amount requested
@@ -1891,6 +1965,14 @@ pub contract Token {
                 0,
             ));
         }
+
+        self.emit(
+            Transfer {
+                from: AztecAddress::zero(),
+                to: PRIVATE_ADDRESS_MAGIC_VALUE,
+                amount: shares,
+            },
+        );
     }
 
     /// @notice Validates share redemption rate and withdraws any outstanding assets via commitment
@@ -1919,6 +2001,14 @@ pub contract Token {
                 0,
             ));
         }
+
+        self.emit(
+            Transfer {
+                from: PRIVATE_ADDRESS_MAGIC_VALUE,
+                to: AztecAddress::zero(),
+                amount: shares,
+            },
+        );
     }
 
     /// @notice Validates share redemption rate and withdraws any outstanding assets via commitment
@@ -1988,6 +2078,14 @@ pub contract Token {
                 0,
             ));
         }
+
+        self.emit(
+            Transfer {
+                from: AztecAddress::zero(),
+                to: PRIVATE_ADDRESS_MAGIC_VALUE,
+                amount: shares,
+            },
+        );
     }
 
     /** ==========================================================
