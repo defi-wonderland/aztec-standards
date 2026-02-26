@@ -547,15 +547,6 @@ export async function deriveContractAddressWithConstructor(
   };
 }
 
-/**
- * Converts a GrumpkinScalar to an Fr.
- * @param scalar - The GrumpkinScalar to convert.
- * @returns The converted Fr.
- */
-export function grumpkinScalarToFr(scalar: GrumpkinScalar) {
-  return new Fr(scalar.toBigInt());
-}
-
 // --- Transfer Event Utils ---
 
 /**

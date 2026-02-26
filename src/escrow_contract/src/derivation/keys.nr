@@ -1,4 +1,4 @@
-use aztec::protocol_types::public_keys::{IvpkM, NpkM, OvpkM, PublicKeys, TpkM};
+use aztec::protocol::public_keys::{IvpkM, NpkM, OvpkM, PublicKeys, TpkM};
 use std::embedded_curve_ops::{EmbeddedCurvePoint, EmbeddedCurveScalar, fixed_base_scalar_mul};
 
 use crate::derivation::conversion::MasterSecretKeys;

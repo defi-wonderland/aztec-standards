@@ -4,9 +4,9 @@ use sha512::sha512;
 use crate::derivation::conversion::MasterSecretKeys;
 use crate::derivation::reduction::reduce_to_grumpkin_scalar;
 use crate::derivation::serialization::serialize_to_buffer;
-use aztec::protocol_types::constants::{
-    GENERATOR_INDEX__IVSK_M, GENERATOR_INDEX__NSK_M, GENERATOR_INDEX__OVSK_M,
-    GENERATOR_INDEX__TSK_M,
+use aztec::protocol::constants::{
+    DOM_SEP__IVSK_M, DOM_SEP__NHK_M, DOM_SEP__OVSK_M,
+    DOM_SEP__TSK_M,
 };
 
 /// Derives a master secret key from a secret key and generator index
@@ -35,28 +35,28 @@ fn sha512_to_grumpkin_scalar(secret_key: Field, generator_index: u32) -> Field {
 /// nsk_m is used for nullifying notes - proving that a note has been spent
 /// without revealing which note was spent.
 pub fn derive_master_nullifier_secret_key(secret_key: Field) -> Field {
-    sha512_to_grumpkin_scalar(secret_key, GENERATOR_INDEX__NSK_M)
+    sha512_to_grumpkin_scalar(secret_key, DOM_SEP__NHK_M)
 }
 
 /// Derive master incoming viewing secret key (ivsk_m) from secret key
 ///
 /// ivsk_m is used to decrypt incoming notes - notes that are sent to you.
 pub fn derive_master_incoming_viewing_secret_key(secret_key: Field) -> Field {
-    sha512_to_grumpkin_scalar(secret_key, GENERATOR_INDEX__IVSK_M)
+    sha512_to_grumpkin_scalar(secret_key, DOM_SEP__IVSK_M)
 }
 
 /// Derive master outgoing viewing secret key (ovsk_m) from secret key
 ///
 /// ovsk_m is used to decrypt outgoing notes - notes that you sent to others.
 pub fn derive_master_outgoing_viewing_secret_key(secret_key: Field) -> Field {
-    sha512_to_grumpkin_scalar(secret_key, GENERATOR_INDEX__OVSK_M)
+    sha512_to_grumpkin_scalar(secret_key, DOM_SEP__OVSK_M)
 }
 
 /// Derive master tagging secret key (tsk_m) from secret key
 ///
 /// tsk_m is used for note tagging/discovery.
 pub fn derive_master_tagging_secret_key(secret_key: Field) -> Field {
-    sha512_to_grumpkin_scalar(secret_key, GENERATOR_INDEX__TSK_M)
+    sha512_to_grumpkin_scalar(secret_key, DOM_SEP__TSK_M)
 }
 
 /// Derive all four master secret keys at once from a secret key
