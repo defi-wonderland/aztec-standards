@@ -1,7 +1,7 @@
 pub mod test;
 pub mod library;
 pub mod types;
-pub mod derivation;
+pub mod key_derivation;
 
 use aztec::macros::aztec;
 

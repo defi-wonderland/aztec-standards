@@ -13,8 +13,8 @@ use aztec::{
 };
 // escrow contract
 use crate::Escrow;
-// derivation
-use crate::derivation::keys::secret_key_to_public_keys;
+// key derivation
+use crate::key_derivation::secret_key_to_public_keys;
 // escrow details event
 pub use crate::types::escrow_details_event::EscrowDetailsLogContent;
 

@@ -131,19 +131,43 @@ pub fn _withdraw_nft(
 
 ## Key Derivation Module
 
-The escrow contract includes a `derivation` module that derives master secret keys and public keys from a single `secret_key: Field`. This is needed because the PXE requires the secret key — not the derived master secret keys — to register an escrow account.
+> **Warning**
+> The key derivation module depends on [noir-lang/sha512](https://github.com/noir-lang/sha512), which has not been reviewed by the Noir team and is unaudited. Use at your own risk.
 
-The derivation pipeline matches the Aztec protocol's `deriveKeys` implementation:
+The escrow contract includes a standalone `key_derivation` module that replicates the Aztec protocol's key derivation pipeline entirely in Noir. This allows the escrow contract to derive all master secret keys and public keys from a single `secret_key: Field`, without depending on the PXE or any external key management.
+
+This is critical because:
+- The PXE requires the secret key — not the derived master secret keys — to register an account.
+- Logic contracts need to compute the escrow's public keys to derive its address, but must not leak the secret key publicly.
+- By performing derivation on-chain in Noir, the secret key never leaves the private context.
+
+### Derivation Pipeline
+
+The pipeline matches the Aztec protocol's `deriveKeys` implementation. Each master secret key is derived by hashing the secret key concatenated with a domain separator, then reducing the 512-bit result modulo the Grumpkin scalar field (BN254 Fq). Public keys are derived via fixed-base scalar multiplication on the Grumpkin curve.
 
 ```
 secret_key (Field)
-    ├── SHA512(sk || GENERATOR_INDEX__NSK_M)  mod Fq  →  nsk_m  →  npk_m
-    ├── SHA512(sk || GENERATOR_INDEX__IVSK_M) mod Fq  →  ivsk_m →  ivpk_m
-    ├── SHA512(sk || GENERATOR_INDEX__OVSK_M) mod Fq  →  ovsk_m →  ovpk_m
-    └── SHA512(sk || GENERATOR_INDEX__TSK_M)  mod Fq  →  tsk_m  →  tpk_m
+    ├── SHA512(sk || DOM_SEP__NHK_M)  mod Fq  →  nsk_m  →  npk_m
+    ├── SHA512(sk || DOM_SEP__IVSK_M) mod Fq  →  ivsk_m →  ivpk_m
+    ├── SHA512(sk || DOM_SEP__OVSK_M) mod Fq  →  ovsk_m →  ovpk_m
+    └── SHA512(sk || DOM_SEP__TSK_M)  mod Fq  →  tsk_m  →  tpk_m
 ```
 
-### secret_key_to_public_keys
+### Usage
+
+```rust
+use escrow_contract::key_derivation::{secret_key_to_public_keys, derive_keys, MasterSecretKeys};
+
+// Full pipeline: secret key → public keys
+let public_keys: PublicKeys = secret_key_to_public_keys(secret_key);
+
+// Or derive intermediate master secret keys
+let msks: MasterSecretKeys = derive_keys(secret_key);
+```
+
+### Public Functions
+
+#### secret_key_to_public_keys
 ```rust
 /// @notice Derives public keys from a secret key (full pipeline: sk -> msks -> pks).
 /// @param secret_key The secret key
@@ -151,7 +175,7 @@ secret_key (Field)
 pub fn secret_key_to_public_keys(secret_key: Field) -> PublicKeys { /* ... */ }
 ```
 
-### derive_keys
+#### derive_keys
 ```rust
 /// @notice Derive all four master secret keys from a secret key.
 /// @param secret_key The secret key
@@ -159,5 +183,10 @@ pub fn secret_key_to_public_keys(secret_key: Field) -> PublicKeys { /* ... */ }
 pub fn derive_keys(secret_key: Field) -> MasterSecretKeys { /* ... */ }
 ```
 
-> **Warning**
-> The key derivation module depends on [noir-lang/sha512](https://github.com/noir-lang/sha512), which has not been reviewed by the Noir team and is unaudited. Use at your own risk.
+#### master_secret_keys_to_public_keys
+```rust
+/// @notice Derives public keys from master secret keys.
+/// @param master_secret_keys The master secret keys
+/// @return PublicKeys containing the derived public keys.
+pub fn master_secret_keys_to_public_keys(master_secret_keys: MasterSecretKeys) -> PublicKeys { /* ... */ }
+```
