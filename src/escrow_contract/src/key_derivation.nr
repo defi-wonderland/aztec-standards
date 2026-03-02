@@ -12,8 +12,8 @@ pub use crate::types::master_secret_keys::MasterSecretKeys;
 
 /// 2^120 as a Field constant for U512 limb reconstruction
 global TWO_POW_120: Field = 0x1000000000000000000000000000000;
-/// 2^240 as a Field constant for U512 limb reconstruction
-global TWO_POW_240: Field = 0x1000000000000000000000000000000000000000000000000000000000000;
+/// 2^112 as a Field constant for hi limb reconstruction
+global TWO_POW_112: Field = 0x10000000000000000000000000000;
 
 /// Fq modulus (BN254 base field / Grumpkin scalar field) as U512 limbs (little-endian, 120-bit each)
 /// Fq.MODULUS = 0x30644e72e131a029b85045b68181585d97816a916871ca8d3c208c16d87cfd47
@@ -27,9 +27,10 @@ global FQ_MODULUS_U512: U512 = U512::from_limbs([
 
 // ============ Internal helpers ============
 
-/// Reduces a 64-byte SHA512 hash modulo the Fq modulus, returning a Field
-/// This performs: result = hash_value % Fq.MODULUS
-fn reduce_to_field(hash: [u8; 64]) -> Field {
+/// Reduces a 64-byte SHA512 hash modulo the Fq modulus, returning an EmbeddedCurveScalar.
+/// This performs: result = hash_value % Fq.MODULUS, then splits the remainder into
+/// lo (lower 128 bits) and hi (upper bits) for EmbeddedCurveScalar construction.
+fn reduce_to_scalar(hash: [u8; 64]) -> EmbeddedCurveScalar {
     // Pad hash to 65 bytes for U512 (which has 513 MOD_BITS)
     let mut hash_padded: [u8; 65] = [0; 65];
     for i in 0..64 {
@@ -39,11 +40,28 @@ fn reduce_to_field(hash: [u8; 64]) -> Field {
     let hash_value: U512 = U512::from_be_bytes(hash_padded);
     let (_, remainder) = hash_value.udiv_mod(FQ_MODULUS_U512);
 
-    // Convert U512 remainder directly to Field via limb reconstruction
-    // remainder < Fq modulus < Field modulus, so no additional validation needed
-    (remainder.get_limb(0) as Field)
-        + (remainder.get_limb(1) as Field) * TWO_POW_120
-        + (remainder.get_limb(2) as Field) * TWO_POW_240
+    // U512 limbs are 120-bit each (little-endian).
+    // EmbeddedCurveScalar splits at 128 bits: lo = lower 128 bits, hi = upper bits.
+    //
+    // limb[0] = bits [0..120)     -- all 120 bits go to lo
+    // limb[1] = bits [120..240)   -- lower 8 bits go to lo, upper 112 bits go to hi
+    // limb[2] = bits [240..360)   -- all bits go to hi
+    //
+    // lo = limb[0] + lower_8_bits(limb[1]) * 2^120
+    // hi = upper_112_bits(limb[1]) + limb[2] * 2^112
+    let limb0 = remainder.get_limb(0);
+    let limb1 = remainder.get_limb(1);
+    let limb2 = remainder.get_limb(2);
+
+    // Split limb[1] at the 8-bit boundary using u128 integer arithmetic
+    let limb1_u128 = limb1 as u128;
+    let limb1_lo = (limb1_u128 % 256) as Field; // lower 8 bits
+    let limb1_hi = (limb1_u128 / 256) as Field; // upper 112 bits
+
+    let lo = (limb0 as Field) + limb1_lo * TWO_POW_120;
+    let hi = limb1_hi + (limb2 as Field) * TWO_POW_112;
+
+    EmbeddedCurveScalar { lo, hi }
 }
 
 /// Sets the generator index bytes in the last 4 bytes of the buffer
@@ -54,15 +72,15 @@ fn set_generator_index(buffer: &mut [u8; 36], generator_index: u32) {
     buffer[35] = (generator_index & 0xff) as u8;
 }
 
-/// Computes SHA512 of the buffer and reduces the result to a Field
-fn hash_and_reduce(buffer: [u8; 36]) -> Field {
+/// Computes SHA512 of the buffer and reduces the result to an EmbeddedCurveScalar
+fn hash_and_reduce(buffer: [u8; 36]) -> EmbeddedCurveScalar {
     let hash = sha512::digest(buffer);
-    reduce_to_field(hash)
+    reduce_to_scalar(hash)
 }
 
 /// Derives a master secret key from a secret key and generator index
 /// using SHA512 followed by modular reduction to Fq
-fn sha512_to_grumpkin_scalar(secret_key: Field, generator_index: u32) -> Field {
+fn sha512_to_grumpkin_scalar(secret_key: Field, generator_index: u32) -> EmbeddedCurveScalar {
     let mut buffer: [u8; 36] = [0; 36];
     let sk_bytes: [u8; 32] = secret_key.to_be_bytes();
     for i in 0..32 {
@@ -75,22 +93,22 @@ fn sha512_to_grumpkin_scalar(secret_key: Field, generator_index: u32) -> Field {
 // ============ Public API ============
 
 /// Derive master nullifier hiding key (nhk_m) from secret key
-pub fn derive_master_nullifier_hiding_key(secret_key: Field) -> Field {
+pub fn derive_master_nullifier_hiding_key(secret_key: Field) -> EmbeddedCurveScalar {
     sha512_to_grumpkin_scalar(secret_key, DOM_SEP__NHK_M)
 }
 
 /// Derive master incoming viewing secret key (ivsk_m) from secret key
-pub fn derive_master_incoming_viewing_secret_key(secret_key: Field) -> Field {
+pub fn derive_master_incoming_viewing_secret_key(secret_key: Field) -> EmbeddedCurveScalar {
     sha512_to_grumpkin_scalar(secret_key, DOM_SEP__IVSK_M)
 }
 
 /// Derive master outgoing viewing secret key (ovsk_m) from secret key
-pub fn derive_master_outgoing_viewing_secret_key(secret_key: Field) -> Field {
+pub fn derive_master_outgoing_viewing_secret_key(secret_key: Field) -> EmbeddedCurveScalar {
     sha512_to_grumpkin_scalar(secret_key, DOM_SEP__OVSK_M)
 }
 
 /// Derive master tagging secret key (tsk_m) from secret key
-pub fn derive_master_tagging_secret_key(secret_key: Field) -> Field {
+pub fn derive_master_tagging_secret_key(secret_key: Field) -> EmbeddedCurveScalar {
     sha512_to_grumpkin_scalar(secret_key, DOM_SEP__TSK_M)
 }
 
@@ -122,14 +140,10 @@ pub fn derive_keys(secret_key: Field) -> MasterSecretKeys {
 /// @param master_secret_keys The master secret keys
 /// @return PublicKeys containing the derived public keys.
 pub fn master_secret_keys_to_public_keys(master_secret_keys: MasterSecretKeys) -> PublicKeys {
-    let npk_m: EmbeddedCurvePoint =
-        fixed_base_scalar_mul(EmbeddedCurveScalar::from_field(master_secret_keys.nhk_m));
-    let ivpk_m: EmbeddedCurvePoint =
-        fixed_base_scalar_mul(EmbeddedCurveScalar::from_field(master_secret_keys.ivsk_m));
-    let ovpk_m: EmbeddedCurvePoint =
-        fixed_base_scalar_mul(EmbeddedCurveScalar::from_field(master_secret_keys.ovsk_m));
-    let tpk_m: EmbeddedCurvePoint =
-        fixed_base_scalar_mul(EmbeddedCurveScalar::from_field(master_secret_keys.tsk_m));
+    let npk_m: EmbeddedCurvePoint = fixed_base_scalar_mul(master_secret_keys.nhk_m);
+    let ivpk_m: EmbeddedCurvePoint = fixed_base_scalar_mul(master_secret_keys.ivsk_m);
+    let ovpk_m: EmbeddedCurvePoint = fixed_base_scalar_mul(master_secret_keys.ovsk_m);
+    let tpk_m: EmbeddedCurvePoint = fixed_base_scalar_mul(master_secret_keys.tsk_m);
 
     PublicKeys {
         npk_m: NpkM { inner: npk_m },

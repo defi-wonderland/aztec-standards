@@ -143,14 +143,14 @@ This is critical because:
 
 ### Derivation Pipeline
 
-The pipeline matches the Aztec protocol's `deriveKeys` implementation. Each master secret key is derived by hashing the secret key concatenated with a domain separator, then reducing the 512-bit result modulo the Grumpkin scalar field (BN254 Fq). Public keys are derived via fixed-base scalar multiplication on the Grumpkin curve.
+The pipeline matches the Aztec protocol's `deriveKeys` implementation. Each master secret key is derived by hashing the secret key concatenated with a domain separator, then reducing the 512-bit result modulo the Grumpkin scalar field (BN254 Fq). The result is stored as an `EmbeddedCurveScalar` (lo/hi limb pair), constructed directly from the U512 remainder without converting through `Field`. Public keys are derived via fixed-base scalar multiplication on the Grumpkin curve.
 
 ```
 secret_key (Field)
-    ├── SHA512(sk || DOM_SEP__NHK_M)  mod Fq  →  nhk_m  →  npk_m
-    ├── SHA512(sk || DOM_SEP__IVSK_M) mod Fq  →  ivsk_m →  ivpk_m
-    ├── SHA512(sk || DOM_SEP__OVSK_M) mod Fq  →  ovsk_m →  ovpk_m
-    └── SHA512(sk || DOM_SEP__TSK_M)  mod Fq  →  tsk_m  →  tpk_m
+    ├── SHA512(sk || DOM_SEP__NHK_M)  mod Fq  →  nhk_m (EmbeddedCurveScalar)  →  npk_m
+    ├── SHA512(sk || DOM_SEP__IVSK_M) mod Fq  →  ivsk_m (EmbeddedCurveScalar) →  ivpk_m
+    ├── SHA512(sk || DOM_SEP__OVSK_M) mod Fq  →  ovsk_m (EmbeddedCurveScalar) →  ovpk_m
+    └── SHA512(sk || DOM_SEP__TSK_M)  mod Fq  →  tsk_m (EmbeddedCurveScalar)  →  tpk_m
 ```
 
 ### Usage
@@ -179,14 +179,14 @@ pub fn secret_key_to_public_keys(secret_key: Field) -> PublicKeys { /* ... */ }
 ```rust
 /// @notice Derive all four master secret keys from a secret key.
 /// @param secret_key The secret key
-/// @return MasterSecretKeys containing nhk_m, ivsk_m, ovsk_m, tsk_m.
+/// @return MasterSecretKeys containing nhk_m, ivsk_m, ovsk_m, tsk_m (as EmbeddedCurveScalar).
 pub fn derive_keys(secret_key: Field) -> MasterSecretKeys { /* ... */ }
 ```
 
 #### master_secret_keys_to_public_keys
 ```rust
 /// @notice Derives public keys from master secret keys.
-/// @param master_secret_keys The master secret keys
+/// @param master_secret_keys The master secret keys (EmbeddedCurveScalar fields)
 /// @return PublicKeys containing the derived public keys.
 pub fn master_secret_keys_to_public_keys(master_secret_keys: MasterSecretKeys) -> PublicKeys { /* ... */ }
 ```
