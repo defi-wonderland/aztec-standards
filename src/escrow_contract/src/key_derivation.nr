@@ -74,8 +74,8 @@ fn sha512_to_grumpkin_scalar(secret_key: Field, generator_index: u32) -> Field {
 
 // ============ Public API ============
 
-/// Derive master nullifier secret key (nsk_m) from secret key
-pub fn derive_master_nullifier_secret_key(secret_key: Field) -> Field {
+/// Derive master nullifier hiding key (nhk_m) from secret key
+pub fn derive_master_nullifier_hiding_key(secret_key: Field) -> Field {
     sha512_to_grumpkin_scalar(secret_key, DOM_SEP__NHK_M)
 }
 
@@ -104,7 +104,7 @@ pub fn derive_keys(secret_key: Field) -> MasterSecretKeys {
     }
 
     set_generator_index(&mut buffer, DOM_SEP__NHK_M);
-    let nsk_m = hash_and_reduce(buffer);
+    let nhk_m = hash_and_reduce(buffer);
 
     set_generator_index(&mut buffer, DOM_SEP__IVSK_M);
     let ivsk_m = hash_and_reduce(buffer);
@@ -115,7 +115,7 @@ pub fn derive_keys(secret_key: Field) -> MasterSecretKeys {
     set_generator_index(&mut buffer, DOM_SEP__TSK_M);
     let tsk_m = hash_and_reduce(buffer);
 
-    MasterSecretKeys { nsk_m, ivsk_m, ovsk_m, tsk_m }
+    MasterSecretKeys { nhk_m, ivsk_m, ovsk_m, tsk_m }
 }
 
 /// @notice Derives public keys from master secret keys.
@@ -123,7 +123,7 @@ pub fn derive_keys(secret_key: Field) -> MasterSecretKeys {
 /// @return PublicKeys containing the derived public keys.
 pub fn master_secret_keys_to_public_keys(master_secret_keys: MasterSecretKeys) -> PublicKeys {
     let npk_m: EmbeddedCurvePoint =
-        fixed_base_scalar_mul(EmbeddedCurveScalar::from_field(master_secret_keys.nsk_m));
+        fixed_base_scalar_mul(EmbeddedCurveScalar::from_field(master_secret_keys.nhk_m));
     let ivpk_m: EmbeddedCurvePoint =
         fixed_base_scalar_mul(EmbeddedCurveScalar::from_field(master_secret_keys.ivsk_m));
     let ovpk_m: EmbeddedCurvePoint =

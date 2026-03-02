@@ -147,7 +147,7 @@ The pipeline matches the Aztec protocol's `deriveKeys` implementation. Each mast
 
 ```
 secret_key (Field)
-    ├── SHA512(sk || DOM_SEP__NHK_M)  mod Fq  →  nsk_m  →  npk_m
+    ├── SHA512(sk || DOM_SEP__NHK_M)  mod Fq  →  nhk_m  →  npk_m
     ├── SHA512(sk || DOM_SEP__IVSK_M) mod Fq  →  ivsk_m →  ivpk_m
     ├── SHA512(sk || DOM_SEP__OVSK_M) mod Fq  →  ovsk_m →  ovpk_m
     └── SHA512(sk || DOM_SEP__TSK_M)  mod Fq  →  tsk_m  →  tpk_m
@@ -179,7 +179,7 @@ pub fn secret_key_to_public_keys(secret_key: Field) -> PublicKeys { /* ... */ }
 ```rust
 /// @notice Derive all four master secret keys from a secret key.
 /// @param secret_key The secret key
-/// @return MasterSecretKeys containing nsk_m, ivsk_m, ovsk_m, tsk_m.
+/// @return MasterSecretKeys containing nhk_m, ivsk_m, ovsk_m, tsk_m.
 pub fn derive_keys(secret_key: Field) -> MasterSecretKeys { /* ... */ }
 ```
 
