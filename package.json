@@ -32,8 +32,7 @@
     "@aztec/pxe": "4.0.0-devnet.2-patch.1",
     "@aztec/stdlib": "4.0.0-devnet.2-patch.1",
     "@aztec/wallets": "4.0.0-devnet.2-patch.1",
-    "@defi-wonderland/aztec-benchmark": "4.0.0-devnet.2-patch.1",
-    "sha512": "github:noir-lang/sha512#e1c3a72"
+    "@defi-wonderland/aztec-benchmark": "4.0.0-devnet.2-patch.1"
   },
   "devDependencies": {
     "@commitlint/cli": "20.3.1",
