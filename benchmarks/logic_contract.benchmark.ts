@@ -14,12 +14,7 @@ import { EscrowContract, EscrowContractArtifact } from '../src/artifacts/Escrow.
 import { TestLogicContract } from '../src/artifacts/TestLogic.js';
 
 // Import test utilities
-import {
-  setupTestSuite,
-  deployLogic,
-  deployEscrowWithPublicKeysAndSalt,
-  grumpkinScalarToFr,
-} from '../src/ts/test/utils.js';
+import { setupTestSuite, deployLogic, deployEscrowWithPublicKeysAndSalt } from '../src/ts/test/utils.js';
 
 // Extend the BenchmarkContext from the new package
 interface LogicBenchmarkContext extends BenchmarkContext {
@@ -29,12 +24,7 @@ interface LogicBenchmarkContext extends BenchmarkContext {
   accounts: AztecAddress[];
   logicContract: TestLogicContract;
   escrowContract: EscrowContract;
-  secretKeys: {
-    nsk_m: Fr;
-    ivsk_m: Fr;
-    ovsk_m: Fr;
-    tsk_m: Fr;
-  };
+  escrowSk: Fr;
 }
 
 // Use export default class extending Benchmark
@@ -55,12 +45,6 @@ export default class LogicContractBenchmark extends Benchmark {
     // Setup escrow
     const escrowSk = Fr.random();
     const escrowKeys = await deriveKeys(escrowSk);
-    const secretKeys = {
-      nsk_m: grumpkinScalarToFr(escrowKeys.masterNullifierHidingKey),
-      ivsk_m: grumpkinScalarToFr(escrowKeys.masterIncomingViewingSecretKey),
-      ovsk_m: grumpkinScalarToFr(escrowKeys.masterOutgoingViewingSecretKey),
-      tsk_m: grumpkinScalarToFr(escrowKeys.masterTaggingSecretKey),
-    };
     const escrowSalt = new Fr(logicContract.address.toBigInt());
     const escrowContract = (await deployEscrowWithPublicKeysAndSalt(
       escrowKeys.publicKeys,
@@ -76,7 +60,7 @@ export default class LogicContractBenchmark extends Benchmark {
       accounts,
       logicContract,
       escrowContract,
-      secretKeys,
+      escrowSk,
     };
   }
 
@@ -84,24 +68,24 @@ export default class LogicContractBenchmark extends Benchmark {
    * Returns the list of TokenContract methods to be benchmarked.
    */
   getMethods(context: LogicBenchmarkContext): ContractFunctionInteractionCallIntent[] {
-    const { accounts, escrowContract, deployer, logicContract, secretKeys, wallet } = context;
+    const { accounts, escrowContract, deployer, logicContract, escrowSk, wallet } = context;
     const recipient = accounts[2];
 
     const methods: ContractFunctionInteractionCallIntent[] = [
-      // Derive public keys from secret keys
+      // Derive public keys from secret key
       {
         caller: deployer,
-        action: logicContract.withWallet(wallet).methods.secret_keys_to_public_keys(secretKeys),
+        action: logicContract.withWallet(wallet).methods.secret_key_to_public_keys(escrowSk),
       },
       // Check escrow correctness
       {
         caller: deployer,
-        action: logicContract.withWallet(wallet).methods.get_escrow(secretKeys),
+        action: logicContract.withWallet(wallet).methods.get_escrow(escrowSk),
       },
       // Share escrow
       {
         caller: deployer,
-        action: logicContract.withWallet(wallet).methods.share_escrow(recipient, escrowContract.address, secretKeys),
+        action: logicContract.withWallet(wallet).methods.share_escrow(recipient, escrowContract.address, escrowSk),
       },
     ];
 
