@@ -27,7 +27,7 @@ The contract emits a public `Transfer { from, to, amount }` event on every balan
 | Private-to-public | `Transfer(PRIVATE_ADDRESS, to, amount)` |
 | Private-to-private | _(no public events)_ |
 
-**Sentinel values:** `0x0` denotes mint origin (`from`) or burn destination (`to`), following ERC-20. `PRIVATE_ADDRESS` (sha224 of `"PRIVATE_ADDRESS"`) denotes the private side of a balance change when the counterpart cannot be revealed. Query events via `AztecNode.getPublicLogs()`. The Tokenized Vault emits Transfer events on both the underlying asset and the share token for all deposit, issue, withdraw, and redeem operations.
+**Sentinel values:** `0x0` denotes mint origin (`from`) or burn destination (`to`), following ERC-20. `PRIVATE_ADDRESS` (sha224 of `"PRIVATE_ADDRESS"`) denotes the private side of a balance change when the counterpart cannot be revealed. The Tokenized Vault emits Transfer events on both the underlying asset and the share token for all deposit, issue, withdraw, and redeem operations.
 
 ## Storage Fields
 
