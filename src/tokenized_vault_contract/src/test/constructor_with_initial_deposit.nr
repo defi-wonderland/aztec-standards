@@ -1,11 +1,11 @@
 use crate::{
     test::utils::{
-        authorize_transfer_public_to_public, check_public_balance, check_total_supply,
-        get_public_balance, get_total_supply, redeem_public_to_public,
-        setup_with_vault_initial_deposit,
+        authorize_transfer_public_to_public, check_public_balance, get_public_balance,
+        redeem_public_to_public, setup_with_vault_initial_deposit,
     },
     TokenizedVault,
 };
+use token_contract::test::utils::{check_total_supply, get_total_supply};
 use token_contract::Token;
 
 // TODO: When salt setting in env deployment is supported we can precompute the vault address and

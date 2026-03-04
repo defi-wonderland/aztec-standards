@@ -193,18 +193,6 @@ pub unconstrained fn get_private_balance(
     env.simulate_utility(Token::at(token_address).balance_of_private(address))
 }
 
-pub unconstrained fn check_total_supply(
-    env: TestEnvironment,
-    token_address: AztecAddress,
-    expected_total_supply: u128,
-) {
-    let total_supply = get_total_supply(env, token_address);
-    assert(total_supply == expected_total_supply, "Total supply is not correct");
-}
-
-pub unconstrained fn get_total_supply(env: TestEnvironment, token_address: AztecAddress) -> u128 {
-    env.view_public(Token::at(token_address).total_supply())
-}
 
 // ====================== Authwit helpers ======================
 
