@@ -38,7 +38,7 @@ import { getPXEConfig } from '@aztec/pxe/server';
 import { Barretenberg } from '@aztec/bb.js';
 
 import { TokenContract } from '../../../src/artifacts/Token.js';
-import { TokenizedVaultContract, TokenizedVaultContractArtifact } from '../../../src/artifacts/TokenizedVault.js';
+import { VaultContract, VaultContractArtifact } from '../../../src/artifacts/Vault.js';
 import { NFTContract } from '../../../src/artifacts/NFT.js';
 import { TestLogicContract } from '../../../src/artifacts/TestLogic.js';
 import { EscrowContract } from '../../../src/artifacts/Escrow.js';
@@ -214,7 +214,7 @@ export async function deployNFTWithMinter(wallet: EmbeddedWallet, deployer: Azte
   return contract;
 }
 
-// --- Tokenized Vault Utils ---
+// --- Vault Utils ---
 
 /**
  * Deploys 3 contracts: asset token, shares token, and vault.
@@ -229,7 +229,7 @@ export async function deployVaultAndAssetWithMinter(
   wallet: Wallet,
   deployer: AztecAddress,
   options?: DeployOptions,
-): Promise<[TokenizedVaultContract, TokenContract, TokenContract]> {
+): Promise<[VaultContract, TokenContract, TokenContract]> {
   // Deploy asset token with deployer as minter
   const assetContract = await TokenContract.deployWithOpts(
     { method: 'constructor_with_minter', wallet },
@@ -243,7 +243,7 @@ export async function deployVaultAndAssetWithMinter(
   // Precompute vault address (no shares needed — breaks circular dependency)
   const salt = Fr.random();
   const { address: vaultAddress } = await deriveContractAddressWithConstructor(
-    TokenizedVaultContractArtifact,
+    VaultContractArtifact,
     'constructor',
     [deployer, assetContract.address, 1, AztecAddress.ZERO],
     deployer,
@@ -261,7 +261,7 @@ export async function deployVaultAndAssetWithMinter(
   ).send({ ...options, from: deployer });
 
   // Deploy vault at precomputed address with #[initializer] constructor
-  const vaultContract = await TokenizedVaultContract.deploy(
+  const vaultContract = await VaultContract.deploy(
     wallet,
     deployer,
     assetContract.address,
@@ -272,7 +272,7 @@ export async function deployVaultAndAssetWithMinter(
   // Set the shares token on the vault (admin-only, one-shot)
   await vaultContract.methods.set_shares_token(sharesContract.address).send({ from: deployer });
 
-  return [vaultContract as TokenizedVaultContract, assetContract as TokenContract, sharesContract as TokenContract];
+  return [vaultContract as VaultContract, assetContract as TokenContract, sharesContract as TokenContract];
 }
 
 /**
@@ -288,11 +288,11 @@ export async function deployVaultWithInitialDeposit(
   initialDeposit: bigint,
   depositor: AztecAddress,
   options?: DeployOptions,
-): Promise<[TokenizedVaultContract, TokenContract]> {
+): Promise<[VaultContract, TokenContract]> {
   // Precompute vault address (no shares needed — breaks circular dependency)
   const salt = Fr.random();
   const { address: vaultAddress } = await deriveContractAddressWithConstructor(
-    TokenizedVaultContractArtifact,
+    VaultContractArtifact,
     'constructor',
     [deployer, assetContract.address, 1, AztecAddress.ZERO],
     deployer,
@@ -310,7 +310,7 @@ export async function deployVaultWithInitialDeposit(
   ).send({ ...options, from: deployer });
 
   // Deploy vault at precomputed address with #[initializer] constructor
-  const vaultContract = await TokenizedVaultContract.deploy(
+  const vaultContract = await VaultContract.deploy(
     wallet,
     deployer,
     assetContract.address,
@@ -337,7 +337,7 @@ export async function deployVaultWithInitialDeposit(
     await vaultContract.methods.set_shares_token(sharesContract.address).send({ from: deployer });
   }
 
-  return [vaultContract as TokenizedVaultContract, sharesContract as TokenContract];
+  return [vaultContract as VaultContract, sharesContract as TokenContract];
 }
 
 // --- Escrow Utils ---

@@ -21,7 +21,7 @@ Set `NODE_URL` to override the default (e.g. `http://localhost:9000`).
 - [Development](#development)
 - [Dripper Contract](#dripper-contract)
 - [Token Contract](#token-contract)
-- [Tokenized Vault Contract](#tokenized-vault-contract)
+- [Vault Contract](#vault-contract)
 - [NFT Contract](#nft-contract)
 - [Escrow Standard Contract & Library](#escrow-standard-contract--library)
 - [Future Contracts](#future-contracts)
@@ -40,13 +40,13 @@ We published the [AIP-20 Aztec Token Standard](https://forum.aztec.network/t/req
 
 📖 **[View detailed Token documentation](src/token_contract/README.md)**
 
-## Tokenized Vault Contract
+## Vault Contract
 
-The `TokenizedVault` contract is a standalone yield-bearing vault that holds an underlying AIP-20 asset and issues AIP-20 share tokens to depositors. The vault and shares token are separate contracts — the vault manages deposit/withdraw/redeem logic while delegating share token operations (mint, burn, transfer) to an external AIP-20 `Token` contract configured with the vault as its minter.
+The `Vault` contract is a standalone yield-bearing vault that holds an underlying AIP-20 asset and issues AIP-20 share tokens to depositors. The vault and shares token are separate contracts — the vault manages deposit/withdraw/redeem logic while delegating share token operations (mint, burn, transfer) to an external AIP-20 `Token` contract configured with the vault as its minter.
 
 We published the [AIP-4626: Tokenized Vault Standard](https://forum.aztec.network/t/request-for-comments-aip-4626-tokenized-vault/8079) to the forum. Feel free to review and discuss the specification there.
 
-📖 **[View detailed Tokenized Vault documentation](src/tokenized_vault_contract/README.md)**
+📖 **[View detailed Vault documentation](src/vault_contract/README.md)**
 
 ## NFT Contract
 
