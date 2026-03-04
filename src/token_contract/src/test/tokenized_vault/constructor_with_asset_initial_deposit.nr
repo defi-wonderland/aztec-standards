@@ -5,7 +5,6 @@ use crate::{
     },
     Token,
 };
-use aztec::protocol::address::AztecAddress;
 
 // TODO: When salt setting in env deployment is supported we can precompute the vault address and
 // compute the authwit before deployment. Deployment use constructor_with_asset for now.
@@ -27,7 +26,6 @@ unconstrained fn vault_with_initial_deposit_success() {
         18,
         asset_address,
         1,
-        AztecAddress::zero(),
     );
     let vault_address =
         env.deploy("@token_contract/Token").with_public_initializer(owner, vault_initializer);

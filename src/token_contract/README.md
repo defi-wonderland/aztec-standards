@@ -38,7 +38,6 @@ The contract emits a public `Transfer { from, to, amount }` event on every balan
 - `public_balances: Map<AztecAddress, u128>`: Public balances per account.
 - `total_supply: u128`: Total token supply.
 - `minter: AztecAddress`: Authorized minter address (if set).
-- `upgrade_authority: AztecAddress`: Address allowed to perform contract upgrades (zero address if not upgradeable).
 - `asset: AztecAddress`: Underlying asset address for yield-bearing vault functionality.
 
 ## Initializer Functions
@@ -51,7 +50,6 @@ The contract emits a public `Transfer { from, to, amount }` event on every balan
 /// @param decimals The number of decimals of the token
 /// @param asset The address of the underlying asset
 /// @param offset The offset value used to mitigate inflation attacks
-/// @param upgrade_authority The address of the upgrade authority (zero if not upgradeable)
 #[public]
 #[initializer]
 fn constructor_with_asset(
@@ -60,7 +58,6 @@ fn constructor_with_asset(
     decimals: u8,
     asset: AztecAddress,
     offset: u128,
-    upgrade_authority: AztecAddress,
 ) { /* ... */ }
 ```
 
@@ -74,7 +71,6 @@ fn constructor_with_asset(
 /// @param decimals The number of decimals of the token
 /// @param asset The underlying asset for the yield bearing token
 /// @param offset The offset value used to mitigate inflation attacks
-/// @param upgrade_authority The address of the upgrade authority (zero address if not upgradeable)
 /// @param initial_deposit The initial deposit amount of the asset
 /// @param depositor The address of the initial depositor of the assets
 /// @param _nonce The nonce used for authwitness for the transfer of the initial deposit
@@ -86,7 +82,6 @@ fn constructor_with_asset_initial_deposit(
     decimals: u8,
     asset: AztecAddress,
     offset: u128,
-    upgrade_authority: AztecAddress,
     initial_deposit: u128,
     depositor: AztecAddress,
     _nonce: Field,
@@ -102,7 +97,6 @@ fn constructor_with_asset_initial_deposit(
 /// @param decimals The number of decimals of the token
 /// @param initial_supply The initial supply of the token
 /// @param to The address to mint the initial supply to
-/// @param upgrade_authority The address of the upgrade authority (zero if not upgradeable)
 #[public]
 #[initializer]
 fn constructor_with_initial_supply(
@@ -111,7 +105,6 @@ fn constructor_with_initial_supply(
     decimals: u8,
     initial_supply: u128,
     to: AztecAddress,
-    upgrade_authority: AztecAddress,
 ) { /* ... */ }
 ```
 
@@ -122,7 +115,6 @@ fn constructor_with_initial_supply(
 /// @param symbol The symbol of the token
 /// @param decimals The number of decimals of the token
 /// @param minter The address of the minter
-/// @param upgrade_authority The address of the upgrade authority (zero if not upgradeable)
 #[public]
 #[initializer]
 fn constructor_with_minter(
@@ -130,7 +122,6 @@ fn constructor_with_minter(
     symbol: str<31>,
     decimals: u8,
     minter: AztecAddress,
-    upgrade_authority: AztecAddress,
 ) { /* ... */ }
 ```
 
@@ -269,15 +260,6 @@ fn burn_public(
     amount: u128,
     nonce: Field,
 ) { /* ... */ }
-```
-
-### upgrade_contract
-```rust
-/// @notice Upgrades the contract to a new contract class id
-/// @dev Only callable by the `upgrade_authority` and effective after the upgrade delay
-/// @param new_contract_class_id The new contract class id
-#[public]
-fn upgrade_contract(new_contract_class_id: Field) { /* ... */ }
 ```
 
 ## Private Functions
@@ -1025,7 +1007,6 @@ fn constructor_with_asset(
     decimals: u8,
     asset: AztecAddress,
     offset: u128,
-    upgrade_authority: AztecAddress,
 ) { /* ... */ }
 ```
 
@@ -1034,7 +1015,7 @@ When using this deployment method, the vault relies on a **virtual shares offset
 ```rust
 // Example: deploying with offset = 1
 let offset: u128 = 1;
-Token::interface().constructor_with_asset(name, symbol, decimals, asset, offset, upgrade_authority)
+Token::interface().constructor_with_asset(name, symbol, decimals, asset, offset)
 ```
 
 This offset introduces virtual assets and virtual shares into the exchange-rate calculation. By doing so, it **dampens exchange-rate manipulation and reduces rounding-based griefing**, which is a key enabler of inflation attacks in empty or near-empty ERC-4626 vaults.
@@ -1072,7 +1053,6 @@ fn constructor_with_asset_initial_deposit(
     decimals: u8,
     asset: AztecAddress,
     offset: u128,
-    upgrade_authority: AztecAddress,
     initial_deposit: u128,
     depositor: AztecAddress,
     _nonce: Field,
@@ -1113,7 +1093,7 @@ Rather than relying on virtual math alone, this method ensures that an attacker 
 
 > ⚠️ **NOTE — Dead Shares Should Be Unrecoverable**
 >
-> Dead shares are intended to remain permanently locked and are not expected to be redeemed under normal operation. Deployers should ensure that any upgrade or governance process preserves this invariant.
+> Dead shares are intended to remain permanently locked and are not expected to be redeemed under normal operation.
 
 #### Combining Offset and Dead Shares
 

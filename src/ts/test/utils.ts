@@ -148,7 +148,6 @@ export async function deployTokenWithMinter(wallet: Wallet, deployer: AztecAddre
     'PT',
     18,
     deployer,
-    AztecAddress.ZERO,
   ).send({ ...options, from: deployer });
   return contract;
 }
@@ -166,7 +165,6 @@ export async function deployTokenWithInitialSupply(wallet: Wallet, deployer: Azt
     'PT',
     18,
     0,
-    deployer,
     deployer,
   ).send({ ...options, from: deployer });
   return contract;
@@ -208,7 +206,6 @@ export async function deployNFTWithMinter(wallet: EmbeddedWallet, deployer: Azte
     'TestNFT',
     'TNFT',
     deployer,
-    deployer,
   ).send({ ...options, from: deployer });
   return contract;
 }
@@ -232,7 +229,6 @@ export async function deployVaultAndAssetWithMinter(
     'PT',
     6,
     deployer,
-    AztecAddress.ZERO,
   ).send({ ...options, from: deployer });
 
   const vaultContract = await TokenContract.deployWithOpts(
@@ -242,7 +238,6 @@ export async function deployVaultAndAssetWithMinter(
     6,
     assetContract.address,
     1,
-    AztecAddress.ZERO,
   ).send({ ...options, from: deployer });
 
   return [vaultContract, assetContract];
@@ -266,7 +261,6 @@ export async function deployVaultWithInitialDeposit(
     6,
     assetContract.address,
     1,
-    AztecAddress.ZERO,
   ).send({ ...options, from: deployer })) as TokenContract;
 
   if (initialDeposit > 0n) {

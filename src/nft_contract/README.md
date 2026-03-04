@@ -31,7 +31,6 @@ The contract emits a public `Transfer { from, to, token_id }` event on every own
 - `nft_exists: Map<Field, bool>`: Mapping from token ID to existence status.
 - `public_owners: Map<Field, AztecAddress>`: Public ownership mapping from token ID to owner address.
 - `minter: AztecAddress`: Authorized minter address.
-- `upgrade_authority: AztecAddress`: Address allowed to perform contract upgrades (zero address if not upgradeable).
 
 ## Initializer Functions
 
@@ -41,14 +40,12 @@ The contract emits a public `Transfer { from, to, token_id }` event on every own
 /// @param name The name of the NFT collection
 /// @param symbol The symbol of the NFT collection
 /// @param minter The address of the minter
-/// @param upgrade_authority The address of the upgrade authority (zero if not upgradeable)
 #[public]
 #[initializer]
 fn constructor_with_minter(
     name: str<31>,
     symbol: str<31>,
     minter: AztecAddress,
-    upgrade_authority: AztecAddress,
 ) { /* ... */ }
 ```
 
@@ -227,15 +224,6 @@ fn mint_to_public(to: AztecAddress, token_id: Field) { /* ... */ }
 /// @param _nonce The nonce used for authwit
 #[public]
 fn burn_public(from: AztecAddress, token_id: Field, _nonce: Field) { /* ... */ }
-```
-
-### upgrade_contract
-```rust
-/// @notice Upgrades the contract to a new contract class id
-/// @dev The upgrade authority must be set and the upgrade will only be effective after the upgrade delay has passed
-/// @param new_contract_class_id The new contract class id
-#[public]
-fn upgrade_contract(new_contract_class_id: Field) { /* ... */ }
 ```
 
 ## View Functions
