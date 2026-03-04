@@ -87,13 +87,13 @@ pub contract TokenizedVault {
     /// @param shares The shares token address (minter must be this vault)
     /// @param initial_deposit The initial deposit amount of the asset
     /// @param depositor The address of the initial depositor of the assets
-    /// @param _nonce The nonce used for authwitness for the transfer of the initial deposit
+    /// @param nonce The nonce used for authwitness for the transfer of the initial deposit
     #[external("public")]
     fn set_shares_token_with_initial_deposit(
         shares: AztecAddress,
         initial_deposit: u128,
         depositor: AztecAddress,
-        _nonce: Field,
+        nonce: Field,
     ) {
         let admin = self.storage.admin.read();
         assert(self.msg_sender().eq(admin), "caller is not admin");
@@ -120,7 +120,7 @@ pub contract TokenizedVault {
 
         // Transfer the assets from the sender to the vault
         let asset = self.storage.asset.read();
-        self.call(Token::at(asset).transfer_public_to_public(from, to, initial_deposit, _nonce));
+        self.call(Token::at(asset).transfer_public_to_public(from, to, initial_deposit, nonce));
 
         // Mint shares to this contract address (permanently locked)
         self.call(Token::at(shares).mint_to_public(to, deposit_shares));
@@ -130,8 +130,8 @@ pub contract TokenizedVault {
      * ========================= DEPOSIT =========================
      * ======================================================== */
 
-    // ## Note on ERC-777 assets
-    // ERC-777 hooks may execute user code before a transfer (sender hook) or after it (recipient hook).
+    // ## Note on ARC-430 assets
+    // ARC-430 hooks may execute user code before a transfer (sender hook) or after it (recipient hook).
     // Users can therefore use hooks to reenter the vault, either when they send asset tokens in deposit and issue
     // functions or when they receive asset tokens in withdraw and redeem functions.
     //
@@ -145,9 +145,9 @@ pub contract TokenizedVault {
     /// @param from The address of the sender
     /// @param to The address of the recipient
     /// @param assets The amount of assets to deposit
-    /// @param _nonce The nonce used for authwitness
+    /// @param nonce The nonce used for authwitness
     #[external("public")]
-    fn deposit_public_to_public(from: AztecAddress, to: AztecAddress, assets: u128, _nonce: Field) {
+    fn deposit_public_to_public(from: AztecAddress, to: AztecAddress, assets: u128, nonce: Field) {
         self.internal._validate_from_public(from);
 
         // Calculate shares to mint
@@ -157,13 +157,13 @@ pub contract TokenizedVault {
         let shares =
             _convert_to_shares(assets, total_assets, total_supply, vault_offset, ROUND_DOWN);
 
-        // Order matters: transfer before minting to neutralize ERC-777 reentrancy via the `tokens_to_send` hook.
+        // Order matters: transfer before minting to neutralize ARC-430 reentrancy via the `tokens_to_send` hook.
         // Take the assets from the sender
         self.call(Token::at(self.storage.asset.read()).transfer_public_to_public(
             from,
             self.address,
             assets,
-            _nonce,
+            nonce,
         ));
 
         // Mint shares to the recipient
@@ -177,20 +177,20 @@ pub contract TokenizedVault {
     /// @param to The address of the recipient
     /// @param assets The amount of assets to deposit
     /// @param shares The amount of shares that should be minted to the recipient
-    /// @param _nonce The nonce used for authwitness
+    /// @param nonce The nonce used for authwitness
     #[external("private")]
     fn deposit_public_to_private(
         from: AztecAddress,
         to: AztecAddress,
         assets: u128,
         shares: u128,
-        _nonce: Field,
+        nonce: Field,
     ) {
         _validate_from_private::<5>(self.context, from);
 
         // Validate in public that `assets` is sufficient for the requested shares
         // Order matters: enqueue settlement first so asset transfer executes before shares total_supply increase
-        self.enqueue_self.settle_deposit_public_to_private_internal(from, assets, shares, _nonce);
+        self.enqueue_self.settle_deposit_public_to_private_internal(from, assets, shares, nonce);
 
         // Mint shares to the recipient's private balance
         self.call(Token::at(self.storage.shares.read()).mint_to_private(to, shares));
@@ -203,24 +203,24 @@ pub contract TokenizedVault {
     /// @param to The address of the recipient
     /// @param assets The amount of assets to deposit
     /// @param shares The amount of shares that should be minted to the recipient
-    /// @param _nonce The nonce used for authwitness
+    /// @param nonce The nonce used for authwitness
     #[external("private")]
     fn deposit_private_to_private(
         from: AztecAddress,
         to: AztecAddress,
         assets: u128,
         shares: u128,
-        _nonce: Field,
+        nonce: Field,
     ) {
         _validate_from_private::<5>(self.context, from);
 
-        // Order matters: transfer before minting to neutralize ERC-777 reentrancy via the `tokens_to_send` hook.
+        // Order matters: transfer before minting to neutralize ARC-430 reentrancy via the `tokens_to_send` hook.
         // Take the assets from the sender
         self.call(Token::at(self.storage.asset.read()).transfer_private_to_public(
             from,
             self.address,
             assets,
-            _nonce,
+            nonce,
         ));
 
         // Mint shares to the recipient's private balance
@@ -234,23 +234,23 @@ pub contract TokenizedVault {
     /// @param from The address of the sender
     /// @param to The address of the recipient
     /// @param assets The amount of assets to deposit
-    /// @param _nonce The nonce used for authwitness
+    /// @param nonce The nonce used for authwitness
     #[external("private")]
     fn deposit_private_to_public(
         from: AztecAddress,
         to: AztecAddress,
         assets: u128,
-        _nonce: Field,
+        nonce: Field,
     ) {
         _validate_from_private::<4>(self.context, from);
 
-        // Order matters: transfer before minting to neutralize ERC-777 reentrancy via the `tokens_to_send` hook.
+        // Order matters: transfer before minting to neutralize ARC-430 reentrancy via the `tokens_to_send` hook.
         // Take the assets from the sender
         self.call(Token::at(self.storage.asset.read()).transfer_private_to_public(
             from,
             self.address,
             assets,
-            _nonce,
+            nonce,
         ));
 
         // Calculate and mint shares to the recipient in public
@@ -265,14 +265,14 @@ pub contract TokenizedVault {
     /// @param to The address of the recipient
     /// @param assets The amount of assets to deposit
     /// @param min_shares The amount of shares that should be minted to the recipient in private
-    /// @param _nonce The nonce used for authwitness
+    /// @param nonce The nonce used for authwitness
     #[external("private")]
     fn deposit_public_to_private_exact(
         from: AztecAddress,
         to: AztecAddress,
         assets: u128,
         min_shares: u128,
-        _nonce: Field,
+        nonce: Field,
     ) {
         _validate_from_private::<5>(self.context, from);
 
@@ -288,7 +288,7 @@ pub contract TokenizedVault {
             partial_note,
             assets,
             min_shares,
-            _nonce,
+            nonce,
         );
 
         // Mint min_shares to the recipient's private balance
@@ -303,14 +303,14 @@ pub contract TokenizedVault {
     /// @param to The address of the recipient
     /// @param assets The amount of assets to deposit
     /// @param min_shares The amount of shares that should be minted to the recipient in private
-    /// @param _nonce The nonce used for authwitness
+    /// @param nonce The nonce used for authwitness
     #[external("private")]
     fn deposit_private_to_private_exact(
         from: AztecAddress,
         to: AztecAddress,
         assets: u128,
         min_shares: u128,
-        _nonce: Field,
+        nonce: Field,
     ) {
         _validate_from_private::<5>(self.context, from);
 
@@ -318,13 +318,13 @@ pub contract TokenizedVault {
         let partial_note = self.call(Token::at(self.storage.shares.read())
             .initialize_transfer_commitment(to, self.address));
 
-        // Order matters: transfer before minting to neutralize ERC-777 reentrancy via the `tokens_to_send` hook.
+        // Order matters: transfer before minting to neutralize ARC-430 reentrancy via the `tokens_to_send` hook.
         // Take the assets from the sender
         self.call(Token::at(self.storage.asset.read()).transfer_private_to_public(
             from,
             self.address,
             assets,
-            _nonce,
+            nonce,
         ));
 
         // Mint min_shares to the recipient's private balance
@@ -348,14 +348,14 @@ pub contract TokenizedVault {
     /// @param to The address of the recipient
     /// @param shares The amount of shares to issue
     /// @param max_assets The maximum amount of assets that should be deposited
-    /// @param _nonce The nonce used for authwitness
+    /// @param nonce The nonce used for authwitness
     #[external("public")]
     fn issue_public_to_public(
         from: AztecAddress,
         to: AztecAddress,
         shares: u128,
         max_assets: u128,
-        _nonce: Field,
+        nonce: Field,
     ) {
         self.internal._validate_from_public(from);
 
@@ -365,13 +365,13 @@ pub contract TokenizedVault {
         let vault_offset = self.storage.vault_offset.read();
         let assets = _convert_to_assets(shares, total_assets, total_supply, vault_offset, ROUND_UP);
 
-        // Order matters: transfer before minting to neutralize ERC-777 reentrancy via the `tokens_to_send` hook.
+        // Order matters: transfer before minting to neutralize ARC-430 reentrancy via the `tokens_to_send` hook.
         // Take the assets from the sender
         self.call(Token::at(self.storage.asset.read()).transfer_public_to_public(
             from,
             self.address,
             max_assets,
-            _nonce,
+            nonce,
         ));
 
         // Mint shares to the recipient
@@ -394,20 +394,20 @@ pub contract TokenizedVault {
     /// @param to The address of the recipient
     /// @param shares The amount of shares to issue
     /// @param max_assets The maximum amount of assets that should be deposited
-    /// @param _nonce The nonce used for authwitness
+    /// @param nonce The nonce used for authwitness
     #[external("private")]
     fn issue_public_to_private(
         from: AztecAddress,
         to: AztecAddress,
         shares: u128,
         max_assets: u128,
-        _nonce: Field,
+        nonce: Field,
     ) {
         _validate_from_private::<5>(self.context, from);
 
         // Validate the amount of assets transferred and send back any excess
         // Order matters: enqueue settlement first so asset transfer executes before shares total_supply increase
-        self.enqueue_self.settle_issue_public_to_private_internal(from, shares, max_assets, _nonce);
+        self.enqueue_self.settle_issue_public_to_private_internal(from, shares, max_assets, nonce);
 
         // Mint shares to the recipient's private balance
         self.call(Token::at(self.storage.shares.read()).mint_to_private(to, shares));
@@ -419,14 +419,14 @@ pub contract TokenizedVault {
     /// @param to The address of the recipient
     /// @param shares The amount of shares to issue
     /// @param max_assets The maximum amount of assets that should be deposited
-    /// @param _nonce The nonce used for authwitness
+    /// @param nonce The nonce used for authwitness
     #[external("private")]
     fn issue_private_to_public_exact(
         from: AztecAddress,
         to: AztecAddress,
         shares: u128,
         max_assets: u128,
-        _nonce: Field,
+        nonce: Field,
     ) {
         _validate_from_private::<5>(self.context, from);
 
@@ -434,13 +434,13 @@ pub contract TokenizedVault {
         let asset_commitment = self.call(Token::at(self.storage.asset.read())
             .initialize_transfer_commitment(from, self.address));
 
-        // Order matters: transfer before minting to neutralize ERC-777 reentrancy via the `tokens_to_send` hook.
+        // Order matters: transfer before minting to neutralize ARC-430 reentrancy via the `tokens_to_send` hook.
         // Take max_assets from the sender
         self.call(Token::at(self.storage.asset.read()).transfer_private_to_public(
             from,
             self.address,
             max_assets,
-            _nonce,
+            nonce,
         ));
 
         // Validate max_assets in public and refund any excess to the sender with a commitment
@@ -458,14 +458,14 @@ pub contract TokenizedVault {
     /// @param to The address of the recipient
     /// @param shares The amount of shares to issue
     /// @param max_assets The maximum amount of assets that should be deposited
-    /// @param _nonce The nonce used for authwitness
+    /// @param nonce The nonce used for authwitness
     #[external("private")]
     fn issue_private_to_private_exact(
         from: AztecAddress,
         to: AztecAddress,
         shares: u128,
         max_assets: u128,
-        _nonce: Field,
+        nonce: Field,
     ) {
         _validate_from_private::<5>(self.context, from);
 
@@ -473,13 +473,13 @@ pub contract TokenizedVault {
         let asset_commitment = self.call(Token::at(self.storage.asset.read())
             .initialize_transfer_commitment(from, self.address));
 
-        // Order matters: transfer before minting to neutralize ERC-777 reentrancy via the `tokens_to_send` hook.
+        // Order matters: transfer before minting to neutralize ARC-430 reentrancy via the `tokens_to_send` hook.
         // Take max_assets from the sender
         self.call(Token::at(self.storage.asset.read()).transfer_private_to_public(
             from,
             self.address,
             max_assets,
-            _nonce,
+            nonce,
         ));
 
         // Mint shares to the recipient's private balance
@@ -502,13 +502,13 @@ pub contract TokenizedVault {
     /// @param from The address of the sender
     /// @param to The address of the recipient
     /// @param assets The amount of assets to withdraw
-    /// @param _nonce The nonce used for authwitness
+    /// @param nonce The nonce used for authwitness
     #[external("public")]
     fn withdraw_public_to_public(
         from: AztecAddress,
         to: AztecAddress,
         assets: u128,
-        _nonce: Field,
+        nonce: Field,
     ) {
         self.internal._validate_from_public(from);
 
@@ -518,9 +518,9 @@ pub contract TokenizedVault {
         let vault_offset = self.storage.vault_offset.read();
         let shares = _convert_to_shares(assets, total_assets, total_supply, vault_offset, ROUND_UP);
 
-        // Order matters: burn before transferring to neutralize ERC-777 reentrancy via the `tokens_received` hook.
+        // Order matters: burn before transferring to neutralize ARC-430 reentrancy via the `tokens_received` hook.
         // Burn the sender's shares on the shares token
-        self.call(Token::at(self.storage.shares.read()).burn_public(from, shares, _nonce));
+        self.call(Token::at(self.storage.shares.read()).burn_public(from, shares, nonce));
 
         // Transfer the assets to the recipient
         self.call(Token::at(self.storage.asset.read()).transfer_public_to_public(
@@ -536,19 +536,19 @@ pub contract TokenizedVault {
     /// @param from The address of the sender
     /// @param to The address of the recipient
     /// @param assets The amount of assets to withdraw
-    /// @param _nonce The nonce used for authwitness
+    /// @param nonce The nonce used for authwitness
     #[external("private")]
     fn withdraw_public_to_private(
         from: AztecAddress,
         to: AztecAddress,
         assets: u128,
-        _nonce: Field,
+        nonce: Field,
     ) {
         _validate_from_private::<4>(self.context, from);
 
-        // Order matters: burn after calculating shares in public to neutralize ERC-777 reentrancy via the `tokens_received` hook.
+        // Order matters: burn after calculating shares in public to neutralize ARC-430 reentrancy via the `tokens_received` hook.
         // Calculate and burn the sender's shares
-        self.enqueue_self.settle_withdraw_public_to_private_internal(from, assets, _nonce);
+        self.enqueue_self.settle_withdraw_public_to_private_internal(from, assets, nonce);
 
         // Transfer the assets to the recipient in private
         self.call(Token::at(self.storage.asset.read()).transfer_public_to_private(
@@ -566,21 +566,21 @@ pub contract TokenizedVault {
     /// @param to The address of the recipient
     /// @param assets The amount of assets to withdraw
     /// @param shares The amount of shares to burn
-    /// @param _nonce The nonce used for authwitness
+    /// @param nonce The nonce used for authwitness
     #[external("private")]
     fn withdraw_private_to_private(
         from: AztecAddress,
         to: AztecAddress,
         assets: u128,
         shares: u128,
-        _nonce: Field,
+        nonce: Field,
     ) {
         _validate_from_private::<5>(self.context, from);
 
         // Burn shares from the sender's private balance on the shares token
-        self.call(Token::at(self.storage.shares.read()).burn_private(from, shares, _nonce));
+        self.call(Token::at(self.storage.shares.read()).burn_private(from, shares, nonce));
 
-        // Order matters: transfer after burning to neutralize ERC-777 reentrancy via the `tokens_received` hook.
+        // Order matters: transfer after burning to neutralize ARC-430 reentrancy via the `tokens_received` hook.
         // Validate that the shares-assets ratio is correct
         self.enqueue_self.settle_withdraw_private_to_private_internal(assets, shares);
 
@@ -601,14 +601,14 @@ pub contract TokenizedVault {
     /// @param to The address of the recipient
     /// @param assets The amount of underlying asset to withdraw
     /// @param max_shares The maximum amount of shares to burn
-    /// @param _nonce The nonce used for authwitness
+    /// @param nonce The nonce used for authwitness
     #[external("private")]
     fn withdraw_private_to_public_exact(
         from: AztecAddress,
         to: AztecAddress,
         assets: u128,
         max_shares: u128,
-        _nonce: Field,
+        nonce: Field,
     ) {
         _validate_from_private::<5>(self.context, from);
 
@@ -617,7 +617,7 @@ pub contract TokenizedVault {
             .initialize_transfer_commitment(from, self.address));
 
         // Burn max_shares from the sender's private balance on the shares token
-        self.call(Token::at(self.storage.shares.read()).burn_private(from, max_shares, _nonce));
+        self.call(Token::at(self.storage.shares.read()).burn_private(from, max_shares, nonce));
 
         // Burn the correct amount of shares
         // Any excess amount of shares is sent back to the sender via commitment
@@ -638,14 +638,14 @@ pub contract TokenizedVault {
     /// @param to The address of the recipient
     /// @param assets The amount of underlying asset to withdraw
     /// @param max_shares The maximum amount of shares to burn
-    /// @param _nonce The nonce used for authwitness
+    /// @param nonce The nonce used for authwitness
     #[external("private")]
     fn withdraw_private_to_private_exact(
         from: AztecAddress,
         to: AztecAddress,
         assets: u128,
         max_shares: u128,
-        _nonce: Field,
+        nonce: Field,
     ) {
         _validate_from_private::<5>(self.context, from);
 
@@ -654,9 +654,9 @@ pub contract TokenizedVault {
             .initialize_transfer_commitment(from, self.address));
 
         // Burn max_shares from the sender's private balance on the shares token
-        self.call(Token::at(self.storage.shares.read()).burn_private(from, max_shares, _nonce));
+        self.call(Token::at(self.storage.shares.read()).burn_private(from, max_shares, nonce));
 
-        // Order matters: transfer after burning to neutralize ERC-777 reentrancy via the `tokens_received` hook.
+        // Order matters: transfer after burning to neutralize ARC-430 reentrancy via the `tokens_received` hook.
         // Burn the correct amount of shares
         // Any excess amount of shares is sent back to the sender via commitment
         // Reverts if the amount of shares required is greater than max_shares
@@ -684,9 +684,9 @@ pub contract TokenizedVault {
     /// @param from The address of the sender
     /// @param to The address of the recipient
     /// @param shares The amount of shares to redeem
-    /// @param _nonce The nonce used for authwitness
+    /// @param nonce The nonce used for authwitness
     #[external("public")]
-    fn redeem_public_to_public(from: AztecAddress, to: AztecAddress, shares: u128, _nonce: Field) {
+    fn redeem_public_to_public(from: AztecAddress, to: AztecAddress, shares: u128, nonce: Field) {
         self.internal._validate_from_public(from);
 
         // Calculate assets to redeem
@@ -696,9 +696,9 @@ pub contract TokenizedVault {
         let assets =
             _convert_to_assets(shares, total_assets, total_supply, vault_offset, ROUND_DOWN);
 
-        // Order matters: burn before transferring to neutralize ERC-777 reentrancy via the `tokens_received` hook.
+        // Order matters: burn before transferring to neutralize ARC-430 reentrancy via the `tokens_received` hook.
         // Burn the sender's shares on the shares token
-        self.call(Token::at(self.storage.shares.read()).burn_public(from, shares, _nonce));
+        self.call(Token::at(self.storage.shares.read()).burn_public(from, shares, nonce));
 
         // Transfer the assets to the recipient
         self.call(Token::at(self.storage.asset.read()).transfer_public_to_public(
@@ -714,13 +714,13 @@ pub contract TokenizedVault {
     /// @param from The address of the sender
     /// @param to The address of the recipient
     /// @param shares The amount of shares to redeem
-    /// @param _nonce The nonce used for authwitness
+    /// @param nonce The nonce used for authwitness
     #[external("private")]
-    fn redeem_private_to_public(from: AztecAddress, to: AztecAddress, shares: u128, _nonce: Field) {
+    fn redeem_private_to_public(from: AztecAddress, to: AztecAddress, shares: u128, nonce: Field) {
         _validate_from_private::<4>(self.context, from);
 
         // Burn shares from the sender's private balance on the shares token
-        self.call(Token::at(self.storage.shares.read()).burn_private(from, shares, _nonce));
+        self.call(Token::at(self.storage.shares.read()).burn_private(from, shares, nonce));
 
         // Burn shares and redeem public assets
         self.enqueue_self.settle_redeem_private_to_public_internal(to, shares);
@@ -734,14 +734,14 @@ pub contract TokenizedVault {
     /// @param to The address of the recipient
     /// @param shares The amount of shares to burn
     /// @param min_assets The minimum amount of assets to withdraw, immediately in private
-    /// @param _nonce The nonce used for authwitness
+    /// @param nonce The nonce used for authwitness
     #[external("private")]
     fn redeem_private_to_private_exact(
         from: AztecAddress,
         to: AztecAddress,
         shares: u128,
         min_assets: u128,
-        _nonce: Field,
+        nonce: Field,
     ) {
         _validate_from_private::<5>(self.context, from);
 
@@ -750,9 +750,9 @@ pub contract TokenizedVault {
             .initialize_transfer_commitment(to, self.address));
 
         // Burn shares from the sender's private balance on the shares token
-        self.call(Token::at(self.storage.shares.read()).burn_private(from, shares, _nonce));
+        self.call(Token::at(self.storage.shares.read()).burn_private(from, shares, nonce));
 
-        // Order matters: transfer after burning to neutralize ERC-777 reentrancy via the `tokens_received` hook.
+        // Order matters: transfer after burning to neutralize ARC-430 reentrancy via the `tokens_received` hook.
         // Transfers any outstanding assets without revealing the recipient
         // Reverts if min_assets is greater than allowed
         self.enqueue_self.settle_redeem_private_to_private_exact_internal(
@@ -778,14 +778,14 @@ pub contract TokenizedVault {
     /// @param to The address of the recipient
     /// @param shares The amount of shares to redeem
     /// @param min_assets The minimum amount of assets to withdraw, immediately in private
-    /// @param _nonce The nonce used for authwitness
+    /// @param nonce The nonce used for authwitness
     #[external("private")]
     fn redeem_public_to_private_exact(
         from: AztecAddress,
         to: AztecAddress,
         shares: u128,
         min_assets: u128,
-        _nonce: Field,
+        nonce: Field,
     ) {
         _validate_from_private::<5>(self.context, from);
 
@@ -793,7 +793,7 @@ pub contract TokenizedVault {
         let asset_commitment = self.call(Token::at(self.storage.asset.read())
             .initialize_transfer_commitment(to, self.address));
 
-        // Order matters: transfer after burning to neutralize ERC-777 reentrancy via the `tokens_received` hook.
+        // Order matters: transfer after burning to neutralize ARC-430 reentrancy via the `tokens_received` hook.
         // Burns shares and transfers any outstanding assets without revealing the recipient
         // Reverts if min_assets is greater than allowed
         self.enqueue_self.settle_redeem_public_to_private_exact_internal(
@@ -801,7 +801,7 @@ pub contract TokenizedVault {
             asset_commitment,
             shares,
             min_assets,
-            _nonce,
+            nonce,
         );
 
         // Transfer min_assets to the recipient
@@ -1008,10 +1008,10 @@ pub contract TokenizedVault {
     /// @notice Burns shares held in public for a given amount of assets
     /// @param from The address of the sender
     /// @param assets The amount of assets to burn shares for
-    /// @param _nonce The nonce used for authwitness on the shares token
+    /// @param nonce The nonce used for authwitness on the shares token
     #[external("public")]
     #[only_self]
-    fn settle_withdraw_public_to_private_internal(from: AztecAddress, assets: u128, _nonce: Field) {
+    fn settle_withdraw_public_to_private_internal(from: AztecAddress, assets: u128, nonce: Field) {
         // No pre-applied state changes to shares (public burn happens here)
         // Asset balance NOT yet decreased (transfer_public_to_private enqueue runs after this)
         let total_assets = self.internal._total_assets();
@@ -1020,7 +1020,7 @@ pub contract TokenizedVault {
         let shares = _convert_to_shares(assets, total_assets, total_supply, vault_offset, ROUND_UP);
 
         // Burn shares from user's public balance on shares token (requires authwit)
-        self.call(Token::at(self.storage.shares.read()).burn_public(from, shares, _nonce));
+        self.call(Token::at(self.storage.shares.read()).burn_public(from, shares, nonce));
     }
 
     /// @notice Validates that the requested shares amount is valid for the given assets
@@ -1087,14 +1087,14 @@ pub contract TokenizedVault {
     /// @param from The address of the sender
     /// @param assets The amount of assets being deposited
     /// @param shares The amount of shares being issued
-    /// @param _nonce The nonce used for authwitness
+    /// @param nonce The nonce used for authwitness
     #[external("public")]
     #[only_self]
     fn settle_deposit_public_to_private_internal(
         from: AztecAddress,
         assets: u128,
         shares: u128,
-        _nonce: Field,
+        nonce: Field,
     ) {
         // No pre-applied state changes: shares.increase_total_supply(shares) enqueues after this
         let total_supply = self.internal._total_supply_of_shares();
@@ -1105,13 +1105,13 @@ pub contract TokenizedVault {
 
         assert(shares <= max_shares, "Too many shares requested");
 
-        // Order matters: transfer before minting to neutralize ERC-777 reentrancy via the `tokens_to_send` hook.
+        // Order matters: transfer before minting to neutralize ARC-430 reentrancy via the `tokens_to_send` hook.
         // Take the assets from the sender
         self.call(Token::at(self.storage.asset.read()).transfer_public_to_public(
             from,
             self.address,
             assets,
-            _nonce,
+            nonce,
         ));
     }
 
@@ -1229,7 +1229,7 @@ pub contract TokenizedVault {
     /// @param commitment The partial note representing the commitment (privacy entrance)
     /// @param assets The amount of assets being deposited
     /// @param min_shares The minimum amount of shares that should be issued
-    /// @param _nonce The nonce used for authwitness
+    /// @param nonce The nonce used for authwitness
     #[external("public")]
     #[only_self]
     fn settle_deposit_public_to_private_exact_internal(
@@ -1237,7 +1237,7 @@ pub contract TokenizedVault {
         commitment: Field,
         assets: u128,
         min_shares: u128,
-        _nonce: Field,
+        nonce: Field,
     ) {
         // No pre-applied state changes: shares.increase_total_supply(min_shares) enqueues after this
         // Assets not transferred yet
@@ -1248,13 +1248,13 @@ pub contract TokenizedVault {
             _convert_to_shares(assets, total_assets, total_supply, vault_offset, ROUND_DOWN);
         let outstanding_shares = max_shares - min_shares; // Reverts with underflow if invalid
 
-        // Order matters: transfer before minting to neutralize ERC-777 reentrancy via the `tokens_to_send` hook.
+        // Order matters: transfer before minting to neutralize ARC-430 reentrancy via the `tokens_to_send` hook.
         // Take the assets from the sender
         self.call(Token::at(self.storage.asset.read()).transfer_public_to_public(
             from,
             self.address,
             assets,
-            _nonce,
+            nonce,
         ));
 
         if outstanding_shares > 0 {
@@ -1367,7 +1367,7 @@ pub contract TokenizedVault {
     /// @param asset_commitment The partial note representing the commitment (privacy entrance)
     /// @param shares The amount of shares being redeemed
     /// @param min_assets The minimum amount of assets that should be withdrawn
-    /// @param _nonce The nonce used for authwitness on the shares token
+    /// @param nonce The nonce used for authwitness on the shares token
     #[external("public")]
     #[only_self]
     fn settle_redeem_public_to_private_exact_internal(
@@ -1375,7 +1375,7 @@ pub contract TokenizedVault {
         asset_commitment: Field,
         shares: u128,
         min_assets: u128,
-        _nonce: Field,
+        nonce: Field,
     ) {
         // No pre-applied changes to shares total_supply (public burn happens here)
         // Asset balance NOT yet decreased (transfer_public_to_private enqueue runs after this)
@@ -1386,7 +1386,7 @@ pub contract TokenizedVault {
             _convert_to_assets(shares, total_assets, total_supply, vault_offset, ROUND_DOWN);
 
         // Burn the sender's shares on the shares token (requires authwit)
-        self.call(Token::at(self.storage.shares.read()).burn_public(from, shares, _nonce));
+        self.call(Token::at(self.storage.shares.read()).burn_public(from, shares, nonce));
 
         let outstanding_assets = assets - min_assets; // Reverts with underflow if invalid
         if outstanding_assets > 0 {
@@ -1403,14 +1403,14 @@ pub contract TokenizedVault {
     /// @param from The address of the sender
     /// @param shares The amount of shares being issued
     /// @param max_assets The maximum amount of assets that should be deposited
-    /// @param _nonce The nonce used for authwitness
+    /// @param nonce The nonce used for authwitness
     #[external("public")]
     #[only_self]
     fn settle_issue_public_to_private_internal(
         from: AztecAddress,
         shares: u128,
         max_assets: u128,
-        _nonce: Field,
+        nonce: Field,
     ) {
         // No pre-applied state changes: shares.increase_total_supply(shares) enqueues after this
         // Assets not transferred yet
@@ -1419,13 +1419,13 @@ pub contract TokenizedVault {
         let vault_offset = self.storage.vault_offset.read();
         let assets = _convert_to_assets(shares, total_assets, total_supply, vault_offset, ROUND_UP);
 
-        // Order matters: transfer before minting to neutralize ERC-777 reentrancy via the `tokens_to_send` hook.
+        // Order matters: transfer before minting to neutralize ARC-430 reentrancy via the `tokens_to_send` hook.
         // Take the assets from the sender
         self.call(Token::at(self.storage.asset.read()).transfer_public_to_public(
             from,
             self.address,
             max_assets,
-            _nonce,
+            nonce,
         ));
 
         let change = max_assets - assets; // Reverts with underflow if invalid

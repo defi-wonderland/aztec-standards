@@ -157,7 +157,7 @@ unconstrained fn withdraw_public_to_public_on_behalf_of_wrong_caller() {
         deposit_amount,
     );
 
-    // Authorize someone to call withdraw_public_to_public on the vault (but authorize owner, not recipient)
+    // Authorize someone to call withdraw_public_to_public on the vault (but authorizes owner, not recipient)
     let public_withdraw_public_to_public_call_interface = TokenizedVault::at(vault_address)
         .withdraw_public_to_public(deposit_recipient, recipient, deposit_amount, 0);
     authwit_cheatcodes::add_public_authwit_from_call(
