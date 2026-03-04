@@ -5,9 +5,10 @@ import {
   getContractInstanceFromInstantiationParams,
   DeployMethod,
   Contract,
-  DeployOptions,
   type InteractionFeeOptions,
+  DeployOptions,
 } from '@aztec/aztec.js/contracts';
+import { TxStatus } from '@aztec/aztec.js/tx';
 import { AztecAddress } from '@aztec/aztec.js/addresses';
 import { Fr } from '@aztec/aztec.js/fields';
 import { SponsoredFeePaymentMethod } from '@aztec/aztec.js/fee';
@@ -34,8 +35,8 @@ import { readFileSync, writeFileSync, mkdirSync } from 'fs';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 
-import { AztecAddressLike, FieldLike } from '@aztec/aztec.js/abi';
-import config, { DeploymentConfig } from './deploy-config.js';
+import { AztecAddressLike, FieldLike, type ContractArtifact } from '@aztec/aztec.js/abi';
+import { getConfig, DeploymentConfig, TokenConfig, type Network } from './deploy-config.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -86,25 +87,17 @@ interface DeployedContract<T> {
   status: 'deployed' | 'existing';
 }
 
-interface DeploymentContracts {
-  weth?: DeployedContract<TokenContract>;
-  dai?: DeployedContract<TokenContract>;
-  usdc?: DeployedContract<TokenContract>;
-  dripper?: DeployedContract<DripperContract>;
-  upgradeAuthority?: AztecAddress;
-}
-
 const UNIVERSAL_DEPLOYER = AztecAddress.ZERO;
 
 function getDeploymentData(
-  contracts: DeploymentContracts | null | undefined,
+  contracts: DeployedContracts | null | undefined,
   config: DeploymentConfig,
+  upgradeAuthority: AztecAddress,
 ): DeploymentData {
   if (!contracts || (!contracts.weth && !contracts.dai && !contracts.usdc && !contracts.dripper)) {
     return { tokens: [] };
   }
 
-  const upgradeAuthority = contracts.upgradeAuthority || AztecAddress.ZERO;
   const dripperAddress = contracts.dripper?.contract?.address;
   const minterAddress = dripperAddress || AztecAddress.ZERO;
 
@@ -159,9 +152,6 @@ function getDeploymentData(
 
 // --- CLI ---
 
-// TODO: add mainnet-alpha
-type Network = 'devnet-2' | 'testnet' | 'sandbox';
-
 interface CLIOptions {
   deployerSecret?: string;
   dryRun?: boolean;
@@ -170,19 +160,19 @@ interface CLIOptions {
 }
 
 interface RetryOptions {
-  maxRetries?: number;
-  initialDelayMs?: number;
-  backoffMultiplier?: number;
-  maxDelayMs?: number;
+  maxRetries: number;
+  initialDelayMs: number;
+  backoffMultiplier: number;
+  maxDelayMs: number;
 }
 
 async function withRetry<T>(operation: () => Promise<T>, operationName: string, options: RetryOptions): Promise<T> {
   const { maxRetries, initialDelayMs, backoffMultiplier, maxDelayMs } = options;
 
   let lastError: Error;
-  let delayMs = initialDelayMs!;
+  let delayMs = initialDelayMs;
 
-  for (let attempt = 1; attempt <= maxRetries!; attempt++) {
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
       logger.info(`${operationName}: Attempt ${attempt}/${maxRetries}`);
       return await operation();
@@ -190,11 +180,11 @@ async function withRetry<T>(operation: () => Promise<T>, operationName: string, 
       lastError = error as Error;
       logger.warn(`${operationName}: Attempt ${attempt} failed:`, error);
 
-      if (attempt < maxRetries!) {
-        const actualDelay = Math.min(delayMs, maxDelayMs!);
+      if (attempt < maxRetries) {
+        const actualDelay = Math.min(delayMs, maxDelayMs);
         logger.info(`${operationName}: Retrying in ${actualDelay / 1000} seconds...`);
         await sleep(actualDelay);
-        delayMs *= backoffMultiplier!;
+        delayMs *= backoffMultiplier;
       }
     }
   }
@@ -338,6 +328,73 @@ async function checkContractDeployed(node: AztecNode, address: AztecAddress): Pr
   }
 }
 
+async function deployContractGeneric(
+  deployer: Wallet,
+  node: AztecNode,
+  pxe: PXE,
+  artifact: ContractArtifact,
+  constructorArgs: any[],
+  constructorArtifact: string,
+  salt: Fr,
+  options: DeployOptions,
+  label: string,
+): Promise<{ address: AztecAddress; status: 'deployed' | 'existing' }> {
+  logger.info(`Checking ${label}...`);
+
+  const instance = await getContractInstanceFromInstantiationParams(artifact, {
+    constructorArgs,
+    salt,
+    publicKeys: PublicKeys.default(),
+    deployer: AztecAddress.ZERO,
+    constructorArtifact,
+  });
+
+  const isDeployed = await checkContractDeployed(node, instance.address);
+
+  if (isDeployed) {
+    logger.info(`${label} already deployed at: ${instance.address.toString()}`);
+
+    try {
+      await pxe.registerContract({ instance, artifact });
+      logger.debug(`${label} registered with PXE`);
+    } catch (error) {
+      logger.debug(`${label} already registered with PXE`);
+    }
+
+    return { address: instance.address, status: 'existing' };
+  }
+
+  logger.info(`Deploying ${label}...`);
+
+  const deployMethod = new DeployMethod(
+    PublicKeys.default(),
+    deployer,
+    artifact,
+    (inst) => Contract.at(inst.address, artifact, deployer),
+    constructorArgs,
+    constructorArtifact,
+  );
+
+  try {
+    await deployMethod.send({
+      ...options,
+      contractAddressSalt: salt,
+      universalDeploy: true,
+      wait: { waitForStatus: TxStatus.PROPOSED },
+    });
+  } catch (error: any) {
+    const msg = error?.message || error?.cause?.message || String(error);
+    if (msg.includes('Existing nullifier')) {
+      logger.info(`${label} already deployed (existing nullifier) at: ${instance.address.toString()}`);
+      return { address: instance.address, status: 'existing' };
+    }
+    throw error;
+  }
+
+  logger.info(`${label} deployed at: ${instance.address.toString()}`);
+  return { address: instance.address, status: 'deployed' };
+}
+
 export async function deployToken(
   deployer: Wallet,
   node: AztecNode,
@@ -345,72 +402,21 @@ export async function deployToken(
   params: TokenDeployParams,
   options: DeployOptions,
 ): Promise<{ contract: TokenContract; status: 'deployed' | 'existing' }> {
-  logger.info(`Checking Token: ${params.name} (${params.symbol})`);
-
   const minter = params.minter || AztecAddress.ZERO;
   const upgradeAuthority = params.upgradeAuthority || AztecAddress.ZERO;
 
-  const instance = await getContractInstanceFromInstantiationParams(TokenContractArtifact, {
-    constructorArgs: [params.name, params.symbol, params.decimals, minter, upgradeAuthority],
-    salt: params.salt,
-    publicKeys: PublicKeys.default(),
-    deployer: AztecAddress.ZERO,
-    constructorArtifact: 'constructor_with_minter',
-  });
-
-  const isDeployed = await checkContractDeployed(node, instance.address);
-
-  if (isDeployed) {
-    logger.info(`Token ${params.name} already deployed at: ${instance.address.toString()}`);
-
-    try {
-      await pxe.registerContract({
-        instance,
-        artifact: TokenContractArtifact,
-      });
-      logger.debug('Token registered with PXE');
-    } catch (error) {
-      logger.debug('Token already registered with PXE');
-    }
-
-    const tokenContract = await TokenContract.at(instance.address, deployer);
-    return { contract: tokenContract, status: 'existing' };
-  }
-
-  logger.info(`Deploying Token: ${params.name} (${params.symbol})`);
-
-  const deployMethod = new DeployMethod(
-    PublicKeys.default(),
-    deployer,
+  const result = await deployContractGeneric(
+    deployer, node, pxe,
     TokenContractArtifact,
-    (instance) => Contract.at(instance.address, TokenContractArtifact, deployer),
     [params.name, params.symbol, params.decimals, minter, upgradeAuthority],
     'constructor_with_minter',
+    params.salt,
+    options,
+    `Token ${params.name} (${params.symbol})`,
   );
 
-  // TODO: we _could_ define a waitForStatus: TxStatus.MINED
-  options = {
-    ...options,
-    contractAddressSalt: params.salt,
-    universalDeploy: true,
-  };
-
-  try {
-    await deployMethod.send({ ...options });
-  } catch (error: any) {
-    const msg = error?.message || error?.cause?.message || String(error);
-    if (msg.includes('Existing nullifier')) {
-      logger.info(`Token ${params.name} already deployed (existing nullifier) at: ${instance.address.toString()}`);
-      const tokenContract = await TokenContract.at(instance.address, deployer);
-      return { contract: tokenContract, status: 'existing' };
-    }
-    throw error;
-  }
-
-  const tokenContract = await TokenContract.at(instance.address, deployer);
-  logger.info(`Token deployed at: ${instance.address.toString()}`);
-
-  return { contract: tokenContract, status: 'deployed' };
+  const contract = await TokenContract.at(result.address, deployer);
+  return { contract, status: result.status };
 }
 
 export async function deployDripper(
@@ -420,67 +426,18 @@ export async function deployDripper(
   salt: Fr,
   options: DeployOptions,
 ): Promise<{ contract: DripperContract; status: 'deployed' | 'existing' }> {
-  logger.info('Checking Dripper contract...');
-
-  const instance = await getContractInstanceFromInstantiationParams(DripperContractArtifact, {
-    constructorArgs: [],
-    salt,
-    publicKeys: PublicKeys.default(),
-    deployer: AztecAddress.ZERO,
-  });
-
-  const isDeployed = await checkContractDeployed(node, instance.address);
-
-  if (isDeployed) {
-    logger.info(`Dripper already deployed at: ${instance.address.toString()}`);
-
-    try {
-      await pxe.registerContract({
-        instance,
-        artifact: DripperContractArtifact,
-      });
-      logger.debug('Dripper registered with PXE');
-    } catch (error) {
-      logger.debug('Dripper already registered with PXE');
-    }
-
-    const dripperContract = await DripperContract.at(instance.address, deployer);
-    return { contract: dripperContract, status: 'existing' };
-  }
-
-  logger.info('Deploying Dripper contract...');
-
-  const deployMethod = new DeployMethod(
-    PublicKeys.default(),
-    deployer,
+  const result = await deployContractGeneric(
+    deployer, node, pxe,
     DripperContractArtifact,
-    (instance) => Contract.at(instance.address, DripperContractArtifact, deployer),
     [],
     'constructor',
+    salt,
+    options,
+    'Dripper',
   );
 
-  options = {
-    ...options,
-    contractAddressSalt: salt,
-    universalDeploy: true,
-  };
-
-  try {
-    await deployMethod.send({ ...options });
-  } catch (error: any) {
-    const msg = error?.message || error?.cause?.message || String(error);
-    if (msg.includes('Existing nullifier')) {
-      logger.info(`Dripper already deployed (existing nullifier) at: ${instance.address.toString()}`);
-      const dripperContract = await DripperContract.at(instance.address, deployer);
-      return { contract: dripperContract, status: 'existing' };
-    }
-    throw error;
-  }
-
-  const dripperContract = await DripperContract.at(instance.address, deployer);
-  logger.info(`Dripper deployed at: ${instance.address.toString()}`);
-  await sleep(1000);
-  return { contract: dripperContract, status: 'deployed' };
+  const contract = await DripperContract.at(result.address, deployer);
+  return { contract, status: result.status };
 }
 
 export async function deployTokenWithRetry(
@@ -494,22 +451,6 @@ export async function deployTokenWithRetry(
   return withRetry(
     () => deployToken(deployer, node, pxe, params, options),
     `Deploy Token ${params.name} (${params.symbol})`,
-    retryOptions,
-  );
-}
-
-export async function deployDripperWithRetry(
-  deployer: Wallet,
-  node: AztecNode,
-  pxe: PXE,
-  salt: Fr,
-  options: DeployOptions,
-  waitTimeout: number,
-  retryOptions: RetryOptions,
-): Promise<{ contract: DripperContract; status: 'deployed' | 'existing' }> {
-  return withRetry(
-    () => deployDripper(deployer, node, pxe, salt, options, waitTimeout),
-    'Deploy Dripper',
     retryOptions,
   );
 }
@@ -577,7 +518,7 @@ async function computeContractAddresses(config: DeploymentConfig): Promise<Compu
   };
 }
 
-export async function deployToTestnet(options: CLIOptions, config: DeploymentConfig): Promise<DeployedContracts> {
+export async function deployContracts(options: CLIOptions, config: DeploymentConfig): Promise<DeployedContracts> {
   logger.info(`Deploying to ${config.network.name}...`);
   logger.info(`Network: ${config.network.nodeUrl}`);
 
@@ -714,13 +655,9 @@ export async function deployToTestnet(options: CLIOptions, config: DeploymentCon
     } else {
       logger.info('Deploying or checking dripper contract...');
       const dripperSalt = new Fr(config.contracts.dripper.salt);
-      dripper = await deployDripperWithRetry(
-        deployer.wallet,
-        node,
-        pxe,
-        dripperSalt,
-        deployOptions,
-        config.deployment.waitTimeout,
+      dripper = await withRetry(
+        () => deployDripper(deployer.wallet, node, pxe, dripperSalt, deployOptions),
+        'Deploy Dripper',
         config.deployment.retryOptions,
       );
     }
@@ -729,75 +666,41 @@ export async function deployToTestnet(options: CLIOptions, config: DeploymentCon
       throw new Error('Dripper deployment failed');
     }
 
-    let weth: { contract: TokenContract; status: 'deployed' | 'existing' } | undefined;
-    let dai: { contract: TokenContract; status: 'deployed' | 'existing' } | undefined;
-    let usdc: { contract: TokenContract; status: 'deployed' | 'existing' } | undefined;
-
     logger.info('Deploying/checking token contracts...');
 
-    const wethConfig = config.contracts.tokens.weth;
-    weth = await deployTokenWithRetry(
-      deployer.wallet,
-      node,
-      pxe,
-      {
-        name: wethConfig.name,
-        symbol: wethConfig.symbol,
-        decimals: wethConfig.decimals,
-        minter: dripper.contract.address,
-        upgradeAuthority,
-        salt: new Fr(wethConfig.salt),
-      },
-      deployOptions,
-      config.deployment.retryOptions,
-    );
-    if (weth.status === 'deployed') {
-      await sleep(config.deployment.deployDelay);
-    }
+    const tokenEntries = Object.entries(config.contracts.tokens) as [string, TokenConfig][];
+    const deployedTokens: Record<string, DeployedContract<TokenContract>> = {};
 
-    const daiConfig = config.contracts.tokens.dai;
-    dai = await deployTokenWithRetry(
-      deployer.wallet,
-      node,
-      pxe,
-      {
-        name: daiConfig.name,
-        symbol: daiConfig.symbol,
-        decimals: daiConfig.decimals,
-        minter: dripper.contract.address,
-        upgradeAuthority,
-        salt: new Fr(daiConfig.salt),
-      },
-      deployOptions,
-      config.deployment.retryOptions,
-    );
-    if (dai.status === 'deployed') {
-      await sleep(config.deployment.deployDelay);
-    }
+    for (const [key, tokenConfig] of tokenEntries) {
+      const result = await deployTokenWithRetry(
+        deployer.wallet,
+        node,
+        pxe,
+        {
+          name: tokenConfig.name,
+          symbol: tokenConfig.symbol,
+          decimals: tokenConfig.decimals,
+          minter: dripper.contract.address,
+          upgradeAuthority,
+          salt: new Fr(tokenConfig.salt),
+        },
+        deployOptions,
+        config.deployment.retryOptions,
+      );
 
-    const usdcConfig = config.contracts.tokens.usdc;
-    usdc = await deployTokenWithRetry(
-      deployer.wallet,
-      node,
-      pxe,
-      {
-        name: usdcConfig.name,
-        symbol: usdcConfig.symbol,
-        decimals: usdcConfig.decimals,
-        minter: dripper.contract.address,
-        upgradeAuthority,
-        salt: new Fr(usdcConfig.salt),
-      },
-      deployOptions,
-      config.deployment.retryOptions,
-    );
+      deployedTokens[key] = result;
+
+      if (result.status === 'deployed') {
+        await sleep(config.deployment.deployDelay);
+      }
+    }
 
     logger.info('Deployment completed successfully!');
 
     const deployedContracts: DeployedContracts = {
-      weth,
-      dai,
-      usdc,
+      weth: deployedTokens['weth'],
+      dai: deployedTokens['dai'],
+      usdc: deployedTokens['usdc'],
       dripper,
       deployer: deployer.account,
     };
@@ -811,48 +714,6 @@ export async function deployToTestnet(options: CLIOptions, config: DeploymentCon
 
 const program = new Command();
 
-const networkConfigs: Record<Network, Partial<DeploymentConfig>> = {
-  "devnet-2": {
-    network: {
-      nodeUrl: process.env.AZTEC_NODE_URL || 'https://v4-devnet-2.aztec-labs.com',
-      name: 'devnet',
-    },
-    deployer: {
-      pxeVersion: 2,
-      dataDirectory: 'devnet-store/',
-    },
-  },
-  testnet: {
-    network: {
-      nodeUrl: process.env.AZTEC_NODE_URL || 'https://testnet.aztec-labs.com',
-      name: 'testnet',
-    },
-    deployer: {
-      pxeVersion: 2,
-      dataDirectory: 'testnet-store/',
-    },
-  },
-  sandbox: {
-    network: {
-      nodeUrl: 'http://localhost:8080',
-      name: 'sandbox',
-    },
-    deployer: {
-      pxeVersion: 2,
-      dataDirectory: 'sandbox-store/',
-    },
-    deployment: {
-      retryOptions: config.deployment.retryOptions,
-      waitTimeout: 600,
-      deployDelay: 1000,
-    },
-  },
-};
-
-function getActiveConfig(network: Network): DeploymentConfig {
-  return { ...config, ...networkConfigs[network] } as DeploymentConfig;
-}
-
 program
   .name('deploy')
   .description('Deploy Aztec Standards contracts')
@@ -860,16 +721,19 @@ program
   .option('--deployer-secret <secret>', 'Deployer secret (or use DEPLOYER_SECRET env var)')
   .option('--dry-run', 'Show configuration without deploying')
   .option('--output <file>', 'Write deployment JSON to file')
-  .option('-n, --network <network>', 'Target network: devnet, next-devnet, testnet, sandbox', 'devnet')
+  .option('-n, --network <network>', 'Target network: devnet-2, testnet, sandbox', 'devnet-2')
   .action(async (options: CLIOptions) => {
     try {
-      const activeConfig = getActiveConfig(options.network);
+      const activeConfig = getConfig(options.network);
 
-      const contracts = await deployToTestnet(options, activeConfig);
+      const contracts = await deployContracts(options, activeConfig);
       logDeployedContracts(contracts);
 
       if (options.output && !options.dryRun) {
-        const deploymentData = getDeploymentData(contracts, activeConfig);
+        const upgradeAuthority = activeConfig.contracts.upgradeAuthority
+          ? AztecAddress.fromString(activeConfig.contracts.upgradeAuthority)
+          : AztecAddress.ZERO;
+        const deploymentData = getDeploymentData(contracts, activeConfig, upgradeAuthority);
         const jsonOutput = JSON.stringify(deploymentData, null, 4);
         mkdirSync(dirname(options.output), { recursive: true });
         writeFileSync(options.output, jsonOutput);
