@@ -98,7 +98,7 @@ export default class TokenContractBenchmark extends Benchmark {
       authWitnesses.push(authWitness);
     }
 
-    /* ======================= PUBLIC BURN AUTHWITS (shares) =================== */
+    /* ======================= PUBLIC SHARES AUTHWITS ========================= */
 
     // Set public authwitness for the `burn_public` method on the Shares contract
     // to be used by the Vault's withdraw/redeem methods that burn public shares.
@@ -113,7 +113,7 @@ export default class TokenContractBenchmark extends Benchmark {
       await setPublicAuthWit(vaultContract.address, action, bob, wallet);
     }
 
-    /* ======================= PRIVATE BURN AUTHWITS (shares) ================== */
+    /* ======================= PRIVATE SHARES AUTHWITS ======================== */
 
     // Prepare private authwitness for the `burn_private` method on the Shares contract
     // to be used by the Vault's withdraw/redeem methods that burn private shares.
