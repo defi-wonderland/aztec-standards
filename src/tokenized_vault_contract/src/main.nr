@@ -43,6 +43,10 @@ pub contract TokenizedVault {
     /// @notice Initializes the vault with asset, offset, and configuration
     /// @dev The admin must call set_shares() after deploying the shares token with this vault as minter.
     ///      The vault address can be precomputed before shares exists since shares is not a constructor arg.
+    ///      This 2-step deployment exists because contract instance publishing is private-only, so a public
+    ///      factory cannot deploy and wire both contracts atomically. Once public instance registration is
+    ///      supported, this can be simplified to a single-step deployment.
+    ///      See: https://github.com/AztecProtocol/aztec-packages/issues/20771
     /// @param admin The address with permission to set the shares token (one-time setup)
     /// @param asset The underlying asset token address
     /// @param vault_offset The offset used to prevent inflation attacks (typically 1)
@@ -55,6 +59,7 @@ pub contract TokenizedVault {
         vault_offset: u128,
         upgrade_authority: AztecAddress,
     ) {
+        assert(vault_offset > 0, "vault_offset must be greater than 0");
         self.storage.admin.initialize(admin);
         self.storage.asset.initialize(asset);
         self.storage.vault_offset.initialize(vault_offset);

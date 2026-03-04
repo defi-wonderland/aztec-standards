@@ -224,7 +224,7 @@ export default class TokenContractBenchmark extends Benchmark {
       },
 
       // Withdraw methods
-      // Nonces 200-202/300-302 are used for burn authwits on the shares token.
+      // Nonces 200-201/300-302 are used for burn authwits on the shares token.
       // The vault passes _nonce through to shares.burn_public/burn_private.
       {
         caller: bob,

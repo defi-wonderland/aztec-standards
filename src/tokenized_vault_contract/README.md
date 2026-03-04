@@ -118,7 +118,7 @@ Because the vault supports both public and private flows, the `max_*` and `previ
 
 ### Privacy leaks
 
-In the current implementation the functions `deposit_public_to_private`, `deposit_public_to_private_exact` and `issue_public_to_private` can leak the `to` address. Although they are private functions, all other input parameters become public during execution, which allows an attacker to brute-force candidate `to` addresses until finding one that matches the authwit hash. This limitation will be addressed in a future update.
+In the current implementation the functions `deposit_public_to_private`, `deposit_public_to_private_exact`, `issue_public_to_private`, `withdraw_public_to_private` and `redeem_public_to_private_exact` can leak the `to` address. Although they are private functions, all other input parameters become public during execution, which allows an attacker to brute-force candidate `to` addresses until finding one that matches the authwit hash. This limitation will be addressed in a future update.
 
 Also note that several other functions rely on unpredictable nonces for privacy. If private nonces are guessable or reused, additional operations could become vulnerable to similar privacy leaks. Always ensure nonces are generated in a way that is infeasible to predict.
 
@@ -511,7 +511,11 @@ fn get_vault_offset() -> u128 { /* ... */ }
 
 ## Deployment Guide
 
+<!-- TODO: Simplify to single-step deployment once public instance registration lands (https://github.com/AztecProtocol/aztec-packages/issues/20771) -->
+
 Deploying a Tokenized Vault requires a two-step process because the vault and shares token are separate contracts with a circular dependency — the shares token needs the vault as its minter, and the vault needs to know the shares token address.
+
+Ideally, a single public transaction could precompute the shares token address, publish it via the registry, deploy it with the vault as minter, and link them together atomically. However, this is not currently possible because contract instance publishing (`publish_contract_instance_for_public_execution`) is private-only — it relies on a private oracle and `PrivateContext`. A public factory pattern that deploys and wires both contracts in one step is blocked until [public instance registration](https://github.com/AztecProtocol/aztec-packages/issues/20771) is supported.
 
 ### Step 1: Deploy the vault
 
