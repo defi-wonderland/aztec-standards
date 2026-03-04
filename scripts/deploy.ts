@@ -13,7 +13,7 @@ import { AztecAddress } from '@aztec/aztec.js/addresses';
 import { Fr } from '@aztec/aztec.js/fields';
 import { SponsoredFeePaymentMethod } from '@aztec/aztec.js/fee';
 import { AccountWithSecretKey } from '@aztec/aztec.js/account';
-import { type Wallet } from '@aztec/aztec.js/wallet';
+import { AccountManager, type Wallet } from '@aztec/aztec.js/wallet';
 import { createAztecNodeClient, type AztecNode } from '@aztec/aztec.js/node';
 import { createLogger } from '@aztec/foundation/log';
 import { sleep } from '@aztec/foundation/sleep';
@@ -238,6 +238,38 @@ export async function createSponsoredFeeOptions(wallet: Wallet): Promise<Interac
   };
 }
 
+/**
+ * Deploys the account contract on-chain if not already deployed.
+ * Handles the case where the account was already deployed (existing nullifier error).
+ */
+async function deployAccount(
+  manager: AccountManager,
+  node: AztecNode,
+  feeOptions: InteractionFeeOptions,
+): Promise<void> {
+  const address = manager.getInstance().address;
+
+  const existing = await node.getContract(address);
+  if (existing) {
+    logger.info(`Account contract already deployed at ${address.toString()}`);
+    return;
+  }
+
+  logger.info(`Deploying account contract at ${address.toString()}...`);
+  try {
+    const deployMethod = await manager.getDeployMethod();
+    const account = await deployMethod.send({ fee: feeOptions, from: AztecAddress.ZERO });
+    logger.info(`Account contract deployed in tx ${account.address.toString()}`);
+  } catch (error: any) {
+    const msg = error?.message ?? String(error);
+    if (msg.includes('Existing nullifier')) {
+      logger.info('Account contract already deployed (nullifier exists)');
+    } else {
+      throw error;
+    }
+  }
+}
+
 async function checkContractDeployed(node: AztecNode, address: AztecAddress): Promise<boolean> {
   try {
     logger.info(`Checking if contract deployed at ${address.toString()}...`);
@@ -330,7 +362,8 @@ export async function deployToken(
   const upgradeAuthority = params.upgradeAuthority || AztecAddress.ZERO;
 
   const result = await deployContractGeneric(
-    deployer, node,
+    deployer,
+    node,
     TokenContractArtifact,
     [params.name, params.symbol, params.decimals, minter, upgradeAuthority],
     'constructor_with_minter',
@@ -350,7 +383,8 @@ export async function deployDripper(
   options: DeployOptions,
 ): Promise<{ contract: DripperContract; status: 'deployed' | 'existing' }> {
   const result = await deployContractGeneric(
-    deployer, node,
+    deployer,
+    node,
     DripperContractArtifact,
     [],
     'constructor',
@@ -540,17 +574,7 @@ export async function deployContracts(options: CLIOptions, config: DeploymentCon
     logger.info(`Account created: ${account.getAddress().toString()}`);
 
     const sponsoredFeeOptions = await createSponsoredFeeOptions(wallet);
-
-    // Deploy the account contract on-chain if not already deployed
-    const existingAccount = await node.getContract(account.getAddress());
-    if (!existingAccount) {
-      logger.info('Deploying account contract...');
-      const deployMethod = await manager.getDeployMethod();
-      const account = await deployMethod.send({ fee: sponsoredFeeOptions, from: AztecAddress.ZERO });
-      logger.info(`Account contract deployed: ${account.address.toString()}`);
-    } else {
-      logger.info('Account contract already deployed');
-    }
+    await deployAccount(manager, node, sponsoredFeeOptions);
 
     const deployOptions: DeployOptions = {
       from: account.getAddress(),
@@ -670,7 +694,11 @@ program
   .option('--deployer-secret <secret>', 'Deployer secret (or use DEPLOYER_SECRET env var)')
   .option('--dry-run', 'Show configuration without deploying')
   .option('--output <file>', 'Write deployment JSON to file')
-  .addOption(new Option('-n, --network <network>', 'Target network').choices(['devnet-2', 'testnet', 'sandbox']).default('devnet-2'))
+  .addOption(
+    new Option('-n, --network <network>', 'Target network')
+      .choices(['devnet-2', 'testnet', 'sandbox'])
+      .default('devnet-2'),
+  )
   .action(async (options: CLIOptions) => {
     let wallet: EmbeddedWallet | undefined;
     try {
