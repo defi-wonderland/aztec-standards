@@ -1,5 +1,5 @@
 import 'dotenv/config';
-import { Command } from 'commander';
+import { Command, Option } from 'commander';
 import { PublicKeys } from '@aztec/aztec.js/keys';
 import {
   getContractInstanceFromInstantiationParams,
@@ -12,15 +12,13 @@ import { TxStatus } from '@aztec/aztec.js/tx';
 import { AztecAddress } from '@aztec/aztec.js/addresses';
 import { Fr } from '@aztec/aztec.js/fields';
 import { SponsoredFeePaymentMethod } from '@aztec/aztec.js/fee';
-import { AccountWithSecretKey, Account } from '@aztec/aztec.js/account';
-import { AccountManager, type Wallet } from '@aztec/aztec.js/wallet';
-import { BaseWallet } from '@aztec/wallet-sdk/base-wallet';
+import { AccountWithSecretKey } from '@aztec/aztec.js/account';
+import { type Wallet } from '@aztec/aztec.js/wallet';
 import { createAztecNodeClient, type AztecNode } from '@aztec/aztec.js/node';
 import { createLogger } from '@aztec/foundation/log';
 import { sleep } from '@aztec/foundation/sleep';
 
-import { SingleKeyAccountContract } from '@aztec/accounts/single_key';
-import { deriveSigningKey } from '@aztec/stdlib/keys';
+import { EmbeddedWallet } from '@aztec/wallets/embedded';
 import { SponsoredFPCContract } from '@aztec/noir-contracts.js/SponsoredFPC';
 import { SPONSORED_FPC_SALT } from '@aztec/constants';
 import { poseidon2Hash } from '@aztec/foundation/crypto/poseidon';
@@ -28,9 +26,6 @@ import { poseidon2Hash } from '@aztec/foundation/crypto/poseidon';
 import { TokenContract, TokenContractArtifact } from '../src/artifacts/Token.js';
 import { DripperContract, DripperContractArtifact } from '../src/artifacts/Dripper.js';
 
-import { createStore } from '@aztec/kv-store/lmdb-v2';
-import { createPXE, getPXEConfig } from '@aztec/pxe/server';
-import type { PXE, PXECreationOptions } from '@aztec/pxe/server';
 import { readFileSync, writeFileSync, mkdirSync } from 'fs';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
@@ -85,6 +80,11 @@ export interface DeploymentData {
 interface DeployedContract<T> {
   contract: T;
   status: 'deployed' | 'existing';
+}
+
+export interface DeployResult {
+  contracts: DeployedContracts;
+  wallet?: EmbeddedWallet;
 }
 
 const UNIVERSAL_DEPLOYER = AztecAddress.ZERO;
@@ -217,78 +217,7 @@ export interface TokenDeployParams {
   salt: Fr;
 }
 
-export async function setupPXE(node: AztecNode, config: DeploymentConfig): Promise<PXE> {
-  const pxeVersion = config.deployer.pxeVersion;
-
-  const isSandbox = config.network.name === 'sandbox';
-  const pxeConfig = {
-    ...getPXEConfig(),
-    proverEnabled: !isSandbox,
-  };
-  const options: PXECreationOptions = {
-    store: await createStore(config.deployer.dataDirectory, pxeVersion, {
-      dataDirectory: config.deployer.dataDirectory,
-      dataStoreMapSizeKb: 1e6,
-    }),
-  };
-  const pxe = await createPXE(node, pxeConfig, options);
-  logger.info('Connected to PXE');
-
-  try {
-    const nodeInfo = await node.getNodeInfo();
-    logger.info(`Connected to Aztec node version: ${nodeInfo.nodeVersion}`);
-
-    return pxe;
-  } catch (error) {
-    logger.error('Failed to connect to PXE:', error);
-    throw error;
-  }
-}
-
-class MinimalWallet extends BaseWallet {
-  private readonly addressToAccount = new Map<string, AccountWithSecretKey>();
-
-  constructor(pxe: PXE, aztecNode: AztecNode) {
-    super(pxe as unknown as any, aztecNode);
-  }
-
-  public addAccount(account: AccountWithSecretKey) {
-    this.addressToAccount.set(account.getAddress().toString(), account);
-  }
-
-  protected async getAccountFromAddress(address: AztecAddress): Promise<Account> {
-    const acc = this.addressToAccount.get(address.toString());
-    if (!acc) throw new Error(`Account not found in wallet for address: ${address.toString()}`);
-    return acc;
-  }
-
-  async getAccounts(): Promise<{ alias: string; item: AztecAddress }[]> {
-    return Array.from(this.addressToAccount.values()).map((acc) => ({ alias: '', item: acc.getAddress() }));
-  }
-}
-
-export async function createAccount(
-  pxe: PXE,
-  node: AztecNode,
-  secret: Fr,
-): Promise<{ wallet: Wallet; account: AccountWithSecretKey }> {
-  logger.info('Creating account...');
-
-  const wallet = new MinimalWallet(pxe, node);
-  const signingKey = deriveSigningKey(secret);
-  const accountContract = new SingleKeyAccountContract(signingKey);
-  const manager = await AccountManager.create(wallet, secret, accountContract, Fr.ZERO);
-  const account = await manager.getAccount();
-  const instance = manager.getInstance();
-  const artifact = await manager.getAccountContract().getContractArtifact();
-  await wallet.registerContract(instance, artifact, manager.getSecretKey());
-  (wallet as MinimalWallet).addAccount(account);
-
-  logger.info(`Account created: ${account.getAddress().toString()}`);
-  return { wallet, account };
-}
-
-export async function createSponsoredFeeOptions(pxe: PXE): Promise<InteractionFeeOptions> {
+export async function createSponsoredFeeOptions(wallet: Wallet): Promise<InteractionFeeOptions> {
   logger.info('Setting up sponsored fee options...');
 
   const sponsoredFPCInstance = await getContractInstanceFromInstantiationParams(SponsoredFPCContract.artifact, {
@@ -296,10 +225,7 @@ export async function createSponsoredFeeOptions(pxe: PXE): Promise<InteractionFe
   });
 
   try {
-    await pxe.registerContract({
-      instance: sponsoredFPCInstance,
-      artifact: SponsoredFPCContract.artifact,
-    });
+    await wallet.registerContract(sponsoredFPCInstance, SponsoredFPCContract.artifact);
     logger.info(`Registered SponsoredFPC at: ${sponsoredFPCInstance.address.toString()}`);
   } catch (error) {
     logger.debug('SponsoredFPC already registered');
@@ -331,7 +257,6 @@ async function checkContractDeployed(node: AztecNode, address: AztecAddress): Pr
 async function deployContractGeneric(
   deployer: Wallet,
   node: AztecNode,
-  pxe: PXE,
   artifact: ContractArtifact,
   constructorArgs: any[],
   constructorArtifact: string,
@@ -355,7 +280,7 @@ async function deployContractGeneric(
     logger.info(`${label} already deployed at: ${instance.address.toString()}`);
 
     try {
-      await pxe.registerContract({ instance, artifact });
+      await deployer.registerContract(instance, artifact);
       logger.debug(`${label} registered with PXE`);
     } catch (error) {
       logger.debug(`${label} already registered with PXE`);
@@ -398,7 +323,6 @@ async function deployContractGeneric(
 export async function deployToken(
   deployer: Wallet,
   node: AztecNode,
-  pxe: PXE,
   params: TokenDeployParams,
   options: DeployOptions,
 ): Promise<{ contract: TokenContract; status: 'deployed' | 'existing' }> {
@@ -406,7 +330,7 @@ export async function deployToken(
   const upgradeAuthority = params.upgradeAuthority || AztecAddress.ZERO;
 
   const result = await deployContractGeneric(
-    deployer, node, pxe,
+    deployer, node,
     TokenContractArtifact,
     [params.name, params.symbol, params.decimals, minter, upgradeAuthority],
     'constructor_with_minter',
@@ -422,12 +346,11 @@ export async function deployToken(
 export async function deployDripper(
   deployer: Wallet,
   node: AztecNode,
-  pxe: PXE,
   salt: Fr,
   options: DeployOptions,
 ): Promise<{ contract: DripperContract; status: 'deployed' | 'existing' }> {
   const result = await deployContractGeneric(
-    deployer, node, pxe,
+    deployer, node,
     DripperContractArtifact,
     [],
     'constructor',
@@ -443,13 +366,12 @@ export async function deployDripper(
 export async function deployTokenWithRetry(
   deployer: Wallet,
   node: AztecNode,
-  pxe: PXE,
   params: TokenDeployParams,
   options: DeployOptions,
   retryOptions: RetryOptions,
 ): Promise<{ contract: TokenContract; status: 'deployed' | 'existing' }> {
   return withRetry(
-    () => deployToken(deployer, node, pxe, params, options),
+    () => deployToken(deployer, node, params, options),
     `Deploy Token ${params.name} (${params.symbol})`,
     retryOptions,
   );
@@ -518,7 +440,7 @@ async function computeContractAddresses(config: DeploymentConfig): Promise<Compu
   };
 }
 
-export async function deployContracts(options: CLIOptions, config: DeploymentConfig): Promise<DeployedContracts> {
+export async function deployContracts(options: CLIOptions, config: DeploymentConfig): Promise<DeployResult> {
   logger.info(`Deploying to ${config.network.name}...`);
   logger.info(`Network: ${config.network.nodeUrl}`);
 
@@ -586,30 +508,56 @@ export async function deployContracts(options: CLIOptions, config: DeploymentCon
       logger.info(`[DRY RUN] Deployment data written to ${options.output}`);
     }
 
-    return {};
+    return { contracts: {} };
   }
 
+  const nodeUrl = config.network.nodeUrl;
+
+  const deployerSecretStr = options.deployerSecret || process.env.DEPLOYER_SECRET;
+  if (!deployerSecretStr) {
+    throw new Error('Deployer secret is required (use --deployer-secret or DEPLOYER_SECRET env var)');
+  }
+  const deployerSecret = await poseidon2Hash([Fr.fromBufferReduce(Buffer.from(deployerSecretStr, 'utf8'))]);
+
+  const node = createAztecNodeClient(nodeUrl);
+  const isSandbox = config.network.name === 'sandbox';
+  const wallet = await EmbeddedWallet.create(nodeUrl, {
+    pxeConfig: {
+      proverEnabled: !isSandbox,
+      dataDirectory: config.deployer.dataDirectory,
+      dataStoreMapSizeKb: 1e6,
+    },
+  });
+  // wallet.createSchnorrAccount(sepl)
+  logger.info('Connected to PXE');
+
   try {
-    const nodeUrl = config.network.nodeUrl;
+    const nodeInfo = await node.getNodeInfo();
+    logger.info(`Connected to Aztec node version: ${nodeInfo.nodeVersion}`);
 
-    const deployerSecretStr = options.deployerSecret || process.env.DEPLOYER_SECRET;
-    if (!deployerSecretStr) {
-      throw new Error('Deployer secret is required (use --deployer-secret or DEPLOYER_SECRET env var)');
+    const manager = await wallet.createSchnorrAccount(deployerSecret, Fr.ZERO);
+    const account = await manager.getAccount();
+    logger.info(`Account created: ${account.getAddress().toString()}`);
+
+    const sponsoredFeeOptions = await createSponsoredFeeOptions(wallet);
+
+    // Deploy the account contract on-chain if not already deployed
+    const existingAccount = await node.getContract(account.getAddress());
+    if (!existingAccount) {
+      logger.info('Deploying account contract...');
+      const deployMethod = await manager.getDeployMethod();
+      const account = await deployMethod.send({ fee: sponsoredFeeOptions, from: AztecAddress.ZERO });
+      logger.info(`Account contract deployed: ${account.address.toString()}`);
+    } else {
+      logger.info('Account contract already deployed');
     }
-    const deployerSecret = await poseidon2Hash([Fr.fromBufferReduce(Buffer.from(deployerSecretStr, 'utf8'))]);
-
-    const node = createAztecNodeClient(nodeUrl);
-    const pxe = await setupPXE(node, config);
-    const deployer = await createAccount(pxe, node, deployerSecret);
-    logger.info(`Deployer account: ${deployer.account.getAddress()}`);
-    const sponsoredFeeOptions = await createSponsoredFeeOptions(pxe);
 
     const deployOptions: DeployOptions = {
-      from: deployer.account.getAddress(),
+      from: account.getAddress(),
       fee: sponsoredFeeOptions,
     };
 
-    logger.info(`Deploying with account: ${deployer.account.getAddress().toString()}`);
+    logger.info(`Deploying with account: ${account.getAddress().toString()}`);
 
     const upgradeAuthority = config.contracts.upgradeAuthority
       ? AztecAddress.fromString(config.contracts.upgradeAuthority)
@@ -641,22 +589,19 @@ export async function deployContracts(options: CLIOptions, config: DeploymentCon
       logger.info(`Dripper found at: ${dripperAddress.toString()}`);
 
       try {
-        await pxe.registerContract({
-          instance: dripperInstance,
-          artifact: DripperContractArtifact,
-        });
+        await wallet.registerContract(dripperInstance, DripperContractArtifact);
         logger.debug('Dripper registered with PXE');
       } catch (error) {
         logger.debug('Dripper already registered');
       }
 
-      const dripperContract = await DripperContract.at(dripperAddress, deployer.wallet);
+      const dripperContract = await DripperContract.at(dripperAddress, wallet);
       dripper = { contract: dripperContract, status: 'existing' };
     } else {
       logger.info('Deploying or checking dripper contract...');
       const dripperSalt = new Fr(config.contracts.dripper.salt);
       dripper = await withRetry(
-        () => deployDripper(deployer.wallet, node, pxe, dripperSalt, deployOptions),
+        () => deployDripper(wallet, node, dripperSalt, deployOptions),
         'Deploy Dripper',
         config.deployment.retryOptions,
       );
@@ -673,9 +618,8 @@ export async function deployContracts(options: CLIOptions, config: DeploymentCon
 
     for (const [key, tokenConfig] of tokenEntries) {
       const result = await deployTokenWithRetry(
-        deployer.wallet,
+        wallet,
         node,
-        pxe,
         {
           name: tokenConfig.name,
           symbol: tokenConfig.symbol,
@@ -695,6 +639,10 @@ export async function deployContracts(options: CLIOptions, config: DeploymentCon
       }
     }
 
+    // Post-deploy verification
+    const postDeployInfo = await node.getNodeInfo();
+    logger.info(`Post-deploy verification: node ${postDeployInfo.nodeVersion} responsive`);
+
     logger.info('Deployment completed successfully!');
 
     const deployedContracts: DeployedContracts = {
@@ -702,12 +650,13 @@ export async function deployContracts(options: CLIOptions, config: DeploymentCon
       dai: deployedTokens['dai'],
       usdc: deployedTokens['usdc'],
       dripper,
-      deployer: deployer.account,
+      deployer: account,
     };
 
-    return deployedContracts;
+    return { contracts: deployedContracts, wallet };
   } catch (error) {
     logger.error('Deployment failed:', error);
+    await wallet.stop();
     throw error;
   }
 }
@@ -721,29 +670,39 @@ program
   .option('--deployer-secret <secret>', 'Deployer secret (or use DEPLOYER_SECRET env var)')
   .option('--dry-run', 'Show configuration without deploying')
   .option('--output <file>', 'Write deployment JSON to file')
-  .option('-n, --network <network>', 'Target network: devnet-2, testnet, sandbox', 'devnet-2')
+  .addOption(new Option('-n, --network <network>', 'Target network').choices(['devnet-2', 'testnet', 'sandbox']).default('devnet-2'))
   .action(async (options: CLIOptions) => {
+    let wallet: EmbeddedWallet | undefined;
     try {
       const activeConfig = getConfig(options.network);
 
-      const contracts = await deployContracts(options, activeConfig);
-      logDeployedContracts(contracts);
+      const result = await deployContracts(options, activeConfig);
+      wallet = result.wallet;
+      logDeployedContracts(result.contracts);
 
-      if (options.output && !options.dryRun) {
+      if (!options.dryRun) {
         const upgradeAuthority = activeConfig.contracts.upgradeAuthority
           ? AztecAddress.fromString(activeConfig.contracts.upgradeAuthority)
           : AztecAddress.ZERO;
-        const deploymentData = getDeploymentData(contracts, activeConfig, upgradeAuthority);
-        const jsonOutput = JSON.stringify(deploymentData, null, 4);
-        mkdirSync(dirname(options.output), { recursive: true });
-        writeFileSync(options.output, jsonOutput);
-        logger.info(`Deployment data written to ${options.output}`);
-      }
+        const deploymentData = getDeploymentData(result.contracts, activeConfig, upgradeAuthority);
 
-      process.exit(0);
+        // Always update src/deployments.json
+        const deploymentsPath = join(__dirname, '../src/deployments.json');
+        writeFileSync(deploymentsPath, JSON.stringify(deploymentData, null, 4) + '\n');
+        logger.info(`Updated ${deploymentsPath}`);
+
+        if (options.output) {
+          const jsonOutput = JSON.stringify(deploymentData, null, 4);
+          mkdirSync(dirname(options.output), { recursive: true });
+          writeFileSync(options.output, jsonOutput);
+          logger.info(`Deployment data written to ${options.output}`);
+        }
+      }
     } catch (error) {
       logger.error('Deployment failed:', error);
-      process.exit(1);
+      process.exitCode = 1;
+    } finally {
+      await wallet?.stop();
     }
   });
 
