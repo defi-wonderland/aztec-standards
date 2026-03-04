@@ -1,28 +1,24 @@
 # yaml-language-server: $schema=https://coderabbit.ai/integrations/schema.v2.json
+inheritance: true
+
 tone_instructions: >
   Be direct and technical. Focus on security, correctness, and privacy
   implications in this Aztec/Noir smart contract codebase.
 
 reviews:
   profile: assertive
-  request_changes_workflow: true
-  review_status: true
   commit_status: true
   collapse_walkthrough: false
   changed_files_summary: true
   sequence_diagrams: true
-  suggested_labels: false
   suggested_reviewers: true
-  poem: false
 
   path_filters:
     - "!artifacts/**"
     - "!target/**"
-    - "!node_modules/**"
     - "!store/**"
     - "!pxe-*/**"
     - "!codegenCache.json"
-    - "!yarn.lock"
     - "!benchmarks/*.json"
     - "!.tsbuildinfo"
 
@@ -137,7 +133,7 @@ reviews:
       instructions: >
         CI/CD workflows. Ensure:
         - Aztec version is detected dynamically from package.json config.
-        - Docker and sandbox setup steps are present for integration tests.
+        - Local network setup steps are present for integration tests.
         - Test commands match package.json scripts.
         - Concurrency groups prevent duplicate runs.
         - Node.js version matches project requirements (>=22).
@@ -153,12 +149,3 @@ reviews:
       enabled: true
     semgrep:
       enabled: true
-
-chat:
-  integrations:
-    linear:
-      usage: enabled
-
-knowledge_base:
-  linear:
-    usage: enabled

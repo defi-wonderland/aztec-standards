@@ -84,7 +84,7 @@ unconstrained fn nft_transfer_private_to_public_unauthorized_fail() {
     );
 }
 
-#[test(should_fail_with = "nft not found in private to public")]
+#[test(should_fail_with = "nft not found")]
 unconstrained fn nft_transfer_private_to_public_non_existent_nft_fail() {
     // Setup environment but don't mint any NFT
     let (env, nft_contract_address, owner, _, recipient) = utils::setup_with_minter(false);
@@ -102,7 +102,7 @@ unconstrained fn nft_transfer_private_to_public_non_existent_nft_fail() {
     );
 }
 
-#[test(should_fail_with = "nft not found in private to public")]
+#[test(should_fail_with = "nft not found")]
 unconstrained fn nft_transfer_private_to_public_already_public_fail() {
     // Setup and mint NFT to owner in public state
     let token_id = 10000;

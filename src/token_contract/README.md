@@ -8,6 +8,27 @@ This implementation provides a robust foundation for fungible tokens on Aztec, e
 
 This contract follows the [AIP-20 Aztec Token Standard](https://forum.aztec.network/t/request-for-comments-aip-20-aztec-token-standard/7737). Feel free to review and discuss the specification on the Aztec forum.
 
+## AIP-4626: Aztec Tokenized Vault Standard
+
+Optionally, the `Token` contract can be configured as a Tokenized Vault. Learn more [here](#aip-4626-aztec-tokenized-vault-standard-1).
+
+## Transfer Events
+
+The contract emits a public `Transfer { from, to, amount }` event on every balance-changing operation (mints, burns, public transfers, and cross-domain private ↔ public moves), enabling indexers to track token movements.
+
+| Operation | Event Pattern |
+|-----------|---------------|
+| Mint to public | `Transfer(0x0, recipient, amount)` |
+| Mint to private | `Transfer(0x0, PRIVATE_ADDRESS, amount)` |
+| Burn from public | `Transfer(from, 0x0, amount)` |
+| Burn from private | `Transfer(PRIVATE_ADDRESS, 0x0, amount)` |
+| Public-to-public | `Transfer(from, to, amount)` |
+| Public-to-private | `Transfer(from, PRIVATE_ADDRESS, amount)` |
+| Private-to-public | `Transfer(PRIVATE_ADDRESS, to, amount)` |
+| Private-to-private | _(no public events)_ |
+
+**Sentinel values:** `0x0` denotes mint origin (`from`) or burn destination (`to`), following ERC-20. `PRIVATE_ADDRESS` (sha224 of `"PRIVATE_ADDRESS"`) denotes the private side of a balance change when the counterpart cannot be revealed. The Tokenized Vault emits Transfer events on both the underlying asset and the share token for all deposit, issue, withdraw, and redeem operations.
+
 ## Storage Fields
 
 - `name: str<31>`: Token name (compressed).

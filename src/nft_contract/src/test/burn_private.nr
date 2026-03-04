@@ -54,7 +54,7 @@ unconstrained fn nft_burn_private_authorized_success() {
     utils::assert_nft_does_not_exist(env, nft_contract_address, token_id);
 }
 
-#[test(should_fail_with = "nft not found in private to public")]
+#[test(should_fail_with = "nft not found")]
 unconstrained fn nft_burn_private_non_existent_fail() {
     // Setup but don't mint any NFT
     let (env, nft_contract_address, owner, _, _) = utils::setup_with_minter(false);
@@ -117,7 +117,7 @@ unconstrained fn nft_burn_private_wrong_authwit_fail() {
     );
 }
 
-#[test(should_fail_with = "nft not found in private to public")]
+#[test(should_fail_with = "nft not found")]
 unconstrained fn nft_burn_private_public_nft_fail() {
     // Setup and mint NFT to owner in public state
     let token_id = 10000;

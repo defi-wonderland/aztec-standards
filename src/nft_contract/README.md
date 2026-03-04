@@ -4,6 +4,25 @@ The `NFT` contract implements an ERC-721-like non-fungible token with Aztec-spec
 
 This contract provides a comprehensive NFT implementation that allows seamless transitions between private and public ownership states, making it ideal for applications requiring flexible privacy controls.
 
+## Transfer Events
+
+The contract emits a public `Transfer { from, to, token_id }` event on every ownership-changing operation (mints, burns, public transfers, and cross-domain private ↔ public moves), enabling indexers to track NFT movements.
+
+| Operation | Event Pattern |
+|-----------|---------------|
+| Mint to public | `Transfer(0x0, recipient, tokenId)` |
+| Mint to private | `Transfer(0x0, PRIVATE_ADDRESS, tokenId)` |
+| Burn from public | `Transfer(from, 0x0, tokenId)` |
+| Burn from private | `Transfer(PRIVATE_ADDRESS, 0x0, tokenId)` |
+| Public-to-public | `Transfer(from, to, tokenId)` |
+| Public-to-private | `Transfer(from, PRIVATE_ADDRESS, tokenId)` |
+| Private-to-public | `Transfer(PRIVATE_ADDRESS, to, tokenId)` |
+| Public-to-commitment | `Transfer(from, PRIVATE_ADDRESS, tokenId)` |
+| Private-to-private | _(no public events)_ |
+| Private-to-commitment | _(no public events)_ |
+
+**Sentinel values:** `0x0` denotes mint origin (`from`) or burn destination (`to`), following ERC-721. `PRIVATE_ADDRESS` (sha224 of `"PRIVATE_ADDRESS"`) denotes the private side of an ownership change when the counterpart cannot be revealed.
+
 ## Storage Fields
 
 - `name: FieldCompressedString`: NFT collection name (compressed).
@@ -125,11 +144,11 @@ fn transfer_public_to_private(
 ```rust
 /// @notice Initializes a transfer commitment to be used for transfers
 /// @dev Returns a partial nft note that can be used to execute transfers
-/// @param from The address of the sender
 /// @param to The address of the recipient
+/// @param completer The address allowed to complete the partial note
 /// @return commitment The partial nft note utilized for the transfer commitment (privacy entrance)
 #[private]
-fn initialize_transfer_commitment(from: AztecAddress, to: AztecAddress) -> Field { /* ... */ }
+fn initialize_transfer_commitment(to: AztecAddress, completer: AztecAddress) -> Field { /* ... */ }
 ```
 
 ### mint_to_private
