@@ -19,7 +19,8 @@
     "test:nr": "aztec test",
     "lint:prettier": "prettier '**/*.{js,ts}' --write",
     "bench": "NODE_NO_WARNINGS=1 aztec-benchmark --suffix _base",
-    "ccc": "yarn clean && yarn compile && yarn codegen"
+    "ccc": "yarn clean && yarn compile && yarn codegen",
+    "deploy": "NODE_NO_WARNINGS=1 tsx scripts/deploy.ts",
   },
   "lint-staged": {
     "*.ts": "prettier --write -u"
@@ -31,8 +32,11 @@
     "@aztec/protocol-contracts": "4.0.0-devnet.2-patch.1",
     "@aztec/pxe": "4.0.0-devnet.2-patch.1",
     "@aztec/stdlib": "4.0.0-devnet.2-patch.1",
+    "@aztec/wallet-sdk": "4.0.0-devnet.2-patch.1",
     "@aztec/wallets": "4.0.0-devnet.2-patch.1",
-    "@defi-wonderland/aztec-benchmark": "4.0.0-devnet.2-patch.1"
+    "@defi-wonderland/aztec-benchmark": "4.0.0-devnet.2-patch.1",
+    "commander": "14.0.1",
+    "dotenv": "16.4.7"
   },
   "devDependencies": {
     "@commitlint/cli": "20.3.1",
