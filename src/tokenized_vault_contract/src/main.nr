@@ -119,8 +119,8 @@ pub contract TokenizedVault {
         );
 
         // Transfer the assets from the sender to the vault
-        let asset = self.storage.asset.read();
-        self.call(Token::at(asset).transfer_public_to_public(from, to, initial_deposit, nonce));
+        let asset_token = self.storage.asset.read();
+        self.call(Token::at(asset_token).transfer_public_to_public(from, to, initial_deposit, nonce));
 
         // Mint shares to this contract address (permanently locked)
         self.call(Token::at(shares).mint_to_public(to, deposit_shares));
@@ -148,6 +148,8 @@ pub contract TokenizedVault {
     /// @param nonce The nonce used for authwitness
     #[external("public")]
     fn deposit_public_to_public(from: AztecAddress, to: AztecAddress, assets: u128, nonce: Field) {
+        let asset_token = self.storage.asset.read();
+        let shares_token = self.storage.shares.read();
         self.internal._validate_from_public(from);
 
         // Calculate shares to mint
@@ -159,7 +161,7 @@ pub contract TokenizedVault {
 
         // Order matters: transfer before minting to neutralize ARC-430 reentrancy via the `tokens_to_send` hook.
         // Take the assets from the sender
-        self.call(Token::at(self.storage.asset.read()).transfer_public_to_public(
+        self.call(Token::at(asset_token).transfer_public_to_public(
             from,
             self.address,
             assets,
@@ -167,7 +169,7 @@ pub contract TokenizedVault {
         ));
 
         // Mint shares to the recipient
-        self.call(Token::at(self.storage.shares.read()).mint_to_public(to, shares));
+        self.call(Token::at(shares_token).mint_to_public(to, shares));
     }
 
     /// @notice Deposits the underlying asset from a public balance and receives shares to a private balance
@@ -186,6 +188,7 @@ pub contract TokenizedVault {
         shares: u128,
         nonce: Field,
     ) {
+        let shares_token = self.storage.shares.read();
         _validate_from_private::<5>(self.context, from);
 
         // Validate in public that `assets` is sufficient for the requested shares
@@ -193,7 +196,7 @@ pub contract TokenizedVault {
         self.enqueue_self.settle_deposit_public_to_private_internal(from, assets, shares, nonce);
 
         // Mint shares to the recipient's private balance
-        self.call(Token::at(self.storage.shares.read()).mint_to_private(to, shares));
+        self.call(Token::at(shares_token).mint_to_private(to, shares));
     }
 
     /// @notice Deposits the underlying asset from a private balance and receives shares to a private balance
@@ -212,11 +215,13 @@ pub contract TokenizedVault {
         shares: u128,
         nonce: Field,
     ) {
+        let asset_token = self.storage.asset.read();
+        let shares_token = self.storage.shares.read();
         _validate_from_private::<5>(self.context, from);
 
         // Order matters: transfer before minting to neutralize ARC-430 reentrancy via the `tokens_to_send` hook.
         // Take the assets from the sender
-        self.call(Token::at(self.storage.asset.read()).transfer_private_to_public(
+        self.call(Token::at(asset_token).transfer_private_to_public(
             from,
             self.address,
             assets,
@@ -224,7 +229,7 @@ pub contract TokenizedVault {
         ));
 
         // Mint shares to the recipient's private balance
-        self.call(Token::at(self.storage.shares.read()).mint_to_private(to, shares));
+        self.call(Token::at(shares_token).mint_to_private(to, shares));
 
         // Validate in public that `assets` is sufficient for the requested shares
         self.enqueue_self.settle_deposit_private_to_private_internal(assets, shares);
@@ -242,11 +247,12 @@ pub contract TokenizedVault {
         assets: u128,
         nonce: Field,
     ) {
+        let asset_token = self.storage.asset.read();
         _validate_from_private::<4>(self.context, from);
 
         // Order matters: transfer before minting to neutralize ARC-430 reentrancy via the `tokens_to_send` hook.
         // Take the assets from the sender
-        self.call(Token::at(self.storage.asset.read()).transfer_private_to_public(
+        self.call(Token::at(asset_token).transfer_private_to_public(
             from,
             self.address,
             assets,
@@ -274,10 +280,11 @@ pub contract TokenizedVault {
         min_shares: u128,
         nonce: Field,
     ) {
+        let shares_token = self.storage.shares.read();
         _validate_from_private::<5>(self.context, from);
 
         // Initialize commitment on the shares token that allows to mint outstanding shares to the recipient in public
-        let partial_note = self.call(Token::at(self.storage.shares.read())
+        let partial_note = self.call(Token::at(shares_token)
             .initialize_transfer_commitment(to, self.address));
 
         // Mint any outstanding shares without revealing the recipient and updates the shares total supply
@@ -292,7 +299,7 @@ pub contract TokenizedVault {
         );
 
         // Mint min_shares to the recipient's private balance
-        self.call(Token::at(self.storage.shares.read()).mint_to_private(to, min_shares));
+        self.call(Token::at(shares_token).mint_to_private(to, min_shares));
     }
 
     /// @notice Deposits the underlying asset from a private balance and receives shares to a private balance
@@ -312,15 +319,17 @@ pub contract TokenizedVault {
         min_shares: u128,
         nonce: Field,
     ) {
+        let asset_token = self.storage.asset.read();
+        let shares_token = self.storage.shares.read();
         _validate_from_private::<5>(self.context, from);
 
         // Initialize commitment on the shares token that allows to mint outstanding shares to the recipient in public
-        let partial_note = self.call(Token::at(self.storage.shares.read())
+        let partial_note = self.call(Token::at(shares_token)
             .initialize_transfer_commitment(to, self.address));
 
         // Order matters: transfer before minting to neutralize ARC-430 reentrancy via the `tokens_to_send` hook.
         // Take the assets from the sender
-        self.call(Token::at(self.storage.asset.read()).transfer_private_to_public(
+        self.call(Token::at(asset_token).transfer_private_to_public(
             from,
             self.address,
             assets,
@@ -328,7 +337,7 @@ pub contract TokenizedVault {
         ));
 
         // Mint min_shares to the recipient's private balance
-        self.call(Token::at(self.storage.shares.read()).mint_to_private(to, min_shares));
+        self.call(Token::at(shares_token).mint_to_private(to, min_shares));
 
         // Mint any outstanding shares without revealing the recipient and updates the shares total supply
         // Reverts if min_shares is greater than allowed
@@ -357,6 +366,8 @@ pub contract TokenizedVault {
         max_assets: u128,
         nonce: Field,
     ) {
+        let asset_token = self.storage.asset.read();
+        let shares_token = self.storage.shares.read();
         self.internal._validate_from_public(from);
 
         // Calculate assets required
@@ -367,7 +378,7 @@ pub contract TokenizedVault {
 
         // Order matters: transfer before minting to neutralize ARC-430 reentrancy via the `tokens_to_send` hook.
         // Take the assets from the sender
-        self.call(Token::at(self.storage.asset.read()).transfer_public_to_public(
+        self.call(Token::at(asset_token).transfer_public_to_public(
             from,
             self.address,
             max_assets,
@@ -375,12 +386,12 @@ pub contract TokenizedVault {
         ));
 
         // Mint shares to the recipient
-        self.call(Token::at(self.storage.shares.read()).mint_to_public(to, shares));
+        self.call(Token::at(shares_token).mint_to_public(to, shares));
 
         // Refund
         let change = max_assets - assets; // Reverts with underflow if invalid
         if change > 0 {
-            self.call(Token::at(self.storage.asset.read()).transfer_public_to_public(
+            self.call(Token::at(asset_token).transfer_public_to_public(
                 self.address,
                 from,
                 change,
@@ -403,6 +414,7 @@ pub contract TokenizedVault {
         max_assets: u128,
         nonce: Field,
     ) {
+        let shares_token = self.storage.shares.read();
         _validate_from_private::<5>(self.context, from);
 
         // Validate the amount of assets transferred and send back any excess
@@ -410,7 +422,7 @@ pub contract TokenizedVault {
         self.enqueue_self.settle_issue_public_to_private_internal(from, shares, max_assets, nonce);
 
         // Mint shares to the recipient's private balance
-        self.call(Token::at(self.storage.shares.read()).mint_to_private(to, shares));
+        self.call(Token::at(shares_token).mint_to_private(to, shares));
     }
 
     /// @notice Issues exactly the requested shares to a public balance and receives the underlying asset from a private balance
@@ -428,15 +440,16 @@ pub contract TokenizedVault {
         max_assets: u128,
         nonce: Field,
     ) {
+        let asset_token = self.storage.asset.read();
         _validate_from_private::<5>(self.context, from);
 
         // Initialize commitment on the asset token that allows to refund excess assets to the sender in public
-        let asset_commitment = self.call(Token::at(self.storage.asset.read())
+        let asset_commitment = self.call(Token::at(asset_token)
             .initialize_transfer_commitment(from, self.address));
 
         // Order matters: transfer before minting to neutralize ARC-430 reentrancy via the `tokens_to_send` hook.
         // Take max_assets from the sender
-        self.call(Token::at(self.storage.asset.read()).transfer_private_to_public(
+        self.call(Token::at(asset_token).transfer_private_to_public(
             from,
             self.address,
             max_assets,
@@ -467,15 +480,17 @@ pub contract TokenizedVault {
         max_assets: u128,
         nonce: Field,
     ) {
+        let asset_token = self.storage.asset.read();
+        let shares_token = self.storage.shares.read();
         _validate_from_private::<5>(self.context, from);
 
         // Initialize commitment on the asset token that allows to refund excess assets to the sender in public
-        let asset_commitment = self.call(Token::at(self.storage.asset.read())
+        let asset_commitment = self.call(Token::at(asset_token)
             .initialize_transfer_commitment(from, self.address));
 
         // Order matters: transfer before minting to neutralize ARC-430 reentrancy via the `tokens_to_send` hook.
         // Take max_assets from the sender
-        self.call(Token::at(self.storage.asset.read()).transfer_private_to_public(
+        self.call(Token::at(asset_token).transfer_private_to_public(
             from,
             self.address,
             max_assets,
@@ -483,7 +498,7 @@ pub contract TokenizedVault {
         ));
 
         // Mint shares to the recipient's private balance
-        self.call(Token::at(self.storage.shares.read()).mint_to_private(to, shares));
+        self.call(Token::at(shares_token).mint_to_private(to, shares));
 
         // Validate max_assets in public and refunds any excess to the sender with a commitment
         self.enqueue_self.settle_issue_private_to_private_exact_internal(
@@ -510,6 +525,8 @@ pub contract TokenizedVault {
         assets: u128,
         nonce: Field,
     ) {
+        let asset_token = self.storage.asset.read();
+        let shares_token = self.storage.shares.read();
         self.internal._validate_from_public(from);
 
         // Calculate shares to burn
@@ -520,10 +537,10 @@ pub contract TokenizedVault {
 
         // Order matters: burn before transferring to neutralize ARC-430 reentrancy via the `tokens_received` hook.
         // Burn the sender's shares on the shares token
-        self.call(Token::at(self.storage.shares.read()).burn_public(from, shares, nonce));
+        self.call(Token::at(shares_token).burn_public(from, shares, nonce));
 
         // Transfer the assets to the recipient
-        self.call(Token::at(self.storage.asset.read()).transfer_public_to_public(
+        self.call(Token::at(asset_token).transfer_public_to_public(
             self.address,
             to,
             assets,
@@ -544,6 +561,7 @@ pub contract TokenizedVault {
         assets: u128,
         nonce: Field,
     ) {
+        let asset_token = self.storage.asset.read();
         _validate_from_private::<4>(self.context, from);
 
         // Order matters: burn after calculating shares in public to neutralize ARC-430 reentrancy via the `tokens_received` hook.
@@ -551,7 +569,7 @@ pub contract TokenizedVault {
         self.enqueue_self.settle_withdraw_public_to_private_internal(from, assets, nonce);
 
         // Transfer the assets to the recipient in private
-        self.call(Token::at(self.storage.asset.read()).transfer_public_to_private(
+        self.call(Token::at(asset_token).transfer_public_to_private(
             self.address,
             to,
             assets,
@@ -575,17 +593,19 @@ pub contract TokenizedVault {
         shares: u128,
         nonce: Field,
     ) {
+        let asset_token = self.storage.asset.read();
+        let shares_token = self.storage.shares.read();
         _validate_from_private::<5>(self.context, from);
 
         // Burn shares from the sender's private balance on the shares token
-        self.call(Token::at(self.storage.shares.read()).burn_private(from, shares, nonce));
+        self.call(Token::at(shares_token).burn_private(from, shares, nonce));
 
         // Order matters: transfer after burning to neutralize ARC-430 reentrancy via the `tokens_received` hook.
         // Validate that the shares-assets ratio is correct
         self.enqueue_self.settle_withdraw_private_to_private_internal(assets, shares);
 
         // Transfer the assets to the recipient in private
-        self.call(Token::at(self.storage.asset.read()).transfer_public_to_private(
+        self.call(Token::at(asset_token).transfer_public_to_private(
             self.address,
             to,
             assets,
@@ -610,14 +630,15 @@ pub contract TokenizedVault {
         max_shares: u128,
         nonce: Field,
     ) {
+        let shares_token = self.storage.shares.read();
         _validate_from_private::<5>(self.context, from);
 
         // Initialize commitment on the shares token that allows to refund excess shares to the sender in public
-        let partial_note = self.call(Token::at(self.storage.shares.read())
+        let partial_note = self.call(Token::at(shares_token)
             .initialize_transfer_commitment(from, self.address));
 
         // Burn max_shares from the sender's private balance on the shares token
-        self.call(Token::at(self.storage.shares.read()).burn_private(from, max_shares, nonce));
+        self.call(Token::at(shares_token).burn_private(from, max_shares, nonce));
 
         // Burn the correct amount of shares
         // Any excess amount of shares is sent back to the sender via commitment
@@ -647,14 +668,16 @@ pub contract TokenizedVault {
         max_shares: u128,
         nonce: Field,
     ) {
+        let asset_token = self.storage.asset.read();
+        let shares_token = self.storage.shares.read();
         _validate_from_private::<5>(self.context, from);
 
         // Initialize commitment on the shares token that allows to refund excess shares to the sender in public
-        let partial_note = self.call(Token::at(self.storage.shares.read())
+        let partial_note = self.call(Token::at(shares_token)
             .initialize_transfer_commitment(from, self.address));
 
         // Burn max_shares from the sender's private balance on the shares token
-        self.call(Token::at(self.storage.shares.read()).burn_private(from, max_shares, nonce));
+        self.call(Token::at(shares_token).burn_private(from, max_shares, nonce));
 
         // Order matters: transfer after burning to neutralize ARC-430 reentrancy via the `tokens_received` hook.
         // Burn the correct amount of shares
@@ -667,7 +690,7 @@ pub contract TokenizedVault {
         );
 
         // Transfer the assets to the recipient in private
-        self.call(Token::at(self.storage.asset.read()).transfer_public_to_private(
+        self.call(Token::at(asset_token).transfer_public_to_private(
             self.address,
             to,
             assets,
@@ -687,6 +710,8 @@ pub contract TokenizedVault {
     /// @param nonce The nonce used for authwitness
     #[external("public")]
     fn redeem_public_to_public(from: AztecAddress, to: AztecAddress, shares: u128, nonce: Field) {
+        let asset_token = self.storage.asset.read();
+        let shares_token = self.storage.shares.read();
         self.internal._validate_from_public(from);
 
         // Calculate assets to redeem
@@ -698,10 +723,10 @@ pub contract TokenizedVault {
 
         // Order matters: burn before transferring to neutralize ARC-430 reentrancy via the `tokens_received` hook.
         // Burn the sender's shares on the shares token
-        self.call(Token::at(self.storage.shares.read()).burn_public(from, shares, nonce));
+        self.call(Token::at(shares_token).burn_public(from, shares, nonce));
 
         // Transfer the assets to the recipient
-        self.call(Token::at(self.storage.asset.read()).transfer_public_to_public(
+        self.call(Token::at(asset_token).transfer_public_to_public(
             self.address,
             to,
             assets,
@@ -717,10 +742,11 @@ pub contract TokenizedVault {
     /// @param nonce The nonce used for authwitness
     #[external("private")]
     fn redeem_private_to_public(from: AztecAddress, to: AztecAddress, shares: u128, nonce: Field) {
+        let shares_token = self.storage.shares.read();
         _validate_from_private::<4>(self.context, from);
 
         // Burn shares from the sender's private balance on the shares token
-        self.call(Token::at(self.storage.shares.read()).burn_private(from, shares, nonce));
+        self.call(Token::at(shares_token).burn_private(from, shares, nonce));
 
         // Burn shares and redeem public assets
         self.enqueue_self.settle_redeem_private_to_public_internal(to, shares);
@@ -743,14 +769,16 @@ pub contract TokenizedVault {
         min_assets: u128,
         nonce: Field,
     ) {
+        let asset_token = self.storage.asset.read();
+        let shares_token = self.storage.shares.read();
         _validate_from_private::<5>(self.context, from);
 
         // Initialize commitment on the asset token that allows to transfer outstanding assets to the recipient in public
-        let asset_commitment = self.call(Token::at(self.storage.asset.read())
+        let asset_commitment = self.call(Token::at(asset_token)
             .initialize_transfer_commitment(to, self.address));
 
         // Burn shares from the sender's private balance on the shares token
-        self.call(Token::at(self.storage.shares.read()).burn_private(from, shares, nonce));
+        self.call(Token::at(shares_token).burn_private(from, shares, nonce));
 
         // Order matters: transfer after burning to neutralize ARC-430 reentrancy via the `tokens_received` hook.
         // Transfers any outstanding assets without revealing the recipient
@@ -762,7 +790,7 @@ pub contract TokenizedVault {
         );
 
         // Transfer min_assets to the recipient
-        self.call(Token::at(self.storage.asset.read()).transfer_public_to_private(
+        self.call(Token::at(asset_token).transfer_public_to_private(
             self.address,
             to,
             min_assets,
@@ -787,10 +815,11 @@ pub contract TokenizedVault {
         min_assets: u128,
         nonce: Field,
     ) {
+        let asset_token = self.storage.asset.read();
         _validate_from_private::<5>(self.context, from);
 
         // Initialize commitment on the asset token that allows to transfer outstanding assets to the recipient in public
-        let asset_commitment = self.call(Token::at(self.storage.asset.read())
+        let asset_commitment = self.call(Token::at(asset_token)
             .initialize_transfer_commitment(to, self.address));
 
         // Order matters: transfer after burning to neutralize ARC-430 reentrancy via the `tokens_received` hook.
@@ -805,7 +834,7 @@ pub contract TokenizedVault {
         );
 
         // Transfer min_assets to the recipient
-        self.call(Token::at(self.storage.asset.read()).transfer_public_to_private(
+        self.call(Token::at(asset_token).transfer_public_to_private(
             self.address,
             to,
             min_assets,
@@ -934,8 +963,9 @@ pub contract TokenizedVault {
     #[external("public")]
     #[view]
     fn max_withdraw(owner: AztecAddress) -> u128 {
+        let shares_token = self.storage.shares.read();
         let owner_shares =
-            self.view(Token::at(self.storage.shares.read()).balance_of_public(owner));
+            self.view(Token::at(shares_token).balance_of_public(owner));
         let total_assets = self.internal._total_assets();
         let total_supply = self.internal._total_supply_of_shares();
         let vault_offset = self.storage.vault_offset.read();
@@ -970,7 +1000,8 @@ pub contract TokenizedVault {
     #[external("public")]
     #[view]
     fn max_redeem(owner: AztecAddress) -> u128 {
-        self.view(Token::at(self.storage.shares.read()).balance_of_public(owner))
+        let shares_token = self.storage.shares.read();
+        self.view(Token::at(shares_token).balance_of_public(owner))
     }
 
     /// @dev Allows an on-chain or off-chain user to simulate the effects of their redeem at the current block, given current on-chain conditions.
@@ -1012,6 +1043,7 @@ pub contract TokenizedVault {
     #[external("public")]
     #[only_self]
     fn settle_withdraw_public_to_private_internal(from: AztecAddress, assets: u128, nonce: Field) {
+        let shares_token = self.storage.shares.read();
         // No pre-applied state changes to shares (public burn happens here)
         // Asset balance NOT yet decreased (transfer_public_to_private enqueue runs after this)
         let total_assets = self.internal._total_assets();
@@ -1020,7 +1052,7 @@ pub contract TokenizedVault {
         let shares = _convert_to_shares(assets, total_assets, total_supply, vault_offset, ROUND_UP);
 
         // Burn shares from user's public balance on shares token (requires authwit)
-        self.call(Token::at(self.storage.shares.read()).burn_public(from, shares, nonce));
+        self.call(Token::at(shares_token).burn_public(from, shares, nonce));
     }
 
     /// @notice Validates that the requested shares amount is valid for the given assets
@@ -1047,6 +1079,7 @@ pub contract TokenizedVault {
     #[external("public")]
     #[only_self]
     fn settle_redeem_private_to_public_internal(to: AztecAddress, shares: u128) {
+        let asset_token = self.storage.asset.read();
         // Pre-applied: shares.decrease_total_supply(shares) from burn_private
         let total_supply_post = self.internal._total_supply_of_shares();
         let total_supply = total_supply_post + shares;
@@ -1056,7 +1089,7 @@ pub contract TokenizedVault {
             _convert_to_assets(shares, total_assets, total_supply, vault_offset, ROUND_DOWN);
 
         // Transfer the assets to the recipient
-        self.call(Token::at(self.storage.asset.read()).transfer_public_to_public(
+        self.call(Token::at(asset_token).transfer_public_to_public(
             self.address,
             to,
             assets,
@@ -1070,6 +1103,7 @@ pub contract TokenizedVault {
     #[external("public")]
     #[only_self]
     fn settle_deposit_private_to_public_internal(to: AztecAddress, assets: u128) {
+        let shares_token = self.storage.shares.read();
         // Pre-applied: asset.increase_public_balance(self, assets) from transfer_private_to_public
         // No pre-applied changes to shares total_supply (public mint happens here)
         let total_assets_post = self.internal._total_assets();
@@ -1080,7 +1114,7 @@ pub contract TokenizedVault {
             _convert_to_shares(assets, total_assets, total_supply, vault_offset, ROUND_DOWN);
 
         // Mint shares to the recipient on the shares token
-        self.call(Token::at(self.storage.shares.read()).mint_to_public(to, shares));
+        self.call(Token::at(shares_token).mint_to_public(to, shares));
     }
 
     /// @notice Validates that the requested shares amount is valid for the deposited assets
@@ -1096,6 +1130,7 @@ pub contract TokenizedVault {
         shares: u128,
         nonce: Field,
     ) {
+        let asset_token = self.storage.asset.read();
         // No pre-applied state changes: shares.increase_total_supply(shares) enqueues after this
         let total_supply = self.internal._total_supply_of_shares();
         let total_assets = self.internal._total_assets(); // Assets not transferred yet
@@ -1107,7 +1142,7 @@ pub contract TokenizedVault {
 
         // Order matters: transfer before minting to neutralize ARC-430 reentrancy via the `tokens_to_send` hook.
         // Take the assets from the sender
-        self.call(Token::at(self.storage.asset.read()).transfer_public_to_public(
+        self.call(Token::at(asset_token).transfer_public_to_public(
             from,
             self.address,
             assets,
@@ -1146,6 +1181,8 @@ pub contract TokenizedVault {
         max_shares: u128,
         to: AztecAddress,
     ) {
+        let asset_token = self.storage.asset.read();
+        let shares_token = self.storage.shares.read();
         // Pre-applied: shares.decrease_total_supply(max_shares) from burn_private
         let total_supply_post = self.internal._total_supply_of_shares();
         let total_supply = total_supply_post + max_shares;
@@ -1156,11 +1193,11 @@ pub contract TokenizedVault {
         let surplus = max_shares - shares; // Reverts with underflow if invalid
         if surplus > 0 {
             // Mint surplus back to the sender via commitment on shares token
-            self.call(Token::at(self.storage.shares.read()).mint_to_commitment(commitment, surplus));
+            self.call(Token::at(shares_token).mint_to_commitment(commitment, surplus));
         }
 
         // Transfer the assets to the recipient
-        self.call(Token::at(self.storage.asset.read()).transfer_public_to_public(
+        self.call(Token::at(asset_token).transfer_public_to_public(
             self.address,
             to,
             assets,
@@ -1179,6 +1216,7 @@ pub contract TokenizedVault {
         assets: u128,
         max_shares: u128,
     ) {
+        let shares_token = self.storage.shares.read();
         // Pre-applied: shares.decrease_total_supply(max_shares)
         // Asset balance NOT yet decreased (transfer_public_to_private enqueue runs after this)
         let total_supply_post = self.internal._total_supply_of_shares();
@@ -1190,7 +1228,7 @@ pub contract TokenizedVault {
         let surplus = max_shares - shares; // Reverts with underflow if invalid
         if surplus > 0 {
             // Mint surplus back to the sender via commitment on shares token
-            self.call(Token::at(self.storage.shares.read()).mint_to_commitment(commitment, surplus));
+            self.call(Token::at(shares_token).mint_to_commitment(commitment, surplus));
         }
     }
 
@@ -1205,6 +1243,7 @@ pub contract TokenizedVault {
         assets: u128,
         min_shares: u128,
     ) {
+        let shares_token = self.storage.shares.read();
         // Pre-applied: asset.increase_public_balance(self, assets), shares.increase_total_supply(min_shares)
         let total_assets_post = self.internal._total_assets();
         let total_supply_post = self.internal._total_supply_of_shares();
@@ -1217,7 +1256,7 @@ pub contract TokenizedVault {
         let outstanding_shares = max_shares - min_shares; // Reverts with underflow if invalid
         if outstanding_shares > 0 {
             // Mint outstanding shares via commitment on shares token
-            self.call(Token::at(self.storage.shares.read()).mint_to_commitment(
+            self.call(Token::at(shares_token).mint_to_commitment(
                 commitment,
                 outstanding_shares,
             ));
@@ -1239,6 +1278,8 @@ pub contract TokenizedVault {
         min_shares: u128,
         nonce: Field,
     ) {
+        let asset_token = self.storage.asset.read();
+        let shares_token = self.storage.shares.read();
         // No pre-applied state changes: shares.increase_total_supply(min_shares) enqueues after this
         // Assets not transferred yet
         let total_supply = self.internal._total_supply_of_shares();
@@ -1250,7 +1291,7 @@ pub contract TokenizedVault {
 
         // Order matters: transfer before minting to neutralize ARC-430 reentrancy via the `tokens_to_send` hook.
         // Take the assets from the sender
-        self.call(Token::at(self.storage.asset.read()).transfer_public_to_public(
+        self.call(Token::at(asset_token).transfer_public_to_public(
             from,
             self.address,
             assets,
@@ -1259,7 +1300,7 @@ pub contract TokenizedVault {
 
         if outstanding_shares > 0 {
             // Mint outstanding shares via commitment on shares token
-            self.call(Token::at(self.storage.shares.read()).mint_to_commitment(
+            self.call(Token::at(shares_token).mint_to_commitment(
                 commitment,
                 outstanding_shares,
             ));
@@ -1279,6 +1320,8 @@ pub contract TokenizedVault {
         max_assets: u128,
         to: AztecAddress,
     ) {
+        let asset_token = self.storage.asset.read();
+        let shares_token = self.storage.shares.read();
         // Pre-applied: asset.increase_public_balance(self, max_assets) from transfer_private_to_public
         // No pre-applied changes to shares total_supply (public mint happens here)
         let total_assets_post = self.internal._total_assets();
@@ -1288,11 +1331,11 @@ pub contract TokenizedVault {
         let assets = _convert_to_assets(shares, total_assets, total_supply, vault_offset, ROUND_UP);
 
         // Mint shares to the recipient on the shares token
-        self.call(Token::at(self.storage.shares.read()).mint_to_public(to, shares));
+        self.call(Token::at(shares_token).mint_to_public(to, shares));
 
         let change = max_assets - assets; // Reverts with underflow if invalid
         if change > 0 {
-            self.call(Token::at(self.storage.asset.read()).transfer_public_to_commitment(
+            self.call(Token::at(asset_token).transfer_public_to_commitment(
                 self.address,
                 asset_commitment,
                 change,
@@ -1312,6 +1355,7 @@ pub contract TokenizedVault {
         shares: u128,
         max_assets: u128,
     ) {
+        let asset_token = self.storage.asset.read();
         // Pre-applied: asset.increase_public_balance(self, max_assets), shares.increase_total_supply(shares)
         let total_assets_post = self.internal._total_assets();
         let total_supply_post = self.internal._total_supply_of_shares();
@@ -1322,7 +1366,7 @@ pub contract TokenizedVault {
 
         let change = max_assets - assets; // Reverts with underflow if invalid
         if change > 0 {
-            self.call(Token::at(self.storage.asset.read()).transfer_public_to_commitment(
+            self.call(Token::at(asset_token).transfer_public_to_commitment(
                 self.address,
                 asset_commitment,
                 change,
@@ -1342,6 +1386,7 @@ pub contract TokenizedVault {
         shares: u128,
         min_assets: u128,
     ) {
+        let asset_token = self.storage.asset.read();
         // Pre-applied: shares.decrease_total_supply(shares)
         // Asset balance NOT yet decreased (transfer_public_to_private enqueue runs after this)
         let total_supply_post = self.internal._total_supply_of_shares();
@@ -1353,7 +1398,7 @@ pub contract TokenizedVault {
 
         let outstanding_assets = assets - min_assets; // Reverts with underflow if invalid
         if outstanding_assets > 0 {
-            self.call(Token::at(self.storage.asset.read()).transfer_public_to_commitment(
+            self.call(Token::at(asset_token).transfer_public_to_commitment(
                 self.address,
                 asset_commitment,
                 outstanding_assets,
@@ -1377,6 +1422,8 @@ pub contract TokenizedVault {
         min_assets: u128,
         nonce: Field,
     ) {
+        let asset_token = self.storage.asset.read();
+        let shares_token = self.storage.shares.read();
         // No pre-applied changes to shares total_supply (public burn happens here)
         // Asset balance NOT yet decreased (transfer_public_to_private enqueue runs after this)
         let total_assets = self.internal._total_assets();
@@ -1386,11 +1433,11 @@ pub contract TokenizedVault {
             _convert_to_assets(shares, total_assets, total_supply, vault_offset, ROUND_DOWN);
 
         // Burn the sender's shares on the shares token (requires authwit)
-        self.call(Token::at(self.storage.shares.read()).burn_public(from, shares, nonce));
+        self.call(Token::at(shares_token).burn_public(from, shares, nonce));
 
         let outstanding_assets = assets - min_assets; // Reverts with underflow if invalid
         if outstanding_assets > 0 {
-            self.call(Token::at(self.storage.asset.read()).transfer_public_to_commitment(
+            self.call(Token::at(asset_token).transfer_public_to_commitment(
                 self.address,
                 asset_commitment,
                 outstanding_assets,
@@ -1412,6 +1459,7 @@ pub contract TokenizedVault {
         max_assets: u128,
         nonce: Field,
     ) {
+        let asset_token = self.storage.asset.read();
         // No pre-applied state changes: shares.increase_total_supply(shares) enqueues after this
         // Assets not transferred yet
         let total_supply = self.internal._total_supply_of_shares();
@@ -1421,7 +1469,7 @@ pub contract TokenizedVault {
 
         // Order matters: transfer before minting to neutralize ARC-430 reentrancy via the `tokens_to_send` hook.
         // Take the assets from the sender
-        self.call(Token::at(self.storage.asset.read()).transfer_public_to_public(
+        self.call(Token::at(asset_token).transfer_public_to_public(
             from,
             self.address,
             max_assets,
@@ -1430,7 +1478,7 @@ pub contract TokenizedVault {
 
         let change = max_assets - assets; // Reverts with underflow if invalid
         if change > 0 {
-            self.call(Token::at(self.storage.asset.read()).transfer_public_to_public(
+            self.call(Token::at(asset_token).transfer_public_to_public(
                 self.address,
                 from,
                 change,
@@ -1447,14 +1495,16 @@ pub contract TokenizedVault {
     /// @return The total amount of assets held by the vault
     #[internal("public")]
     fn _total_assets() -> u128 {
-        self.view(Token::at(self.storage.asset.read()).balance_of_public(self.address))
+        let asset_token = self.storage.asset.read();
+        self.view(Token::at(asset_token).balance_of_public(self.address))
     }
 
     /// @notice Returns the total supply of shares
     /// @return The total supply of shares
     #[internal("public")]
     fn _total_supply_of_shares() -> u128 {
-        self.view(Token::at(self.storage.shares.read()).total_supply())
+        let shares_token = self.storage.shares.read();
+        self.view(Token::at(shares_token).total_supply())
     }
 
     /// @notice Converts an amount of assets to shares using the given exchange rate parameters
