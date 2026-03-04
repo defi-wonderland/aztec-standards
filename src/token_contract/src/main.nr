@@ -498,8 +498,6 @@ pub contract Token {
     }
 
     /// @notice Decreases the private balance of `account` by `amount` and emits a private balance note with the change to account
-    /// @param context The private context
-    /// @param private_balances The storage pointer to the private balances
     /// @param account The address of the account to decrease the balance of
     /// @param amount The amount of tokens to decrease the balance by
     /// @param max_notes The maximum number of notes to process in a single call
@@ -513,8 +511,7 @@ pub contract Token {
         );
     }
 
-    /// @notice Updates the given storage pointer `private_balances` to increase the private balance of `to` by `amount`
-    /// @param private_balances The storage pointer to the private balances
+    /// @notice Increases the private balance of `to` by `amount`
     /// @param to The address of the recipient
     /// @param amount The amount of tokens to increase the balance by
     #[internal("private")]
@@ -523,8 +520,7 @@ pub contract Token {
         self.storage.private_balances.at(to).add(amount).deliver(MessageDelivery.ONCHAIN_CONSTRAINED);
     }
 
-    /// @notice Updates the given storage pointer `public_balances` to increase the public balance of `to` by `amount`
-    /// @param public_balances The storage pointer to the public balances
+    /// @notice Increases the public balance of `to` by `amount`
     /// @param to The address of the recipient
     /// @param amount The amount of tokens to increase the balance by
     #[internal("public")]
@@ -535,8 +531,7 @@ pub contract Token {
         self.storage.public_balances.at(to).write(new_balance);
     }
 
-    /// @notice Updates the given storage pointer `public_balances` to decrease the public balance of `from` by `amount`
-    /// @param public_balances The storage pointer to the public balances
+    /// @notice Decreases the public balance of `from` by `amount`
     /// @param from The address of the account to decrease the balance of
     /// @param amount The amount of tokens to decrease the balance by
     #[internal("public")]
@@ -549,7 +544,6 @@ pub contract Token {
 
     /// @notice Completes a partial note
     /// @dev Completes a partial note and increases the balance of the commitment by `amount`
-    /// @param context The context of the public call
     /// @param commitment The partial note representing the commitment (privacy entrance)
     /// @param completer The address used to compute the validity commitment
     /// @param amount The amount of tokens to increase the balance of the commitment by
@@ -564,8 +558,6 @@ pub contract Token {
 
     /// @notice Subtracts balance from private balance
     /// @dev Subtracts amount from private balance and returns the change to the owner, recursively if necessary
-    /// @param context The private context
-    /// @param private_balances The storage pointer to the private balances
     /// @param account The address of the account to subtract the balance from
     /// @param amount The amount of tokens to subtract
     /// @param max_notes The maximum number of notes to process in a single call
@@ -588,8 +580,7 @@ pub contract Token {
         }
     }
 
-    /// @notice Increases the given storage pointer `total_supply` by `amount`
-    /// @param total_supply The storage pointer to the total supply
+    /// @notice Increases the total supply by `amount`
     /// @param amount The amount of tokens to increase the total supply by
     #[internal("public")]
     fn _increase_total_supply(amount: u128) {
@@ -597,8 +588,7 @@ pub contract Token {
         self.storage.total_supply.write(new_supply);
     }
 
-    /// @notice Decreases the given storage pointer `total_supply` by `amount`
-    /// @param total_supply The storage pointer to the total supply
+    /// @notice Decreases the total supply by `amount`
     /// @param amount The amount to decrease the total supply by
     #[internal("public")]
     fn _decrease_total_supply(amount: u128) {
@@ -607,8 +597,6 @@ pub contract Token {
     }
 
     /// @notice Initializes a transfer commitment to be used for transfers/mints
-    /// @param context The context of the private call
-    /// @param private_balances The storage pointer to the private balances
     /// @param to The address of the recipient
     /// @param completer The address used to compute the validity commitment
     /// @return The partial note that can be used to execute the transfer/mint
@@ -629,8 +617,6 @@ pub contract Token {
     }
 
     /// @notice Mints tokens to a public balance and increases the total supply
-    /// @param public_balances The storage pointer to the public balances
-    /// @param total_supply The storage pointer to the total supply
     /// @param to The address of the recipient
     /// @param amount The amount of tokens to mint
     #[internal("public")]
@@ -642,8 +628,6 @@ pub contract Token {
     }
 
     /// @notice Mints tokens to a private balance and enqueues a public call to increase the total supply
-    /// @param context The private context
-    /// @param private_balances The storage pointer to the private balances
     /// @param to The address of the recipient
     /// @param amount The amount of tokens to mint
     #[internal("private")]
@@ -653,8 +637,6 @@ pub contract Token {
     }
 
     /// @notice Burns tokens from a public balance and decreases the total supply
-    /// @param public_balances The storage pointer to the public balances
-    /// @param total_supply The storage pointer to the total supply
     /// @param from The address to burn tokens from
     /// @param amount The amount of tokens to burn
     #[internal("public")]
@@ -666,8 +648,6 @@ pub contract Token {
     }
 
     /// @notice Burns tokens from a private balance and enqueues a public call to decrease the total supply
-    /// @param context The private context
-    /// @param private_balances The storage pointer to the private balances
     /// @param from The address to burn tokens from
     /// @param amount The amount of tokens to burn
     #[internal("private")]
