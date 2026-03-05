@@ -380,7 +380,7 @@ pub contract Vault {
             nonce,
         ));
 
-        // Refund before minting to prevent inflated total_assets during ARC-403 `tokens_received` hook
+        // Refund before minting to prevent inflated total_assets during ARC-403 reentrancy
         let change = max_assets - assets; // Reverts with underflow if invalid
         if change > 0 {
             self.call(Token::at(asset_token).transfer_public_to_public(
