@@ -380,7 +380,10 @@ pub contract Vault {
             nonce,
         ));
 
-        // Refund before minting to prevent inflated total_assets during ARC-403 reentrancy
+        // Mint shares to the recipient
+        self.call(Token::at(shares_token).mint_to_public(to, shares));
+
+        // Refund
         let change = max_assets - assets; // Reverts with underflow if invalid
         if change > 0 {
             self.call(Token::at(asset_token).transfer_public_to_public(
@@ -390,9 +393,6 @@ pub contract Vault {
                 0,
             ));
         }
-
-        // Mint shares to the recipient (after refund so vault balance is correct when ARC-403 hook fires)
-        self.call(Token::at(shares_token).mint_to_public(to, shares));
     }
 
     /// @notice Issues exactly the requested shares to a private balance and receives the underlying asset from a public balance
