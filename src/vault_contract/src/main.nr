@@ -385,10 +385,7 @@ pub contract Vault {
             nonce,
         ));
 
-        // Mint shares to the recipient
-        self.call(Token::at(shares_token).mint_to_public(to, shares));
-
-        // Refund
+        // Refund before minting to prevent inflated total_assets during ARC-430 `tokens_received` hook
         let change = max_assets - assets; // Reverts with underflow if invalid
         if change > 0 {
             self.call(Token::at(asset_token).transfer_public_to_public(
@@ -398,6 +395,9 @@ pub contract Vault {
                 0,
             ));
         }
+
+        // Mint shares to the recipient (after refund so vault balance is correct when hook fires)
+        self.call(Token::at(shares_token).mint_to_public(to, shares));
     }
 
     /// @notice Issues exactly the requested shares to a private balance and receives the underlying asset from a public balance
@@ -1330,9 +1330,6 @@ pub contract Vault {
         let vault_offset = self.storage.vault_offset.read();
         let assets = _convert_to_assets(shares, total_assets, total_supply, vault_offset, ROUND_UP);
 
-        // Mint shares to the recipient on the shares token
-        self.call(Token::at(shares_token).mint_to_public(to, shares));
-
         let change = max_assets - assets; // Reverts with underflow if invalid
         if change > 0 {
             self.call(Token::at(asset_token).transfer_public_to_commitment(
@@ -1342,6 +1339,9 @@ pub contract Vault {
                 0,
             ));
         }
+
+        // Mint shares to the recipient on the shares token (after refund to prevent inflated total_assets)
+        self.call(Token::at(shares_token).mint_to_public(to, shares));
     }
 
     /// @notice Refunds excess assets to the sender via commitment while validating the shares amount requested
