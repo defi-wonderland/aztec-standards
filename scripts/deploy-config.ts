@@ -1,4 +1,5 @@
 import { AztecAddress } from '@aztec/stdlib/aztec-address';
+import { DEFAULT_SALT, NETWORK_URLS } from './constants.js';
 
 export interface TokenConfig {
   name: string;
@@ -20,84 +21,39 @@ export interface NetworkConfig {
 export interface DeploymentConfig {
   network: NetworkConfig;
   deployer: {
-    pxeVersion: number;
     dataDirectory: string;
   };
   contracts: {
-    tokens: {
-      weth: TokenConfig;
-      dai: TokenConfig;
-      usdc: TokenConfig;
-    };
+    tokens: Record<string, TokenConfig>;
     dripper: DripperConfig;
     upgradeAuthority?: string;
-  };
-  deployment: {
-    deployDelay: number;
   };
 }
 
 // TODO: add mainnet-alpha
 export type Network = 'devnet-2' | 'testnet' | 'sandbox';
 
-export function getConfig(network: Network): DeploymentConfig {
-  const nodeUrl = process.env.AZTEC_NODE_URL;
+const TOKENS: Record<string, TokenConfig> = {
+  weth: { name: 'WETH', symbol: 'WETH', decimals: 18, salt: DEFAULT_SALT },
+  dai: { name: 'DAI', symbol: 'DAI', decimals: 9, salt: DEFAULT_SALT },
+  usdc: { name: 'USDC', symbol: 'USDC', decimals: 6, salt: DEFAULT_SALT },
+};
 
-  const baseConfig = {
+export function getConfig(network: Network): DeploymentConfig {
+  const nodeUrl = process.env.AZTEC_NODE_URL || NETWORK_URLS[network];
+
+  return {
+    network: {
+      nodeUrl,
+      name: network === 'devnet-2' ? 'devnet' : network,
+    },
+    deployer: {
+      dataDirectory: `${network === 'devnet-2' ? 'devnet' : network}-store/`,
+    },
     contracts: {
-      tokens: {
-        weth: { name: 'WETH', symbol: 'WETH', decimals: 18, salt: 1337 },
-        dai: { name: 'DAI', symbol: 'DAI', decimals: 9, salt: 1337 },
-        usdc: { name: 'USDC', symbol: 'USDC', decimals: 6, salt: 1337 },
-      },
-      dripper: { salt: 1337 } as DripperConfig,
+      tokens: TOKENS,
+      dripper: { salt: DEFAULT_SALT },
       upgradeAuthority: process.env.UPGRADE_AUTHORITY,
     },
-    deployment: {
-      deployDelay: 24000,
-    },
   };
-
-  switch (network) {
-    case 'devnet-2':
-      return {
-        ...baseConfig,
-        network: {
-          nodeUrl: nodeUrl || 'https://v4-devnet-2.aztec-labs.com',
-          name: 'devnet',
-        },
-        deployer: {
-          pxeVersion: 2,
-          dataDirectory: 'devnet-store/',
-        },
-      };
-    case 'testnet':
-      return {
-        ...baseConfig,
-        network: {
-          nodeUrl: nodeUrl || 'https://testnet.aztec-labs.com',
-          name: 'testnet',
-        },
-        deployer: {
-          pxeVersion: 2,
-          dataDirectory: 'testnet-store/',
-        },
-      };
-    case 'sandbox':
-      return {
-        ...baseConfig,
-        network: {
-          nodeUrl: nodeUrl || 'http://localhost:8080',
-          name: 'sandbox',
-        },
-        deployer: {
-          pxeVersion: 2,
-          dataDirectory: 'sandbox-store/',
-        },
-        deployment: {
-          ...baseConfig.deployment,
-          deployDelay: 1000,
-        },
-      };
-  }
 }

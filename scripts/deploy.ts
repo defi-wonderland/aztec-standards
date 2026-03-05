@@ -16,7 +16,6 @@ import { AccountWithSecretKey } from '@aztec/aztec.js/account';
 import { AccountManager, type Wallet } from '@aztec/aztec.js/wallet';
 import { createAztecNodeClient, type AztecNode } from '@aztec/aztec.js/node';
 import { createLogger } from '@aztec/foundation/log';
-import { sleep } from '@aztec/foundation/sleep';
 
 import { EmbeddedWallet } from '@aztec/wallets/embedded';
 import { SponsoredFPCContract } from '@aztec/noir-contracts.js/SponsoredFPC';
@@ -31,7 +30,7 @@ import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 
 import { AztecAddressLike, FieldLike, type ContractArtifact } from '@aztec/aztec.js/abi';
-import { getConfig, DeploymentConfig, TokenConfig, type Network } from './deploy-config.js';
+import { getConfig, DeploymentConfig, type Network } from './deploy-config.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -352,9 +351,7 @@ export async function deployDripper(
 }
 
 interface ComputedAddresses {
-  weth: AztecAddress;
-  dai: AztecAddress;
-  usdc: AztecAddress;
+  tokens: Record<string, AztecAddress>;
   dripper: AztecAddress;
   upgradeAuthority: AztecAddress;
 }
@@ -368,50 +365,28 @@ async function computeContractAddresses(config: DeploymentConfig): Promise<Compu
   if (config.contracts.dripper.existingAddress) {
     dripper = config.contracts.dripper.existingAddress;
   } else {
-    const dripperSalt = config.contracts.dripper.salt;
     const dripperInstance = await getContractInstanceFromInstantiationParams(DripperContractArtifact, {
       constructorArgs: [],
-      salt: new Fr(dripperSalt),
+      salt: new Fr(config.contracts.dripper.salt),
       publicKeys: PublicKeys.default(),
       deployer: AztecAddress.ZERO,
     });
     dripper = dripperInstance.address;
   }
 
-  const wethConfig = config.contracts.tokens.weth;
-  const wethInstance = await getContractInstanceFromInstantiationParams(TokenContractArtifact, {
-    constructorArgs: [wethConfig.name, wethConfig.symbol, wethConfig.decimals, dripper, upgradeAuthority],
-    salt: new Fr(wethConfig.salt),
-    publicKeys: PublicKeys.default(),
-    deployer: AztecAddress.ZERO,
-    constructorArtifact: 'constructor_with_minter',
-  });
+  const tokens: Record<string, AztecAddress> = {};
+  for (const [key, tokenConfig] of Object.entries(config.contracts.tokens)) {
+    const instance = await getContractInstanceFromInstantiationParams(TokenContractArtifact, {
+      constructorArgs: [tokenConfig.name, tokenConfig.symbol, tokenConfig.decimals, dripper, upgradeAuthority],
+      salt: new Fr(tokenConfig.salt),
+      publicKeys: PublicKeys.default(),
+      deployer: AztecAddress.ZERO,
+      constructorArtifact: 'constructor_with_minter',
+    });
+    tokens[key] = instance.address;
+  }
 
-  const daiConfig = config.contracts.tokens.dai;
-  const daiInstance = await getContractInstanceFromInstantiationParams(TokenContractArtifact, {
-    constructorArgs: [daiConfig.name, daiConfig.symbol, daiConfig.decimals, dripper, upgradeAuthority],
-    salt: new Fr(daiConfig.salt),
-    publicKeys: PublicKeys.default(),
-    deployer: AztecAddress.ZERO,
-    constructorArtifact: 'constructor_with_minter',
-  });
-
-  const usdcConfig = config.contracts.tokens.usdc;
-  const usdcInstance = await getContractInstanceFromInstantiationParams(TokenContractArtifact, {
-    constructorArgs: [usdcConfig.name, usdcConfig.symbol, usdcConfig.decimals, dripper, upgradeAuthority],
-    salt: new Fr(usdcConfig.salt),
-    publicKeys: PublicKeys.default(),
-    deployer: AztecAddress.ZERO,
-    constructorArtifact: 'constructor_with_minter',
-  });
-
-  return {
-    weth: wethInstance.address,
-    dai: daiInstance.address,
-    usdc: usdcInstance.address,
-    dripper,
-    upgradeAuthority,
-  };
+  return { tokens, dripper, upgradeAuthority };
 }
 
 export async function deployContracts(options: CLIOptions, config: DeploymentConfig): Promise<DeployResult> {
@@ -421,13 +396,7 @@ export async function deployContracts(options: CLIOptions, config: DeploymentCon
   if (options.dryRun) {
     logger.info('[DRY RUN] Computing contract addresses...');
     const addresses = await computeContractAddresses(config);
-
-    const tokenAddresses: Record<string, AztecAddress> = {
-      weth: addresses.weth,
-      dai: addresses.dai,
-      usdc: addresses.usdc,
-    };
-    const deploymentData = getDeploymentData(tokenAddresses, addresses.dripper, config, addresses.upgradeAuthority);
+    const deploymentData = getDeploymentData(addresses.tokens, addresses.dripper, config, addresses.upgradeAuthority);
 
     logger.info('[DRY RUN] Deployment data:');
     logger.info(JSON.stringify(deploymentData, null, 4));
@@ -492,9 +461,9 @@ export async function deployContracts(options: CLIOptions, config: DeploymentCon
     const computedAddresses = await computeContractAddresses(config);
     logger.info('\n=== Computed Contract Addresses ===');
     logger.info(`Dripper: ${computedAddresses.dripper.toString()}`);
-    logger.info(`WETH: ${computedAddresses.weth.toString()}`);
-    logger.info(`DAI: ${computedAddresses.dai.toString()}`);
-    logger.info(`USDC: ${computedAddresses.usdc.toString()}`);
+    for (const [key, addr] of Object.entries(computedAddresses.tokens)) {
+      logger.info(`${key.toUpperCase()}: ${addr.toString()}`);
+    }
     logger.info('===================================\n');
 
     let dripper: { contract: DripperContract; status: 'deployed' | 'existing' } | undefined;
@@ -534,7 +503,7 @@ export async function deployContracts(options: CLIOptions, config: DeploymentCon
 
     logger.info('Deploying/checking token contracts...');
 
-    const tokenEntries = Object.entries(config.contracts.tokens) as [string, TokenConfig][];
+    const tokenEntries = Object.entries(config.contracts.tokens);
     const deployedTokens: Record<string, DeployedContract<TokenContract>> = {};
 
     for (const [key, tokenConfig] of tokenEntries) {
@@ -553,10 +522,6 @@ export async function deployContracts(options: CLIOptions, config: DeploymentCon
       );
 
       deployedTokens[key] = result;
-
-      if (result.status === 'deployed') {
-        await sleep(config.deployment.deployDelay);
-      }
     }
 
     // Post-deploy verification
