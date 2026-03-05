@@ -255,8 +255,13 @@ unconstrained fn issue_public_to_public_on_behalf_of_other_success() {
 
     // Authorize the recipient to call issue_public_to_public
     let requested_shares: u128 = max_assets;
-    let issue_public_to_public_call_interface = Vault::at(vault_address)
-        .issue_public_to_public(owner, recipient, requested_shares, max_assets, 0);
+    let issue_public_to_public_call_interface = Vault::at(vault_address).issue_public_to_public(
+        owner,
+        recipient,
+        requested_shares,
+        max_assets,
+        0,
+    );
     authwit_cheatcodes::add_public_authwit_from_call(
         env,
         owner,

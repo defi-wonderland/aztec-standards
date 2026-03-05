@@ -46,22 +46,11 @@ unconstrained fn vault_with_initial_deposit_subsequent_deposits_work() {
     env.call_public(owner, Token::at(asset_address).mint_to_public(owner, second_deposit));
 
     // Authorize and deposit
-    authorize_transfer_public_to_public(
-        env,
-        asset_address,
-        vault_address,
-        owner,
-        second_deposit,
-    );
+    authorize_transfer_public_to_public(env, asset_address, vault_address, owner, second_deposit);
 
     env.call_public(
         owner,
-        Vault::at(vault_address).deposit_public_to_public(
-            owner,
-            recipient,
-            second_deposit,
-            0,
-        ),
+        Vault::at(vault_address).deposit_public_to_public(owner, recipient, second_deposit, 0),
     );
 
     // Verify recipient got shares (1:1 ratio since initial deposit established the rate)
@@ -87,22 +76,11 @@ unconstrained fn vault_with_initial_deposit_yield_distribution() {
     let deposit_amount: u128 = 1000;
     env.call_public(owner, Token::at(asset_address).mint_to_public(owner, deposit_amount));
 
-    authorize_transfer_public_to_public(
-        env,
-        asset_address,
-        vault_address,
-        owner,
-        deposit_amount,
-    );
+    authorize_transfer_public_to_public(env, asset_address, vault_address, owner, deposit_amount);
 
     env.call_public(
         owner,
-        Vault::at(vault_address).deposit_public_to_public(
-            owner,
-            recipient,
-            deposit_amount,
-            0,
-        ),
+        Vault::at(vault_address).deposit_public_to_public(owner, recipient, deposit_amount, 0),
     );
 
     // Simulate yield by minting assets directly to the vault

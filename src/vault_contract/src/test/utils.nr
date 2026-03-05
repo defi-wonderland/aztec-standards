@@ -36,9 +36,8 @@ pub unconstrained fn setup_with_vault(
     // Deploy vault with initializer (admin=owner, no shares yet)
     let vault_initializer =
         Vault::interface().constructor(owner, asset_address, 1, AztecAddress::zero());
-    let vault_address = env
-        .deploy("@vault_contract/Vault")
-        .with_public_initializer(owner, vault_initializer);
+    let vault_address =
+        env.deploy("@vault_contract/Vault").with_public_initializer(owner, vault_initializer);
 
     // Deploy shares token with vault as minter
     let shares_initializer = Token::interface().constructor_with_minter(
@@ -87,9 +86,8 @@ pub unconstrained fn setup_with_vault_initial_deposit(
     // Deploy vault with initializer (admin=owner, no shares yet)
     let vault_initializer =
         Vault::interface().constructor(owner, asset_address, 1, AztecAddress::zero());
-    let vault_address = env
-        .deploy("@vault_contract/Vault")
-        .with_public_initializer(owner, vault_initializer);
+    let vault_address =
+        env.deploy("@vault_contract/Vault").with_public_initializer(owner, vault_initializer);
 
     // Deploy shares token with vault as minter
     let shares_initializer = Token::interface().constructor_with_minter(
@@ -106,13 +104,7 @@ pub unconstrained fn setup_with_vault_initial_deposit(
     env.call_public(owner, Token::at(asset_address).mint_to_public(owner, initial_deposit));
 
     // Authorize vault to transfer assets from owner
-    authorize_transfer_public_to_public(
-        env,
-        asset_address,
-        vault_address,
-        owner,
-        initial_deposit,
-    );
+    authorize_transfer_public_to_public(env, asset_address, vault_address, owner, initial_deposit);
 
     // Set shares and make initial deposit (admin-only, one-shot)
     env.call_public(
@@ -148,9 +140,8 @@ pub unconstrained fn setup_vault_without_shares() -> (TestEnvironment, AztecAddr
     // Deploy vault with initializer (admin=owner) but do NOT call set_shares
     let vault_initializer =
         Vault::interface().constructor(owner, asset_address, 1, AztecAddress::zero());
-    let vault_address = env
-        .deploy("@vault_contract/Vault")
-        .with_public_initializer(owner, vault_initializer);
+    let vault_address =
+        env.deploy("@vault_contract/Vault").with_public_initializer(owner, vault_initializer);
 
     (env, vault_address, owner, recipient, asset_address)
 }
@@ -192,7 +183,6 @@ pub unconstrained fn get_private_balance(
 ) -> u128 {
     env.simulate_utility(Token::at(token_address).balance_of_private(address))
 }
-
 
 // ====================== Authwit helpers ======================
 
@@ -253,10 +243,7 @@ pub unconstrained fn redeem_public_to_public(
     shares: u128,
 ) {
     authorize_burn_public(env, shares_address, vault_address, from, shares);
-    env.call_public(
-        from,
-        Vault::at(vault_address).redeem_public_to_public(from, to, shares, 0),
-    );
+    env.call_public(from, Vault::at(vault_address).redeem_public_to_public(from, to, shares, 0));
 }
 
 pub unconstrained fn redeem_public_to_private_exact(
@@ -271,13 +258,7 @@ pub unconstrained fn redeem_public_to_private_exact(
     authorize_burn_public(env, shares_address, vault_address, from, shares);
     env.call_private(
         from,
-        Vault::at(vault_address).redeem_public_to_private_exact(
-            from,
-            to,
-            shares,
-            min_assets,
-            0,
-        ),
+        Vault::at(vault_address).redeem_public_to_private_exact(from, to, shares, min_assets, 0),
     );
 }
 
@@ -290,10 +271,7 @@ pub unconstrained fn redeem_private_to_public(
     shares: u128,
 ) {
     authorize_burn_private(env, shares_address, vault_address, from, shares);
-    env.call_private(
-        from,
-        Vault::at(vault_address).redeem_private_to_public(from, to, shares, 0),
-    );
+    env.call_private(from, Vault::at(vault_address).redeem_private_to_public(from, to, shares, 0));
 }
 
 pub unconstrained fn redeem_private_to_private_exact(
@@ -308,13 +286,7 @@ pub unconstrained fn redeem_private_to_private_exact(
     authorize_burn_private(env, shares_address, vault_address, from, shares);
     env.call_private(
         from,
-        Vault::at(vault_address).redeem_private_to_private_exact(
-            from,
-            to,
-            shares,
-            min_assets,
-            0,
-        ),
+        Vault::at(vault_address).redeem_private_to_private_exact(from, to, shares, min_assets, 0),
     );
 }
 
@@ -330,10 +302,7 @@ pub unconstrained fn withdraw_public_to_public(
     shares_to_burn: u128,
 ) {
     authorize_burn_public(env, shares_address, vault_address, from, shares_to_burn);
-    env.call_public(
-        from,
-        Vault::at(vault_address).withdraw_public_to_public(from, to, assets, 0),
-    );
+    env.call_public(from, Vault::at(vault_address).withdraw_public_to_public(from, to, assets, 0));
 }
 
 pub unconstrained fn withdraw_public_to_private(
@@ -346,10 +315,7 @@ pub unconstrained fn withdraw_public_to_private(
     shares_to_burn: u128,
 ) {
     authorize_burn_public(env, shares_address, vault_address, from, shares_to_burn);
-    env.call_private(
-        from,
-        Vault::at(vault_address).withdraw_public_to_private(from, to, assets, 0),
-    );
+    env.call_private(from, Vault::at(vault_address).withdraw_public_to_private(from, to, assets, 0));
 }
 
 pub unconstrained fn withdraw_private_to_private(
@@ -364,13 +330,7 @@ pub unconstrained fn withdraw_private_to_private(
     authorize_burn_private(env, shares_address, vault_address, from, shares_to_burn);
     env.call_private(
         from,
-        Vault::at(vault_address).withdraw_private_to_private(
-            from,
-            to,
-            assets,
-            shares_to_burn,
-            0,
-        ),
+        Vault::at(vault_address).withdraw_private_to_private(from, to, assets, shares_to_burn, 0),
     );
 }
 
@@ -458,13 +418,6 @@ pub unconstrained fn mint_and_deposit_public_to_private(
     // Deposit
     env.call_private(
         minter,
-        Vault::at(vault_address).deposit_public_to_private(
-            minter,
-            recipient,
-            amount,
-            amount,
-            0,
-        ),
+        Vault::at(vault_address).deposit_public_to_private(minter, recipient, amount, amount, 0),
     );
 }
-

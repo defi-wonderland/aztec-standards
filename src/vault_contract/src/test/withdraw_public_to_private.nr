@@ -11,12 +11,7 @@ unconstrained fn withdraw_public_to_private_without_shares() {
 
     env.call_private(
         owner,
-        Vault::at(vault_address).withdraw_public_to_private(
-            owner,
-            recipient,
-            mint_amount,
-            0,
-        ),
+        Vault::at(vault_address).withdraw_public_to_private(owner, recipient, mint_amount, 0),
     );
 }
 

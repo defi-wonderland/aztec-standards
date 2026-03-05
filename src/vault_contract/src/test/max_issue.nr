@@ -27,8 +27,7 @@ unconstrained fn max_issue_same_for_any_address() {
 
     // max_issue should return the same value regardless of address
     let max_issue_owner = env.view_public(Vault::at(vault_address).max_issue(owner));
-    let max_issue_recipient =
-        env.view_public(Vault::at(vault_address).max_issue(recipient));
+    let max_issue_recipient = env.view_public(Vault::at(vault_address).max_issue(recipient));
 
     assert(max_issue_owner == max_issue_recipient, "max_issue should be same for all addresses");
     assert(max_issue_owner == MAX_U128_VALUE, "max_issue should return MAX_U128_VALUE");

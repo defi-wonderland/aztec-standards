@@ -165,8 +165,12 @@ unconstrained fn redeem_private_to_public_on_behalf_of_wrong_caller() {
 
     // Authorize someone to call redeem_private_to_public on the vault
     let requested_shares: u128 = deposit_amount;
-    let redeem_private_to_public_call_interface = Vault::at(vault_address)
-        .redeem_private_to_public(deposit_recipient, recipient, requested_shares, 0);
+    let redeem_private_to_public_call_interface = Vault::at(vault_address).redeem_private_to_public(
+        deposit_recipient,
+        recipient,
+        requested_shares,
+        0,
+    );
     authwit_cheatcodes::add_private_authwit_from_call(
         env,
         deposit_recipient,

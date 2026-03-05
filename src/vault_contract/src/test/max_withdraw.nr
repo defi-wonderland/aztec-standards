@@ -60,8 +60,7 @@ unconstrained fn max_withdraw_increases_with_yield() {
     );
 
     // Check initial max_withdraw
-    let initial_max_withdraw =
-        env.view_public(Vault::at(vault_address).max_withdraw(owner));
+    let initial_max_withdraw = env.view_public(Vault::at(vault_address).max_withdraw(owner));
 
     // Add yield to the vault
     let yield_amount: u128 = mint_amount; // Double the assets
@@ -100,8 +99,7 @@ unconstrained fn max_withdraw_equals_preview_of_max_redeem() {
     let preview_redeem_assets =
         env.view_public(Vault::at(vault_address).preview_redeem(max_redeem));
 
-    let max_withdraw_assets =
-        env.view_public(Vault::at(vault_address).max_withdraw(owner));
+    let max_withdraw_assets = env.view_public(Vault::at(vault_address).max_withdraw(owner));
 
     assert(
         max_withdraw_assets == preview_redeem_assets,
@@ -128,8 +126,7 @@ unconstrained fn max_withdraw_updates_after_withdrawal() {
     );
 
     // Check initial max_withdraw
-    let initial_max_withdraw =
-        env.view_public(Vault::at(vault_address).max_withdraw(owner));
+    let initial_max_withdraw = env.view_public(Vault::at(vault_address).max_withdraw(owner));
 
     // Withdraw half the assets
     let withdraw_amount: u128 = deposit_amount / 2;

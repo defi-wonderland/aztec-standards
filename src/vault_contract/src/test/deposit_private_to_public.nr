@@ -11,12 +11,7 @@ unconstrained fn deposit_private_to_public_without_shares() {
 
     env.call_private(
         owner,
-        Vault::at(vault_address).deposit_private_to_public(
-            owner,
-            recipient,
-            mint_amount,
-            0,
-        ),
+        Vault::at(vault_address).deposit_private_to_public(owner, recipient, mint_amount, 0),
     );
 }
 
@@ -43,12 +38,7 @@ unconstrained fn deposit_private_to_public_success() {
     // Deposit
     env.call_private(
         owner,
-        Vault::at(vault_address).deposit_private_to_public(
-            owner,
-            recipient,
-            deposit_amount,
-            0,
-        ),
+        Vault::at(vault_address).deposit_private_to_public(owner, recipient, deposit_amount, 0),
     );
 
     // Check recipient got shares
@@ -92,12 +82,7 @@ unconstrained fn deposit_private_to_public_after_yield() {
     // Deposit
     env.call_private(
         owner,
-        Vault::at(vault_address).deposit_private_to_public(
-            owner,
-            recipient,
-            deposit_amount,
-            0,
-        ),
+        Vault::at(vault_address).deposit_private_to_public(owner, recipient, deposit_amount, 0),
     );
 
     // Check recipient got shares
@@ -130,12 +115,7 @@ unconstrained fn deposit_private_to_public_without_asset_approval() {
     // Deposit
     env.call_private(
         owner,
-        Vault::at(vault_address).deposit_private_to_public(
-            owner,
-            recipient,
-            deposit_amount,
-            0,
-        ),
+        Vault::at(vault_address).deposit_private_to_public(owner, recipient, deposit_amount, 0),
     );
 }
 
@@ -161,12 +141,8 @@ unconstrained fn deposit_private_to_public_on_behalf_of_wrong_caller() {
 
     // Deposit
     let proxy = env.deploy("@generic_proxy/GenericProxy").without_initializer();
-    let call_interface = Vault::at(vault_address).deposit_private_to_public(
-        owner,
-        recipient,
-        deposit_amount,
-        0,
-    );
+    let call_interface =
+        Vault::at(vault_address).deposit_private_to_public(owner, recipient, deposit_amount, 0);
     // No authwit added from owner to proxy
     env.call_private(
         owner,
@@ -199,8 +175,8 @@ unconstrained fn deposit_private_to_public_on_behalf_of_other_success() {
     );
 
     // Authorize the recipient to call deposit_private_to_public
-    let deposit_private_to_public_call_interface = Vault::at(vault_address)
-        .deposit_private_to_public(owner, recipient, deposit_amount, 0);
+    let deposit_private_to_public_call_interface =
+        Vault::at(vault_address).deposit_private_to_public(owner, recipient, deposit_amount, 0);
     authwit_cheatcodes::add_private_authwit_from_call(
         env,
         owner,
@@ -211,12 +187,7 @@ unconstrained fn deposit_private_to_public_on_behalf_of_other_success() {
     // Deposit
     env.call_private(
         owner,
-        Vault::at(vault_address).deposit_private_to_public(
-            owner,
-            recipient,
-            deposit_amount,
-            0,
-        ),
+        Vault::at(vault_address).deposit_private_to_public(owner, recipient, deposit_amount, 0),
     );
 
     // Check recipient got shares
