@@ -523,7 +523,7 @@ Vault::interface().constructor(admin, asset, vault_offset)
 Deploy an AIP-20 `Token` contract with the vault address as its minter:
 
 ```rust
-Token::interface().constructor_with_minter(name, symbol, decimals, vault_address, AztecAddress::zero())
+Token::interface().constructor_with_minter(name, symbol, decimals, vault_address)
 ```
 
 Then call either `set_shares_token` or `set_shares_token_with_initial_deposit` on the vault to link the shares token. This can only be called once by the admin.
