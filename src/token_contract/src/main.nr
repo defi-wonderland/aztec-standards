@@ -16,20 +16,13 @@ pub contract Token {
             storage::storage,
         },
         messages::message_delivery::MessageDelivery,
-        protocol::{
-            address::AztecAddress,
-            constants::CONTRACT_INSTANCE_REGISTRY_CONTRACT_ADDRESS,
-            contract_class_id::ContractClassId,
-            traits::{FromField, ToField},
-        },
+        protocol::{address::AztecAddress, traits::{FromField, ToField}},
         state_vars::{Map, Owned, PublicImmutable, PublicMutable, StateVariable},
     };
     // note library
     use uint_note::{PartialUintNote, UintNote};
     // compression library
     use compressed_string::FieldCompressedString;
-    // contract instance registry
-    use contract_instance_registry::ContractInstanceRegistry;
     // private balance library
     use balance_set::BalanceSet;
 
@@ -57,7 +50,6 @@ pub contract Token {
     /// @param total_supply The total supply of the token
     /// @param public_balances The public balances of the token
     /// @param minter The account permissioned to mint the token
-    /// @param upgrade_authority The address with permission to upgrade the contract
     #[storage]
     struct Storage<Context> {
         name: PublicImmutable<FieldCompressedString, Context>,
@@ -67,7 +59,6 @@ pub contract Token {
         total_supply: PublicMutable<u128, Context>,
         public_balances: Map<AztecAddress, PublicMutable<u128, Context>, Context>,
         minter: PublicImmutable<AztecAddress, Context>,
-        upgrade_authority: PublicImmutable<AztecAddress, Context>,
     }
 
     /// @notice Initializes the token with an initial supply
@@ -77,7 +68,6 @@ pub contract Token {
     /// @param decimals The number of decimals of the token
     /// @param initial_supply The initial supply of the token
     /// @param to The address to mint the initial supply to
-    /// @param upgrade_authority The address of the upgrade authority (zero address if not upgradeable)
     #[external("public")]
     #[initializer]
     fn constructor_with_initial_supply(
@@ -86,15 +76,12 @@ pub contract Token {
         decimals: u8,
         initial_supply: u128,
         to: AztecAddress,
-        upgrade_authority: AztecAddress,
     ) {
         self.storage.name.initialize(FieldCompressedString::from_string(name));
         self.storage.symbol.initialize(FieldCompressedString::from_string(symbol));
         self.storage.decimals.initialize(decimals);
 
         self.internal._mint_to_public(to, initial_supply);
-
-        self.storage.upgrade_authority.initialize(upgrade_authority);
     }
 
     /// @notice Initializes the token with a minter
@@ -102,22 +89,14 @@ pub contract Token {
     /// @param symbol The symbol of the token
     /// @param decimals The number of decimals of the token
     /// @param minter The address of the minter
-    /// @param upgrade_authority The address of the upgrade authority (zero address if not upgradeable)
     #[external("public")]
     #[initializer]
-    fn constructor_with_minter(
-        name: str<31>,
-        symbol: str<31>,
-        decimals: u8,
-        minter: AztecAddress,
-        upgrade_authority: AztecAddress,
-    ) {
+    fn constructor_with_minter(name: str<31>, symbol: str<31>, decimals: u8, minter: AztecAddress) {
         self.storage.name.initialize(FieldCompressedString::from_string(name));
         self.storage.symbol.initialize(FieldCompressedString::from_string(symbol));
         self.storage.decimals.initialize(decimals);
 
         self.storage.minter.initialize(minter);
-        self.storage.upgrade_authority.initialize(upgrade_authority);
     }
 
     /** ==========================================================
@@ -654,26 +633,6 @@ pub contract Token {
     fn _burn_private(from: AztecAddress, amount: u128) {
         self.internal._decrease_private_balance(from, amount, INITIAL_TRANSFER_CALL_MAX_NOTES);
         self.enqueue_self.decrease_total_supply_internal(amount);
-    }
-
-    /** ==========================================================
-     * ===================  UPGRADEABLE  =========================
-     * ======================================================== */
-
-    /// @notice Upgrades the contract to a new contract class id
-    /// @dev The upgrade authority must be set
-    /// @dev The upgrade will only be effective after the upgrade delay has passed
-    /// @param new_contract_class_id The new contract class id
-    #[external("public")]
-    fn upgrade_contract(new_contract_class_id: Field) {
-        let upgrade_authority = self.storage.upgrade_authority.read();
-
-        assert(!upgrade_authority.eq(AztecAddress::zero()), "upgrade authority not set");
-        assert(self.msg_sender().eq(upgrade_authority), "caller is not upgrade authority");
-
-        self.call(ContractInstanceRegistry::at(CONTRACT_INSTANCE_REGISTRY_CONTRACT_ADDRESS).update(
-            ContractClassId::from_field(new_contract_class_id),
-        ));
     }
 
     /** ==========================================================

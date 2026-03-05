@@ -33,7 +33,6 @@ The contract emits a public `Transfer { from, to, amount }` event on every balan
 - `public_balances: Map<AztecAddress, u128>`: Public balances per account.
 - `total_supply: u128`: Total token supply.
 - `minter: AztecAddress`: Authorized minter address (if set).
-- `upgrade_authority: AztecAddress`: Address allowed to perform contract upgrades (zero address if not upgradeable).
 
 ## Initializer Functions
 
@@ -46,7 +45,6 @@ The contract emits a public `Transfer { from, to, amount }` event on every balan
 /// @param decimals The number of decimals of the token
 /// @param initial_supply The initial supply of the token
 /// @param to The address to mint the initial supply to
-/// @param upgrade_authority The address of the upgrade authority (zero if not upgradeable)
 #[public]
 #[initializer]
 fn constructor_with_initial_supply(
@@ -55,7 +53,6 @@ fn constructor_with_initial_supply(
     decimals: u8,
     initial_supply: u128,
     to: AztecAddress,
-    upgrade_authority: AztecAddress,
 ) { /* ... */ }
 ```
 
@@ -66,7 +63,6 @@ fn constructor_with_initial_supply(
 /// @param symbol The symbol of the token
 /// @param decimals The number of decimals of the token
 /// @param minter The address of the minter
-/// @param upgrade_authority The address of the upgrade authority (zero if not upgradeable)
 #[public]
 #[initializer]
 fn constructor_with_minter(
@@ -74,7 +70,6 @@ fn constructor_with_minter(
     symbol: str<31>,
     decimals: u8,
     minter: AztecAddress,
-    upgrade_authority: AztecAddress,
 ) { /* ... */ }
 ```
 
@@ -213,15 +208,6 @@ fn burn_public(
     amount: u128,
     nonce: Field,
 ) { /* ... */ }
-```
-
-### upgrade_contract
-```rust
-/// @notice Upgrades the contract to a new contract class id
-/// @dev Only callable by the `upgrade_authority` and effective after the upgrade delay
-/// @param new_contract_class_id The new contract class id
-#[public]
-fn upgrade_contract(new_contract_class_id: Field) { /* ... */ }
 ```
 
 ## Private Functions

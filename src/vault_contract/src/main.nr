@@ -10,13 +10,9 @@ pub contract Vault {
         },
         context::PrivateContext,
         macros::{functions::{external, initializer, internal, only_self, view}, storage::storage},
-        protocol::{
-            address::AztecAddress, constants::CONTRACT_INSTANCE_REGISTRY_CONTRACT_ADDRESS,
-            contract_class_id::ContractClassId, traits::FromField,
-        },
+        protocol::address::AztecAddress,
         state_vars::PublicImmutable,
     };
-    use contract_instance_registry::ContractInstanceRegistry;
     use token_contract::Token;
 
     // Rounding direction that the vault uses to calculate shares and assets
@@ -30,14 +26,12 @@ pub contract Vault {
     /// @param asset The underlying asset token address
     /// @param shares The shares token address (minter must be this vault)
     /// @param vault_offset The offset used to prevent inflation attacks
-    /// @param upgrade_authority The address with permission to upgrade the contract
     #[storage]
     struct Storage<Context> {
         admin: PublicImmutable<AztecAddress, Context>,
         asset: PublicImmutable<AztecAddress, Context>,
         shares: PublicImmutable<AztecAddress, Context>,
         vault_offset: PublicImmutable<u128, Context>,
-        upgrade_authority: PublicImmutable<AztecAddress, Context>,
     }
 
     /// @notice Initializes the vault with asset, offset, and configuration
@@ -50,20 +44,13 @@ pub contract Vault {
     /// @param admin The address with permission to set the shares token (one-time setup)
     /// @param asset The underlying asset token address
     /// @param vault_offset The offset used to prevent inflation attacks (typically 1)
-    /// @param upgrade_authority The address of the upgrade authority (zero address if not upgradeable)
     #[external("public")]
     #[initializer]
-    fn constructor(
-        admin: AztecAddress,
-        asset: AztecAddress,
-        vault_offset: u128,
-        upgrade_authority: AztecAddress,
-    ) {
+    fn constructor(admin: AztecAddress, asset: AztecAddress, vault_offset: u128) {
         assert(vault_offset > 0, "vault_offset must be greater than 0");
         self.storage.admin.initialize(admin);
         self.storage.asset.initialize(asset);
         self.storage.vault_offset.initialize(vault_offset);
-        self.storage.upgrade_authority.initialize(upgrade_authority);
     }
 
     /// @notice Sets the shares token address (one-time, admin-only, immutable after set)
@@ -1491,24 +1478,6 @@ pub contract Vault {
             assets = assets + 1;
         }
         assets
-    }
-
-    /** ==========================================================
-     * =================== UPGRADEABLE ==========================
-     * ======================================================== */
-
-    /// @notice Upgrades the contract to a new contract class id
-    /// @param new_contract_class_id The new contract class id
-    #[external("public")]
-    fn upgrade_contract(new_contract_class_id: Field) {
-        let upgrade_authority = self.storage.upgrade_authority.read();
-
-        assert(!upgrade_authority.eq(AztecAddress::zero()), "upgrade authority not set");
-        assert(self.msg_sender().eq(upgrade_authority), "caller is not upgrade authority");
-
-        self.call(ContractInstanceRegistry::at(CONTRACT_INSTANCE_REGISTRY_CONTRACT_ADDRESS).update(
-            ContractClassId::from_field(new_contract_class_id),
-        ));
     }
 
     /** ==========================================================

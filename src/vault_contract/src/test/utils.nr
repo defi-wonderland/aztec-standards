@@ -28,14 +28,12 @@ pub unconstrained fn setup_with_vault(
         "ASSET00000000000000000000000000",
         6,
         owner,
-        AztecAddress::zero(),
     );
     let asset_address =
         env.deploy("@token_contract/Token").with_public_initializer(owner, asset_initializer);
 
     // Deploy vault with initializer (admin=owner, no shares yet)
-    let vault_initializer =
-        Vault::interface().constructor(owner, asset_address, 1, AztecAddress::zero());
+    let vault_initializer = Vault::interface().constructor(owner, asset_address, 1);
     let vault_address =
         env.deploy("@vault_contract/Vault").with_public_initializer(owner, vault_initializer);
 
@@ -45,7 +43,6 @@ pub unconstrained fn setup_with_vault(
         "SHARES0000000000000000000000000",
         18,
         vault_address,
-        AztecAddress::zero(),
     );
     let shares_address =
         env.deploy("@token_contract/Token").with_public_initializer(owner, shares_initializer);
@@ -78,14 +75,12 @@ pub unconstrained fn setup_with_vault_initial_deposit(
         "ASSET00000000000000000000000000",
         6,
         owner,
-        AztecAddress::zero(),
     );
     let asset_address =
         env.deploy("@token_contract/Token").with_public_initializer(owner, asset_initializer);
 
     // Deploy vault with initializer (admin=owner, no shares yet)
-    let vault_initializer =
-        Vault::interface().constructor(owner, asset_address, 1, AztecAddress::zero());
+    let vault_initializer = Vault::interface().constructor(owner, asset_address, 1);
     let vault_address =
         env.deploy("@vault_contract/Vault").with_public_initializer(owner, vault_initializer);
 
@@ -95,7 +90,6 @@ pub unconstrained fn setup_with_vault_initial_deposit(
         "SHARES0000000000000000000000000",
         18,
         vault_address,
-        AztecAddress::zero(),
     );
     let shares_address =
         env.deploy("@token_contract/Token").with_public_initializer(owner, shares_initializer);
@@ -132,14 +126,12 @@ pub unconstrained fn setup_vault_without_shares() -> (TestEnvironment, AztecAddr
         "ASSET00000000000000000000000000",
         6,
         owner,
-        AztecAddress::zero(),
     );
     let asset_address =
         env.deploy("@token_contract/Token").with_public_initializer(owner, asset_initializer);
 
     // Deploy vault with initializer (admin=owner) but do NOT call set_shares
-    let vault_initializer =
-        Vault::interface().constructor(owner, asset_address, 1, AztecAddress::zero());
+    let vault_initializer = Vault::interface().constructor(owner, asset_address, 1);
     let vault_address =
         env.deploy("@vault_contract/Vault").with_public_initializer(owner, vault_initializer);
 

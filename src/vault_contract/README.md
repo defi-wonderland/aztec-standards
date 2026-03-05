@@ -31,7 +31,6 @@ This separation enables cleaner composability — the shares token is a standard
 - `asset: AztecAddress`: The underlying asset token address.
 - `shares: AztecAddress`: The shares token address (set post-deployment via `set_shares_token`).
 - `vault_offset: u128`: Offset used to prevent inflation attacks.
-- `upgrade_authority: AztecAddress`: Address allowed to perform contract upgrades (zero address if not upgradeable).
 
 ## Initializer Functions
 
@@ -42,15 +41,9 @@ This separation enables cleaner composability — the shares token is a standard
 /// @param admin The address with permission to set the shares token (one-time setup)
 /// @param asset The underlying asset token address
 /// @param vault_offset The offset used to prevent inflation attacks (typically 1)
-/// @param upgrade_authority The address of the upgrade authority (zero address if not upgradeable)
 #[public]
 #[initializer]
-fn constructor(
-    admin: AztecAddress,
-    asset: AztecAddress,
-    vault_offset: u128,
-    upgrade_authority: AztecAddress,
-) { /* ... */ }
+fn constructor(admin: AztecAddress, asset: AztecAddress, vault_offset: u128) { /* ... */ }
 ```
 
 ## Setup Functions
@@ -522,7 +515,7 @@ Ideally, a single public transaction could precompute the shares token address, 
 Deploy the `Vault` contract with the asset token address, offset, and an admin who will complete setup:
 
 ```rust
-Vault::interface().constructor(admin, asset, vault_offset, upgrade_authority)
+Vault::interface().constructor(admin, asset, vault_offset)
 ```
 
 ### Step 2: Deploy the shares token and link it
@@ -530,7 +523,7 @@ Vault::interface().constructor(admin, asset, vault_offset, upgrade_authority)
 Deploy an AIP-20 `Token` contract with the vault address as its minter:
 
 ```rust
-Token::interface().constructor_with_minter(name, symbol, decimals, vault_address, upgrade_authority)
+Token::interface().constructor_with_minter(name, symbol, decimals, vault_address)
 ```
 
 Then call either `set_shares_token` or `set_shares_token_with_initial_deposit` on the vault to link the shares token. This can only be called once by the admin.
@@ -603,7 +596,7 @@ Rather than relying on virtual math alone, this method ensures that an attacker 
 
 > **NOTE — Dead Shares Should Be Unrecoverable**
 >
-> Dead shares are intended to remain permanently locked and are not expected to be redeemed under normal operation. Deployers should ensure that any upgrade or governance process preserves this invariant.
+> Dead shares are intended to remain permanently locked and are not expected to be redeemed under normal operation.
 
 ### Combining Offset and Dead Shares
 

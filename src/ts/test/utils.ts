@@ -149,7 +149,6 @@ export async function deployTokenWithMinter(wallet: Wallet, deployer: AztecAddre
     'PT',
     18,
     deployer,
-    AztecAddress.ZERO,
   ).send({ ...options, from: deployer });
   return contract;
 }
@@ -167,7 +166,6 @@ export async function deployTokenWithInitialSupply(wallet: Wallet, deployer: Azt
     'PT',
     18,
     0,
-    deployer,
     deployer,
   ).send({ ...options, from: deployer });
   return contract;
@@ -209,7 +207,6 @@ export async function deployNFTWithMinter(wallet: EmbeddedWallet, deployer: Azte
     'TestNFT',
     'TNFT',
     deployer,
-    deployer,
   ).send({ ...options, from: deployer });
   return contract;
 }
@@ -237,7 +234,6 @@ export async function deployVaultAndAssetWithMinter(
     'AT',
     6,
     deployer,
-    AztecAddress.ZERO,
   ).send({ ...options, from: deployer });
 
   // Precompute vault address (no shares needed — breaks circular dependency)
@@ -245,7 +241,7 @@ export async function deployVaultAndAssetWithMinter(
   const { address: vaultAddress } = await deriveContractAddressWithConstructor(
     VaultContractArtifact,
     'constructor',
-    [deployer, assetContract.address, 1, AztecAddress.ZERO],
+    [deployer, assetContract.address, 1],
     deployer,
     salt,
   );
@@ -261,13 +257,11 @@ export async function deployVaultAndAssetWithMinter(
   ).send({ ...options, from: deployer });
 
   // Deploy vault at precomputed address with #[initializer] constructor
-  const vaultContract = await VaultContract.deploy(
-    wallet,
-    deployer,
-    assetContract.address,
-    1,
-    AztecAddress.ZERO,
-  ).send({ ...options, from: deployer, contractAddressSalt: salt });
+  const vaultContract = await VaultContract.deploy(wallet, deployer, assetContract.address, 1).send({
+    ...options,
+    from: deployer,
+    contractAddressSalt: salt,
+  });
 
   // Set the shares token on the vault (admin-only, one-shot)
   await vaultContract.methods.set_shares_token(sharesContract.address).send({ from: deployer });
@@ -294,7 +288,7 @@ export async function deployVaultWithInitialDeposit(
   const { address: vaultAddress } = await deriveContractAddressWithConstructor(
     VaultContractArtifact,
     'constructor',
-    [deployer, assetContract.address, 1, AztecAddress.ZERO],
+    [deployer, assetContract.address, 1],
     deployer,
     salt,
   );
@@ -310,13 +304,11 @@ export async function deployVaultWithInitialDeposit(
   ).send({ ...options, from: deployer });
 
   // Deploy vault at precomputed address with #[initializer] constructor
-  const vaultContract = await VaultContract.deploy(
-    wallet,
-    deployer,
-    assetContract.address,
-    1,
-    AztecAddress.ZERO,
-  ).send({ ...options, from: deployer, contractAddressSalt: salt });
+  const vaultContract = await VaultContract.deploy(wallet, deployer, assetContract.address, 1).send({
+    ...options,
+    from: deployer,
+    contractAddressSalt: salt,
+  });
 
   if (initialDeposit > 0n) {
     // Authorize vault to transfer assets from depositor
