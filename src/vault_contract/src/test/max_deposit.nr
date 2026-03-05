@@ -27,8 +27,7 @@ unconstrained fn max_deposit_same_for_any_address() {
 
     // max_deposit should return the same value regardless of address
     let max_deposit_owner = env.view_public(Vault::at(vault_address).max_deposit(owner));
-    let max_deposit_recipient =
-        env.view_public(Vault::at(vault_address).max_deposit(recipient));
+    let max_deposit_recipient = env.view_public(Vault::at(vault_address).max_deposit(recipient));
 
     assert(
         max_deposit_owner == max_deposit_recipient,

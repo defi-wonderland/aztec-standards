@@ -80,8 +80,8 @@ unconstrained fn preview_withdraw_with_yield_accrued_success() {
     let expected_assets_to_withdraw: u128 = deposit_amount + 1;
 
     // Preview withdraw before withdraw
-    let preview_withdraw_shares = env.view_public(Vault::at(vault_address)
-        .preview_withdraw(expected_assets_to_withdraw));
+    let preview_withdraw_shares =
+        env.view_public(Vault::at(vault_address).preview_withdraw(expected_assets_to_withdraw));
 
     // Withdraw all shares
     let expected_shares_to_burn: u128 = deposit_amount;
@@ -111,8 +111,7 @@ unconstrained fn preview_withdraw_zero_amount() {
         utils::setup_with_vault(false);
 
     // Preview withdraw with zero shares
-    let preview_withdraw_assets =
-        env.view_public(Vault::at(vault_address).preview_withdraw(0));
+    let preview_withdraw_assets = env.view_public(Vault::at(vault_address).preview_withdraw(0));
 
     // Zero shares should yield zero assets
     assert(preview_withdraw_assets == 0, "Zero shares should return zero assets");

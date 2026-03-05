@@ -11,13 +11,7 @@ unconstrained fn withdraw_private_to_private_exact_without_shares() {
 
     env.call_private(
         owner,
-        Vault::at(vault_address).withdraw_private_to_private_exact(
-            owner,
-            recipient,
-            0,
-            0,
-            0,
-        ),
+        Vault::at(vault_address).withdraw_private_to_private_exact(owner, recipient, 0, 0, 0),
     );
 }
 

@@ -21,8 +21,7 @@ unconstrained fn convert_to_shares_initial_ratio() {
 
     // At initial 1:1 ratio, convert_to_shares should return the same amount
     let assets_to_convert: u128 = 1000;
-    let shares =
-        env.view_public(Vault::at(vault_address).convert_to_shares(assets_to_convert));
+    let shares = env.view_public(Vault::at(vault_address).convert_to_shares(assets_to_convert));
 
     assert(shares == assets_to_convert, "convert_to_shares should return 1:1 at initial ratio");
 }
@@ -64,8 +63,7 @@ unconstrained fn convert_to_shares_with_yield_accrued_rounds_down() {
     // After yield (2x assets), 2000 assets should convert to 1000 shares
     let assets_to_convert: u128 = 2000;
     let expected_shares: u128 = 1000;
-    let shares =
-        env.view_public(Vault::at(vault_address).convert_to_shares(assets_to_convert));
+    let shares = env.view_public(Vault::at(vault_address).convert_to_shares(assets_to_convert));
 
     assert(shares == expected_shares, "2000 assets should convert to 1000 shares");
 }

@@ -84,8 +84,7 @@ unconstrained fn max_redeem_different_per_owner() {
 
     // max_redeem should return different values for different owners
     let max_redeem_owner = env.view_public(Vault::at(vault_address).max_redeem(owner));
-    let max_redeem_recipient =
-        env.view_public(Vault::at(vault_address).max_redeem(recipient));
+    let max_redeem_recipient = env.view_public(Vault::at(vault_address).max_redeem(recipient));
 
     // First deposit 1:1, second deposit also ~1:1 (slight difference due to offset)
     assert(max_redeem_owner == owner_deposit, "max_redeem should return owner's balance");

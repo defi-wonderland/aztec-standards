@@ -10,12 +10,7 @@ unconstrained fn withdraw_public_to_public_without_shares() {
 
     env.call_public(
         owner,
-        Vault::at(vault_address).withdraw_public_to_public(
-            owner,
-            recipient,
-            mint_amount,
-            0,
-        ),
+        Vault::at(vault_address).withdraw_public_to_public(owner, recipient, mint_amount, 0),
     );
 }
 

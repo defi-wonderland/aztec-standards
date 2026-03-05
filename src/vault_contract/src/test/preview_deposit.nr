@@ -35,12 +35,7 @@ unconstrained fn preview_deposit_success() {
     // Deposit
     env.call_public(
         owner,
-        Vault::at(vault_address).deposit_public_to_public(
-            owner,
-            recipient,
-            deposit_amount,
-            0,
-        ),
+        Vault::at(vault_address).deposit_public_to_public(owner, recipient, deposit_amount, 0),
     );
 
     // Check recipient got shares
@@ -83,12 +78,7 @@ unconstrained fn preview_deposit_with_yield_accrued_success() {
     // Deposit
     env.call_public(
         owner,
-        Vault::at(vault_address).deposit_public_to_public(
-            owner,
-            recipient,
-            deposit_amount,
-            0,
-        ),
+        Vault::at(vault_address).deposit_public_to_public(owner, recipient, deposit_amount, 0),
     );
 
     // Check recipient got shares
@@ -106,8 +96,7 @@ unconstrained fn preview_deposit_zero_amount() {
         utils::setup_with_vault(false);
 
     // Preview deposit with zero assets
-    let preview_deposit_shares =
-        env.view_public(Vault::at(vault_address).preview_deposit(0));
+    let preview_deposit_shares = env.view_public(Vault::at(vault_address).preview_deposit(0));
 
     // Zero assets should yield zero shares
     assert(preview_deposit_shares == 0, "Zero assets should return zero shares");

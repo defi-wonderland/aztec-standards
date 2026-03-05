@@ -35,7 +35,14 @@ unconstrained fn preview_redeem_success() {
 
     let shares_to_burn: u128 = deposit_amount;
 
-    utils::redeem_public_to_public(env, vault_address, shares_address, owner, recipient, shares_to_burn);
+    utils::redeem_public_to_public(
+        env,
+        vault_address,
+        shares_address,
+        owner,
+        recipient,
+        shares_to_burn,
+    );
 
     // Check recipient received assets (1:1 ratio)
     utils::check_public_balance(env, asset_address, recipient, assets_to_redeem);
@@ -79,7 +86,14 @@ unconstrained fn preview_redeem_with_yield_accrued_success() {
         "preview_redeem should return the expected assets",
     );
 
-    utils::redeem_public_to_public(env, vault_address, shares_address, owner, recipient, shares_to_burn);
+    utils::redeem_public_to_public(
+        env,
+        vault_address,
+        shares_address,
+        owner,
+        recipient,
+        shares_to_burn,
+    );
 
     // Check recipient received the expected assets
     utils::check_public_balance(env, asset_address, recipient, expected_assets);
@@ -92,8 +106,7 @@ unconstrained fn preview_redeem_zero_amount() {
         utils::setup_with_vault(false);
 
     // Preview redeem with zero assets
-    let preview_redeem_shares =
-        env.view_public(Vault::at(vault_address).preview_redeem(0));
+    let preview_redeem_shares = env.view_public(Vault::at(vault_address).preview_redeem(0));
 
     // Zero assets should require zero shares
     assert(preview_redeem_shares == 0, "Zero assets should return zero shares");
