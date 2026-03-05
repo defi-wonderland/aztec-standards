@@ -3,7 +3,6 @@ import { Command, Option } from 'commander';
 import { PublicKeys } from '@aztec/aztec.js/keys';
 import {
   getContractInstanceFromInstantiationParams,
-  DeployMethod,
   Contract,
   type InteractionFeeOptions,
   DeployOptions,
@@ -12,7 +11,6 @@ import { TxStatus } from '@aztec/aztec.js/tx';
 import { AztecAddress } from '@aztec/aztec.js/addresses';
 import { Fr } from '@aztec/aztec.js/fields';
 import { SponsoredFeePaymentMethod } from '@aztec/aztec.js/fee';
-import { AccountWithSecretKey } from '@aztec/aztec.js/account';
 import { AccountManager, type Wallet } from '@aztec/aztec.js/wallet';
 import { createAztecNodeClient, type AztecNode } from '@aztec/aztec.js/node';
 import { createLogger } from '@aztec/foundation/log';
@@ -80,8 +78,6 @@ interface DeployedContract<T> {
 
 export interface DeployResult {
   contracts: DeployedContracts;
-  wallet?: EmbeddedWallet;
-  deployer?: AccountWithSecretKey;
 }
 
 const UNIVERSAL_DEPLOYER = AztecAddress.ZERO;
@@ -133,7 +129,7 @@ interface CLIOptions {
   network: Network;
 }
 
-export function logDeployedContracts(contracts: DeployedContracts, deployer?: AccountWithSecretKey): void {
+export function logDeployedContracts(contracts: DeployedContracts): void {
   logger.info('Deployed contracts:');
 
   for (const [key, value] of Object.entries(contracts.tokens)) {
@@ -144,10 +140,6 @@ export function logDeployedContracts(contracts: DeployedContracts, deployer?: Ac
   if (contracts.dripper) {
     const status = contracts.dripper.status === 'deployed' ? '[NEWLY DEPLOYED]' : '[EXISTING]';
     logger.info(`dripper: ${contracts.dripper.contract.address.toString()} ${status}`);
-  }
-
-  if (deployer) {
-    logger.info(`deployer: ${deployer.getAddress().toString()}`);
   }
 }
 
@@ -276,14 +268,7 @@ async function deployContractGeneric(
 
   logger.info(`Deploying ${label}...`);
 
-  const deployMethod = new DeployMethod(
-    PublicKeys.default(),
-    deployer,
-    artifact,
-    (inst) => Contract.at(inst.address, artifact, deployer),
-    constructorArgs,
-    constructorArtifact,
-  );
+  const deployMethod = Contract.deploy(deployer, artifact, constructorArgs, constructorArtifact);
 
   try {
     await deployMethod.send({
@@ -535,11 +520,9 @@ export async function deployContracts(options: CLIOptions, config: DeploymentCon
       dripper,
     };
 
-    return { contracts: deployedContracts, wallet, deployer: account };
-  } catch (error) {
-    logger.error('Deployment failed:', error);
+    return { contracts: deployedContracts };
+  } finally {
     await wallet.stop();
-    throw error;
   }
 }
 
@@ -553,18 +536,14 @@ program
   .option('--dry-run', 'Show configuration without deploying')
   .option('--output <file>', 'Write deployment JSON to file')
   .addOption(
-    new Option('-n, --network <network>', 'Target network')
-      .choices(['devnet-2', 'testnet', 'sandbox'])
-      .default('devnet-2'),
+    new Option('-n, --network <network>', 'Target network').choices(['devnet', 'testnet', 'sandbox']).default('devnet'),
   )
   .action(async (options: CLIOptions) => {
-    let wallet: EmbeddedWallet | undefined;
     try {
       const activeConfig = getConfig(options.network);
 
       const result = await deployContracts(options, activeConfig);
-      wallet = result.wallet;
-      logDeployedContracts(result.contracts, result.deployer);
+      logDeployedContracts(result.contracts);
 
       if (!options.dryRun) {
         const upgradeAuthority = activeConfig.contracts.upgradeAuthority
@@ -591,11 +570,9 @@ program
     } catch (error) {
       logger.error('Deployment failed:', error);
       process.exitCode = 1;
-    } finally {
-      await wallet?.stop();
     }
   });
 
 if (import.meta.url === `file://${process.argv[1]}`) {
-  program.parse(process.argv);
+  program.parseAsync(process.argv).then(() => process.exit(process.exitCode ?? 0));
 }

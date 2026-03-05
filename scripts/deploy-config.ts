@@ -31,7 +31,7 @@ export interface DeploymentConfig {
 }
 
 // TODO: add mainnet-alpha
-export type Network = 'devnet-2' | 'testnet' | 'sandbox';
+export type Network = 'devnet' | 'testnet' | 'sandbox';
 
 const TOKENS: Record<string, TokenConfig> = {
   weth: { name: 'WETH', symbol: 'WETH', decimals: 18, salt: DEFAULT_SALT },
@@ -45,10 +45,10 @@ export function getConfig(network: Network): DeploymentConfig {
   return {
     network: {
       nodeUrl,
-      name: network === 'devnet-2' ? 'devnet' : network,
+      name: network,
     },
     deployer: {
-      dataDirectory: `${network === 'devnet-2' ? 'devnet' : network}-store/`,
+      dataDirectory: `${network}-store/`,
     },
     contracts: {
       tokens: TOKENS,
