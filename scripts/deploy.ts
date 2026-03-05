@@ -42,11 +42,8 @@ const logger = createLogger('aztec:deploy');
 // --- Types ---
 
 export interface DeployedContracts {
-  weth?: { contract: TokenContract; status: 'deployed' | 'existing' };
-  dai?: { contract: TokenContract; status: 'deployed' | 'existing' };
-  usdc?: { contract: TokenContract; status: 'deployed' | 'existing' };
+  tokens: Record<string, { contract: TokenContract; status: 'deployed' | 'existing' }>;
   dripper?: { contract: DripperContract; status: 'deployed' | 'existing' };
-  deployer?: AccountWithSecretKey;
 }
 
 interface TokenConstructorArgs {
@@ -85,56 +82,34 @@ interface DeployedContract<T> {
 export interface DeployResult {
   contracts: DeployedContracts;
   wallet?: EmbeddedWallet;
+  deployer?: AccountWithSecretKey;
 }
 
 const UNIVERSAL_DEPLOYER = AztecAddress.ZERO;
 
 function getDeploymentData(
-  contracts: DeployedContracts | null | undefined,
+  tokenAddresses: Record<string, AztecAddress>,
+  dripperAddress: AztecAddress | undefined,
   config: DeploymentConfig,
   upgradeAuthority: AztecAddress,
 ): DeploymentData {
-  if (!contracts || (!contracts.weth && !contracts.dai && !contracts.usdc && !contracts.dripper)) {
-    return { tokens: [] };
-  }
-
-  const dripperAddress = contracts.dripper?.contract?.address;
   const minterAddress = dripperAddress || AztecAddress.ZERO;
 
-  const tokens: DeploymentToken[] = [];
-
-  if (contracts.weth) {
-    const { name, symbol, decimals, salt } = config.contracts.tokens.weth;
-    tokens.push({
-      address: contracts.weth.contract.address,
-      salt,
+  const tokens: DeploymentToken[] = Object.entries(config.contracts.tokens)
+    .filter(([key]) => key in tokenAddresses)
+    .map(([key, tokenConfig]) => ({
+      address: tokenAddresses[key],
+      salt: tokenConfig.salt,
       deployer: UNIVERSAL_DEPLOYER,
-      constructorArtifact: 'constructor_with_minter',
-      constructorArgs: { name, symbol, decimals, minter: minterAddress, upgrade_authority: upgradeAuthority },
-    });
-  }
-
-  if (contracts.dai) {
-    const { name, symbol, decimals, salt } = config.contracts.tokens.dai;
-    tokens.push({
-      address: contracts.dai.contract.address,
-      salt,
-      deployer: UNIVERSAL_DEPLOYER,
-      constructorArtifact: 'constructor_with_minter',
-      constructorArgs: { name, symbol, decimals, minter: minterAddress, upgrade_authority: upgradeAuthority },
-    });
-  }
-
-  if (contracts.usdc) {
-    const { name, symbol, decimals, salt } = config.contracts.tokens.usdc;
-    tokens.push({
-      address: contracts.usdc.contract.address,
-      salt,
-      deployer: UNIVERSAL_DEPLOYER,
-      constructorArtifact: 'constructor_with_minter',
-      constructorArgs: { name, symbol, decimals, minter: minterAddress, upgrade_authority: upgradeAuthority },
-    });
-  }
+      constructorArtifact: 'constructor_with_minter' as const,
+      constructorArgs: {
+        name: tokenConfig.name,
+        symbol: tokenConfig.symbol,
+        decimals: tokenConfig.decimals,
+        minter: minterAddress,
+        upgrade_authority: upgradeAuthority,
+      },
+    }));
 
   const result: DeploymentData = { tokens };
 
@@ -193,18 +168,21 @@ async function withRetry<T>(operation: () => Promise<T>, operationName: string, 
   throw lastError!;
 }
 
-export function logDeployedContracts(contracts: DeployedContracts): void {
+export function logDeployedContracts(contracts: DeployedContracts, deployer?: AccountWithSecretKey): void {
   logger.info('Deployed contracts:');
 
-  for (const [key, value] of Object.entries(contracts)) {
-    if (value && typeof value === 'object' && 'contract' in value) {
-      const status = value.status === 'deployed' ? '[NEWLY DEPLOYED]' : '[EXISTING]';
-      logger.info(`${key}: ${value.contract.address.toString()} ${status}`);
-    } else if (value instanceof AccountWithSecretKey) {
-      logger.info(`${key}: ${value.getAddress().toString()}`);
-    } else {
-      logger.info(`${key}: ${value}`);
-    }
+  for (const [key, value] of Object.entries(contracts.tokens)) {
+    const status = value.status === 'deployed' ? '[NEWLY DEPLOYED]' : '[EXISTING]';
+    logger.info(`${key}: ${value.contract.address.toString()} ${status}`);
+  }
+
+  if (contracts.dripper) {
+    const status = contracts.dripper.status === 'deployed' ? '[NEWLY DEPLOYED]' : '[EXISTING]';
+    logger.info(`dripper: ${contracts.dripper.contract.address.toString()} ${status}`);
+  }
+
+  if (deployer) {
+    logger.info(`deployer: ${deployer.getAddress().toString()}`);
   }
 }
 
@@ -227,8 +205,13 @@ export async function createSponsoredFeeOptions(wallet: Wallet): Promise<Interac
   try {
     await wallet.registerContract(sponsoredFPCInstance, SponsoredFPCContract.artifact);
     logger.info(`Registered SponsoredFPC at: ${sponsoredFPCInstance.address.toString()}`);
-  } catch (error) {
-    logger.debug('SponsoredFPC already registered');
+  } catch (error: any) {
+    const msg = error?.message ?? String(error);
+    if (msg.includes('already')) {
+      logger.debug('SponsoredFPC already registered');
+    } else {
+      throw error;
+    }
   }
 
   const paymentMethod = new SponsoredFeePaymentMethod(sponsoredFPCInstance.address);
@@ -314,8 +297,13 @@ async function deployContractGeneric(
     try {
       await deployer.registerContract(instance, artifact);
       logger.debug(`${label} registered with PXE`);
-    } catch (error) {
-      logger.debug(`${label} already registered with PXE`);
+    } catch (error: any) {
+      const msg = error?.message ?? String(error);
+      if (msg.includes('already')) {
+        logger.debug(`${label} already registered with PXE`);
+      } else {
+        throw error;
+      }
     }
 
     return { address: instance.address, status: 'existing' };
@@ -482,55 +470,12 @@ export async function deployContracts(options: CLIOptions, config: DeploymentCon
     logger.info('[DRY RUN] Computing contract addresses...');
     const addresses = await computeContractAddresses(config);
 
-    const deploymentData: DeploymentData = {
-      tokens: [
-        {
-          address: addresses.weth,
-          salt: config.contracts.tokens.weth.salt,
-          deployer: UNIVERSAL_DEPLOYER,
-          constructorArtifact: 'constructor_with_minter',
-          constructorArgs: {
-            name: config.contracts.tokens.weth.name,
-            symbol: config.contracts.tokens.weth.symbol,
-            decimals: config.contracts.tokens.weth.decimals,
-            minter: addresses.dripper,
-            upgrade_authority: addresses.upgradeAuthority,
-          },
-        },
-        {
-          address: addresses.dai,
-          salt: config.contracts.tokens.dai.salt,
-          deployer: UNIVERSAL_DEPLOYER,
-          constructorArtifact: 'constructor_with_minter',
-          constructorArgs: {
-            name: config.contracts.tokens.dai.name,
-            symbol: config.contracts.tokens.dai.symbol,
-            decimals: config.contracts.tokens.dai.decimals,
-            minter: addresses.dripper,
-            upgrade_authority: addresses.upgradeAuthority,
-          },
-        },
-        {
-          address: addresses.usdc,
-          salt: config.contracts.tokens.usdc.salt,
-          deployer: UNIVERSAL_DEPLOYER,
-          constructorArtifact: 'constructor_with_minter',
-          constructorArgs: {
-            name: config.contracts.tokens.usdc.name,
-            symbol: config.contracts.tokens.usdc.symbol,
-            decimals: config.contracts.tokens.usdc.decimals,
-            minter: addresses.dripper,
-            upgrade_authority: addresses.upgradeAuthority,
-          },
-        },
-      ],
-      dripper: {
-        address: addresses.dripper,
-        salt: config.contracts.dripper.salt,
-        deployer: UNIVERSAL_DEPLOYER,
-        constructorArtifact: 'constructor',
-      },
+    const tokenAddresses: Record<string, AztecAddress> = {
+      weth: addresses.weth,
+      dai: addresses.dai,
+      usdc: addresses.usdc,
     };
+    const deploymentData = getDeploymentData(tokenAddresses, addresses.dripper, config, addresses.upgradeAuthority);
 
     logger.info('[DRY RUN] Deployment data:');
     logger.info(JSON.stringify(deploymentData, null, 4));
@@ -542,7 +487,7 @@ export async function deployContracts(options: CLIOptions, config: DeploymentCon
       logger.info(`[DRY RUN] Deployment data written to ${options.output}`);
     }
 
-    return { contracts: {} };
+    return { contracts: { tokens: {} } };
   }
 
   const nodeUrl = config.network.nodeUrl;
@@ -562,7 +507,6 @@ export async function deployContracts(options: CLIOptions, config: DeploymentCon
       dataStoreMapSizeKb: 1e6,
     },
   });
-  // wallet.createSchnorrAccount(sepl)
   logger.info('Connected to PXE');
 
   try {
@@ -615,8 +559,13 @@ export async function deployContracts(options: CLIOptions, config: DeploymentCon
       try {
         await wallet.registerContract(dripperInstance, DripperContractArtifact);
         logger.debug('Dripper registered with PXE');
-      } catch (error) {
-        logger.debug('Dripper already registered');
+      } catch (error: any) {
+        const msg = error?.message ?? String(error);
+        if (msg.includes('already')) {
+          logger.debug('Dripper already registered');
+        } else {
+          throw error;
+        }
       }
 
       const dripperContract = await DripperContract.at(dripperAddress, wallet);
@@ -670,14 +619,11 @@ export async function deployContracts(options: CLIOptions, config: DeploymentCon
     logger.info('Deployment completed successfully!');
 
     const deployedContracts: DeployedContracts = {
-      weth: deployedTokens['weth'],
-      dai: deployedTokens['dai'],
-      usdc: deployedTokens['usdc'],
+      tokens: deployedTokens,
       dripper,
-      deployer: account,
     };
 
-    return { contracts: deployedContracts, wallet };
+    return { contracts: deployedContracts, wallet, deployer: account };
   } catch (error) {
     logger.error('Deployment failed:', error);
     await wallet.stop();
@@ -706,13 +652,17 @@ program
 
       const result = await deployContracts(options, activeConfig);
       wallet = result.wallet;
-      logDeployedContracts(result.contracts);
+      logDeployedContracts(result.contracts, result.deployer);
 
       if (!options.dryRun) {
         const upgradeAuthority = activeConfig.contracts.upgradeAuthority
           ? AztecAddress.fromString(activeConfig.contracts.upgradeAuthority)
           : AztecAddress.ZERO;
-        const deploymentData = getDeploymentData(result.contracts, activeConfig, upgradeAuthority);
+        const tokenAddresses = Object.fromEntries(
+          Object.entries(result.contracts.tokens).map(([k, v]) => [k, v.contract.address]),
+        );
+        const dripperAddress = result.contracts.dripper?.contract?.address;
+        const deploymentData = getDeploymentData(tokenAddresses, dripperAddress, activeConfig, upgradeAuthority);
 
         // Always update src/deployments.json
         const deploymentsPath = join(__dirname, '../src/deployments.json');
