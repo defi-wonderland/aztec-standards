@@ -33,12 +33,6 @@ export interface DeploymentConfig {
     upgradeAuthority?: string;
   };
   deployment: {
-    retryOptions: {
-      maxRetries: number;
-      initialDelayMs: number;
-      backoffMultiplier: number;
-      maxDelayMs: number;
-    };
     deployDelay: number;
   };
 }
@@ -60,12 +54,6 @@ export function getConfig(network: Network): DeploymentConfig {
       upgradeAuthority: process.env.UPGRADE_AUTHORITY,
     },
     deployment: {
-      retryOptions: {
-        maxRetries: 3,
-        initialDelayMs: 5000,
-        backoffMultiplier: 2,
-        maxDelayMs: 30000,
-      },
       deployDelay: 24000,
     },
   };

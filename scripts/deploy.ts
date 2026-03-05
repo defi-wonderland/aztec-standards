@@ -134,40 +134,6 @@ interface CLIOptions {
   network: Network;
 }
 
-interface RetryOptions {
-  maxRetries: number;
-  initialDelayMs: number;
-  backoffMultiplier: number;
-  maxDelayMs: number;
-}
-
-async function withRetry<T>(operation: () => Promise<T>, operationName: string, options: RetryOptions): Promise<T> {
-  const { maxRetries, initialDelayMs, backoffMultiplier, maxDelayMs } = options;
-
-  let lastError: Error;
-  let delayMs = initialDelayMs;
-
-  for (let attempt = 1; attempt <= maxRetries; attempt++) {
-    try {
-      logger.info(`${operationName}: Attempt ${attempt}/${maxRetries}`);
-      return await operation();
-    } catch (error) {
-      lastError = error as Error;
-      logger.warn(`${operationName}: Attempt ${attempt} failed:`, error);
-
-      if (attempt < maxRetries) {
-        const actualDelay = Math.min(delayMs, maxDelayMs);
-        logger.info(`${operationName}: Retrying in ${actualDelay / 1000} seconds...`);
-        await sleep(actualDelay);
-        delayMs *= backoffMultiplier;
-      }
-    }
-  }
-
-  logger.error(`${operationName}: All ${maxRetries} attempts failed`);
-  throw lastError!;
-}
-
 export function logDeployedContracts(contracts: DeployedContracts, deployer?: AccountWithSecretKey): void {
   logger.info('Deployed contracts:');
 
@@ -385,20 +351,6 @@ export async function deployDripper(
   return { contract, status: result.status };
 }
 
-export async function deployTokenWithRetry(
-  deployer: Wallet,
-  node: AztecNode,
-  params: TokenDeployParams,
-  options: DeployOptions,
-  retryOptions: RetryOptions,
-): Promise<{ contract: TokenContract; status: 'deployed' | 'existing' }> {
-  return withRetry(
-    () => deployToken(deployer, node, params, options),
-    `Deploy Token ${params.name} (${params.symbol})`,
-    retryOptions,
-  );
-}
-
 interface ComputedAddresses {
   weth: AztecAddress;
   dai: AztecAddress;
@@ -573,11 +525,7 @@ export async function deployContracts(options: CLIOptions, config: DeploymentCon
     } else {
       logger.info('Deploying or checking dripper contract...');
       const dripperSalt = new Fr(config.contracts.dripper.salt);
-      dripper = await withRetry(
-        () => deployDripper(wallet, node, dripperSalt, deployOptions),
-        'Deploy Dripper',
-        config.deployment.retryOptions,
-      );
+      dripper = await deployDripper(wallet, node, dripperSalt, deployOptions);
     }
 
     if (!dripper) {
@@ -590,7 +538,7 @@ export async function deployContracts(options: CLIOptions, config: DeploymentCon
     const deployedTokens: Record<string, DeployedContract<TokenContract>> = {};
 
     for (const [key, tokenConfig] of tokenEntries) {
-      const result = await deployTokenWithRetry(
+      const result = await deployToken(
         wallet,
         node,
         {
@@ -602,7 +550,6 @@ export async function deployContracts(options: CLIOptions, config: DeploymentCon
           salt: new Fr(tokenConfig.salt),
         },
         deployOptions,
-        config.deployment.retryOptions,
       );
 
       deployedTokens[key] = result;
