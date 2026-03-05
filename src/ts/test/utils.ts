@@ -149,6 +149,7 @@ export async function deployTokenWithMinter(wallet: Wallet, deployer: AztecAddre
     18,
     deployer,
     AztecAddress.ZERO,
+    AztecAddress.ZERO,
   ).send({ ...options, from: deployer });
   return contract;
 }
@@ -168,6 +169,7 @@ export async function deployTokenWithInitialSupply(wallet: Wallet, deployer: Azt
     0,
     deployer,
     deployer,
+    AztecAddress.ZERO,
   ).send({ ...options, from: deployer });
   return contract;
 }
@@ -233,6 +235,7 @@ export async function deployVaultAndAssetWithMinter(
     6,
     deployer,
     AztecAddress.ZERO,
+    AztecAddress.ZERO,
   ).send({ ...options, from: deployer });
 
   const vaultContract = await TokenContract.deployWithOpts(
@@ -242,6 +245,7 @@ export async function deployVaultAndAssetWithMinter(
     6,
     assetContract.address,
     1,
+    AztecAddress.ZERO,
     AztecAddress.ZERO,
   ).send({ ...options, from: deployer });
 
@@ -266,6 +270,7 @@ export async function deployVaultWithInitialDeposit(
     6,
     assetContract.address,
     1,
+    AztecAddress.ZERO,
     AztecAddress.ZERO,
   ).send({ ...options, from: deployer })) as TokenContract;
 

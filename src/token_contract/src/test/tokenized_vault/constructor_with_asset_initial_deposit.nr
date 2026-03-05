@@ -28,6 +28,7 @@ unconstrained fn vault_with_initial_deposit_success() {
         asset_address,
         1,
         AztecAddress::zero(),
+        AztecAddress::zero(),
     );
     let vault_address =
         env.deploy("@token_contract/Token").with_public_initializer(owner, vault_initializer);

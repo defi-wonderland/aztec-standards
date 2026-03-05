@@ -56,16 +56,18 @@ describe('Token', () => {
 
       const deploymentData = await getContractInstanceFromInstantiationParams(TokenContractArtifact, {
         constructorArtifact: 'constructor_with_minter',
-        constructorArgs: ['PrivateToken', 'PT', 18, deployerWallet, deployerWallet],
+        constructorArgs: ['PrivateToken', 'PT', 18, deployerWallet, deployerWallet, AztecAddress.ZERO],
         salt,
         deployer: deployerWallet,
       });
 
       const deployer = new ContractDeployer(TokenContractArtifact, wallet, undefined, 'constructor_with_minter');
-      const contract = await deployer.deploy('PrivateToken', 'PT', 18, deployerWallet, deployerWallet).send({
-        contractAddressSalt: salt,
-        from: deployerWallet,
-      });
+      const contract = await deployer
+        .deploy('PrivateToken', 'PT', 18, deployerWallet, deployerWallet, AztecAddress.ZERO)
+        .send({
+          contractAddressSalt: salt,
+          from: deployerWallet,
+        });
 
       const contractMetadata = await wallet.getContractMetadata(deploymentData.address);
       expect(contractMetadata).toBeDefined();
@@ -84,7 +86,7 @@ describe('Token', () => {
 
       const deploymentData = await getContractInstanceFromInstantiationParams(TokenContractArtifact, {
         constructorArtifact: 'constructor_with_initial_supply',
-        constructorArgs: ['PrivateToken', 'PT', 18, 1, deployerWallet, deployerWallet],
+        constructorArgs: ['PrivateToken', 'PT', 18, 1, deployerWallet, deployerWallet, AztecAddress.ZERO],
         salt,
         deployer: deployerWallet,
       });
@@ -95,7 +97,7 @@ describe('Token', () => {
         'constructor_with_initial_supply',
       );
       const contract = await deployer
-        .deploy('PrivateToken', 'PT', 18, 1, deployerWallet, deployerWallet)
+        .deploy('PrivateToken', 'PT', 18, 1, deployerWallet, deployerWallet, AztecAddress.ZERO)
         .send({ contractAddressSalt: salt, from: deployerWallet });
 
       const contractMetadata = await wallet.getContractMetadata(deploymentData.address);

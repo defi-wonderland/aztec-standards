@@ -80,6 +80,7 @@ pub unconstrained fn setup_with_asset(
         6, // TODO: Test 18 decimals once overflows are handled correctly in asset-share conversion
         owner,
         AztecAddress::zero(),
+        AztecAddress::zero(),
     );
     let asset_contract_address = env.deploy("@token_contract/Token").with_public_initializer(
         owner,
@@ -93,6 +94,7 @@ pub unconstrained fn setup_with_asset(
         18,
         asset_contract_address,
         1,
+        AztecAddress::zero(),
         AztecAddress::zero(),
     );
     let vault_contract_address = env.deploy("@token_contract/Token").with_public_initializer(
@@ -124,6 +126,7 @@ pub unconstrained fn setup_with_asset_initial_deposit(
         18,
         asset_contract_address,
         1,
+        AztecAddress::zero(),
         AztecAddress::zero(),
     );
     let vault_contract_address = env.deploy("@token_contract/Token").with_public_initializer(
@@ -169,6 +172,7 @@ pub unconstrained fn deploy_token_with_initial_supply(
         initial_supply,
         to,
         AztecAddress::zero(),
+        AztecAddress::zero(),
     );
     let token_contract_address = env.deploy("@token_contract/Token").with_public_initializer(
         owner,
@@ -189,6 +193,7 @@ pub unconstrained fn deploy_token_with_minter(
         "TT00000000000000000000000000000",
         18,
         minter,
+        AztecAddress::zero(),
         AztecAddress::zero(),
     );
     let token_contract_address = env.deploy("@token_contract/Token").with_public_initializer(
