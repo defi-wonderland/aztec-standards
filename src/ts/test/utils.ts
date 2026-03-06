@@ -37,7 +37,7 @@ import {
 import { getPXEConfig } from '@aztec/pxe/server';
 import { Barretenberg } from '@aztec/bb.js';
 
-import { TokenContract } from '../../../src/artifacts/Token.js';
+import { TokenContract, TokenContractArtifact } from '../../../src/artifacts/Token.js';
 import { VaultContract, VaultContractArtifact } from '../../../src/artifacts/Vault.js';
 import { NFTContract } from '../../../src/artifacts/NFT.js';
 import { TestLogicContract } from '../../../src/artifacts/TestLogic.js';
@@ -215,9 +215,9 @@ export async function deployNFTWithMinter(wallet: EmbeddedWallet, deployer: Azte
 
 /**
  * Deploys 3 contracts: asset token, shares token, and vault.
- * The vault is deployed first without initializer to get its address,
- * then the shares token is deployed with the vault as minter,
- * then the vault is initialized with asset and shares addresses.
+ * The vault constructor computes the shares token address deterministically from the token
+ * class ID, salt, deployer, and constructor args. The shares token must be deployed with the
+ * same salt and deployer so the computed address matches.
  * @param wallet - The wallet to deploy the contract with.
  * @param deployer - The account to deploy the contract with.
  * @returns [vault, asset, shares] contract instances.
@@ -236,43 +236,54 @@ export async function deployVaultAndAssetWithMinter(
     deployer,
   ).send({ ...options, from: deployer });
 
-  // Precompute vault address (no shares needed — breaks circular dependency)
+  // Get token class ID for shares address derivation
+  const tokenClass = await getContractClassFromArtifact(TokenContractArtifact);
+  const sharesClassId = tokenClass.id;
+
+  // Use the same salt and deployer for both vault and shares
   const salt = Fr.random();
+
+  // Precompute vault address (constructor computes shares address internally)
   const { address: vaultAddress } = await deriveContractAddressWithConstructor(
     VaultContractArtifact,
     'constructor',
-    [deployer, assetContract.address, 1],
+    [assetContract.address, 1, 'SharesToken', 'ST', 18, sharesClassId],
     deployer,
     salt,
   );
 
-  // Deploy shares token with precomputed vault address as minter
+  // Deploy shares token with precomputed vault address as minter, same salt and deployer
   const sharesContract = await TokenContract.deployWithOpts(
     { method: 'constructor_with_minter', wallet },
     'SharesToken',
     'ST',
     18,
     vaultAddress,
-    AztecAddress.ZERO,
-  ).send({ ...options, from: deployer });
+  ).send({ ...options, from: deployer, contractAddressSalt: salt });
 
-  // Deploy vault at precomputed address with #[initializer] constructor
-  const vaultContract = await VaultContract.deploy(wallet, deployer, assetContract.address, 1).send({
+  // Deploy vault — constructor reads its own salt/deployer and computes shares address
+  const vaultContract = await VaultContract.deployWithOpts(
+    { method: 'constructor', wallet },
+    assetContract.address,
+    1,
+    'SharesToken',
+    'ST',
+    18,
+    sharesClassId,
+  ).send({
     ...options,
     from: deployer,
     contractAddressSalt: salt,
   });
-
-  // Set the shares token on the vault (admin-only, one-shot)
-  await vaultContract.methods.set_shares_token(sharesContract.address).send({ from: deployer });
 
   return [vaultContract as VaultContract, assetContract as TokenContract, sharesContract as TokenContract];
 }
 
 /**
  * Deploys a vault with an optional initial deposit for inflation-attack protection.
- * Deploys 3 contracts: vault (without initializer), shares token (with vault as minter), then initializes vault.
- * If initialDeposit > 0, authorizes vault to transfer assets and deposits them.
+ * If initialDeposit > 0, uses constructor_with_initial_deposit which transfers assets from
+ * the depositor and mints permanently-locked shares to the vault during initialization.
+ * Otherwise, uses the regular constructor.
  * @returns [vault, shares] contract instances.
  */
 export async function deployVaultWithInitialDeposit(
@@ -283,53 +294,77 @@ export async function deployVaultWithInitialDeposit(
   depositor: AztecAddress,
   options?: DeployOptions,
 ): Promise<[VaultContract, TokenContract]> {
-  // Precompute vault address (no shares needed — breaks circular dependency)
+  const tokenClass = await getContractClassFromArtifact(TokenContractArtifact);
+  const sharesClassId = tokenClass.id;
+
   const salt = Fr.random();
+  const useInitialDeposit = initialDeposit > 0n;
+
+  // Constructor choice determines the address
+  const constructorName = useInitialDeposit ? 'constructor_with_initial_deposit' : 'constructor';
+  const constructorArgs = useInitialDeposit
+    ? [assetContract.address, 1, 'SharesToken', 'ST', 18, sharesClassId, initialDeposit, depositor, 0]
+    : [assetContract.address, 1, 'SharesToken', 'ST', 18, sharesClassId];
+
   const { address: vaultAddress } = await deriveContractAddressWithConstructor(
     VaultContractArtifact,
-    'constructor',
-    [deployer, assetContract.address, 1],
+    constructorName,
+    constructorArgs,
     deployer,
     salt,
   );
 
-  // Deploy shares token with precomputed vault address as minter
+  // Deploy shares token with vault as minter, same salt and deployer
   const sharesContract = await TokenContract.deployWithOpts(
     { method: 'constructor_with_minter', wallet },
     'SharesToken',
     'ST',
     18,
     vaultAddress,
-    AztecAddress.ZERO,
-  ).send({ ...options, from: deployer });
+  ).send({ ...options, from: deployer, contractAddressSalt: salt });
 
-  // Deploy vault at precomputed address with #[initializer] constructor
-  const vaultContract = await VaultContract.deploy(wallet, deployer, assetContract.address, 1).send({
-    ...options,
-    from: deployer,
-    contractAddressSalt: salt,
-  });
+  if (useInitialDeposit) {
+    // Authorize vault to transfer assets from depositor (before vault is deployed)
+    const transfer = assetContract.methods.transfer_public_to_public(depositor, vaultAddress, initialDeposit, 0);
+    await setPublicAuthWit(vaultAddress, transfer, depositor, wallet as EmbeddedWallet);
 
-  if (initialDeposit > 0n) {
-    // Authorize vault to transfer assets from depositor
-    const transfer = assetContract.methods.transfer_public_to_public(
-      depositor,
-      vaultContract.address,
+    // Deploy vault with initial deposit
+    const vaultContract = await VaultContract.deployWithOpts(
+      { method: 'constructor_with_initial_deposit', wallet },
+      assetContract.address,
+      1,
+      'SharesToken',
+      'ST',
+      18,
+      sharesClassId,
       initialDeposit,
+      depositor,
       0,
-    );
-    await setPublicAuthWit(vaultContract.address, transfer, depositor, wallet as EmbeddedWallet);
+    ).send({
+      ...options,
+      from: deployer,
+      contractAddressSalt: salt,
+    });
 
-    // Set shares and make initial deposit
-    await vaultContract.methods
-      .set_shares_token_with_initial_deposit(sharesContract.address, initialDeposit, depositor, 0)
-      .send({ from: deployer });
+    return [vaultContract as VaultContract, sharesContract as TokenContract];
   } else {
-    // Just set shares without initial deposit
-    await vaultContract.methods.set_shares_token(sharesContract.address).send({ from: deployer });
-  }
+    // Deploy vault without initial deposit
+    const vaultContract = await VaultContract.deployWithOpts(
+      { method: 'constructor', wallet },
+      assetContract.address,
+      1,
+      'SharesToken',
+      'ST',
+      18,
+      sharesClassId,
+    ).send({
+      ...options,
+      from: deployer,
+      contractAddressSalt: salt,
+    });
 
-  return [vaultContract as VaultContract, sharesContract as TokenContract];
+    return [vaultContract as VaultContract, sharesContract as TokenContract];
+  }
 }
 
 // --- Escrow Utils ---
