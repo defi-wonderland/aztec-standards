@@ -1,13 +1,17 @@
 use crate::Vault;
-use aztec::{protocol::address::AztecAddress, test::helpers::test_environment::TestEnvironment};
+use aztec::{
+    hash::hash_args,
+    protocol::{address::AztecAddress, traits::ToField},
+    test::helpers::{test_environment::TestEnvironment, txe_oracles},
+};
 use aztec::test::helpers::authwit as authwit_cheatcodes;
 use token_contract::Token;
 
 pub global mint_amount: u128 = 10_000 as u128;
 
 /// @notice Sets up a vault with an asset token and a shares token.
-/// Deploys 3 contracts: asset token (with owner as minter), vault (with initializer, admin=owner),
-/// shares token (with vault as minter), then calls set_shares on the vault.
+/// Deploys 3 contracts: asset token (with owner as minter), vault (2-step init),
+/// shares token (with vault as minter), then calls step1 + step2 + set_shares on the vault.
 pub unconstrained fn setup_with_vault(
     with_account_contracts: bool,
 ) -> (TestEnvironment, AztecAddress, AztecAddress, AztecAddress, AztecAddress, AztecAddress) {
@@ -32,12 +36,22 @@ pub unconstrained fn setup_with_vault(
     let asset_address =
         env.deploy("@token_contract/Token").with_public_initializer(owner, asset_initializer);
 
-    // Deploy vault with initializer (admin=owner, no shares yet)
-    let vault_initializer = Vault::interface().constructor(owner, asset_address, 1);
-    let vault_address =
-        env.deploy("@vault_contract/Vault").with_public_initializer(owner, vault_initializer);
+    let step1_args_hash = hash_args([asset_address.to_field(), 1 as Field]);
 
-    // Deploy shares token with vault as minter
+    // Register vault instance with constructor_step2's init_hash but do NOT execute step2 yet.
+    // vault_address commits to hash(constructor_step2_selector, [step1_args_hash]).
+    // Because constructor_step2 takes only step1_args_hash (not shares), there is no circular
+    // dependency: vault_address does not depend on shares_address.
+    let vault_deployment = env.deploy("@vault_contract/Vault");
+    let vault_address = txe_oracles::deploy(
+        "@vault_contract/Vault",
+        "constructor_step2",
+        [step1_args_hash],
+        vault_deployment.secret,
+    )
+        .to_address();
+
+    // Deploy shares token with the now-known vault_address as minter
     let shares_initializer = Token::interface().constructor_with_minter(
         "SharesToken00000000000000000000",
         "SHARES0000000000000000000000000",
@@ -47,8 +61,15 @@ pub unconstrained fn setup_with_vault(
     let shares_address =
         env.deploy("@token_contract/Token").with_public_initializer(owner, shares_initializer);
 
-    // Set the shares token on the vault (admin-only, one-shot)
-    env.call_public(owner, Vault::at(vault_address).set_shares_token(shares_address));
+    // Tx 1: step 1 - emits step1_nullifier, sets asset and vault_offset (#[noinitcheck])
+    env.call_public(owner, Vault::at(vault_address).constructor_step1(asset_address, 1));
+    // Tx 2: step 2 - verifies step1_nullifier, marks vault as initialized (#[initializer])
+    env.call_public(owner, Vault::at(vault_address).constructor_step2(step1_args_hash));
+    // Tx 3: bind shares - verifies step1_nullifier, sets shares (regular public)
+    env.call_public(
+        owner,
+        Vault::at(vault_address).constructor_step2_set_shares(step1_args_hash, shares_address),
+    );
 
     (env, vault_address, owner, recipient, asset_address, shares_address)
 }
@@ -79,12 +100,19 @@ pub unconstrained fn setup_with_vault_initial_deposit(
     let asset_address =
         env.deploy("@token_contract/Token").with_public_initializer(owner, asset_initializer);
 
-    // Deploy vault with initializer (admin=owner, no shares yet)
-    let vault_initializer = Vault::interface().constructor(owner, asset_address, 1);
-    let vault_address =
-        env.deploy("@vault_contract/Vault").with_public_initializer(owner, vault_initializer);
+    let step1_args_hash = hash_args([asset_address.to_field(), 1 as Field]);
 
-    // Deploy shares token with vault as minter
+    // Register vault with constructor_step2's init_hash without executing step2
+    let vault_deployment = env.deploy("@vault_contract/Vault");
+    let vault_address = txe_oracles::deploy(
+        "@vault_contract/Vault",
+        "constructor_step2",
+        [step1_args_hash],
+        vault_deployment.secret,
+    )
+        .to_address();
+
+    // Deploy shares token with vault_address as minter
     let shares_initializer = Token::interface().constructor_with_minter(
         "SharesToken00000000000000000000",
         "SHARES0000000000000000000000000",
@@ -100,10 +128,15 @@ pub unconstrained fn setup_with_vault_initial_deposit(
     // Authorize vault to transfer assets from owner
     authorize_transfer_public_to_public(env, asset_address, vault_address, owner, initial_deposit);
 
-    // Set shares and make initial deposit (admin-only, one-shot)
+    // Tx 1: step 1
+    env.call_public(owner, Vault::at(vault_address).constructor_step1(asset_address, 1));
+    // Tx 2: step 2 (marks as initialized)
+    env.call_public(owner, Vault::at(vault_address).constructor_step2(step1_args_hash));
+    // Tx 3: bind shares + initial deposit
     env.call_public(
         owner,
-        Vault::at(vault_address).set_shares_token_with_initial_deposit(
+        Vault::at(vault_address).constructor_step2_set_shares_with_initial_deposit(
+            step1_args_hash,
             shares_address,
             initial_deposit,
             owner,
@@ -114,7 +147,7 @@ pub unconstrained fn setup_with_vault_initial_deposit(
     (env, vault_address, owner, recipient, asset_address, shares_address)
 }
 
-/// @notice Deploys a vault with initializer but without setting shares (for failure tests)
+/// @notice Deploys a vault with step 1 and step 2 done but shares NOT set (for failure tests)
 pub unconstrained fn setup_vault_without_shares() -> (TestEnvironment, AztecAddress, AztecAddress, AztecAddress, AztecAddress) {
     let mut env = TestEnvironment::new();
     let owner = env.create_light_account();
@@ -130,10 +163,20 @@ pub unconstrained fn setup_vault_without_shares() -> (TestEnvironment, AztecAddr
     let asset_address =
         env.deploy("@token_contract/Token").with_public_initializer(owner, asset_initializer);
 
-    // Deploy vault with initializer (admin=owner) but do NOT call set_shares
-    let vault_initializer = Vault::interface().constructor(owner, asset_address, 1);
-    let vault_address =
-        env.deploy("@vault_contract/Vault").with_public_initializer(owner, vault_initializer);
+    let step1_args_hash = hash_args([asset_address.to_field(), 1 as Field]);
+
+    // Register vault with step2's init_hash, call step1 + step2 but NOT set_shares
+    let vault_deployment = env.deploy("@vault_contract/Vault");
+    let vault_address = txe_oracles::deploy(
+        "@vault_contract/Vault",
+        "constructor_step2",
+        [step1_args_hash],
+        vault_deployment.secret,
+    )
+        .to_address();
+
+    env.call_public(owner, Vault::at(vault_address).constructor_step1(asset_address, 1));
+    env.call_public(owner, Vault::at(vault_address).constructor_step2(step1_args_hash));
 
     (env, vault_address, owner, recipient, asset_address)
 }

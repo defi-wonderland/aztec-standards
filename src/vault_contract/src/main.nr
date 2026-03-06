@@ -9,11 +9,17 @@ pub contract Vault {
             assert_current_call_valid_authwit, assert_current_call_valid_authwit_public,
         },
         context::PrivateContext,
-        macros::{functions::{external, initializer, internal, only_self, view}, storage::storage},
-        protocol::address::AztecAddress,
+        macros::{
+            functions::{external, initializer, internal, noinitcheck, only_self, view},
+            storage::storage,
+        },
+        protocol::{address::AztecAddress, hash::poseidon2_hash_with_separator, traits::ToField},
         state_vars::PublicImmutable,
     };
     use token_contract::Token;
+
+    // Domain separator for the step 1 nullifier - binds it to this contract/use-case
+    global STEP1_NULLIFIER_DOMAIN_SEP: Field = 0x76756c745f73746570315f6e756c6c6966696572;
 
     // Rounding direction that the vault uses to calculate shares and assets
     global ROUND_DOWN: bool = false;
@@ -22,95 +28,122 @@ pub contract Vault {
     // Maximum value for a u128 (2**128 - 1)
     global MAX_U128_VALUE: u128 = 340282366920938463463374607431768211455;
 
-    /// @param admin The address with permission to set the shares token (one-time setup)
     /// @param asset The underlying asset token address
     /// @param shares The shares token address (minter must be this vault)
     /// @param vault_offset The offset used to prevent inflation attacks
     #[storage]
     struct Storage<Context> {
-        admin: PublicImmutable<AztecAddress, Context>,
         asset: PublicImmutable<AztecAddress, Context>,
         shares: PublicImmutable<AztecAddress, Context>,
         vault_offset: PublicImmutable<u128, Context>,
     }
 
-    /// @notice Initializes the vault with asset, offset, and configuration
-    /// @dev The admin must call set_shares() after deploying the shares token with this vault as minter.
-    ///      The vault address can be precomputed before shares exists since shares is not a constructor arg.
-    ///      This 2-step deployment exists because contract instance publishing is private-only, so a public
-    ///      factory cannot deploy and wire both contracts atomically. Once public instance registration is
-    ///      supported, this can be simplified to a single-step deployment.
-    ///      See: https://github.com/AztecProtocol/aztec-packages/issues/20771
-    /// @param admin The address with permission to set the shares token (one-time setup)
+    /// @notice Step 1 of 2-step initialization: sets asset/vault_offset and emits a binding nullifier.
+    /// @dev Deploy the vault by registering its instance with constructor_step2's selector+args as the
+    ///      initialization_hash (so the address commits to step1_args_hash). Then:
+    ///      Tx 1: call constructor_step1 (this function, no init check required).
+    ///      Tx 2: call constructor_step2_set_shares or constructor_step2_set_shares_with_initial_deposit.
+    ///      The nullifier binds step 2 to the exact step 1 args committed in the address preimage.
+    ///      Wrong-args calls to step 1 are harmless; step 2 will reject them (nullifier won't match).
     /// @param asset The underlying asset token address
     /// @param vault_offset The offset used to prevent inflation attacks (typically 1)
     #[external("public")]
-    #[initializer]
-    fn constructor(admin: AztecAddress, asset: AztecAddress, vault_offset: u128) {
+    #[noinitcheck]
+    fn constructor_step1(asset: AztecAddress, vault_offset: u128) {
         assert(vault_offset > 0, "vault_offset must be greater than 0");
-        self.storage.admin.initialize(admin);
+
+        // Nullifier is unique to (vault_address, step1_args_hash), preventing replays and binding step 2
+        let step1_nullifier = _compute_step1_nullifier(self.address, self.context.get_args_hash());
+        self.context.push_nullifier(step1_nullifier);
+
         self.storage.asset.initialize(asset);
         self.storage.vault_offset.initialize(vault_offset);
     }
 
-    /// @notice Sets the shares token address (one-time, admin-only, immutable after set)
-    /// @dev Must be called after deploying the shares token with this vault as minter.
-    ///      PublicImmutable.initialize() ensures this can only ever be set once -- any subsequent
-    ///      call will revert. All vault operations read shares via PublicImmutable.read() which
-    ///      reverts if shares has not been initialized, so the vault is inoperable until this is called.
+    /// @notice Initializer: verifies step 1 ran with the args committed in the vault address, marks vault ready.
+    /// @dev The vault address commits to hash(this_selector, [step1_args_hash]) so step1_args_hash is
+    ///      trustlessly verifiable from the instance. Call this before constructor_step2_set_shares.
+    /// @param step1_args_hash hash_args([asset, vault_offset]) - must match the step 1 call
+    #[external("public")]
+    #[initializer]
+    fn constructor_step2(step1_args_hash: Field) {
+        let expected_step1_nullifier = _compute_step1_nullifier(self.address, step1_args_hash);
+        assert(
+            self.context.nullifier_exists_unsafe(expected_step1_nullifier, self.address),
+            "Step 1 nullifier not found",
+        );
+    }
+
+    /// @notice Sets the shares token after constructor_step2 has marked the vault as initialized.
+    /// @dev step1_args_hash is re-verified so shares-setting is trustlessly bound to the committed step 1 args.
+    /// @param step1_args_hash hash_args([asset, vault_offset]) - must match the step 1 call
     /// @param shares The shares token address (minter must be this vault)
     #[external("public")]
-    fn set_shares_token(shares: AztecAddress) {
-        let admin = self.storage.admin.read();
-        assert(self.msg_sender().eq(admin), "caller is not admin");
+    fn constructor_step2_set_shares(step1_args_hash: Field, shares: AztecAddress) {
+        let expected_step1_nullifier = _compute_step1_nullifier(self.address, step1_args_hash);
+        assert(
+            self.context.nullifier_exists_unsafe(expected_step1_nullifier, self.address),
+            "Step 1 nullifier not found",
+        );
+
         self.storage.shares.initialize(shares);
     }
 
-    /// @notice Sets the shares token and makes an initial deposit for inflation-attack protection
-    /// @dev Must be called after deploying the shares token with this vault as minter.
-    ///      PublicImmutable.initialize() ensures this can only ever be set once -- any subsequent
-    ///      call will revert. All vault operations read shares via PublicImmutable.read() which
-    ///      reverts if shares has not been initialized, so the vault is inoperable until this is called.
+    /// @notice Sets the shares token and makes an initial deposit after constructor_step2.
+    /// @param step1_args_hash hash_args([asset, vault_offset]) - must match the step 1 call
     /// @param shares The shares token address (minter must be this vault)
     /// @param initial_deposit The initial deposit amount of the asset
     /// @param depositor The address of the initial depositor of the assets
     /// @param nonce The nonce used for authwitness for the transfer of the initial deposit
     #[external("public")]
-    fn set_shares_token_with_initial_deposit(
+    fn constructor_step2_set_shares_with_initial_deposit(
+        step1_args_hash: Field,
         shares: AztecAddress,
         initial_deposit: u128,
         depositor: AztecAddress,
         nonce: Field,
     ) {
-        let admin = self.storage.admin.read();
-        assert(self.msg_sender().eq(admin), "caller is not admin");
-        self.storage.shares.initialize(shares);
-
-        // Caller deposits assets, shares are minted to this contract and are permanently locked.
-        let from = depositor;
-        let to = self.address;
-
-        // Assets could be donated to the vault's precomputed address before deployment, but such assets are
-        // ignored at this point to ensure the asset<>share conversion is 1:1 for the initial deposit.
-        let total_assets: u128 = 0;
-        let total_supply: u128 = 0;
-        let vault_offset = self.storage.vault_offset.read();
-
-        // Calculate shares to mint for the initial deposit.
-        let deposit_shares = _convert_to_shares(
-            initial_deposit,
-            total_assets,
-            total_supply,
-            vault_offset,
-            ROUND_DOWN,
+        let expected_step1_nullifier = _compute_step1_nullifier(self.address, step1_args_hash);
+        assert(
+            self.context.nullifier_exists_unsafe(expected_step1_nullifier, self.address),
+            "Step 1 nullifier not found",
         );
 
-        // Transfer the assets from the sender to the vault
-        let asset_token = self.storage.asset.read();
-        self.call(Token::at(asset_token).transfer_public_to_public(from, to, initial_deposit, nonce));
+        self.storage.shares.initialize(shares);
 
-        // Mint shares to this contract address (permanently locked)
-        self.call(Token::at(shares).mint_to_public(to, deposit_shares));
+        if initial_deposit > 0 {
+            let from = depositor;
+            let to = self.address;
+            let total_assets: u128 = 0;
+            let total_supply: u128 = 0;
+            let vault_offset = self.storage.vault_offset.read();
+
+            let deposit_shares = _convert_to_shares(
+                initial_deposit,
+                total_assets,
+                total_supply,
+                vault_offset,
+                ROUND_DOWN,
+            );
+
+            let asset_token = self.storage.asset.read();
+            self.call(Token::at(asset_token).transfer_public_to_public(
+                from,
+                to,
+                initial_deposit,
+                nonce,
+            ));
+            self.call(Token::at(shares).mint_to_public(to, deposit_shares));
+        }
+    }
+
+    /// Computes the step 1 nullifier: unique to (vault_address, step1_args_hash).
+    #[contract_library_method]
+    fn _compute_step1_nullifier(address: AztecAddress, step1_args_hash: Field) -> Field {
+        poseidon2_hash_with_separator(
+            [address.to_field(), step1_args_hash],
+            STEP1_NULLIFIER_DOMAIN_SEP,
+        )
     }
 
     /** ==========================================================
@@ -787,14 +820,6 @@ pub contract Vault {
     /** ==========================================================
      * ======================= VAULT VIEW ========================
      * ======================================================== */
-
-    /// @notice Returns the admin address
-    /// @return The address of the admin
-    #[external("public")]
-    #[view]
-    fn admin() -> AztecAddress {
-        self.storage.admin.read()
-    }
 
     /// @notice Returns the underlying asset address
     /// @return The address of the underlying asset
