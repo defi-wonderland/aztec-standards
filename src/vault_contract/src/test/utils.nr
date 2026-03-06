@@ -9,7 +9,7 @@ use token_contract::Token;
 pub global mint_amount: u128 = 10_000 as u128;
 
 /// @notice Sets up a vault with an asset token and a shares token.
-/// Deploys 3 contracts: asset token (with owner as minter), vault (private initializer that
+/// Deploys 3 contracts: asset token (with owner as minter), vault (public initializer that
 /// computes the shares address), and shares token (with vault as minter).
 ///
 /// TODO: The vault constructor computes the shares token address using its own salt and deployer.
@@ -44,7 +44,8 @@ pub unconstrained fn setup_with_vault(
     // Get token class ID from the deployed asset (same class as shares)
     let token_class_id = get_contract_instance(asset_address).contract_class_id;
 
-    // Deploy vault with private initializer (computes shares address internally)
+    // TODO: salt is passed as 0 because the test environment does not support custom salts.
+    // The computed shares address will not match the deployed shares address.
     let vault_initializer = Vault::interface().constructor(
         asset_address,
         1,
@@ -52,9 +53,10 @@ pub unconstrained fn setup_with_vault(
         "SHARES0000000000000000000000000",
         18,
         token_class_id,
+        0,
     );
     let vault_address =
-        env.deploy("@vault_contract/Vault").with_private_initializer(owner, vault_initializer);
+        env.deploy("@vault_contract/Vault").with_public_initializer(owner, vault_initializer);
 
     // Deploy shares token with vault as minter
     let shares_initializer = Token::interface().constructor_with_minter(
@@ -113,7 +115,7 @@ pub unconstrained fn setup_with_vault_initial_deposit(
     // that won't match the actual deployed vault address (due to the salt limitation above).
     // This means the initial deposit flow cannot be fully tested until custom salts are supported.
 
-    // Deploy vault with private initializer that includes initial deposit
+    // TODO: salt is passed as 0 because the test environment does not support custom salts.
     let vault_initializer = Vault::interface().constructor_with_initial_deposit(
         asset_address,
         1,
@@ -121,12 +123,13 @@ pub unconstrained fn setup_with_vault_initial_deposit(
         "SHARES0000000000000000000000000",
         18,
         token_class_id,
+        0,
         initial_deposit,
         owner,
         0,
     );
     let vault_address =
-        env.deploy("@vault_contract/Vault").with_private_initializer(owner, vault_initializer);
+        env.deploy("@vault_contract/Vault").with_public_initializer(owner, vault_initializer);
 
     // Deploy shares token with vault as minter
     let shares_initializer = Token::interface().constructor_with_minter(

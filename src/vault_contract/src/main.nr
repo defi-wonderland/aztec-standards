@@ -11,7 +11,7 @@ pub contract Vault {
         context::PrivateContext,
         hash::hash_args,
         macros::{functions::{external, initializer, internal, only_self, view}, storage::storage},
-        oracle::get_contract_instance::get_contract_instance,
+        oracle::get_contract_instance::get_contract_instance_deployer_avm,
         protocol::{
             abis::function_selector::FunctionSelector, address::AztecAddress,
             constants::DOM_SEP__INITIALIZER, contract_class_id::ContractClassId,
@@ -42,16 +42,16 @@ pub contract Vault {
     /// @notice Initializes the vault with asset, offset, and shares token configuration
     /// @dev Computes the shares token address deterministically from the provided parameters.
     ///      The shares token must be deployed separately with constructor_with_minter using matching
-    ///      parameters and this vault as minter. Salt and deployer are reused from the vault's own
-    ///      contract instance so the shares token deployment must use the same salt and deployer as
-    ///      the vault.
+    ///      parameters and this vault as minter. The shares token deployment must use the same salt
+    ///      and deployer as the vault.
     /// @param asset The underlying asset token address
     /// @param vault_offset The offset used to prevent inflation attacks (typically 1)
     /// @param shares_name The name of the shares token
     /// @param shares_symbol The symbol of the shares token
     /// @param shares_decimals The number of decimals for the shares token
     /// @param shares_class_id The contract class ID of the shares token contract
-    #[external("private")]
+    /// @param shares_salt The salt used for the shares token deployment
+    #[external("public")]
     #[initializer]
     fn constructor(
         asset: AztecAddress,
@@ -60,37 +60,42 @@ pub contract Vault {
         shares_symbol: str<31>,
         shares_decimals: u8,
         shares_class_id: ContractClassId,
+        shares_salt: Field,
     ) {
         assert(vault_offset > 0, "vault_offset must be greater than 0");
 
-        let vault_instance = get_contract_instance(self.address);
+        let deployer = get_contract_instance_deployer_avm(self.address).unwrap();
         let shares = _compute_token_address(
             shares_name,
             shares_symbol,
             shares_decimals,
             self.address,
             shares_class_id,
-            vault_instance.salt,
-            vault_instance.deployer,
+            shares_salt,
+            deployer,
         );
 
-        self.enqueue_self.initialize_storage_internal(asset, shares, vault_offset);
+        self.storage.asset.initialize(asset);
+        self.storage.shares.initialize(shares);
+        self.storage.vault_offset.initialize(vault_offset);
     }
 
     /// @notice Initializes the vault and makes an initial deposit for inflation-attack protection
     /// @dev Computes the shares token address deterministically, initializes storage, then transfers
     ///      assets from the depositor and mints shares to this contract (permanently locked).
-    ///      Salt and deployer are reused from the vault's own contract instance.
+    ///      Assets donated to the vault's precomputed address before deployment are ignored to ensure
+    ///      the asset<>share conversion is 1:1 for the initial deposit.
     /// @param asset The underlying asset token address
     /// @param vault_offset The offset used to prevent inflation attacks (typically 1)
     /// @param shares_name The name of the shares token
     /// @param shares_symbol The symbol of the shares token
     /// @param shares_decimals The number of decimals for the shares token
     /// @param shares_class_id The contract class ID of the shares token contract
+    /// @param shares_salt The salt used for the shares token deployment
     /// @param initial_deposit The initial deposit amount of the asset
     /// @param depositor The address of the initial depositor of the assets
     /// @param nonce The nonce used for authwitness for the transfer of the initial deposit
-    #[external("private")]
+    #[external("public")]
     #[initializer]
     fn constructor_with_initial_deposit(
         asset: AztecAddress,
@@ -99,31 +104,44 @@ pub contract Vault {
         shares_symbol: str<31>,
         shares_decimals: u8,
         shares_class_id: ContractClassId,
+        shares_salt: Field,
         initial_deposit: u128,
         depositor: AztecAddress,
         nonce: Field,
     ) {
         assert(vault_offset > 0, "vault_offset must be greater than 0");
 
-        let vault_instance = get_contract_instance(self.address);
+        let deployer = get_contract_instance_deployer_avm(self.address).unwrap();
         let shares = _compute_token_address(
             shares_name,
             shares_symbol,
             shares_decimals,
             self.address,
             shares_class_id,
-            vault_instance.salt,
-            vault_instance.deployer,
+            shares_salt,
+            deployer,
         );
 
-        self.enqueue_self.initialize_storage_with_initial_deposit_internal(
-            asset,
-            shares,
-            vault_offset,
+        self.storage.asset.initialize(asset);
+        self.storage.shares.initialize(shares);
+        self.storage.vault_offset.initialize(vault_offset);
+
+        let from = depositor;
+        let to = self.address;
+
+        let total_assets: u128 = 0;
+        let total_supply: u128 = 0;
+
+        let deposit_shares = _convert_to_shares(
             initial_deposit,
-            depositor,
-            nonce,
+            total_assets,
+            total_supply,
+            vault_offset,
+            ROUND_DOWN,
         );
+
+        self.call(Token::at(asset).transfer_public_to_public(from, to, initial_deposit, nonce));
+        self.call(Token::at(shares).mint_to_public(to, deposit_shares));
     }
 
     /** ==========================================================
@@ -976,63 +994,6 @@ pub contract Vault {
     /** ==========================================================
      * ==================== VAULT INTERNALS ======================
      * ======================================================== */
-
-    /// @notice Initializes vault storage (enqueued from the private constructor)
-    /// @param asset The underlying asset token address
-    /// @param shares The computed shares token address
-    /// @param vault_offset The offset used to prevent inflation attacks
-    #[external("public")]
-    #[only_self]
-    fn initialize_storage_internal(asset: AztecAddress, shares: AztecAddress, vault_offset: u128) {
-        self.storage.asset.initialize(asset);
-        self.storage.shares.initialize(shares);
-        self.storage.vault_offset.initialize(vault_offset);
-    }
-
-    /// @notice Initializes vault storage and makes an initial deposit (enqueued from the private constructor)
-    /// @dev Transfers assets from the depositor and mints shares to this contract (permanently locked).
-    ///      Assets donated to the vault's precomputed address before deployment are ignored to ensure
-    ///      the asset<>share conversion is 1:1 for the initial deposit.
-    /// @param asset The underlying asset token address
-    /// @param shares The computed shares token address
-    /// @param vault_offset The offset used to prevent inflation attacks
-    /// @param initial_deposit The initial deposit amount of the asset
-    /// @param depositor The address of the initial depositor of the assets
-    /// @param nonce The nonce used for authwitness for the transfer of the initial deposit
-    #[external("public")]
-    #[only_self]
-    fn initialize_storage_with_initial_deposit_internal(
-        asset: AztecAddress,
-        shares: AztecAddress,
-        vault_offset: u128,
-        initial_deposit: u128,
-        depositor: AztecAddress,
-        nonce: Field,
-    ) {
-        self.storage.asset.initialize(asset);
-        self.storage.shares.initialize(shares);
-        self.storage.vault_offset.initialize(vault_offset);
-
-        let from = depositor;
-        let to = self.address;
-
-        let total_assets: u128 = 0;
-        let total_supply: u128 = 0;
-
-        let deposit_shares = _convert_to_shares(
-            initial_deposit,
-            total_assets,
-            total_supply,
-            vault_offset,
-            ROUND_DOWN,
-        );
-
-        // Transfer the assets from the depositor to the vault
-        self.call(Token::at(asset).transfer_public_to_public(from, to, initial_deposit, nonce));
-
-        // Mint shares to this contract address (permanently locked)
-        self.call(Token::at(shares).mint_to_public(to, deposit_shares));
-    }
 
     // Settlement functions adjust for pre-applied state changes.
     // In the separated model, private cross-contract calls (e.g. shares.mint_to_private, shares.burn_private)

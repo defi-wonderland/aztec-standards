@@ -247,7 +247,7 @@ export async function deployVaultAndAssetWithMinter(
   const { address: vaultAddress } = await deriveContractAddressWithConstructor(
     VaultContractArtifact,
     'constructor',
-    [assetContract.address, 1, 'SharesToken', 'ST', 18, sharesClassId],
+    [assetContract.address, 1, 'SharesToken', 'ST', 18, sharesClassId, salt],
     deployer,
     salt,
   );
@@ -261,7 +261,7 @@ export async function deployVaultAndAssetWithMinter(
     vaultAddress,
   ).send({ ...options, from: deployer, contractAddressSalt: salt });
 
-  // Deploy vault — constructor reads its own salt/deployer and computes shares address
+  // Deploy vault — constructor takes salt as param and reads deployer from AVM
   const vaultContract = await VaultContract.deployWithOpts(
     { method: 'constructor', wallet },
     assetContract.address,
@@ -270,6 +270,7 @@ export async function deployVaultAndAssetWithMinter(
     'ST',
     18,
     sharesClassId,
+    salt,
   ).send({
     ...options,
     from: deployer,
@@ -303,8 +304,8 @@ export async function deployVaultWithInitialDeposit(
   // Constructor choice determines the address
   const constructorName = useInitialDeposit ? 'constructor_with_initial_deposit' : 'constructor';
   const constructorArgs = useInitialDeposit
-    ? [assetContract.address, 1, 'SharesToken', 'ST', 18, sharesClassId, initialDeposit, depositor, 0]
-    : [assetContract.address, 1, 'SharesToken', 'ST', 18, sharesClassId];
+    ? [assetContract.address, 1, 'SharesToken', 'ST', 18, sharesClassId, salt, initialDeposit, depositor, 0]
+    : [assetContract.address, 1, 'SharesToken', 'ST', 18, sharesClassId, salt];
 
   const { address: vaultAddress } = await deriveContractAddressWithConstructor(
     VaultContractArtifact,
@@ -337,6 +338,7 @@ export async function deployVaultWithInitialDeposit(
       'ST',
       18,
       sharesClassId,
+      salt,
       initialDeposit,
       depositor,
       0,
@@ -357,6 +359,7 @@ export async function deployVaultWithInitialDeposit(
       'ST',
       18,
       sharesClassId,
+      salt,
     ).send({
       ...options,
       from: deployer,
