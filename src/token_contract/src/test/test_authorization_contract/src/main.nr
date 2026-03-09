@@ -4,7 +4,7 @@ use aztec::macros::aztec;
 pub contract AuthorizationContract {
     use aztec::{macros::functions::external, protocol::address::AztecAddress};
 
-    /// @notice Private authorization hook - called in private context when the source balance is private
+    /// @notice Private authorization hook
     /// @param _from The address tokens are moved from (zero address for mints)
     /// @param _amount The amount of tokens being moved
     #[external("private")]
@@ -12,7 +12,7 @@ pub contract AuthorizationContract {
         // no-op: allow all operations
     }
 
-    /// @notice Public authorization hook - called in public context when the source balance is public
+    /// @notice Public authorization hook
     /// @param _from The address tokens are moved from (zero address for mints)
     /// @param _amount The amount of tokens being moved
     #[external("public")]

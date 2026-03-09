@@ -52,7 +52,7 @@ pub contract Token {
     /// @param total_supply The total supply of the token
     /// @param public_balances The public balances of the token
     /// @param minter The account permissioned to mint the token
-    /// @param auth_contract The address of the ARC-403 authorization hook contract (zero address disables authorization)
+    /// @param auth_contract The authorization contract called on every transfer
     #[storage]
     struct Storage<Context> {
         name: PublicImmutable<FieldCompressedString, Context>,
@@ -72,7 +72,7 @@ pub contract Token {
     /// @param decimals The number of decimals of the token
     /// @param initial_supply The initial supply of the token
     /// @param to The address to mint the initial supply to
-    /// @param auth_contract The ARC-403 authorization hook address (zero address disables authorization)
+    /// @param auth_contract The address of the authorization contract (zero address to disable)
     #[external("public")]
     #[initializer]
     fn constructor_with_initial_supply(
@@ -97,7 +97,7 @@ pub contract Token {
     /// @param symbol The symbol of the token
     /// @param decimals The number of decimals of the token
     /// @param minter The address of the minter
-    /// @param auth_contract The ARC-403 authorization hook address (zero address disables authorization)
+    /// @param auth_contract The address of the authorization contract (zero address to disable)
     #[external("public")]
     #[initializer]
     fn constructor_with_minter(
