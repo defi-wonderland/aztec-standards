@@ -248,7 +248,7 @@ pub contract Token {
     ) {
         _validate_from_private::<4>(self.context, from);
 
-        self.internal._call_auth_private(from, to, amount);
+        self.internal._call_auth_private(from, amount);
 
         self.internal._decrease_private_balance(from, amount, INITIAL_TRANSFER_CALL_MAX_NOTES);
 
@@ -272,7 +272,7 @@ pub contract Token {
     ) -> Field {
         _validate_from_private::<4>(self.context, from);
 
-        self.internal._call_auth_private(from, to, amount);
+        self.internal._call_auth_private(from, amount);
 
         self.internal._decrease_private_balance(from, amount, INITIAL_TRANSFER_CALL_MAX_NOTES);
 
@@ -299,7 +299,7 @@ pub contract Token {
     ) {
         _validate_from_private::<4>(self.context, from);
 
-        self.internal._call_auth_private(from, to, amount);
+        self.internal._call_auth_private(from, amount);
 
         self.internal._decrease_private_balance(from, amount, INITIAL_TRANSFER_CALL_MAX_NOTES);
 
@@ -322,7 +322,7 @@ pub contract Token {
     ) {
         _validate_from_private::<4>(self.context, from);
 
-        self.internal._call_auth_private(from, PRIVATE_ADDRESS_MAGIC_VALUE, amount);
+        self.internal._call_auth_private(from, amount);
 
         self.internal._decrease_private_balance(from, amount, INITIAL_TRANSFER_CALL_MAX_NOTES);
 
@@ -349,7 +349,7 @@ pub contract Token {
     ) {
         _validate_from_private::<4>(self.context, from);
 
-        self.internal._call_auth_private(from, to, amount);
+        self.internal._call_auth_private(from, amount);
 
         self.enqueue_self.decrease_public_balance_internal(from, amount);
 
@@ -397,7 +397,7 @@ pub contract Token {
     ) {
         self.internal._validate_from_public(from);
 
-        self.internal._call_auth_public(from, to, amount);
+        self.internal._call_auth_public(from, amount);
 
         self.internal._decrease_public_balance(from, amount);
         self.internal._increase_public_balance(to, amount);
@@ -422,7 +422,7 @@ pub contract Token {
     ) {
         self.internal._validate_from_public(from);
 
-        self.internal._call_auth_public(from, PRIVATE_ADDRESS_MAGIC_VALUE, amount);
+        self.internal._call_auth_public(from, amount);
 
         self.internal._decrease_public_balance(from, amount);
 
@@ -535,7 +535,7 @@ pub contract Token {
     fn mint_to_private(to: AztecAddress, amount: u128) {
         _validate_minter(self.msg_sender(), self.storage.minter.read());
 
-        self.internal._call_auth_private(AztecAddress::zero(), to, amount);
+        self.internal._call_auth_private(AztecAddress::zero(), amount);
 
         self.internal._mint_to_private(to, amount);
     }
@@ -548,7 +548,7 @@ pub contract Token {
     fn mint_to_public(to: AztecAddress, amount: u128) {
         _validate_minter(self.msg_sender(), self.storage.minter.read());
 
-        self.internal._call_auth_public(AztecAddress::zero(), to, amount);
+        self.internal._call_auth_public(AztecAddress::zero(), amount);
 
         self.internal._mint_to_public(to, amount);
     }
@@ -562,7 +562,7 @@ pub contract Token {
         let sender = self.msg_sender();
         _validate_minter(sender, self.storage.minter.read());
 
-        self.internal._call_auth_public(AztecAddress::zero(), PRIVATE_ADDRESS_MAGIC_VALUE, amount);
+        self.internal._call_auth_public(AztecAddress::zero(), amount);
 
         let completer = sender;
         self.internal._increase_total_supply(amount);
@@ -607,7 +607,7 @@ pub contract Token {
     fn burn_private(from: AztecAddress, amount: u128, _nonce: Field) {
         _validate_from_private::<3>(self.context, from);
 
-        self.internal._call_auth_private(from, AztecAddress::zero(), amount);
+        self.internal._call_auth_private(from, amount);
 
         self.internal._burn_private(from, amount);
     }
@@ -621,7 +621,7 @@ pub contract Token {
     fn burn_public(from: AztecAddress, amount: u128, _nonce: Field) {
         self.internal._validate_from_public(from);
 
-        self.internal._call_auth_public(from, AztecAddress::zero(), amount);
+        self.internal._call_auth_public(from, amount);
 
         self.internal._burn_public(from, amount);
     }
@@ -652,13 +652,12 @@ pub contract Token {
     /// @notice ARC-403: calls the public authorization hook when one is configured
     /// @dev Used for public-source operations (public balance decreases); no-ops when auth_contract is zero
     /// @param from The address tokens are moved from (zero address for mints)
-    /// @param to The address tokens are moved to (zero address for burns / commitment transfers)
     /// @param amount The amount of tokens being moved
     #[internal("public")]
-    fn _call_auth_public(from: AztecAddress, to: AztecAddress, amount: u128) {
+    fn _call_auth_public(from: AztecAddress, amount: u128) {
         let auth = self.storage.auth_contract.read();
         if !auth.eq(AztecAddress::zero()) {
-            self.call(AuthorizationContract::at(auth).authorize_public(from, to, amount));
+            self.call(AuthorizationContract::at(auth).authorize_public(from, amount));
         }
     }
 
@@ -666,13 +665,12 @@ pub contract Token {
     /// @dev Used for private-source operations (private note spends); no-ops when auth_contract is zero.
     ///      Runs entirely in private context - the auth call is never revealed on-chain.
     /// @param from The address tokens are moved from (zero address for mints)
-    /// @param to The address tokens are moved to (zero address for burns / commitment transfers)
     /// @param amount The amount of tokens being moved
     #[internal("private")]
-    fn _call_auth_private(from: AztecAddress, to: AztecAddress, amount: u128) {
+    fn _call_auth_private(from: AztecAddress, amount: u128) {
         let auth = self.storage.auth_contract.read();
         if !auth.eq(AztecAddress::zero()) {
-            AuthorizationContract::at(auth).authorize_private(from, to, amount).call(self.context);
+            AuthorizationContract::at(auth).authorize_private(from, amount).call(self.context);
         }
     }
 
