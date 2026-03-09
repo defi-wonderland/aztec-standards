@@ -65,7 +65,7 @@ describe('NFT', () => {
 
       const deployer = new ContractDeployer(NFTContractArtifact, wallet, undefined, 'constructor_with_minter');
 
-      const contract = await deployer
+      const { contract } = await deployer
         .deploy('TestNFT', 'TNFT', deployerWallet, deployerWallet)
         .send({ contractAddressSalt: salt, from: deployerWallet });
 
@@ -86,7 +86,7 @@ describe('NFT', () => {
       const tokenId = 1n;
 
       // First mint NFT privately to alice
-      const mintTx = await nft.methods.mint_to_private(alice, tokenId).send({ from: alice });
+      const { receipt: mintTx } = await nft.methods.mint_to_private(alice, tokenId).send({ from: alice });
 
       // mint_to_private: Transfer(0x0, PRIVATE, tokenId)
       await expectNFTTransferEvents(mintTx.txHash, nft.address, [
@@ -104,7 +104,7 @@ describe('NFT', () => {
       const commitment = await initializeTransferCommitmentNFT(nft, alice, bobAccountManager, alice);
 
       // Alice transfers NFT to the commitment
-      const commitmentTx = await nft.methods
+      const { receipt: commitmentTx } = await nft.methods
         .transfer_private_to_commitment(alice, tokenId, commitment, 0n)
         .send({ from: alice });
 
@@ -194,7 +194,7 @@ describe('NFT', () => {
       const tokenId = 1n;
 
       // First mint NFT publicly to alice
-      const mintTx = await nft.methods.mint_to_public(alice, tokenId).send({ from: alice });
+      const { receipt: mintTx } = await nft.methods.mint_to_public(alice, tokenId).send({ from: alice });
 
       // mint_to_public: Transfer(0x0, alice, tokenId)
       await expectNFTTransferEvents(mintTx.txHash, nft.address, [
@@ -212,7 +212,7 @@ describe('NFT', () => {
       const witness = await wallet.createAuthWit(alice, intent);
 
       // Bob executes the transfer with alice's authorization
-      const transferTx = await transferCallInterface.send({ from: bob, authWitnesses: [witness] });
+      const { receipt: transferTx } = await transferCallInterface.send({ from: bob, authWitnesses: [witness] });
 
       // transfer_public_to_private: Transfer(alice, PRIVATE, tokenId)
       await expectNFTTransferEvents(transferTx.txHash, nft.address, [
@@ -236,7 +236,7 @@ describe('NFT', () => {
       const tokenId = 1n;
 
       // First mint NFT publicly to alice
-      const mintTx = await nft.methods.mint_to_public(alice, tokenId).send({ from: alice });
+      const { receipt: mintTx } = await nft.methods.mint_to_public(alice, tokenId).send({ from: alice });
 
       // mint_to_public: Transfer(0x0, alice, tokenId)
       await expectNFTTransferEvents(mintTx.txHash, nft.address, [
@@ -266,7 +266,7 @@ describe('NFT', () => {
       expect(validity.isValidInPublic).toBeTruthy();
 
       // Bob executes the transfer with alice's authorization
-      const transferTx = await action.send({ from: bob, authWitnesses: [witness] });
+      const { receipt: transferTx } = await action.send({ from: bob, authWitnesses: [witness] });
 
       // transfer_public_to_public: Transfer(alice, bob, tokenId)
       await expectNFTTransferEvents(transferTx.txHash, nft.address, [{ from: alice, to: bob, token_id: tokenId }]);
@@ -285,7 +285,7 @@ describe('NFT', () => {
       const tokenId = 1n;
 
       // Mint NFT publicly to alice
-      const mintTx = await nft.methods.mint_to_public(alice, tokenId).send({ from: alice });
+      const { receipt: mintTx } = await nft.methods.mint_to_public(alice, tokenId).send({ from: alice });
 
       // mint_to_public: Transfer(0x0, alice, tokenId)
       await expectNFTTransferEvents(mintTx.txHash, nft.address, [
@@ -296,7 +296,7 @@ describe('NFT', () => {
       await assertOwnsPublicNFT(nft, tokenId, alice, true);
 
       // Alice burns the NFT
-      const burnTx = await nft.methods.burn_public(alice, tokenId, 0n).send({ from: alice });
+      const { receipt: burnTx } = await nft.methods.burn_public(alice, tokenId, 0n).send({ from: alice });
 
       // burn_public: Transfer(alice, 0x0, tokenId)
       await expectNFTTransferEvents(burnTx.txHash, nft.address, [
@@ -315,7 +315,7 @@ describe('NFT', () => {
       const tokenId = 1n;
 
       // Mint NFT privately to alice
-      const mintTx = await nft.methods.mint_to_private(alice, tokenId).send({ from: alice });
+      const { receipt: mintTx } = await nft.methods.mint_to_private(alice, tokenId).send({ from: alice });
 
       // mint_to_private: Transfer(0x0, PRIVATE, tokenId)
       await expectNFTTransferEvents(mintTx.txHash, nft.address, [
@@ -326,7 +326,7 @@ describe('NFT', () => {
       await assertOwnsPrivateNFT(nft, tokenId, alice, true);
 
       // Alice burns the NFT
-      const burnTx = await nft.methods.burn_private(alice, tokenId, 0n).send({ from: alice });
+      const { receipt: burnTx } = await nft.methods.burn_private(alice, tokenId, 0n).send({ from: alice });
 
       // burn_private: Transfer(PRIVATE, 0x0, tokenId)
       await expectNFTTransferEvents(burnTx.txHash, nft.address, [

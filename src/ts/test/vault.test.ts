@@ -51,8 +51,8 @@ describe('Vault', () => {
     const { nonce = 0, caller = from } = options;
     const transfer = asset.methods.transfer_public_to_public(from, vault.address, amount, nonce);
     await setPublicAuthWit(vault.address, transfer, from, wallet);
-    const tx = await action.send({ from: caller });
-    return tx.txHash;
+    const { receipt } = await action.send({ from: caller });
+    return receipt.txHash;
   }
 
   async function callVaultWithPrivateAuthWit(
@@ -64,8 +64,8 @@ describe('Vault', () => {
     const { nonce = 0, caller = from } = options;
     const transfer = asset.methods.transfer_private_to_public(from, vault.address, amount, nonce);
     const transferAuthWitness = await setPrivateAuthWit(vault.address, transfer, from, wallet);
-    const tx = await action.with({ authWitnesses: [transferAuthWitness] }).send({ from: caller });
-    return tx.txHash;
+    const { receipt } = await action.with({ authWitnesses: [transferAuthWitness] }).send({ from: caller });
+    return receipt.txHash;
   }
 
   async function callVaultWithPublicAuthWitFromWallet(
@@ -94,11 +94,11 @@ describe('Vault', () => {
   }
 
   async function publicBalance(token: TokenContract, address: AztecAddress, reader: AztecAddress): Promise<bigint> {
-    return token.methods.balance_of_public(address).simulate({ from: reader });
+    return (await token.methods.balance_of_public(address).simulate({ from: reader })).result;
   }
 
   async function totalShares(sharesContract: TokenContract, reader: AztecAddress): Promise<bigint> {
-    return sharesContract.methods.total_supply().simulate({ from: reader });
+    return (await sharesContract.methods.total_supply().simulate({ from: reader })).result;
   }
 
   const scale = 1_000_000n; // 6 decimals
@@ -122,11 +122,11 @@ describe('Vault', () => {
       'Public assets, Public shares: Alice deposits/withdraws, Bob issues/redeems',
       async () => {
         // Mint some assets to Alice and Bob for deposit/issue
-        const mintAliceTx = await asset.methods.mint_to_public(alice, initialAmount).send({ from: alice });
+        const { receipt: mintAliceTx } = await asset.methods.mint_to_public(alice, initialAmount).send({ from: alice });
         await expectTransferEvents(mintAliceTx.txHash, asset.address, [
           { from: AztecAddress.ZERO, to: alice, amount: BigInt(initialAmount) },
         ]);
-        const mintBobTx = await asset.methods.mint_to_public(bob, initialAmount).send({ from: alice });
+        const { receipt: mintBobTx } = await asset.methods.mint_to_public(bob, initialAmount).send({ from: alice });
         await expectTransferEvents(mintBobTx.txHash, asset.address, [
           { from: AztecAddress.ZERO, to: bob, amount: BigInt(initialAmount) },
         ]);
@@ -146,7 +146,9 @@ describe('Vault', () => {
         ]);
 
         // Simulate yield: mint assets to vault
-        const yieldTx = await asset.methods.mint_to_public(vault.address, yieldAmount).send({ from: alice });
+        const { receipt: yieldTx } = await asset.methods
+          .mint_to_public(vault.address, yieldAmount)
+          .send({ from: alice });
         await expectTransferEvents(yieldTx.txHash, asset.address, [
           { from: AztecAddress.ZERO, to: vault.address, amount: BigInt(yieldAmount) },
         ]);
@@ -173,9 +175,9 @@ describe('Vault', () => {
 
         // Alice withdraws public assets by burning public shares
         // withdraw_public_to_public: vault Transfer(from, 0x0, shares) + asset Transfer(vault, to, assets)
-        const maxWithdraw = await vault.methods.max_withdraw(alice).simulate({ from: alice });
+        const { result: maxWithdraw } = await vault.methods.max_withdraw(alice).simulate({ from: alice });
         await authorizeBurnPublic(alice, maxWithdraw > 0n ? sharesAlice : 0);
-        const withdrawTx = await vault.methods
+        const { receipt: withdrawTx } = await vault.methods
           .withdraw_public_to_public(alice, alice, maxWithdraw, 0)
           .send({ from: alice });
         const withdrawShares = BigInt(sharesAlice); // shares = convert_to_shares(maxWithdraw, ROUND_UP) = sharesAlice
@@ -189,7 +191,9 @@ describe('Vault', () => {
         // Bob redeems public shares for public assets
         // redeem_public_to_public: vault Transfer(from, 0x0, shares) + asset Transfer(vault, to, assets)
         await authorizeBurnPublic(bob, sharesBob);
-        const redeemTx = await vault.methods.redeem_public_to_public(bob, bob, sharesBob, 0).send({ from: bob });
+        const { receipt: redeemTx } = await vault.methods
+          .redeem_public_to_public(bob, bob, sharesBob, 0)
+          .send({ from: bob });
         await expectTransferEvents(redeemTx.txHash, shares.address, [
           { from: bob, to: AztecAddress.ZERO, amount: BigInt(sharesBob) },
         ]);
@@ -214,11 +218,13 @@ describe('Vault', () => {
       async () => {
         // Mint some assets to Alice and Bob for deposit/issue
         // mint_to_private enqueues increase_total_supply_internal which emits Transfer(0x0, PRIVATE, amount)
-        const mintAliceTx = await asset.methods.mint_to_private(alice, initialAmount).send({ from: alice });
+        const { receipt: mintAliceTx } = await asset.methods
+          .mint_to_private(alice, initialAmount)
+          .send({ from: alice });
         await expectTransferEvents(mintAliceTx.txHash, asset.address, [
           { from: AztecAddress.ZERO, to: PRIVATE_ADDRESS, amount: BigInt(initialAmount) },
         ]);
-        const mintBobTx = await asset.methods.mint_to_private(bob, initialAmount).send({ from: alice });
+        const { receipt: mintBobTx } = await asset.methods.mint_to_private(bob, initialAmount).send({ from: alice });
         await expectTransferEvents(mintBobTx.txHash, asset.address, [
           { from: AztecAddress.ZERO, to: PRIVATE_ADDRESS, amount: BigInt(initialAmount) },
         ]);
@@ -263,9 +269,9 @@ describe('Vault', () => {
 
         // Alice withdraws private assets by burning public shares
         // withdraw_public_to_private: vault Transfer(from, 0x0, shares) + asset Transfer(vault, PRIVATE, assets)
-        const maxWithdraw = await vault.methods.max_withdraw(alice).simulate({ from: alice });
+        const { result: maxWithdraw } = await vault.methods.max_withdraw(alice).simulate({ from: alice });
         await authorizeBurnPublic(alice, sharesAlice);
-        const withdrawTx = await vault.methods
+        const { receipt: withdrawTx } = await vault.methods
           .withdraw_public_to_private(alice, alice, maxWithdraw, 0)
           .send({ from: alice });
         await expectTransferEvents(withdrawTx.txHash, shares.address, [
@@ -280,7 +286,7 @@ describe('Vault', () => {
         // + optionally asset Transfer(vault, PRIVATE, outstanding) via commitment
         const minAssets = assetsBob;
         await authorizeBurnPublic(bob, sharesBob);
-        const redeemTx = await vault.methods
+        const { receipt: redeemTx } = await vault.methods
           .redeem_public_to_private_exact(bob, bob, sharesBob, minAssets, 0)
           .send({ from: bob });
         await expectTransferEvents(redeemTx.txHash, shares.address, [
@@ -350,10 +356,10 @@ describe('Vault', () => {
         // Alice withdraws public assets by burning private shares
         // withdraw_private_to_public_exact: vault Transfer(PRIVATE, 0x0, shares) + asset Transfer(vault, to, assets)
         // + potentially vault commitment surplus (0 in this case since sharesAlice = exact)
-        const maxRedeemPriv = await shares.methods.balance_of_private(alice).simulate({ from: alice });
-        const maxWithdraw = await vault.methods.preview_redeem(maxRedeemPriv).simulate({ from: alice });
+        const { result: maxRedeemPriv } = await shares.methods.balance_of_private(alice).simulate({ from: alice });
+        const { result: maxWithdraw } = await vault.methods.preview_redeem(maxRedeemPriv).simulate({ from: alice });
         const burnAuthWit = await authorizeBurnPrivate(alice, sharesAlice);
-        const withdrawTx = await vault.methods
+        const { receipt: withdrawTx } = await vault.methods
           .withdraw_private_to_public_exact(alice, alice, maxWithdraw, sharesAlice, 0)
           .with({ authWitnesses: [burnAuthWit] })
           .send({ from: alice });
@@ -367,7 +373,7 @@ describe('Vault', () => {
         // Bob redeems private shares for public assets
         // redeem_private_to_public: vault Transfer(PRIVATE, 0x0, shares) + asset Transfer(vault, to, assets)
         const burnAuthWitBob = await authorizeBurnPrivate(bob, sharesBob);
-        const redeemTx = await vault.methods
+        const { receipt: redeemTx } = await vault.methods
           .redeem_private_to_public(bob, bob, sharesBob, 0)
           .with({ authWitnesses: [burnAuthWitBob] })
           .send({ from: bob });
@@ -394,11 +400,13 @@ describe('Vault', () => {
       'Private assets, Private shares: Alice deposits/withdraws, Bob issues/redeems',
       async () => {
         // Mint some assets to Alice and Bob for deposit/issue
-        const mintAliceTx = await asset.methods.mint_to_private(alice, initialAmount).send({ from: alice });
+        const { receipt: mintAliceTx } = await asset.methods
+          .mint_to_private(alice, initialAmount)
+          .send({ from: alice });
         await expectTransferEvents(mintAliceTx.txHash, asset.address, [
           { from: AztecAddress.ZERO, to: PRIVATE_ADDRESS, amount: BigInt(initialAmount) },
         ]);
-        const mintBobTx = await asset.methods.mint_to_private(bob, initialAmount).send({ from: alice });
+        const { receipt: mintBobTx } = await asset.methods.mint_to_private(bob, initialAmount).send({ from: alice });
         await expectTransferEvents(mintBobTx.txHash, asset.address, [
           { from: AztecAddress.ZERO, to: PRIVATE_ADDRESS, amount: BigInt(initialAmount) },
         ]);
@@ -443,10 +451,10 @@ describe('Vault', () => {
 
         // Alice withdraws private assets by burning private shares
         // withdraw_private_to_private: vault Transfer(PRIVATE, 0x0, shares) + asset Transfer(vault, PRIVATE, assets)
-        const maxRedeemPriv = await shares.methods.balance_of_private(alice).simulate({ from: alice });
-        const maxWithdraw = await vault.methods.preview_redeem(maxRedeemPriv).simulate({ from: alice });
+        const { result: maxRedeemPriv } = await shares.methods.balance_of_private(alice).simulate({ from: alice });
+        const { result: maxWithdraw } = await vault.methods.preview_redeem(maxRedeemPriv).simulate({ from: alice });
         const burnAuthWit = await authorizeBurnPrivate(alice, sharesAlice);
-        const withdrawTx = await vault.methods
+        const { receipt: withdrawTx } = await vault.methods
           .withdraw_private_to_private(alice, alice, maxWithdraw, sharesAlice, 0)
           .with({ authWitnesses: [burnAuthWit] })
           .send({ from: alice });
@@ -461,7 +469,7 @@ describe('Vault', () => {
         // redeem_private_to_private_exact: vault Transfer(PRIVATE, 0x0, shares)
         // + optionally asset Transfer(vault, PRIVATE, outstanding_assets) via commitment
         const burnAuthWitBob = await authorizeBurnPrivate(bob, sharesBob);
-        const redeemTx = await vault.methods
+        const { receipt: redeemTx } = await vault.methods
           .redeem_private_to_private_exact(bob, bob, sharesBob, assetsBob, 0)
           .with({ authWitnesses: [burnAuthWitBob] })
           .send({ from: bob });
@@ -531,10 +539,10 @@ describe('Vault', () => {
         // Alice withdraws private assets by burning private shares (exact)
         // withdraw_private_to_private_exact: vault Transfer(PRIVATE, 0x0, shares) + asset Transfer(vault, PRIVATE, assets)
         // + potentially vault commitment surplus
-        const maxRedeemPriv = await shares.methods.balance_of_private(alice).simulate({ from: alice });
-        const maxWithdraw = await vault.methods.preview_redeem(maxRedeemPriv).simulate({ from: alice });
+        const { result: maxRedeemPriv } = await shares.methods.balance_of_private(alice).simulate({ from: alice });
+        const { result: maxWithdraw } = await vault.methods.preview_redeem(maxRedeemPriv).simulate({ from: alice });
         const burnAuthWit = await authorizeBurnPrivate(alice, sharesAlice);
-        const withdrawAliceTx = await vault.methods
+        const { receipt: withdrawAliceTx } = await vault.methods
           .withdraw_private_to_private_exact(alice, alice, maxWithdraw, sharesAlice, 0)
           .with({ authWitnesses: [burnAuthWit] })
           .send({ from: alice });
@@ -549,7 +557,7 @@ describe('Vault', () => {
         // withdraw_private_to_public_exact: vault Transfer(PRIVATE, 0x0, shares) + asset Transfer(vault, to, assets)
         // + potentially vault commitment surplus
         const burnAuthWitBob = await authorizeBurnPrivate(bob, sharesBob);
-        const withdrawBobTx = await vault.methods
+        const { receipt: withdrawBobTx } = await vault.methods
           .withdraw_private_to_public_exact(bob, bob, assetsBob, sharesBob, 0)
           .with({ authWitnesses: [burnAuthWitBob] })
           .send({ from: bob });
@@ -617,11 +625,11 @@ describe('Vault', () => {
         expect(await totalShares(shares, carl)).toBe(BigInt(sharesBob + sharesAlice));
 
         // Alice withdraws public assets by burning public shares
-        const maxWithdraw = await vault.methods.max_withdraw(alice).simulate({ from: alice });
+        const { result: maxWithdraw } = await vault.methods.max_withdraw(alice).simulate({ from: alice });
         await authorizeBurnPublic(alice, sharesAlice);
         const withdrawAction = vault.methods.withdraw_public_to_public(alice, alice, maxWithdraw, 0);
         await setPublicAuthWit(carl, withdrawAction, alice, wallet);
-        const withdrawTx = await withdrawAction.send({ from: carl });
+        const { receipt: withdrawTx } = await withdrawAction.send({ from: carl });
         await expectTransferEvents(withdrawTx.txHash, shares.address, [
           { from: alice, to: AztecAddress.ZERO, amount: BigInt(sharesAlice) },
         ]);
@@ -633,7 +641,7 @@ describe('Vault', () => {
         await authorizeBurnPublic(bob, sharesBob);
         const redeemAction = vault.methods.redeem_public_to_public(bob, bob, sharesBob, 0);
         await setPublicAuthWit(carl, redeemAction, bob, wallet);
-        const redeemTx = await redeemAction.send({ from: carl });
+        const { receipt: redeemTx } = await redeemAction.send({ from: carl });
         await expectTransferEvents(redeemTx.txHash, shares.address, [
           { from: bob, to: AztecAddress.ZERO, amount: BigInt(sharesBob) },
         ]);
@@ -708,9 +716,9 @@ describe('Vault', () => {
         expect(await totalShares(shares, carl)).toBe(BigInt(sharesBob + sharesAlice));
 
         // Alice withdraws private assets by burning public shares
-        const maxWithdraw = await vault.methods.max_withdraw(alice).simulate({ from: alice });
+        const { result: maxWithdraw } = await vault.methods.max_withdraw(alice).simulate({ from: alice });
         await authorizeBurnPublic(alice, sharesAlice);
-        const withdrawTx = await vault.methods
+        const { receipt: withdrawTx } = await vault.methods
           .withdraw_public_to_private(alice, alice, maxWithdraw, 0)
           .send({ from: alice });
         await expectTransferEvents(withdrawTx.txHash, shares.address, [
@@ -723,7 +731,7 @@ describe('Vault', () => {
         // Bob redeems public shares for private assets
         const minAssets = 15;
         await authorizeBurnPublic(bob, sharesBob);
-        const redeemTx = await vault.methods
+        const { receipt: redeemTx } = await vault.methods
           .redeem_public_to_private_exact(bob, bob, sharesBob, minAssets, 0)
           .send({ from: bob });
         await expectTransferEvents(redeemTx.txHash, shares.address, [
@@ -800,8 +808,8 @@ describe('Vault', () => {
         expect(await totalShares(shares, carl)).toBe(BigInt(sharesBob + sharesAlice));
 
         // Alice withdraws public assets by burning private shares
-        const maxRedeemPriv = await shares.methods.balance_of_private(alice).simulate({ from: alice });
-        const maxWithdraw = await vault.methods.preview_redeem(maxRedeemPriv).simulate({ from: alice });
+        const { result: maxRedeemPriv } = await shares.methods.balance_of_private(alice).simulate({ from: alice });
+        const { result: maxWithdraw } = await vault.methods.preview_redeem(maxRedeemPriv).simulate({ from: alice });
         const burnAuthWit = await authorizeBurnPrivate(alice, sharesAlice);
         const withdrawAction = vault.methods.withdraw_private_to_public_exact(
           alice,
@@ -811,7 +819,7 @@ describe('Vault', () => {
           0,
         );
         const withdrawAuthWitness = await setPrivateAuthWit(carl, withdrawAction, alice, wallet);
-        const withdrawTx = await withdrawAction
+        const { receipt: withdrawTx } = await withdrawAction
           .with({ authWitnesses: [withdrawAuthWitness, burnAuthWit] })
           .send({ from: carl });
         await expectTransferEvents(withdrawTx.txHash, shares.address, [
@@ -825,7 +833,7 @@ describe('Vault', () => {
         const burnAuthWitBob = await authorizeBurnPrivate(bob, sharesBob);
         const redeemAction = vault.methods.redeem_private_to_public(bob, bob, sharesBob, 0);
         const redeemAuthWitness = await setPrivateAuthWit(carl, redeemAction, bob, wallet);
-        const redeemTx = await redeemAction
+        const { receipt: redeemTx } = await redeemAction
           .with({ authWitnesses: [redeemAuthWitness, burnAuthWitBob] })
           .send({ from: carl });
         await expectTransferEvents(redeemTx.txHash, shares.address, [
@@ -902,12 +910,12 @@ describe('Vault', () => {
         expect(await totalShares(shares, carl)).toBe(BigInt(sharesBob + sharesAlice));
 
         // Alice withdraws private assets by burning private shares
-        const maxRedeemPriv = await shares.methods.balance_of_private(alice).simulate({ from: alice });
-        const maxWithdraw = await vault.methods.preview_redeem(maxRedeemPriv).simulate({ from: alice });
+        const { result: maxRedeemPriv } = await shares.methods.balance_of_private(alice).simulate({ from: alice });
+        const { result: maxWithdraw } = await vault.methods.preview_redeem(maxRedeemPriv).simulate({ from: alice });
         const burnAuthWit = await authorizeBurnPrivate(alice, sharesAlice);
         const withdrawAction = vault.methods.withdraw_private_to_private(alice, alice, maxWithdraw, 9, 0);
         const withdrawAuthWitness = await setPrivateAuthWit(carl, withdrawAction, alice, wallet);
-        const withdrawTx = await withdrawAction
+        const { receipt: withdrawTx } = await withdrawAction
           .with({ authWitnesses: [withdrawAuthWitness, burnAuthWit] })
           .send({ from: carl });
         await expectTransferEvents(withdrawTx.txHash, shares.address, [
@@ -921,7 +929,7 @@ describe('Vault', () => {
         const burnAuthWitBob = await authorizeBurnPrivate(bob, sharesBob);
         const redeemAction = vault.methods.redeem_private_to_private_exact(bob, bob, sharesBob, 15, 0);
         const redeemAuthWitness = await setPrivateAuthWit(carl, redeemAction, bob, wallet);
-        const redeemTx = await redeemAction
+        const { receipt: redeemTx } = await redeemAction
           .with({ authWitnesses: [redeemAuthWitness, burnAuthWitBob] })
           .send({ from: carl });
         await expectTransferEvents(redeemTx.txHash, shares.address, [
@@ -995,12 +1003,12 @@ describe('Vault', () => {
         expect(await totalShares(shares, carl)).toBe(BigInt(sharesBob + sharesAlice));
 
         // Alice withdraws private assets by burning private shares (exact)
-        const maxRedeemPriv = await shares.methods.balance_of_private(alice).simulate({ from: alice });
-        const maxWithdraw = await vault.methods.preview_redeem(maxRedeemPriv).simulate({ from: alice });
+        const { result: maxRedeemPriv } = await shares.methods.balance_of_private(alice).simulate({ from: alice });
+        const { result: maxWithdraw } = await vault.methods.preview_redeem(maxRedeemPriv).simulate({ from: alice });
         const burnAuthWit = await authorizeBurnPrivate(alice, sharesAlice);
         const withdrawAction = vault.methods.withdraw_private_to_private_exact(alice, alice, maxWithdraw, 9, 0);
         const withdrawAuthWitness = await setPrivateAuthWit(carl, withdrawAction, alice, wallet);
-        const withdrawTx = await withdrawAction
+        const { receipt: withdrawTx } = await withdrawAction
           .with({ authWitnesses: [withdrawAuthWitness, burnAuthWit] })
           .send({ from: carl });
         await expectTransferEvents(withdrawTx.txHash, shares.address, [
@@ -1014,7 +1022,7 @@ describe('Vault', () => {
         const burnAuthWitBob = await authorizeBurnPrivate(bob, sharesBob);
         const publicWithdrawAction = vault.methods.withdraw_private_to_public_exact(bob, bob, 15, sharesBob, 0);
         const publicWithdrawAuthWitness = await setPrivateAuthWit(carl, publicWithdrawAction, bob, wallet);
-        const withdrawBobTx = await publicWithdrawAction
+        const { receipt: withdrawBobTx } = await publicWithdrawAction
           .with({ authWitnesses: [publicWithdrawAuthWitness, burnAuthWitBob] })
           .send({ from: carl });
         await expectTransferEvents(withdrawBobTx.txHash, shares.address, [
