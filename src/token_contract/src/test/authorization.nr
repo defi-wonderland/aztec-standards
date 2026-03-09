@@ -41,7 +41,6 @@ unconstrained fn setup_with_auth_and_minter() -> (TestEnvironment, AztecAddress,
             "TT00000000000000000000000000000",
             18,
             minter,
-            AztecAddress::zero(),
             auth_contract,
         ),
     );
@@ -68,7 +67,6 @@ unconstrained fn setup_with_auth_and_public_balance() -> (TestEnvironment, Aztec
             18,
             mint_amount,
             owner,
-            AztecAddress::zero(),
             auth_contract,
         ),
     );
@@ -95,7 +93,6 @@ unconstrained fn setup_with_auth_and_private_balance() -> (TestEnvironment, Azte
             "TT00000000000000000000000000000",
             18,
             minter,
-            AztecAddress::zero(),
             auth_contract,
         ),
     );
