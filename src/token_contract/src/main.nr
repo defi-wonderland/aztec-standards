@@ -47,9 +47,10 @@ pub contract Token {
     /// @param symbol The symbol of the token
     /// @param decimals The number of decimals of the token
     /// @param private_balances The private balances of the token
-    /// @param total_supply The total supply of the token
+    /// @param total_supply The total supply of the token (updated only when total_supply_enabled)
     /// @param public_balances The public balances of the token
     /// @param minter The account permissioned to mint the token
+    /// @param total_supply_enabled When true, total_supply is updated on mint/burn; when false, it is not
     #[storage]
     struct Storage<Context> {
         name: PublicImmutable<FieldCompressedString, Context>,
@@ -59,6 +60,7 @@ pub contract Token {
         total_supply: PublicMutable<u128, Context>,
         public_balances: Map<AztecAddress, PublicMutable<u128, Context>, Context>,
         minter: PublicImmutable<AztecAddress, Context>,
+        total_supply_enabled: PublicImmutable<bool, Context>,
     }
 
     /// @notice Initializes the token with an initial supply
@@ -68,6 +70,7 @@ pub contract Token {
     /// @param decimals The number of decimals of the token
     /// @param initial_supply The initial supply of the token
     /// @param to The address to mint the initial supply to
+    /// @param total_supply_enabled When true, total_supply is updated on mint/burn
     #[external("public")]
     #[initializer]
     fn constructor_with_initial_supply(
@@ -76,10 +79,12 @@ pub contract Token {
         decimals: u8,
         initial_supply: u128,
         to: AztecAddress,
+        total_supply_enabled: bool,
     ) {
         self.storage.name.initialize(FieldCompressedString::from_string(name));
         self.storage.symbol.initialize(FieldCompressedString::from_string(symbol));
         self.storage.decimals.initialize(decimals);
+        self.storage.total_supply_enabled.initialize(total_supply_enabled);
 
         self.internal._mint_to_public(to, initial_supply);
     }
@@ -89,12 +94,20 @@ pub contract Token {
     /// @param symbol The symbol of the token
     /// @param decimals The number of decimals of the token
     /// @param minter The address of the minter
+    /// @param total_supply_enabled When true, total_supply is updated on mint/burn
     #[external("public")]
     #[initializer]
-    fn constructor_with_minter(name: str<31>, symbol: str<31>, decimals: u8, minter: AztecAddress) {
+    fn constructor_with_minter(
+        name: str<31>,
+        symbol: str<31>,
+        decimals: u8,
+        minter: AztecAddress,
+        total_supply_enabled: bool,
+    ) {
         self.storage.name.initialize(FieldCompressedString::from_string(name));
         self.storage.symbol.initialize(FieldCompressedString::from_string(symbol));
         self.storage.decimals.initialize(decimals);
+        self.storage.total_supply_enabled.initialize(total_supply_enabled);
 
         self.storage.minter.initialize(minter);
     }
@@ -327,12 +340,21 @@ pub contract Token {
         self.storage.public_balances.at(owner).read()
     }
 
-    /// @notice Returns the total supply of the token
+    /// @notice Returns the total supply of the token (only meaningful when total_supply_enabled)
     /// @return The total supply of the token
     #[external("public")]
     #[view]
     fn total_supply() -> u128 {
+        // TODO: revert if total_supply_enabled is false
         self.storage.total_supply.read()
+    }
+
+    /// @notice Returns whether total supply tracking is enabled
+    /// @return True if total_supply is updated on mint/burn, false otherwise
+    #[external("public")]
+    #[view]
+    fn total_supply_enabled() -> bool {
+        self.storage.total_supply_enabled.read()
     }
 
     /// @notice Returns the name of the token
@@ -387,7 +409,7 @@ pub contract Token {
     }
 
     /// @notice Mints tokens to an address publicly
-    /// @dev Increases the public balance of `to` by `amount` and the total supply
+    /// @dev Increases the public balance of `to` by `amount` and the total supply (only when enabled)
     /// @param to The address of the recipient
     /// @param amount The amount of tokens to mint
     #[external("public")]
@@ -398,7 +420,7 @@ pub contract Token {
     }
 
     /// @notice Finalizes a mint to a commitment
-    /// @dev Finalizes a mint to a commitment and updates the total supply
+    /// @dev Finalizes a mint to a commitment and updates the total supply (only when enabled)
     /// @param commitment The partial note representing the mint commitment (privacy entrance)
     /// @param amount The amount of tokens to mint
     #[external("public")]
@@ -406,7 +428,9 @@ pub contract Token {
         let sender = self.msg_sender();
         _validate_minter(sender, self.storage.minter.read());
         let completer = sender;
-        self.internal._increase_total_supply(amount);
+        if self.storage.total_supply_enabled.read() {
+            self.internal._increase_total_supply(amount);
+        }
         self.internal._increase_commitment_balance(
             PartialUintNote::from_field(commitment),
             completer,
@@ -416,7 +440,7 @@ pub contract Token {
         self.emit(Transfer { from: AztecAddress::zero(), to: PRIVATE_ADDRESS_MAGIC_VALUE, amount });
     }
 
-    /// @notice Internal function to increase the total supply by `amount`
+    /// @notice Internal function to increase the total supply by `amount` (only when enabled)
     /// @param amount The amount to increase the total supply by
     #[external("public")]
     #[only_self]
@@ -431,7 +455,7 @@ pub contract Token {
      * ======================================================== */
 
     /// @notice Burns tokens from a private balance
-    /// @dev Burns tokens from a private balance and enqueues a public call to update the total supply
+    /// @dev Burns tokens from a private balance and updates the total supply (only when enabled)
     /// @param from The address of the sender
     /// @param amount The amount of tokens to burn
     /// @param _nonce The nonce used for authwitness
@@ -443,7 +467,7 @@ pub contract Token {
     }
 
     /// @notice Burns tokens from a public balance
-    /// @dev Burns tokens from a public balance and updates the total supply
+    /// @dev Burns tokens from a public balance and updates the total supply (only when enabled)
     /// @param from The address of the sender
     /// @param amount The amount of tokens to burn
     /// @param _nonce The nonce used for authwitness
@@ -595,44 +619,51 @@ pub contract Token {
         commitment
     }
 
-    /// @notice Mints tokens to a public balance and increases the total supply
+    /// @notice Mints tokens to a public balance and updates the total supply (only when enabled)
     /// @param to The address of the recipient
     /// @param amount The amount of tokens to mint
     #[internal("public")]
     fn _mint_to_public(to: AztecAddress, amount: u128) {
         self.internal._increase_public_balance(to, amount);
-        self.internal._increase_total_supply(amount);
+        if self.storage.total_supply_enabled.read() {
+            self.internal._increase_total_supply(amount);
+        }
 
         self.emit(Transfer { from: AztecAddress::zero(), to, amount });
     }
 
-    /// @notice Mints tokens to a private balance and enqueues a public call to increase the total supply
+    /// @notice Mints tokens to a private balance and updates the total supply (only when enabled)
     /// @param to The address of the recipient
     /// @param amount The amount of tokens to mint
     #[internal("private")]
     fn _mint_to_private(to: AztecAddress, amount: u128) {
         self.internal._increase_private_balance(to, amount);
-        self.enqueue_self.increase_total_supply_internal(amount);
+        if self.storage.total_supply_enabled.read() {
+            self.enqueue_self.increase_total_supply_internal(amount);
+        }
     }
 
-    /// @notice Burns tokens from a public balance and decreases the total supply
+    /// @notice Burns tokens from a public balance and updates the total supply (only when enabled)
     /// @param from The address to burn tokens from
     /// @param amount The amount of tokens to burn
     #[internal("public")]
     fn _burn_public(from: AztecAddress, amount: u128) {
         self.internal._decrease_public_balance(from, amount);
-        self.internal._decrease_total_supply(amount);
-
+        if self.storage.total_supply_enabled.read() {
+            self.internal._decrease_total_supply(amount);
+        }
         self.emit(Transfer { from, to: AztecAddress::zero(), amount });
     }
 
-    /// @notice Burns tokens from a private balance and enqueues a public call to decrease the total supply
+    /// @notice Burns tokens from a private balance and updates the total supply (only when enabled)
     /// @param from The address to burn tokens from
     /// @param amount The amount of tokens to burn
     #[internal("private")]
     fn _burn_private(from: AztecAddress, amount: u128) {
         self.internal._decrease_private_balance(from, amount, INITIAL_TRANSFER_CALL_MAX_NOTES);
-        self.enqueue_self.decrease_total_supply_internal(amount);
+        if self.storage.total_supply_enabled.read() {
+            self.enqueue_self.decrease_total_supply_internal(amount);
+        }
     }
 
     /** ==========================================================

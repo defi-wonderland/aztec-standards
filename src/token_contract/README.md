@@ -31,8 +31,9 @@ The contract emits a public `Transfer { from, to, amount }` event on every balan
 - `decimals: u8`: Decimal precision.
 - `private_balances: Map<AztecAddress, BalanceSet>`: Private balances per account.
 - `public_balances: Map<AztecAddress, u128>`: Public balances per account.
-- `total_supply: u128`: Total token supply.
+- `total_supply: u128`: Total token supply (updated only when `total_supply_enabled`).
 - `minter: AztecAddress`: Authorized minter address (if set).
+- `total_supply_enabled: bool`: When true, total_supply is updated on mint/burn; when false, it is not.
 
 ## Initializer Functions
 
@@ -45,6 +46,7 @@ The contract emits a public `Transfer { from, to, amount }` event on every balan
 /// @param decimals The number of decimals of the token
 /// @param initial_supply The initial supply of the token
 /// @param to The address to mint the initial supply to
+/// @param total_supply_enabled When true, total_supply is updated on mint/burn
 #[public]
 #[initializer]
 fn constructor_with_initial_supply(
@@ -53,6 +55,7 @@ fn constructor_with_initial_supply(
     decimals: u8,
     initial_supply: u128,
     to: AztecAddress,
+    total_supply_enabled: bool,
 ) { /* ... */ }
 ```
 
@@ -63,6 +66,7 @@ fn constructor_with_initial_supply(
 /// @param symbol The symbol of the token
 /// @param decimals The number of decimals of the token
 /// @param minter The address of the minter
+/// @param total_supply_enabled When true, total_supply is updated on mint/burn
 #[public]
 #[initializer]
 fn constructor_with_minter(
@@ -70,10 +74,20 @@ fn constructor_with_minter(
     symbol: str<31>,
     decimals: u8,
     minter: AztecAddress,
+    total_supply_enabled: bool,
 ) { /* ... */ }
 ```
 
 ## View Functions
+
+### total_supply_enabled
+```rust
+/// @notice Returns whether total supply tracking is enabled
+/// @return True if total_supply is updated on mint/burn, false otherwise
+#[public]
+#[view]
+fn total_supply_enabled() -> bool { /* ... */ }
+```
 
 ### balance_of_public
 ```rust
@@ -87,7 +101,7 @@ fn balance_of_public(owner: AztecAddress) -> u128 { /* ... */ }
 
 ### total_supply
 ```rust
-/// @notice Returns the total supply of the token
+/// @notice Returns the total supply of the token (only meaningful when total_supply_enabled)
 /// @return The total supply of the token
 #[public]
 #[view]
@@ -172,7 +186,7 @@ fn transfer_public_to_commitment(
 ### mint_to_public
 ```rust
 /// @notice Mints tokens to a public balance
-/// @dev Increases the public balance of `to` by `amount` and the total supply
+/// @dev Increases the public balance of `to` by `amount`
 /// @param to The address of the recipient
 /// @param amount The amount of tokens to mint
 #[public]
@@ -185,7 +199,7 @@ fn mint_to_public(
 ### mint_to_commitment
 ```rust
 /// @notice Finalizes a mint to a commitment
-/// @dev Finalizes a mint to a commitment and updates the total supply
+/// @dev Finalizes a mint to a commitment
 /// @param commitment The Field representing the mint commitment (privacy entrance)
 /// @param amount The amount of tokens to mint
 #[public]
@@ -198,7 +212,7 @@ fn mint_to_commitment(
 ### burn_public
 ```rust
 /// @notice Burns tokens from a public balance
-/// @dev Burns tokens from a public balance and updates the total supply
+/// @dev Burns tokens from a public balance
 /// @param from The address of the sender
 /// @param amount The amount of tokens to burn
 /// @param nonce The nonce used for authwit
@@ -312,7 +326,7 @@ fn initialize_transfer_commitment(to: AztecAddress, completer: AztecAddress) -> 
 ### mint_to_private
 ```rust
 /// @notice Mints tokens into a private balance
-/// @dev Requires minter, enqueues supply update
+/// @dev Requires minter
 /// @param to The address of the recipient
 /// @param amount The amount of tokens to mint
 #[private]
@@ -322,7 +336,7 @@ fn mint_to_private(to: AztecAddress, amount: u128) { /* ... */ }
 ### burn_private
 ```rust
 /// @notice Burns tokens from a private balance
-/// @dev Requires authwit, enqueues supply update
+/// @dev Requires authwit
 /// @param from The address of the sender
 /// @param amount The amount of tokens to burn
 /// @param nonce The nonce used for authwit

@@ -149,6 +149,7 @@ export async function deployTokenWithMinter(wallet: Wallet, deployer: AztecAddre
     'PT',
     18,
     deployer,
+    true,
   ).send({ ...options, from: deployer });
   return contract;
 }
@@ -167,6 +168,7 @@ export async function deployTokenWithInitialSupply(wallet: Wallet, deployer: Azt
     18,
     0,
     deployer,
+    true,
   ).send({ ...options, from: deployer });
   return contract;
 }
