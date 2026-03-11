@@ -1,6 +1,6 @@
 use crate::Vault;
 use aztec::{
-    oracle::get_contract_instance::get_contract_instance, protocol::address::AztecAddress,
+    protocol::{address::AztecAddress, contract_class_id::ContractClassId, traits::FromField},
     test::helpers::test_environment::TestEnvironment,
 };
 use aztec::test::helpers::authwit as authwit_cheatcodes;
@@ -12,11 +12,19 @@ pub global mint_amount: u128 = 10_000 as u128;
 /// Deploys 3 contracts: asset token (with owner as minter), vault (public initializer that
 /// computes the shares address), and shares token (with vault as minter).
 ///
-/// TODO: The vault constructor computes the shares token address using its own salt and deployer.
-/// The test environment does not support custom salts, so the shares token cannot be deployed
-/// at the address the vault computes. Once custom salt support is added to the test environment,
-/// the shares token should be deployed with the same salt and deployer as the vault.
-/// See: https://github.com/AztecProtocol/aztec-packages/issues/16656
+/// TODO: The vault constructor computes the shares token address deterministically using salt,
+/// deployer, class_id, and initialization parameters. The TXE test environment does not support
+/// custom salts, so the vault's computed shares address will NOT match the actually deployed
+/// shares token address. This means vault operations that interact with the shares token
+/// (deposit, withdraw, redeem, etc.) will fail in TXE tests because the vault calls the wrong
+/// address. Once custom salt support is added to TXE, the shares token can be deployed at the
+/// vault's computed address. See: https://github.com/AztecProtocol/aztec-packages/issues/16656
+///
+/// Dummy values are used for shares_class_id (0), shares_salt (0), and shares_deployer (owner)
+/// because:
+/// - The utility oracle get_contract_instance is not available in the TXE handler
+/// - The AVM opcode get_contract_instance_deployer_avm is not available in TXE public context
+/// - The shares address mismatch makes correct values irrelevant until custom salts are supported
 pub unconstrained fn setup_with_vault(
     with_account_contracts: bool,
 ) -> (TestEnvironment, AztecAddress, AztecAddress, AztecAddress, AztecAddress, AztecAddress) {
@@ -41,19 +49,17 @@ pub unconstrained fn setup_with_vault(
     let asset_address =
         env.deploy("@token_contract/Token").with_public_initializer(owner, asset_initializer);
 
-    // Get token class ID from the deployed asset (same class as shares)
-    let token_class_id = get_contract_instance(asset_address).contract_class_id;
-
-    // TODO: salt is passed as 0 because the test environment does not support custom salts.
-    // The computed shares address will not match the deployed shares address.
+    // Dummy values: shares_class_id, shares_salt, shares_deployer are placeholders because the
+    // TXE does not support custom salts, so the computed shares address won't match anyway.
     let vault_initializer = Vault::interface().constructor(
         asset_address,
         1,
         "SharesToken00000000000000000000",
         "SHARES0000000000000000000000000",
         18,
-        token_class_id,
+        ContractClassId::from_field(0),
         0,
+        owner,
     );
     let vault_address =
         env.deploy("@vault_contract/Vault").with_public_initializer(owner, vault_initializer);
@@ -75,10 +81,10 @@ pub unconstrained fn setup_with_vault(
 /// Uses constructor_with_initial_deposit which transfers assets from the depositor and mints
 /// permanently-locked shares to the vault during initialization.
 ///
-/// TODO: The vault constructor computes the shares token address using its own salt and deployer.
-/// The test environment does not support custom salts, so the shares token cannot be deployed
-/// at the address the vault computes. Once custom salt support is added to the test environment,
-/// the shares token should be deployed with the same salt and deployer as the vault.
+/// TODO: Same TXE limitations as setup_with_vault apply here. Additionally, the constructor
+/// attempts to transfer assets and mint shares during initialization, which will fail because
+/// the computed shares address doesn't match the deployed shares token. This setup function
+/// cannot work until the TXE supports custom salts.
 /// See: https://github.com/AztecProtocol/aztec-packages/issues/16656
 pub unconstrained fn setup_with_vault_initial_deposit(
     with_account_contracts: bool,
@@ -105,25 +111,19 @@ pub unconstrained fn setup_with_vault_initial_deposit(
     let asset_address =
         env.deploy("@token_contract/Token").with_public_initializer(owner, asset_initializer);
 
-    // Get token class ID from the deployed asset (same class as shares)
-    let token_class_id = get_contract_instance(asset_address).contract_class_id;
-
     // Mint initial_deposit of assets to owner before vault deployment
     env.call_public(owner, Token::at(asset_address).mint_to_public(owner, initial_deposit));
 
-    // TODO: The vault address is not yet known, so the authwit targets a precomputed address
-    // that won't match the actual deployed vault address (due to the salt limitation above).
-    // This means the initial deposit flow cannot be fully tested until custom salts are supported.
-
-    // TODO: salt is passed as 0 because the test environment does not support custom salts.
+    // Dummy values for shares_class_id, shares_salt, shares_deployer (see setup_with_vault)
     let vault_initializer = Vault::interface().constructor_with_initial_deposit(
         asset_address,
         1,
         "SharesToken00000000000000000000",
         "SHARES0000000000000000000000000",
         18,
-        token_class_id,
+        ContractClassId::from_field(0),
         0,
+        owner,
         initial_deposit,
         owner,
         0,
