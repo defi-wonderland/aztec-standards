@@ -396,15 +396,24 @@ pub contract Vault {
         max_assets: u128,
         nonce: Field,
     ) {
+        let asset_token = self.storage.asset.read();
         let shares_token = self.storage.shares.read();
         _validate_from_private::<5>(self.context, from);
 
-        // Validate the amount of assets transferred and send back any excess
-        // Order matters: enqueue settlement first so asset transfer executes before shares total_supply increase
-        self.enqueue_self.settle_issue_public_to_private_internal(from, shares, max_assets, nonce);
+        // Order matters: enqueue asset transfer first so it executes before shares total_supply increase,
+        // neutralizing ARC-403 reentrancy via the `tokens_to_send` hook.
+        self.enqueue(Token::at(asset_token).transfer_public_to_public(
+            from,
+            self.address,
+            max_assets,
+            nonce,
+        ));
 
         // Mint shares to the recipient's private balance
         self.call(Token::at(shares_token).mint_to_private(to, shares));
+
+        // Settle: compute actual assets needed and refund any excess
+        self.enqueue_self.settle_issue_public_to_private_internal(from, shares, max_assets);
     }
 
     /// @notice Issues exactly the requested shares to a public balance and receives the underlying asset from a private balance
@@ -1375,31 +1384,17 @@ pub contract Vault {
     /// @param from The address of the sender
     /// @param shares The amount of shares being issued
     /// @param max_assets The maximum amount of assets that should be deposited
-    /// @param nonce The nonce used for authwitness
     #[external("public")]
     #[only_self]
-    fn settle_issue_public_to_private_internal(
-        from: AztecAddress,
-        shares: u128,
-        max_assets: u128,
-        nonce: Field,
-    ) {
+    fn settle_issue_public_to_private_internal(from: AztecAddress, shares: u128, max_assets: u128) {
         let asset_token = self.storage.asset.read();
-        // No pre-applied state changes: shares.increase_total_supply(shares) enqueues after this
-        // Assets not transferred yet
-        let total_supply = self.internal._total_supply_of_shares();
-        let total_assets = self.internal._total_assets();
+        // Pre-applied: asset.transfer_public_to_public(from, self, max_assets), shares.increase_total_supply(shares)
+        let total_assets_post = self.internal._total_assets();
+        let total_supply_post = self.internal._total_supply_of_shares();
+        let total_assets = total_assets_post - max_assets;
+        let total_supply = total_supply_post - shares;
         let vault_offset = self.storage.vault_offset.read();
         let assets = _convert_to_assets(shares, total_assets, total_supply, vault_offset, ROUND_UP);
-
-        // Order matters: transfer before minting to neutralize ARC-403 reentrancy via the `tokens_to_send` hook.
-        // Take the assets from the sender
-        self.call(Token::at(asset_token).transfer_public_to_public(
-            from,
-            self.address,
-            max_assets,
-            nonce,
-        ));
 
         let change = max_assets - assets; // Reverts with underflow if invalid
         if change > 0 {
