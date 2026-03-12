@@ -1434,6 +1434,7 @@ pub contract Vault {
     /// @param vault_offset The vault offset
     /// @param rounding The rounding direction (ROUND_UP or ROUND_DOWN)
     /// @return The equivalent amount of shares
+    // TODO: The multiplication `assets * (total_supply + vault_offset)` can overflow u128 for large values.
     #[contract_library_method]
     fn _convert_to_shares(
         assets: u128,
@@ -1458,6 +1459,7 @@ pub contract Vault {
     /// @param vault_offset The vault offset
     /// @param rounding The rounding direction (ROUND_UP or ROUND_DOWN)
     /// @return The equivalent amount of assets
+    // TODO: The multiplication `shares * (total_assets + 1)` can overflow u128 for large values.
     #[contract_library_method]
     fn _convert_to_assets(
         shares: u128,
