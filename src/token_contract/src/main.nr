@@ -403,12 +403,12 @@ pub contract Token {
     /// @param amount The amount of tokens to mint
     #[external("public")]
     fn mint_to_commitment(commitment: Field, amount: u128) {
-        let sender = self.msg_sender();
-        _validate_minter(sender, self.storage.minter.read());
+        let completer = self.msg_sender();
+        _validate_minter(completer, self.storage.minter.read());
         self.internal._increase_total_supply(amount);
         self.internal._increase_commitment_balance(
             PartialUintNote::from_field(commitment),
-            sender,
+            completer,
             amount,
         );
 
