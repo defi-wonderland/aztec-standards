@@ -18,7 +18,13 @@ pub global mint_amount: u128 = 10_000 as u128;
 /// shares token address. This means vault operations that interact with the shares token
 /// (deposit, withdraw, redeem, etc.) will fail in TXE tests because the vault calls the wrong
 /// address. Once custom salt support is added to TXE, the shares token can be deployed at the
-/// vault's computed address. See: https://github.com/AztecProtocol/aztec-packages/issues/16656
+/// vault's computed address.
+///
+/// AztecProtocol/aztec-packages issue #16656 was fixed upstream in PR #21183
+/// (https://github.com/AztecProtocol/aztec-packages/pull/21183), merged into the v5 train on
+/// 2026-03-05. Backport to v4 is pending via PR #21191
+/// (https://github.com/AztecProtocol/aztec-packages/pull/21191).
+/// Re-enable Noir tests for both vault and escrow contracts during the upgrade that brings this change.
 ///
 /// Dummy values are used for shares_class_id (0), shares_salt (0), and shares_deployer (owner)
 /// because:
@@ -59,7 +65,6 @@ pub unconstrained fn setup_with_vault(
         18,
         ContractClassId::from_field(0),
         0,
-        owner,
     );
     let vault_address =
         env.deploy("@vault_contract/Vault").with_public_initializer(owner, vault_initializer);
@@ -123,7 +128,6 @@ pub unconstrained fn setup_with_vault_initial_deposit(
         18,
         ContractClassId::from_field(0),
         0,
-        owner,
         initial_deposit,
         owner,
         0,
