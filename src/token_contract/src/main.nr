@@ -405,11 +405,10 @@ pub contract Token {
     fn mint_to_commitment(commitment: Field, amount: u128) {
         let sender = self.msg_sender();
         _validate_minter(sender, self.storage.minter.read());
-        let completer = sender;
         self.internal._increase_total_supply(amount);
         self.internal._increase_commitment_balance(
             PartialUintNote::from_field(commitment),
-            completer,
+            sender,
             amount,
         );
 
