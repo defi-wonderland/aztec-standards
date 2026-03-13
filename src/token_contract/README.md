@@ -8,6 +8,17 @@ This implementation provides a robust foundation for fungible tokens on Aztec, e
 
 This contract follows the [AIP-20 Aztec Token Standard](https://forum.aztec.network/t/request-for-comments-aip-20-aztec-token-standard/7737). Feel free to review and discuss the specification on the Aztec forum.
 
+## ARC-403: Authorization Hooks
+
+The token supports an optional authorization contract (ARC-403) that is invoked before every balance-changing operation. Set at deployment via `auth_contract`; use the zero address to disable.
+
+| Entry point       | Hook called       |
+|-------------------|-------------------|
+| Private functions | `authorize_private` |
+| Public functions  | `authorize_public`  |
+
+Authorization follows the **entry-point context**: private calls invoke the private hook (nothing revealed on-chain), public calls invoke the public hook. Query `get_auth_contract()` for the configured address.
+
 ## Transfer Events
 
 The contract emits a public `Transfer { from, to, amount }` event on every balance-changing operation (mints, burns, public transfers, and cross-domain private ↔ public moves), enabling indexers to track token movements.
@@ -33,6 +44,7 @@ The contract emits a public `Transfer { from, to, amount }` event on every balan
 - `public_balances: Map<AztecAddress, u128>`: Public balances per account.
 - `total_supply: u128`: Total token supply.
 - `minter: AztecAddress`: Authorized minter address (if set).
+- `auth_contract: AztecAddress`: ARC-403 authorization hook (zero = disabled).
 
 ## Initializer Functions
 
@@ -45,6 +57,7 @@ The contract emits a public `Transfer { from, to, amount }` event on every balan
 /// @param decimals The number of decimals of the token
 /// @param initial_supply The initial supply of the token
 /// @param to The address to mint the initial supply to
+/// @param auth_contract ARC-403 authorization hook (zero address to disable)
 #[public]
 #[initializer]
 fn constructor_with_initial_supply(
@@ -63,6 +76,7 @@ fn constructor_with_initial_supply(
 /// @param symbol The symbol of the token
 /// @param decimals The number of decimals of the token
 /// @param minter The address of the minter
+/// @param auth_contract ARC-403 authorization hook (zero address to disable)
 #[public]
 #[initializer]
 fn constructor_with_minter(
@@ -119,6 +133,15 @@ fn symbol() -> FieldCompressedString { /* ... */ }
 #[public]
 #[view]
 fn decimals() -> u8 { /* ... */ }
+```
+
+### get_auth_contract
+```rust
+/// @notice Returns the ARC-403 authorization hook contract address
+/// @return The auth contract address (zero address means authorization is disabled)
+#[public]
+#[view]
+fn get_auth_contract() -> AztecAddress { /* ... */ }
 ```
 
 ## Utility Functions

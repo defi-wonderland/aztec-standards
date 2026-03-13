@@ -25,6 +25,8 @@ pub contract Token {
     use compressed_string::FieldCompressedString;
     // private balance library
     use balance_set::BalanceSet;
+    // authorization hook contract
+    use authorization_contract::AuthorizationContract;
 
     // gas-optimized max notes for initial transfer call
     global INITIAL_TRANSFER_CALL_MAX_NOTES: u32 = 2;
@@ -50,6 +52,7 @@ pub contract Token {
     /// @param total_supply The total supply of the token
     /// @param public_balances The public balances of the token
     /// @param minter The account permissioned to mint the token
+    /// @param auth_contract The authorization contract called on every transfer
     #[storage]
     struct Storage<Context> {
         name: PublicImmutable<FieldCompressedString, Context>,
@@ -59,6 +62,7 @@ pub contract Token {
         total_supply: PublicMutable<u128, Context>,
         public_balances: Map<AztecAddress, PublicMutable<u128, Context>, Context>,
         minter: PublicImmutable<AztecAddress, Context>,
+        auth_contract: PublicImmutable<AztecAddress, Context>,
     }
 
     /// @notice Initializes the token with an initial supply
@@ -68,6 +72,7 @@ pub contract Token {
     /// @param decimals The number of decimals of the token
     /// @param initial_supply The initial supply of the token
     /// @param to The address to mint the initial supply to
+    /// @param auth_contract The address of the authorization contract (zero address to disable)
     #[external("public")]
     #[initializer]
     fn constructor_with_initial_supply(
@@ -76,12 +81,15 @@ pub contract Token {
         decimals: u8,
         initial_supply: u128,
         to: AztecAddress,
+        auth_contract: AztecAddress,
     ) {
         self.storage.name.initialize(FieldCompressedString::from_string(name));
         self.storage.symbol.initialize(FieldCompressedString::from_string(symbol));
         self.storage.decimals.initialize(decimals);
 
         self.internal._mint_to_public(to, initial_supply);
+
+        self.storage.auth_contract.initialize(auth_contract);
     }
 
     /// @notice Initializes the token with a minter
@@ -89,14 +97,22 @@ pub contract Token {
     /// @param symbol The symbol of the token
     /// @param decimals The number of decimals of the token
     /// @param minter The address of the minter
+    /// @param auth_contract The address of the authorization contract (zero address to disable)
     #[external("public")]
     #[initializer]
-    fn constructor_with_minter(name: str<31>, symbol: str<31>, decimals: u8, minter: AztecAddress) {
+    fn constructor_with_minter(
+        name: str<31>,
+        symbol: str<31>,
+        decimals: u8,
+        minter: AztecAddress,
+        auth_contract: AztecAddress,
+    ) {
         self.storage.name.initialize(FieldCompressedString::from_string(name));
         self.storage.symbol.initialize(FieldCompressedString::from_string(symbol));
         self.storage.decimals.initialize(decimals);
 
         self.storage.minter.initialize(minter);
+        self.storage.auth_contract.initialize(auth_contract);
     }
 
     /** ==========================================================
@@ -117,6 +133,8 @@ pub contract Token {
         _nonce: Field,
     ) {
         _validate_from_private::<4>(self.context, from);
+
+        self.internal._call_auth_private(from, amount);
 
         self.internal._decrease_private_balance(from, amount, INITIAL_TRANSFER_CALL_MAX_NOTES);
 
@@ -139,6 +157,8 @@ pub contract Token {
         _nonce: Field,
     ) -> Field {
         _validate_from_private::<4>(self.context, from);
+
+        self.internal._call_auth_private(from, amount);
 
         self.internal._decrease_private_balance(from, amount, INITIAL_TRANSFER_CALL_MAX_NOTES);
 
@@ -165,6 +185,8 @@ pub contract Token {
     ) {
         _validate_from_private::<4>(self.context, from);
 
+        self.internal._call_auth_private(from, amount);
+
         self.internal._decrease_private_balance(from, amount, INITIAL_TRANSFER_CALL_MAX_NOTES);
 
         self.internal._increase_private_balance(to, amount);
@@ -185,6 +207,8 @@ pub contract Token {
         _nonce: Field,
     ) {
         _validate_from_private::<4>(self.context, from);
+
+        self.internal._call_auth_private(from, amount);
 
         self.internal._decrease_private_balance(from, amount, INITIAL_TRANSFER_CALL_MAX_NOTES);
 
@@ -210,6 +234,8 @@ pub contract Token {
         _nonce: Field,
     ) {
         _validate_from_private::<4>(self.context, from);
+
+        self.internal._call_auth_private(from, amount);
 
         self.enqueue_self.decrease_public_balance_internal(from, amount);
 
@@ -257,6 +283,8 @@ pub contract Token {
     ) {
         self.internal._validate_from_public(from);
 
+        self.internal._call_auth_public(from, amount);
+
         self.internal._decrease_public_balance(from, amount);
         self.internal._increase_public_balance(to, amount);
 
@@ -279,6 +307,8 @@ pub contract Token {
         _nonce: Field,
     ) {
         self.internal._validate_from_public(from);
+
+        self.internal._call_auth_public(from, amount);
 
         self.internal._decrease_public_balance(from, amount);
 
@@ -359,6 +389,14 @@ pub contract Token {
         self.storage.decimals.read()
     }
 
+    /// @notice Returns the ARC-403 authorization hook contract address
+    /// @return The auth contract address (zero address means authorization is disabled)
+    #[external("public")]
+    #[view]
+    fn get_auth_contract() -> AztecAddress {
+        self.storage.auth_contract.read()
+    }
+
     /** ==========================================================
      * ===================== UNCONSTRAINED =======================
      * ======================================================== */
@@ -383,6 +421,8 @@ pub contract Token {
     fn mint_to_private(to: AztecAddress, amount: u128) {
         _validate_minter(self.msg_sender(), self.storage.minter.read());
 
+        self.internal._call_auth_private(AztecAddress::zero(), amount);
+
         self.internal._mint_to_private(to, amount);
     }
 
@@ -393,6 +433,8 @@ pub contract Token {
     #[external("public")]
     fn mint_to_public(to: AztecAddress, amount: u128) {
         _validate_minter(self.msg_sender(), self.storage.minter.read());
+
+        self.internal._call_auth_public(AztecAddress::zero(), amount);
 
         self.internal._mint_to_public(to, amount);
     }
@@ -405,6 +447,9 @@ pub contract Token {
     fn mint_to_commitment(commitment: Field, amount: u128) {
         let sender = self.msg_sender();
         _validate_minter(sender, self.storage.minter.read());
+
+        self.internal._call_auth_public(AztecAddress::zero(), amount);
+
         let completer = sender;
         self.internal._increase_total_supply(amount);
         self.internal._increase_commitment_balance(
@@ -439,6 +484,8 @@ pub contract Token {
     fn burn_private(from: AztecAddress, amount: u128, _nonce: Field) {
         _validate_from_private::<3>(self.context, from);
 
+        self.internal._call_auth_private(from, amount);
+
         self.internal._burn_private(from, amount);
     }
 
@@ -450,6 +497,8 @@ pub contract Token {
     #[external("public")]
     fn burn_public(from: AztecAddress, amount: u128, _nonce: Field) {
         self.internal._validate_from_public(from);
+
+        self.internal._call_auth_public(from, amount);
 
         self.internal._burn_public(from, amount);
     }
@@ -467,6 +516,31 @@ pub contract Token {
     /** ==========================================================
      * ================= TOKEN LIBRARIES =========================
      * ======================================================== */
+
+    /// @notice ARC-403: calls the public authorization hook when one is configured
+    /// @dev Used for public-source operations (public balance decreases); no-ops when auth_contract is zero
+    /// @param from The address tokens are moved from (zero address for mints)
+    /// @param amount The amount of tokens being moved
+    #[internal("public")]
+    fn _call_auth_public(from: AztecAddress, amount: u128) {
+        let auth = self.storage.auth_contract.read();
+        if !auth.eq(AztecAddress::zero()) {
+            self.call(AuthorizationContract::at(auth).authorize_public(from, amount));
+        }
+    }
+
+    /// @notice ARC-403: calls the private authorization hook when one is configured
+    /// @dev Used for private-source operations (private note spends); no-ops when auth_contract is zero.
+    ///      Runs entirely in private context - the auth call is never revealed on-chain.
+    /// @param from The address tokens are moved from (zero address for mints)
+    /// @param amount The amount of tokens being moved
+    #[internal("private")]
+    fn _call_auth_private(from: AztecAddress, amount: u128) {
+        let auth = self.storage.auth_contract.read();
+        if !auth.eq(AztecAddress::zero()) {
+            AuthorizationContract::at(auth).authorize_private(from, amount).call(self.context);
+        }
+    }
 
     /// @notice Validates that the caller is the minter
     /// @param sender The address of the caller

@@ -34,7 +34,7 @@ The `Dripper` contract provides a convenient faucet mechanism for minting tokens
 
 ## Token Contract
 
-The `Token` contract implements an ERC-20-like token with Aztec-specific privacy extensions. It supports transfers and interactions explicitly through private balances and public balances, offering full coverage of Aztec's confidentiality features.
+The `Token` contract implements an ERC-20-like token with Aztec-specific privacy extensions. It supports transfers and interactions explicitly through private balances and public balances, offering full coverage of Aztec's confidentiality features. Optional ARC-403 authorization hooks allow third-party contracts to gate balance-changing operations.
 
 We published the [AIP-20 Aztec Token Standard](https://forum.aztec.network/t/request-for-comments-aip-20-aztec-token-standard/7737) to the forum. Feel free to review and discuss the specification there.
 

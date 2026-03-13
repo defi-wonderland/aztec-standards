@@ -1,3 +1,4 @@
+mod authorization;
 mod burn_private;
 mod burn_public;
 mod mint_to_private;
