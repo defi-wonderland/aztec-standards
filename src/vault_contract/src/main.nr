@@ -118,9 +118,10 @@ pub contract Vault {
      * ======================================================== */
 
     // ## Note on ARC-403 assets
-    // ARC-403 hooks may execute user code before a transfer (sender hook) or after it (recipient hook).
-    // Users can therefore use hooks to reenter the vault, either when they send asset tokens in deposit and issue
-    // functions or when they receive asset tokens in withdraw and redeem functions.
+    // ARC-403 defines a single authorization hook (`authorize_private` / `authorize_public`) that fires
+    // on the source side BEFORE a transfer - there is no recipient-side hook.
+    // Users can therefore use the hook to reenter the vault when the asset token calls `authorize` before
+    // moving balances in deposit, withdraw, issue, and redeem functions.
     //
     // To keep the contract safe, reentrancy should not happen at half-updated states:
     //  - Assets should be transferred into the vault BEFORE minting shares. Reentrancy would only happen before any
@@ -147,7 +148,7 @@ pub contract Vault {
             _convert_to_shares(assets, total_assets, total_supply, vault_offset, ROUND_DOWN);
         assert(shares > 0, "Zero shares, insufficient assets");
 
-        // Order matters: transfer before minting to neutralize ARC-403 reentrancy via the `tokens_to_send` hook.
+        // Order matters: transfer before minting to neutralize ARC-403 reentrancy.
         // Take the assets from the sender
         self.call(Token::at(asset_token).transfer_public_to_public(
             from,
@@ -207,7 +208,7 @@ pub contract Vault {
         let shares_token = self.storage.shares.read();
         _validate_from_private::<5>(self.context, from);
 
-        // Order matters: transfer before minting to neutralize ARC-403 reentrancy via the `tokens_to_send` hook.
+        // Order matters: transfer before minting to neutralize ARC-403 reentrancy.
         // Take the assets from the sender
         self.call(Token::at(asset_token).transfer_private_to_public(
             from,
@@ -233,7 +234,7 @@ pub contract Vault {
         let asset_token = self.storage.asset.read();
         _validate_from_private::<4>(self.context, from);
 
-        // Order matters: transfer before minting to neutralize ARC-403 reentrancy via the `tokens_to_send` hook.
+        // Order matters: transfer before minting to neutralize ARC-403 reentrancy.
         // Take the assets from the sender
         self.call(Token::at(asset_token).transfer_private_to_public(
             from,
@@ -310,7 +311,7 @@ pub contract Vault {
         let partial_note =
             self.call(Token::at(shares_token).initialize_transfer_commitment(to, self.address));
 
-        // Order matters: transfer before minting to neutralize ARC-403 reentrancy via the `tokens_to_send` hook.
+        // Order matters: transfer before minting to neutralize ARC-403 reentrancy.
         // Take the assets from the sender
         self.call(Token::at(asset_token).transfer_private_to_public(
             from,
@@ -359,7 +360,7 @@ pub contract Vault {
         let vault_offset = self.storage.vault_offset.read();
         let assets = _convert_to_assets(shares, total_assets, total_supply, vault_offset, ROUND_UP);
 
-        // Order matters: transfer before minting to neutralize ARC-403 reentrancy via the `tokens_to_send` hook.
+        // Order matters: transfer before minting to neutralize ARC-403 reentrancy.
         // Take the assets from the sender
         self.call(Token::at(asset_token).transfer_public_to_public(
             from,
@@ -402,7 +403,7 @@ pub contract Vault {
         _validate_from_private::<5>(self.context, from);
 
         // Order matters: enqueue asset transfer first so it executes before shares total_supply increase,
-        // neutralizing ARC-403 reentrancy via the `tokens_to_send` hook.
+        // neutralizing ARC-403 reentrancy.
         self.enqueue(Token::at(asset_token).transfer_public_to_public(
             from,
             self.address,
@@ -439,7 +440,7 @@ pub contract Vault {
         let asset_commitment =
             self.call(Token::at(asset_token).initialize_transfer_commitment(from, self.address));
 
-        // Order matters: transfer before minting to neutralize ARC-403 reentrancy via the `tokens_to_send` hook.
+        // Order matters: transfer before minting to neutralize ARC-403 reentrancy.
         // Take max_assets from the sender
         self.call(Token::at(asset_token).transfer_private_to_public(
             from,
@@ -480,7 +481,7 @@ pub contract Vault {
         let asset_commitment =
             self.call(Token::at(asset_token).initialize_transfer_commitment(from, self.address));
 
-        // Order matters: transfer before minting to neutralize ARC-403 reentrancy via the `tokens_to_send` hook.
+        // Order matters: transfer before minting to neutralize ARC-403 reentrancy.
         // Take max_assets from the sender
         self.call(Token::at(asset_token).transfer_private_to_public(
             from,
@@ -522,7 +523,7 @@ pub contract Vault {
         let vault_offset = self.storage.vault_offset.read();
         let shares = _convert_to_shares(assets, total_assets, total_supply, vault_offset, ROUND_UP);
 
-        // Order matters: burn before transferring to neutralize ARC-403 reentrancy via the `tokens_received` hook.
+        // Order matters: burn before transferring to neutralize ARC-403 reentrancy.
         // Burn the sender's shares on the shares token
         self.call(Token::at(shares_token).burn_public(from, shares, nonce));
 
@@ -546,7 +547,7 @@ pub contract Vault {
         let asset_token = self.storage.asset.read();
         _validate_from_private::<4>(self.context, from);
 
-        // Order matters: burn after calculating shares in public to neutralize ARC-403 reentrancy via the `tokens_received` hook.
+        // Order matters: burn after calculating shares in public to neutralize ARC-403 reentrancy.
         // Calculate and burn the sender's shares
         self.enqueue_self.settle_withdraw_public_to_private_internal(from, assets, nonce);
 
@@ -577,7 +578,7 @@ pub contract Vault {
         // Burn shares from the sender's private balance on the shares token
         self.call(Token::at(shares_token).burn_private(from, shares, nonce));
 
-        // Order matters: transfer after burning to neutralize ARC-403 reentrancy via the `tokens_received` hook.
+        // Order matters: transfer after burning to neutralize ARC-403 reentrancy.
         // Validate that the shares-assets ratio is correct
         self.enqueue_self.settle_withdraw_private_to_private_internal(assets, shares);
 
@@ -651,7 +652,7 @@ pub contract Vault {
         // Burn max_shares from the sender's private balance on the shares token
         self.call(Token::at(shares_token).burn_private(from, max_shares, nonce));
 
-        // Order matters: transfer after burning to neutralize ARC-403 reentrancy via the `tokens_received` hook.
+        // Order matters: transfer after burning to neutralize ARC-403 reentrancy.
         // Burn the correct amount of shares
         // Any excess amount of shares is sent back to the sender via commitment
         // Reverts if the amount of shares required is greater than max_shares
@@ -688,7 +689,7 @@ pub contract Vault {
         let assets =
             _convert_to_assets(shares, total_assets, total_supply, vault_offset, ROUND_DOWN);
 
-        // Order matters: burn before transferring to neutralize ARC-403 reentrancy via the `tokens_received` hook.
+        // Order matters: burn before transferring to neutralize ARC-403 reentrancy.
         // Burn the sender's shares on the shares token
         self.call(Token::at(shares_token).burn_public(from, shares, nonce));
 
@@ -742,7 +743,7 @@ pub contract Vault {
         // Burn shares from the sender's private balance on the shares token
         self.call(Token::at(shares_token).burn_private(from, shares, nonce));
 
-        // Order matters: transfer after burning to neutralize ARC-403 reentrancy via the `tokens_received` hook.
+        // Order matters: transfer after burning to neutralize ARC-403 reentrancy.
         // Transfers any outstanding assets without revealing the recipient
         // Reverts if min_assets is greater than allowed
         self.enqueue_self.settle_redeem_private_to_private_exact_internal(
@@ -779,7 +780,7 @@ pub contract Vault {
         let asset_commitment =
             self.call(Token::at(asset_token).initialize_transfer_commitment(to, self.address));
 
-        // Order matters: transfer after burning to neutralize ARC-403 reentrancy via the `tokens_received` hook.
+        // Order matters: transfer after burning to neutralize ARC-403 reentrancy.
         // Burns shares and transfers any outstanding assets without revealing the recipient
         // Reverts if min_assets is greater than allowed
         self.enqueue_self.settle_redeem_public_to_private_exact_internal(
@@ -1087,7 +1088,7 @@ pub contract Vault {
 
         assert(shares <= max_shares, "Too many shares requested");
 
-        // Order matters: transfer before minting to neutralize ARC-403 reentrancy via the `tokens_to_send` hook.
+        // Order matters: transfer before minting to neutralize ARC-403 reentrancy.
         // Take the assets from the sender
         self.call(Token::at(asset_token).transfer_public_to_public(
             from,
@@ -1228,7 +1229,7 @@ pub contract Vault {
             _convert_to_shares(assets, total_assets, total_supply, vault_offset, ROUND_DOWN);
         let outstanding_shares = max_shares - min_shares; // Reverts with underflow if invalid
 
-        // Order matters: transfer before minting to neutralize ARC-403 reentrancy via the `tokens_to_send` hook.
+        // Order matters: transfer before minting to neutralize ARC-403 reentrancy.
         // Take the assets from the sender
         self.call(Token::at(asset_token).transfer_public_to_public(
             from,
