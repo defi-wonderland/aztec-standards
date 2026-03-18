@@ -35,7 +35,29 @@ import {
 } from '@aztec/stdlib/contract';
 
 import { getPXEConfig } from '@aztec/pxe/server';
+import { type TxExecutionRequest, type TxProvingResult } from '@aztec/stdlib/tx';
+import { type ExecutionPayload } from '@aztec/stdlib/tx';
+import { type BaseWallet, type FeeOptions } from '@aztec/wallet-sdk/base-wallet';
 import { Barretenberg } from '@aztec/bb.js';
+
+/**
+ * Subset of protected BaseWallet methods needed to prove a tx and extract private return values.
+ * These are not part of the public Wallet interface, so we define a local type to avoid `as any`.
+ */
+interface WalletWithInternals {
+  completeFeeOptions(
+    from: AztecAddress,
+    feePayer: AztecAddress | undefined,
+    gasSettings: undefined,
+  ): Promise<FeeOptions>;
+  createTxExecutionRequestFromPayloadAndFee(
+    executionPayload: ExecutionPayload,
+    from: AztecAddress,
+    feeOptions: FeeOptions,
+  ): Promise<TxExecutionRequest>;
+  scopesFrom(from: AztecAddress): AztecAddress[];
+  pxe: { proveTx(txRequest: TxExecutionRequest, scopes: AztecAddress[]): Promise<TxProvingResult> };
+}
 
 import { TokenContract } from '../../../src/artifacts/Token.js';
 import { VaultContract, VaultContractArtifact } from '../../../src/artifacts/Vault.js';
@@ -411,11 +433,11 @@ export async function initializeTransferCommitment(
   caller: AztecAddress,
   to: AccountManager,
   completer: AztecAddress,
-) {
+): Promise<bigint> {
   // Use wallet internals to prove the tx and extract the private return value (the commitment)
   const interaction = token.methods.initialize_transfer_commitment(to.address, completer);
   const executionPayload = await interaction.request({ from: caller });
-  const w = token.wallet as any;
+  const w = token.wallet as unknown as WalletWithInternals;
   const feeOptions = await w.completeFeeOptions(caller, executionPayload.feePayer, undefined);
   const txRequest = await w.createTxExecutionRequestFromPayloadAndFee(executionPayload, caller, feeOptions);
   const provenTx = await w.pxe.proveTx(txRequest, w.scopesFrom(caller));
@@ -449,11 +471,11 @@ export async function initializeTransferCommitmentNFT(
   caller: AztecAddress,
   to: AccountManager,
   completer: AztecAddress,
-) {
+): Promise<bigint> {
   // Use wallet internals to prove the tx and extract the private return value (the commitment)
   const interaction = nft.methods.initialize_transfer_commitment(to.address, completer);
   const executionPayload = await interaction.request({ from: caller });
-  const w = nft.wallet as any;
+  const w = nft.wallet as unknown as WalletWithInternals;
   const feeOptions = await w.completeFeeOptions(caller, executionPayload.feePayer, undefined);
   const txRequest = await w.createTxExecutionRequestFromPayloadAndFee(executionPayload, caller, feeOptions);
   const provenTx = await w.pxe.proveTx(txRequest, w.scopesFrom(caller));
