@@ -420,6 +420,7 @@ export async function setPublicAuthWit(
   await validateAction.send({ from: authorizer });
 }
 
+// TODO: Replace wallet internals (privateExecutionResult) with simulate() + send() to get private return values via public API.
 /**
  * Initializes a transfer commitment
  * @param token - The token contract instance.
