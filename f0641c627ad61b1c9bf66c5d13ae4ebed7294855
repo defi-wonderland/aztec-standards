@@ -1,0 +1,23 @@
+scripts/deploy.ts
+  c70328c23679ace6 197-198,532
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.15",
+  "base_commit_sha": "f0641c627ad61b1c9bf66c5d13ae4ebed7294855",
+  "prompts": {
+    "c70328c23679ace6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "ec6deb50-71da-4382-a2ed-1d465ce523ff",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "xorsal <zorzal@wonderland.xyz>",
+      "messages": [],
+      "total_additions": 9,
+      "total_deletions": 33,
+      "accepted_lines": 5,
+      "overriden_lines": 0
+    }
+  }
+}
