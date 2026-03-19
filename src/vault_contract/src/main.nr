@@ -151,7 +151,12 @@ pub contract Vault {
         );
 
         // Transfer the assets from the sender to the vault
-        self.call(Token::at(asset).transfer_public_to_public(from, self.address, initial_deposit, nonce));
+        self.call(Token::at(asset).transfer_public_to_public(
+            from,
+            self.address,
+            initial_deposit,
+            nonce,
+        ));
         // Mint shares to this contract address (permanently locked)
         self.call(Token::at(shares).mint_to_public(self.address, deposit_shares));
     }

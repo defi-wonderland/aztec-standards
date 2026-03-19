@@ -70,7 +70,7 @@ pub unconstrained fn setup_with_vault(
     let shares_address =
         env.deploy("@token_contract/Token").with_public_initializer(owner, shares_initializer);
 
-    // Initialize vault (dummy values for shares_class_id, shares_salt — see TODO above)
+    // Initialize vault (dummy values for shares_class_id, shares_salt - see TODO above)
     env.call_public(
         owner,
         Vault::at(vault_address).constructor(
