@@ -146,6 +146,7 @@ pub contract Vault {
         let vault_offset = self.storage.vault_offset.read();
         let shares =
             _convert_to_shares(assets, total_assets, total_supply, vault_offset, ROUND_DOWN);
+        assert(shares > 0, "Zero shares, insufficient assets");
 
         // Order matters: transfer before minting to neutralize ARC-403 reentrancy.
         // Take the assets from the sender
@@ -1058,6 +1059,7 @@ pub contract Vault {
         let vault_offset = self.storage.vault_offset.read();
         let shares =
             _convert_to_shares(assets, total_assets, total_supply, vault_offset, ROUND_DOWN);
+        assert(shares > 0, "Zero shares, insufficient assets");
 
         // Mint shares to the recipient on the shares token
         self.call(Token::at(shares_token).mint_to_public(to, shares));
