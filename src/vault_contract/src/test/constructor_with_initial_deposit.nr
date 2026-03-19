@@ -100,12 +100,10 @@ unconstrained fn vault_with_initial_deposit_yield_distribution() {
     // Recipient should have received more than deposit_amount due to yield
     // Total shares = initial_deposit + deposit_amount = 2000
     // Total assets = initial_deposit + deposit_amount + yield = 2200
-    // Recipient's share = 1000/2000 * 2200 = 1100
+    // Recipient's share = 1000 * (2200 + 1) / (2000 + 1) = 1099 (virtual offset rounding)
     let recipient_assets = get_public_balance(env, asset_address, recipient);
-    assert(
-        recipient_assets > deposit_amount,
-        "Recipient should have received more assets due to yield",
-    );
+    let expected_assets: u128 = 1099;
+    assert(recipient_assets == expected_assets, "Recipient should receive exactly 1099 assets");
 
     // Locked shares remain unchanged
     let locked_shares = get_public_balance(env, shares_address, vault_address);
