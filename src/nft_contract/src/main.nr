@@ -21,19 +21,12 @@ pub contract NFT {
             constants::MAX_NOTES_PER_PAGE, note_getter_options::NoteGetterOptions,
             note_interface::NoteProperties, note_viewer_options::NoteViewerOptions,
         },
-        protocol::{
-            address::AztecAddress,
-            constants::CONTRACT_INSTANCE_REGISTRY_CONTRACT_ADDRESS,
-            contract_class_id::ContractClassId,
-            traits::{FromField, ToField},
-        },
+        protocol::{address::AztecAddress, traits::{FromField, ToField}},
         state_vars::{Map, Owned, PrivateSet, PublicImmutable, PublicMutable, StateVariable},
         utils::comparison::Comparator,
     };
     // compression library
     use compressed_string::FieldCompressedString;
-    // contract instance registry
-    use contract_instance_registry::ContractInstanceRegistry;
     // nft note structs
     use crate::types::nft_note::{NFTNote, PartialNFTNote};
 
@@ -43,7 +36,6 @@ pub contract NFT {
     /// @param nft_exists A map from token ID to a boolean indicating if the NFT exists
     /// @param public_owners A map from token ID to the public owner of the NFT
     /// @param minter The address that can mint
-    /// @param upgrade_authority The address that can upgrade the contract
     #[storage]
     struct Storage<Context> {
         symbol: PublicImmutable<FieldCompressedString, Context>,
@@ -52,7 +44,6 @@ pub contract NFT {
         nft_exists: Map<Field, PublicMutable<bool, Context>, Context>,
         public_owners: Map<Field, PublicMutable<AztecAddress, Context>, Context>,
         minter: PublicImmutable<AztecAddress, Context>,
-        upgrade_authority: PublicImmutable<AztecAddress, Context>,
     }
 
     // Sentinel address used in Transfer events to represent the private side of a balance change.
@@ -71,19 +62,12 @@ pub contract NFT {
     /// @param name The name of the NFT
     /// @param symbol The symbol of the NFT
     /// @param minter The address of the minter
-    /// @param upgrade_authority The address of the upgrade authority
     #[external("public")]
     #[initializer]
-    fn constructor_with_minter(
-        name: str<31>,
-        symbol: str<31>,
-        minter: AztecAddress,
-        upgrade_authority: AztecAddress,
-    ) {
+    fn constructor_with_minter(name: str<31>, symbol: str<31>, minter: AztecAddress) {
         self.storage.name.initialize(FieldCompressedString::from_string(name));
         self.storage.symbol.initialize(FieldCompressedString::from_string(symbol));
         self.storage.minter.initialize(minter);
-        self.storage.upgrade_authority.initialize(upgrade_authority);
     }
 
     /** ==========================================================
@@ -433,26 +417,6 @@ pub contract NFT {
         self.internal._update_public_token_owner(AztecAddress::zero(), token_id);
         self.internal._set_nft_exists(token_id, false);
         self.emit(Transfer { from, to: AztecAddress::zero(), token_id });
-    }
-
-    /** ==========================================================
-     * ===================  UPGRADEABLE  =========================
-     * ======================================================== */
-
-    /// @notice Upgrades the contract to a new contract class id
-    /// @dev The upgrade authority must be set
-    /// @dev The upgrade will only be effective after the upgrade delay has passed
-    /// @param new_contract_class_id The new contract class id
-    #[external("public")]
-    fn upgrade_contract(new_contract_class_id: Field) {
-        let upgrade_authority = self.storage.upgrade_authority.read();
-
-        assert(!upgrade_authority.eq(AztecAddress::zero()), "upgrade authority not set");
-        assert(self.msg_sender().eq(upgrade_authority), "caller is not upgrade authority");
-
-        self.call(ContractInstanceRegistry::at(CONTRACT_INSTANCE_REGISTRY_CONTRACT_ADDRESS).update(
-            ContractClassId::from_field(new_contract_class_id),
-        ));
     }
 
     /** ==========================================================

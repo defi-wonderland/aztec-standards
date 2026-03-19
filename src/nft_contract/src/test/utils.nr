@@ -37,7 +37,6 @@ pub unconstrained fn deploy_nft_with_minter(
         "TestNFT000000000000000000000000",
         "TNFT000000000000000000000000000",
         minter,
-        AztecAddress::zero(),
     );
     let nft_contract_address =
         env.deploy("@nft_contract/NFT").with_public_initializer(owner, initializer_call_interface);
@@ -134,7 +133,7 @@ pub unconstrained fn owns_private_nft(
 ) -> bool {
     // Direct call to unconstrained
     let (private_nfts, _) =
-        env.simulate_utility(NFT::at(nft_contract_address).get_private_nfts(owner, 0));
+        env.execute_utility(NFT::at(nft_contract_address).get_private_nfts(owner, 0));
 
     let mut nft_found = false;
     for obtained_token_id in private_nfts {

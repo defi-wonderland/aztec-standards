@@ -124,7 +124,7 @@ describe('Escrow', () => {
       });
 
       const deployer = new ContractDeployer(TestLogicContractArtifact, wallet, undefined, 'constructor');
-      const contract = await deployer.deploy(escrowClassId).send({
+      const { contract } = await deployer.deploy(escrowClassId).send({
         contractAddressSalt: escrowSalt,
         from: alice,
       });
@@ -153,7 +153,9 @@ describe('Escrow', () => {
 
   describe('secret_key_to_public_keys', () => {
     it('derives escrow public keys from private keys correctly', async () => {
-      const circuitPublicKeys = await logic.methods.secret_key_to_public_keys(escrowSk).simulate({ from: alice });
+      const { result: circuitPublicKeys } = await logic.methods
+        .secret_key_to_public_keys(escrowSk)
+        .simulate({ from: alice });
 
       expect(new Fr(circuitPublicKeys.npk_m.inner.x).toString()).toBe(
         escrowKeys.publicKeys.masterNullifierPublicKey.x.toString(),
@@ -184,9 +186,9 @@ describe('Escrow', () => {
 
   describe('get_escrow', () => {
     it('should be able to get escrow address correctly', async () => {
-      const escrow_address = await logic.methods.get_escrow(escrowSk).simulate({ from: alice });
+      const { result: escrow_address } = await logic.methods.get_escrow(escrowSk).simulate({ from: alice });
 
-      const publicKeys = await logic.methods.secret_key_to_public_keys(escrowSk).simulate({ from: alice });
+      const { result: publicKeys } = await logic.methods.secret_key_to_public_keys(escrowSk).simulate({ from: alice });
       const publicKeysObj = new PublicKeys(
         noirWrappedPointToPoint(publicKeys.npk_m),
         noirWrappedPointToPoint(publicKeys.ivpk_m),
@@ -202,9 +204,9 @@ describe('Escrow', () => {
     });
 
     it('get escrow with non zero deployer should fail', async () => {
-      const escrow_address = await logic.methods.get_escrow(escrowSk).simulate({ from: alice });
+      const { result: escrow_address } = await logic.methods.get_escrow(escrowSk).simulate({ from: alice });
 
-      const publicKeys = await logic.methods.secret_key_to_public_keys(escrowSk).simulate({ from: alice });
+      const { result: publicKeys } = await logic.methods.secret_key_to_public_keys(escrowSk).simulate({ from: alice });
       const publicKeysObj = new PublicKeys(
         noirWrappedPointToPoint(publicKeys.npk_m),
         noirWrappedPointToPoint(publicKeys.ivpk_m),
@@ -221,9 +223,9 @@ describe('Escrow', () => {
     });
 
     it('get escrow with incorrect salt should fail', async () => {
-      const escrow_address = await logic.methods.get_escrow(escrowSk).simulate({ from: alice });
+      const { result: escrow_address } = await logic.methods.get_escrow(escrowSk).simulate({ from: alice });
 
-      const publicKeys = await logic.methods.secret_key_to_public_keys(escrowSk).simulate({ from: alice });
+      const { result: publicKeys } = await logic.methods.secret_key_to_public_keys(escrowSk).simulate({ from: alice });
       const publicKeysObj = new PublicKeys(
         noirWrappedPointToPoint(publicKeys.npk_m),
         noirWrappedPointToPoint(publicKeys.ivpk_m),
@@ -245,7 +247,7 @@ describe('Escrow', () => {
   describe('share_escrow', () => {
     it('should be able to share escrow correctly', async () => {
       // Share the escrow contract with bob
-      const tx = await logic.methods.share_escrow(bob, escrow.address, escrowSk).send({ from: alice });
+      const { receipt: tx } = await logic.methods.share_escrow(bob, escrow.address, escrowSk).send({ from: alice });
       const blockNumber = tx.blockNumber!;
 
       const events = await wallet.getPrivateEvents<EscrowDetailsLogContent>(
@@ -267,10 +269,14 @@ describe('Escrow', () => {
 
     it('share escrow with multiple recipients correctly', async () => {
       // Share the escrow contract with bob
-      const txForBob = await logic.methods.share_escrow(bob, escrow.address, escrowSk).send({ from: alice });
+      const { receipt: txForBob } = await logic.methods
+        .share_escrow(bob, escrow.address, escrowSk)
+        .send({ from: alice });
       const blockNumberBob = txForBob.blockNumber!;
 
-      const txForCarl = await logic.methods.share_escrow(carl, escrow.address, escrowSk).send({ from: alice });
+      const { receipt: txForCarl } = await logic.methods
+        .share_escrow(carl, escrow.address, escrowSk)
+        .send({ from: alice });
       const blockNumberCarl = txForCarl.blockNumber!;
 
       const numberOfBlocks = blockNumberCarl - blockNumberBob + 1;
@@ -310,7 +316,7 @@ describe('Escrow', () => {
     });
 
     it('should be able to withdraw from escrow correctly', async () => {
-      const privateBalance = await token.methods.balance_of_private(escrow.address).simulate({ from: bob });
+      const { result: privateBalance } = await token.methods.balance_of_private(escrow.address).simulate({ from: bob });
 
       await expectTokenBalances(token, escrow.address, wad(0), AMOUNT, escrow.address);
       await expectTokenBalances(token, bob, wad(0), wad(0), bob);
