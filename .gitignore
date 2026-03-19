@@ -17,4 +17,5 @@ store-*
 
 pxe_data_*
 wallet_data_*
-
+.tsbuildinfo
+*-store/
