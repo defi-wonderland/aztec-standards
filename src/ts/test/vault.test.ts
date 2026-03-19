@@ -1048,7 +1048,7 @@ describe('Vault', () => {
 
     describe('Inflation attacks', () => {
       it(
-        'attack succeeds when vault deployed with initial deposit = 0',
+        'zero-share deposit reverts',
         async () => {
           // Deploy vault with initial deposit = 0 (no protection)
           const initialDeposit = 0n;
@@ -1067,12 +1067,7 @@ describe('Vault', () => {
           await asset.methods.mint_to_public(attacker, 20_000n * scale).send({ from: alice });
           await asset.methods.mint_to_public(victim, 20_000n * scale).send({ from: alice });
 
-          const attackerStart = await publicBalance(asset, attacker, attacker);
-
-          // Vault starts with 0 assets
-          expect(await publicBalance(asset, vaultContract.address, attacker)).toBe(0n);
-
-          // 1) Attacker: one-step donate + mint 1 share using deposit_public_to_private
+          // 1) Attacker inflates the exchange rate: donate + mint 1 share
           const donationAmount = 1000n * scale;
           const attackerAssetsToSend = donationAmount + 1n;
           const attackerDepositAction = vaultContract.withWallet(wallet).methods.deposit_public_to_private(
@@ -1095,69 +1090,24 @@ describe('Vault', () => {
           const supplyAfterAttacker = await totalShares(sharesContract, attacker);
           expect(supplyAfterAttacker).toBe(1n);
 
-          const vaultAfterAttacker = await publicBalance(asset, vaultContract.address, attacker);
-          expect(vaultAfterAttacker).toBe(attackerAssetsToSend);
-
-          // 2) Victim deposits just below threshold to get 0 shares
+          // 2) Victim deposits dust below threshold — would yield 0 shares, reverts
           const currentVaultAssets = await publicBalance(asset, vaultContract.address, attacker);
           const thresholdForOneShare = (currentVaultAssets + 1n) / 2n;
           const victimDepositAmount = thresholdForOneShare - 1n;
 
-          // 3) Victim deposits
-          const numberOfVictims = 8;
-          let totalVictimDeposits = 0n;
-          const victimBeforeDeposits: bigint = await publicBalance(asset, victim, victim);
-          for (let i = 0; i < numberOfVictims; i++) {
-            const victimDepositAction = vaultContract
-              .withWallet(wallet)
-              .methods.deposit_public_to_public(victim, victim, victimDepositAmount, 0);
-            await callVaultWithPublicAuthWitFromWallet(
+          const victimDepositAction = vaultContract
+            .withWallet(wallet)
+            .methods.deposit_public_to_public(victim, victim, victimDepositAmount, 0);
+          await expect(
+            callVaultWithPublicAuthWitFromWallet(
               vaultContract,
               asset,
               victimDepositAction,
               wallet,
               victim,
               victimDepositAmount,
-            );
-            totalVictimDeposits += victimDepositAmount;
-          }
-
-          // Victim gets 0 shares
-          const victimShares = await publicBalance(sharesContract, victim, victim);
-          expect(victimShares).toBe(0n);
-
-          const supplyAfterVictim = await totalShares(sharesContract, attacker);
-          expect(supplyAfterVictim).toBe(1n); // Still only attacker's 1 share
-
-          const victimAfterDeposits: bigint = await publicBalance(asset, victim, victim);
-          expect(victimBeforeDeposits - victimAfterDeposits).toBe(totalVictimDeposits);
-
-          const vaultAfterVictim = await publicBalance(asset, vaultContract.address, attacker);
-          expect(vaultAfterVictim).toBe(attackerAssetsToSend + totalVictimDeposits);
-
-          // 4) Attacker redeems their 1 private share
-          const burnAuthWit = await setPrivateAuthWit(
-            vaultContract.address,
-            sharesContract.methods.burn_private(attacker, 1n, 0),
-            attacker,
-            wallet,
-          );
-          await vaultContract.methods
-            .redeem_private_to_public(attacker, attacker, 1n, 0)
-            .with({ authWitnesses: [burnAuthWit] })
-            .send({ from: attacker });
-
-          const supplyAfterRedeem = await totalShares(sharesContract, attacker);
-          expect(supplyAfterRedeem).toBe(0n);
-
-          const strandedAssets = await publicBalance(asset, vaultContract.address, attacker);
-          expect(strandedAssets).toBeGreaterThan(0n);
-
-          const attackerFinal = await publicBalance(asset, attacker, attacker);
-          const attackerNet = attackerFinal - attackerStart;
-
-          // Attacker profits from victim's deposit!
-          expect(attackerNet).toBeGreaterThan(0n);
+            ),
+          ).rejects.toThrow(/app_logic_reverted/);
         },
         TEST_TIMEOUT * 2,
       );

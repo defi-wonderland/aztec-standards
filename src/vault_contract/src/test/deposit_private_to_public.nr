@@ -102,6 +102,35 @@ unconstrained fn deposit_private_to_public_after_yield() {
     );
 }
 
+#[test(should_fail_with = "Zero shares, insufficient assets")]
+unconstrained fn deposit_private_to_public_zero_shares() {
+    let (mut env, vault_address, owner, recipient, asset_address, _shares_address) =
+        utils::setup_with_vault(true);
+
+    // Mint a large amount of assets directly to the vault to inflate the exchange rate
+    let inflated_amount: u128 = 1_000_000;
+    env.call_public(owner, Token::at(asset_address).mint_to_public(vault_address, inflated_amount));
+
+    // Mint a dust amount to the depositor
+    let dust_amount: u128 = 1;
+    env.call_private(owner, Token::at(asset_address).mint_to_private(owner, dust_amount));
+
+    // Authorize the vault to use the caller's assets
+    utils::authorize_transfer_private_to_public(
+        env,
+        asset_address,
+        vault_address,
+        owner,
+        dust_amount,
+    );
+
+    // Deposit dust - should revert because shares round down to 0
+    env.call_private(
+        owner,
+        Vault::at(vault_address).deposit_private_to_public(owner, recipient, dust_amount, 0),
+    );
+}
+
 #[test(should_fail_with = "Unknown auth witness for message hash ")]
 unconstrained fn deposit_private_to_public_without_asset_approval() {
     // Setup with asset token
