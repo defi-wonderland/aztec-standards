@@ -48,7 +48,6 @@ interface TokenConstructorArgs {
   symbol: string;
   decimals: number;
   minter: AztecAddress;
-  upgrade_authority: AztecAddress;
 }
 
 interface DeploymentToken {
@@ -86,7 +85,6 @@ function getDeploymentData(
   tokenAddresses: Record<string, AztecAddress>,
   dripperAddress: AztecAddress | undefined,
   config: DeploymentConfig,
-  upgradeAuthority: AztecAddress,
 ): DeploymentData {
   const minterAddress = dripperAddress || AztecAddress.ZERO;
 
@@ -102,7 +100,6 @@ function getDeploymentData(
         symbol: tokenConfig.symbol,
         decimals: tokenConfig.decimals,
         minter: minterAddress,
-        upgrade_authority: upgradeAuthority,
       },
     }));
 
@@ -148,7 +145,6 @@ export interface TokenDeployParams {
   symbol: string;
   decimals: number;
   minter?: AztecAddress;
-  upgradeAuthority?: AztecAddress;
   salt: Fr;
 }
 
@@ -198,8 +194,8 @@ async function deployAccount(
   logger.info(`Deploying account contract at ${address.toString()}...`);
   try {
     const deployMethod = await manager.getDeployMethod();
-    const account = await deployMethod.send({ fee: feeOptions, from: AztecAddress.ZERO });
-    logger.info(`Account contract deployed in tx ${account.address.toString()}`);
+    const result = await deployMethod.send({ fee: feeOptions, from: AztecAddress.ZERO });
+    logger.info(`Account contract deployed at ${result.contract.address.toString()}`);
   } catch (error: any) {
     const msg = error?.message ?? String(error);
     if (msg.includes('Existing nullifier')) {
@@ -297,13 +293,12 @@ export async function deployToken(
   options: DeployOptions,
 ): Promise<{ contract: TokenContract; status: 'deployed' | 'existing' }> {
   const minter = params.minter || AztecAddress.ZERO;
-  const upgradeAuthority = params.upgradeAuthority || AztecAddress.ZERO;
 
   const result = await deployContractGeneric(
     deployer,
     node,
     TokenContractArtifact,
-    [params.name, params.symbol, params.decimals, minter, upgradeAuthority],
+    [params.name, params.symbol, params.decimals, minter],
     'constructor_with_minter',
     params.salt,
     options,
@@ -338,14 +333,9 @@ export async function deployDripper(
 interface ComputedAddresses {
   tokens: Record<string, AztecAddress>;
   dripper: AztecAddress;
-  upgradeAuthority: AztecAddress;
 }
 
 async function computeContractAddresses(config: DeploymentConfig): Promise<ComputedAddresses> {
-  const upgradeAuthority = config.contracts.upgradeAuthority
-    ? AztecAddress.fromString(config.contracts.upgradeAuthority)
-    : AztecAddress.ZERO;
-
   let dripper: AztecAddress;
   if (config.contracts.dripper.existingAddress) {
     dripper = config.contracts.dripper.existingAddress;
@@ -362,7 +352,7 @@ async function computeContractAddresses(config: DeploymentConfig): Promise<Compu
   const tokens: Record<string, AztecAddress> = {};
   for (const [key, tokenConfig] of Object.entries(config.contracts.tokens)) {
     const instance = await getContractInstanceFromInstantiationParams(TokenContractArtifact, {
-      constructorArgs: [tokenConfig.name, tokenConfig.symbol, tokenConfig.decimals, dripper, upgradeAuthority],
+      constructorArgs: [tokenConfig.name, tokenConfig.symbol, tokenConfig.decimals, dripper],
       salt: new Fr(tokenConfig.salt),
       publicKeys: PublicKeys.default(),
       deployer: AztecAddress.ZERO,
@@ -371,7 +361,7 @@ async function computeContractAddresses(config: DeploymentConfig): Promise<Compu
     tokens[key] = instance.address;
   }
 
-  return { tokens, dripper, upgradeAuthority };
+  return { tokens, dripper };
 }
 
 export async function deployContracts(options: CLIOptions, config: DeploymentConfig): Promise<DeployResult> {
@@ -381,7 +371,7 @@ export async function deployContracts(options: CLIOptions, config: DeploymentCon
   if (options.dryRun) {
     logger.info('[DRY RUN] Computing contract addresses...');
     const addresses = await computeContractAddresses(config);
-    const deploymentData = getDeploymentData(addresses.tokens, addresses.dripper, config, addresses.upgradeAuthority);
+    const deploymentData = getDeploymentData(addresses.tokens, addresses.dripper, config);
 
     logger.info('[DRY RUN] Deployment data:');
     logger.info(JSON.stringify(deploymentData, null, 4));
@@ -432,16 +422,6 @@ export async function deployContracts(options: CLIOptions, config: DeploymentCon
     };
 
     logger.info(`Deploying with account: ${account.getAddress().toString()}`);
-
-    const upgradeAuthority = config.contracts.upgradeAuthority
-      ? AztecAddress.fromString(config.contracts.upgradeAuthority)
-      : AztecAddress.ZERO;
-
-    if (config.contracts.upgradeAuthority) {
-      logger.info(`Using upgrade authority: ${upgradeAuthority.toString()}`);
-    } else {
-      logger.info('No upgrade authority set (using zero address)');
-    }
 
     const computedAddresses = await computeContractAddresses(config);
     logger.info('\n=== Computed Contract Addresses ===');
@@ -500,7 +480,6 @@ export async function deployContracts(options: CLIOptions, config: DeploymentCon
           symbol: tokenConfig.symbol,
           decimals: tokenConfig.decimals,
           minter: dripper.contract.address,
-          upgradeAuthority,
           salt: new Fr(tokenConfig.salt),
         },
         deployOptions,
@@ -546,14 +525,11 @@ program
       logDeployedContracts(result.contracts);
 
       if (!options.dryRun) {
-        const upgradeAuthority = activeConfig.contracts.upgradeAuthority
-          ? AztecAddress.fromString(activeConfig.contracts.upgradeAuthority)
-          : AztecAddress.ZERO;
         const tokenAddresses = Object.fromEntries(
           Object.entries(result.contracts.tokens).map(([k, v]) => [k, v.contract.address]),
         );
         const dripperAddress = result.contracts.dripper?.contract?.address;
-        const deploymentData = getDeploymentData(tokenAddresses, dripperAddress, activeConfig, upgradeAuthority);
+        const deploymentData = getDeploymentData(tokenAddresses, dripperAddress, activeConfig);
 
         // Always update src/deployments.json
         const deploymentsPath = join(__dirname, '../src/deployments.json');

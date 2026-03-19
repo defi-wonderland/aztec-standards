@@ -26,7 +26,6 @@ export interface DeploymentConfig {
   contracts: {
     tokens: Record<string, TokenConfig>;
     dripper: DripperConfig;
-    upgradeAuthority?: string;
   };
 }
 
@@ -53,7 +52,6 @@ export function getConfig(network: Network): DeploymentConfig {
     contracts: {
       tokens: TOKENS,
       dripper: { salt: DEFAULT_SALT },
-      upgradeAuthority: process.env.UPGRADE_AUTHORITY,
     },
   };
 }
