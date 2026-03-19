@@ -73,7 +73,7 @@ pub fn _get_escrow(
     context: &mut PrivateContext,
     escrow_class_id: Field,
     secret_key: Field,
-) { /* ... */ }
+) -> AztecAddress { /* ... */ }
 ```
 
 ### _share_escrow
@@ -156,6 +156,7 @@ secret_key (Field)
 ### Usage
 
 ```rust
+use aztec::protocol::public_keys::PublicKeys;
 use escrow_contract::key_derivation::{secret_key_to_public_keys, derive_keys, MasterSecretKeys};
 
 // Full pipeline: secret key → public keys
