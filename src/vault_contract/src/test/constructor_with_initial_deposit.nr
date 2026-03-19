@@ -8,8 +8,9 @@ use crate::{
 use token_contract::test::utils::{check_total_supply, get_total_supply};
 use token_contract::Token;
 
-// TODO: When salt setting in env deployment is supported we can precompute the vault address and
-// compute the authwit before deployment. Deployment use constructor_with_asset for now.
+// TODO: TXE does not support custom salts, so the vault's computed shares address won't match
+// the deployed shares token. Tests will fail until custom salt support is added to TXE.
+// See: https://github.com/AztecProtocol/aztec-packages/issues/16656
 
 #[test]
 unconstrained fn vault_with_initial_deposit_success() {
