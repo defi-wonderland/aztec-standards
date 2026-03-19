@@ -1,0 +1,23 @@
+src/vault_contract/src/test/constructor_with_initial_deposit.nr
+  72c523a735746eb9 105-106,108
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.15",
+  "base_commit_sha": "710a7870391d23a8836e9d4c76bba5ca41918f9e",
+  "prompts": {
+    "72c523a735746eb9": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "0e0eed54-25f1-4ad6-bc60-b0d99afeeac3",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "xorsal <zorzal@wonderland.xyz>",
+      "messages": [],
+      "total_additions": 6,
+      "total_deletions": 4,
+      "accepted_lines": 4,
+      "overriden_lines": 0
+    }
+  }
+}
