@@ -279,7 +279,6 @@ export async function deployVaultAndAssetWithMinter(
     'ST',
     18,
     vaultAddress,
-    AztecAddress.ZERO,
   ).send({ ...options, from: deployer });
 
   // Deploy vault at precomputed address with #[initializer] constructor
@@ -326,7 +325,6 @@ export async function deployVaultWithInitialDeposit(
     'ST',
     18,
     vaultAddress,
-    AztecAddress.ZERO,
   ).send({ ...options, from: deployer });
 
   // Deploy vault at precomputed address with #[initializer] constructor

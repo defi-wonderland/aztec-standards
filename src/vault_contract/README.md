@@ -12,9 +12,11 @@ This contract follows the [AIP-4626: Tokenized Vault Standard](https://forum.azt
 >
 > Any asset tokens transferred to the Vault's private balance will be lost forever, as the contract doesn't have keys to spend a private balance nor any recovery mechanism. Yield must be sent to the Vault's public balance.
 
+<!-- -->
+
 > **WARNING — Experimental Feature**
 >
-> The AIP-4626 functionality of this contract is not yet production ready. Use it at your own risk. In particular there is a known overflow issue in the asset<>share conversion logic used on deposits and withdrawals. This can corrupt balances for sufficiently large inputs.
+> The AIP-4626 functionality of this contract is not yet production-ready. Use it at your own risk. In particular there is a known overflow issue in the asset<>share conversion logic used on deposits and withdrawals. This can corrupt balances for sufficiently large inputs.
 
 ## Architecture
 
@@ -35,6 +37,7 @@ This separation enables cleaner composability — the shares token is a standard
 ## Initializer Functions
 
 ### constructor
+
 ```rust
 /// @notice Initializes the vault with asset, offset, and configuration
 /// @dev The admin must call set_shares_token() after deploying the shares token with this vault as minter.
@@ -49,6 +52,7 @@ fn constructor(admin: AztecAddress, asset: AztecAddress, vault_offset: u128) { /
 ## Setup Functions
 
 ### set_shares_token
+
 ```rust
 /// @notice Sets the shares token address (one-time, admin-only, immutable after set)
 /// @dev Must be called after deploying the shares token with this vault as minter.
@@ -60,6 +64,7 @@ fn set_shares_token(shares: AztecAddress) { /* ... */ }
 ```
 
 ### set_shares_token_with_initial_deposit
+
 ```rust
 /// @notice Sets the shares token and makes an initial deposit for inflation-attack protection
 /// @dev Must be called after deploying the shares token with this vault as minter.
@@ -118,6 +123,7 @@ Also note that several other functions rely on unpredictable nonces for privacy.
 ## Deposit Functions
 
 ### deposit_public_to_public
+
 ```rust
 /// @notice Deposits underlying assets from public balance and mints shares to public balance
 /// @param from The address providing the assets
@@ -129,6 +135,7 @@ fn deposit_public_to_public(from: AztecAddress, to: AztecAddress, assets: u128, 
 ```
 
 ### deposit_public_to_private
+
 ```rust
 /// @notice Deposits underlying assets from public balance and mints shares to private balance
 /// @param from The address providing the assets
@@ -141,6 +148,7 @@ fn deposit_public_to_private(from: AztecAddress, to: AztecAddress, assets: u128,
 ```
 
 ### deposit_private_to_private
+
 ```rust
 /// @notice Deposits underlying assets from private balance and mints shares to private balance
 /// @param from The address providing the assets
@@ -153,6 +161,7 @@ fn deposit_private_to_private(from: AztecAddress, to: AztecAddress, assets: u128
 ```
 
 ### deposit_private_to_public
+
 ```rust
 /// @notice Deposits underlying assets from private balance and mints shares to public balance
 /// @param from The address providing the assets
@@ -166,6 +175,7 @@ fn deposit_private_to_public(from: AztecAddress, to: AztecAddress, assets: u128,
 ## Exact Deposit Functions
 
 ### deposit_public_to_private_exact
+
 ```rust
 /// @notice Deposits underlying assets from public balance for exact shares to private balance
 /// @param from The address providing the assets
@@ -178,6 +188,7 @@ fn deposit_public_to_private_exact(from: AztecAddress, to: AztecAddress, assets:
 ```
 
 ### deposit_private_to_private_exact
+
 ```rust
 /// @notice Deposits underlying assets from private balance for exact shares to private balance
 /// @param from The address providing the assets
@@ -192,6 +203,7 @@ fn deposit_private_to_private_exact(from: AztecAddress, to: AztecAddress, assets
 ## Issue Functions
 
 ### issue_public_to_public
+
 ```rust
 /// @notice Issues exact shares for underlying assets from public balance to public balance
 /// @param from The address providing the assets
@@ -204,6 +216,7 @@ fn issue_public_to_public(from: AztecAddress, to: AztecAddress, shares: u128, ma
 ```
 
 ### issue_public_to_private
+
 ```rust
 /// @notice Issues exact shares for underlying assets from public balance to private balance
 /// @param from The address providing the assets
@@ -216,6 +229,7 @@ fn issue_public_to_private(from: AztecAddress, to: AztecAddress, shares: u128, m
 ```
 
 ### issue_private_to_public_exact
+
 ```rust
 /// @notice Issues exact shares for underlying assets from private balance to public balance
 /// @dev Any excess assets transferred in private will be returned via commitment during public execution
@@ -229,6 +243,7 @@ fn issue_private_to_public_exact(from: AztecAddress, to: AztecAddress, shares: u
 ```
 
 ### issue_private_to_private_exact
+
 ```rust
 /// @notice Issues exact shares for underlying assets from private balance to private balance
 /// @dev Any excess assets transferred in private will be returned via commitment during public execution
@@ -244,6 +259,7 @@ fn issue_private_to_private_exact(from: AztecAddress, to: AztecAddress, shares: 
 ## Withdraw Functions
 
 ### withdraw_public_to_public
+
 ```rust
 /// @notice Withdraws underlying assets by burning shares from public balance to public balance
 /// @param from The address providing the shares
@@ -255,6 +271,7 @@ fn withdraw_public_to_public(from: AztecAddress, to: AztecAddress, assets: u128,
 ```
 
 ### withdraw_public_to_private
+
 ```rust
 /// @notice Withdraws underlying assets by burning shares from public balance to private balance
 /// @param from The address providing the shares
@@ -266,6 +283,7 @@ fn withdraw_public_to_private(from: AztecAddress, to: AztecAddress, assets: u128
 ```
 
 ### withdraw_private_to_private
+
 ```rust
 /// @notice Withdraws underlying assets by burning shares from private balance to private balance
 /// @param from The address providing the shares
@@ -278,6 +296,7 @@ fn withdraw_private_to_private(from: AztecAddress, to: AztecAddress, assets: u12
 ```
 
 ### withdraw_private_to_public_exact
+
 ```rust
 /// @notice Withdraws exact underlying assets by burning shares from private balance to public balance
 /// @dev Excess shares transferred in private will be returned via commitment during public execution
@@ -291,6 +310,7 @@ fn withdraw_private_to_public_exact(from: AztecAddress, to: AztecAddress, assets
 ```
 
 ### withdraw_private_to_private_exact
+
 ```rust
 /// @notice Withdraws exact underlying assets by burning shares from private balance to private balance
 /// @dev Excess shares transferred in private will be returned via commitment during public execution
@@ -306,6 +326,7 @@ fn withdraw_private_to_private_exact(from: AztecAddress, to: AztecAddress, asset
 ## Redeem Functions
 
 ### redeem_public_to_public
+
 ```rust
 /// @notice Redeems shares for underlying assets from public balance to public balance
 /// @param from The address providing the shares
@@ -317,6 +338,7 @@ fn redeem_public_to_public(from: AztecAddress, to: AztecAddress, shares: u128, n
 ```
 
 ### redeem_private_to_public
+
 ```rust
 /// @notice Redeems shares for underlying assets from private balance to public balance
 /// @param from The address providing the shares
@@ -328,6 +350,7 @@ fn redeem_private_to_public(from: AztecAddress, to: AztecAddress, shares: u128, 
 ```
 
 ### redeem_private_to_private_exact
+
 ```rust
 /// @notice Redeems shares for exact underlying assets from private balance to private balance
 /// @dev Outstanding assets beyond min_assets will be transferred via commitment during public execution
@@ -341,6 +364,7 @@ fn redeem_private_to_private_exact(from: AztecAddress, to: AztecAddress, shares:
 ```
 
 ### redeem_public_to_private_exact
+
 ```rust
 /// @notice Redeems shares for exact underlying assets from public balance to private balance
 /// @dev Outstanding assets beyond min_assets will be transferred via commitment during public execution
@@ -356,6 +380,7 @@ fn redeem_public_to_private_exact(from: AztecAddress, to: AztecAddress, shares: 
 ## View Functions
 
 ### admin
+
 ```rust
 /// @notice Returns the admin address
 /// @return The address of the admin
@@ -365,6 +390,7 @@ fn admin() -> AztecAddress { /* ... */ }
 ```
 
 ### asset
+
 ```rust
 /// @notice Returns the underlying asset address
 /// @return The address of the underlying asset
@@ -374,6 +400,7 @@ fn asset() -> AztecAddress { /* ... */ }
 ```
 
 ### shares
+
 ```rust
 /// @notice Returns the shares token address
 /// @return The address of the shares token
@@ -383,6 +410,7 @@ fn shares() -> AztecAddress { /* ... */ }
 ```
 
 ### total_assets
+
 ```rust
 /// @notice Returns the total amount of underlying assets held by the vault
 /// @return The total amount of assets held by the vault
@@ -392,6 +420,7 @@ fn total_assets() -> u128 { /* ... */ }
 ```
 
 ### convert_to_shares
+
 ```rust
 /// @notice Converts an amount of assets to shares using the current exchange rate
 /// @param assets The amount of assets to convert
@@ -402,6 +431,7 @@ fn convert_to_shares(assets: u128) -> u128 { /* ... */ }
 ```
 
 ### convert_to_assets
+
 ```rust
 /// @notice Converts an amount of shares to assets using the current exchange rate
 /// @param shares The amount of shares to convert
@@ -412,6 +442,7 @@ fn convert_to_assets(shares: u128) -> u128 { /* ... */ }
 ```
 
 ### max_deposit
+
 ```rust
 /// @notice Returns the maximum amount of the underlying asset that can be deposited into the Vault for the receiver
 /// @param receiver The address of the receiver
@@ -422,6 +453,7 @@ fn max_deposit(receiver: AztecAddress) -> u128 { /* ... */ }
 ```
 
 ### preview_deposit
+
 ```rust
 /// @notice Simulates the effects of a deposit at the current block
 /// @param assets The amount of assets to deposit
@@ -432,6 +464,7 @@ fn preview_deposit(assets: u128) -> u128 { /* ... */ }
 ```
 
 ### max_issue
+
 ```rust
 /// @notice Returns the maximum amount of Vault shares that can be issued for the receiver
 /// @param receiver The address of the receiver
@@ -442,6 +475,7 @@ fn max_issue(receiver: AztecAddress) -> u128 { /* ... */ }
 ```
 
 ### preview_issue
+
 ```rust
 /// @notice Simulates the effects of an issue at the current block
 /// @param shares The amount of shares to issue
@@ -452,6 +486,7 @@ fn preview_issue(shares: u128) -> u128 { /* ... */ }
 ```
 
 ### max_withdraw
+
 ```rust
 /// @notice Returns the maximum amount of the underlying asset that can be withdrawn from the owner's public balance
 /// @dev This does NOT include private balance - private holders must track their own balance
@@ -463,6 +498,7 @@ fn max_withdraw(owner: AztecAddress) -> u128 { /* ... */ }
 ```
 
 ### preview_withdraw
+
 ```rust
 /// @notice Simulates the effects of a withdrawal at the current block
 /// @param assets The amount of assets to withdraw
@@ -473,6 +509,7 @@ fn preview_withdraw(assets: u128) -> u128 { /* ... */ }
 ```
 
 ### max_redeem
+
 ```rust
 /// @notice Returns the maximum amount of Vault shares that can be redeemed from the owner's public balance
 /// @dev This does NOT include private balance - private holders must track their own balance
@@ -484,6 +521,7 @@ fn max_redeem(owner: AztecAddress) -> u128 { /* ... */ }
 ```
 
 ### preview_redeem
+
 ```rust
 /// @notice Simulates the effects of a redemption at the current block
 /// @param shares The amount of shares to redeem
@@ -494,6 +532,7 @@ fn preview_redeem(shares: u128) -> u128 { /* ... */ }
 ```
 
 ### get_vault_offset
+
 ```rust
 /// @notice Returns the vault offset
 /// @return The offset value
