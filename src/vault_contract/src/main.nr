@@ -133,12 +133,15 @@ pub contract Vault {
         self.storage.shares.initialize(shares);
         self.storage.vault_offset.initialize(vault_offset);
 
+        // Caller deposits assets, shares are minted to this contract and are permanently locked.
         let from = depositor;
-        let to = self.address;
 
+        // Assets could be donated to the vault's precomputed address before deployment, but such assets are
+        // ignored at this point to ensure the asset<>share conversion is 1:1 for the initial deposit.
         let total_assets: u128 = 0;
         let total_supply: u128 = 0;
 
+        // Calculate shares to mint for the initial deposit.
         let deposit_shares = _convert_to_shares(
             initial_deposit,
             total_assets,
@@ -147,8 +150,10 @@ pub contract Vault {
             ROUND_DOWN,
         );
 
-        self.call(Token::at(asset).transfer_public_to_public(from, to, initial_deposit, nonce));
-        self.call(Token::at(shares).mint_to_public(to, deposit_shares));
+        // Transfer the assets from the sender to the vault
+        self.call(Token::at(asset).transfer_public_to_public(from, self.address, initial_deposit, nonce));
+        // Mint shares to this contract address (permanently locked)
+        self.call(Token::at(shares).mint_to_public(self.address, deposit_shares));
     }
 
     /** ==========================================================
