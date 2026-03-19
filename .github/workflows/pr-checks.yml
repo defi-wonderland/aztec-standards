@@ -13,7 +13,7 @@ jobs:
     secrets: inherit
 
   benchmark:
-    uses: defi-wonderland/aztec-benchmark/.github/workflows/pr-benchmark.yml@5022f356e113c73ff42822f49186c56ee34b697d
+    uses: defi-wonderland/aztec-benchmark/.github/workflows/pr-benchmark.yml@4.1.0-rc.4
     permissions:
       pull-requests: write
       issues: write
