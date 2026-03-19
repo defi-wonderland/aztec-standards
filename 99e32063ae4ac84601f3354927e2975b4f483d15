@@ -1,0 +1,25 @@
+.github/workflows/update-baseline.yml
+  78d145681221d02c 18
+.github/workflows/pr-checks.yml
+  78d145681221d02c 16
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.15",
+  "base_commit_sha": "99e32063ae4ac84601f3354927e2975b4f483d15",
+  "prompts": {
+    "78d145681221d02c": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "209c13eb-b06f-4c42-ae2d-3ee71f7ef2d9",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "xorsal <zorzal@wonderland.xyz>",
+      "messages": [],
+      "total_additions": 2,
+      "total_deletions": 2,
+      "accepted_lines": 2,
+      "overriden_lines": 0
+    }
+  }
+}
