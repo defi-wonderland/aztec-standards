@@ -455,7 +455,6 @@ pub contract NFT {
     ) -> PartialNFTNote {
         let commitment = NFTNote::partial(
             to,
-            self.storage.private_nfts.get_storage_slot(),
             self.context,
             to,
             completer,
@@ -506,7 +505,7 @@ pub contract NFT {
         // used once, but since the AVM offers no gas refunds for doing so this would just make the transaction be more
         // expensive.
         assert(self.context.storage_read(commitment), "invalid commitment");
-        PartialNFTNote::new(commitment).complete(&mut self.context, completer, token_id);
+        PartialNFTNote::new(commitment).complete(self.context, completer, self.storage.private_nfts.get_storage_slot(), token_id);
     }
 
     /// @notice Validates that the caller is the owner of a token
