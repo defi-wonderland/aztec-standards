@@ -216,7 +216,7 @@ pub unconstrained fn get_private_balance(
     token_address: AztecAddress,
     address: AztecAddress,
 ) -> u128 {
-    env.simulate_utility(Token::at(token_address).balance_of_private(address))
+    env.execute_utility(Token::at(token_address).balance_of_private(address))
 }
 
 // ====================== Authwit helpers ======================

@@ -200,7 +200,7 @@ pub unconstrained fn get_private_balance(
     token_contract_address: AztecAddress,
     address: AztecAddress,
 ) -> u128 {
-    let amt = env.simulate_utility(Token::at(token_contract_address).balance_of_private(address));
+    let amt = env.execute_utility(Token::at(token_contract_address).balance_of_private(address));
     amt
 }
 
