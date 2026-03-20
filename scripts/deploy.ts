@@ -32,7 +32,12 @@ import { getConfig, DeploymentConfig, type Network } from './deploy-config.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
-const packageJson = JSON.parse(readFileSync(join(__dirname, '../package.json'), 'utf-8'));
+let packageJson: Record<string, unknown>;
+try {
+  packageJson = JSON.parse(readFileSync(join(__dirname, '../package.json'), 'utf-8'));
+} catch (error) {
+  throw new Error('Failed to read package.json: ensure the file exists and is valid JSON');
+}
 
 const logger = createLogger('aztec:deploy');
 
@@ -222,7 +227,7 @@ async function checkContractDeployed(node: AztecNode, address: AztecAddress): Pr
   }
 }
 
-async function deployContractGeneric(
+async function deployContract(
   deployer: Wallet,
   node: AztecNode,
   artifact: ContractArtifact,
@@ -294,7 +299,7 @@ export async function deployToken(
 ): Promise<{ contract: TokenContract; status: 'deployed' | 'existing' }> {
   const minter = params.minter || AztecAddress.ZERO;
 
-  const result = await deployContractGeneric(
+  const result = await deployContract(
     deployer,
     node,
     TokenContractArtifact,
@@ -315,7 +320,7 @@ export async function deployDripper(
   salt: Fr,
   options: DeployOptions,
 ): Promise<{ contract: DripperContract; status: 'deployed' | 'existing' }> {
-  const result = await deployContractGeneric(
+  const result = await deployContract(
     deployer,
     node,
     DripperContractArtifact,
@@ -389,7 +394,7 @@ export async function deployContracts(options: CLIOptions, config: DeploymentCon
   const nodeUrl = config.network.nodeUrl;
 
   const deployerSecretStr = options.deployerSecret || process.env.DEPLOYER_SECRET;
-  if (!deployerSecretStr) {
+  if (!deployerSecretStr || deployerSecretStr.trim().length === 0) {
     throw new Error('Deployer secret is required (use --deployer-secret or DEPLOYER_SECRET env var)');
   }
   const deployerSecret = await poseidon2Hash([Fr.fromBufferReduce(Buffer.from(deployerSecretStr, 'utf8'))]);
