@@ -266,16 +266,16 @@ export async function deployVaultAndAssetWithMinter(
   const tokenClass = await getContractClassFromArtifact(TokenContractArtifact);
   const sharesClassId = tokenClass.id;
 
-  // Use the same salt and deployer for both vault and shares
-  const salt = Fr.random();
+  const vaultSalt = Fr.random();
+  const sharesSalt = Fr.random();
 
   // Precompute vault address (constructor computes shares address internally)
   const { address: vaultAddress } = await deriveContractAddressWithConstructor(
     VaultContractArtifact,
     'constructor',
-    [assetContract.address, 1, 'SharesToken', 'ST', 18, sharesClassId, salt],
+    [assetContract.address, 1, 'SharesToken', 'ST', 18, sharesClassId, sharesSalt],
     deployer,
-    salt,
+    vaultSalt,
   );
 
   // Deploy shares token with precomputed vault address as minter
@@ -285,9 +285,9 @@ export async function deployVaultAndAssetWithMinter(
     'ST',
     18,
     vaultAddress,
-  ).send({ ...options, from: deployer, contractAddressSalt: salt });
+  ).send({ ...options, from: deployer, contractAddressSalt: sharesSalt });
 
-  // Deploy vault — constructor takes salt as param and reads deployer from AVM
+  // Deploy vault — constructor takes shares salt as param and reads deployer from AVM
   const { contract: vaultContract } = await VaultContract.deployWithOpts(
     { method: 'constructor', wallet },
     assetContract.address,
@@ -296,8 +296,8 @@ export async function deployVaultAndAssetWithMinter(
     'ST',
     18,
     sharesClassId,
-    salt,
-  ).send({ ...options, from: deployer });
+    sharesSalt,
+  ).send({ ...options, from: deployer, contractAddressSalt: vaultSalt });
 
   return [vaultContract as VaultContract, assetContract as TokenContract, sharesContract as TokenContract];
 }
@@ -320,21 +320,22 @@ export async function deployVaultWithInitialDeposit(
   const tokenClass = await getContractClassFromArtifact(TokenContractArtifact);
   const sharesClassId = tokenClass.id;
 
-  const salt = Fr.random();
+  const vaultSalt = Fr.random();
+  const sharesSalt = Fr.random();
   const useInitialDeposit = initialDeposit > 0n;
 
   // Constructor choice determines the address
   const constructorName = useInitialDeposit ? 'constructor_with_initial_deposit' : 'constructor';
   const constructorArgs = useInitialDeposit
-    ? [assetContract.address, 1, 'SharesToken', 'ST', 18, sharesClassId, salt, initialDeposit, depositor, 0]
-    : [assetContract.address, 1, 'SharesToken', 'ST', 18, sharesClassId, salt];
+    ? [assetContract.address, 1, 'SharesToken', 'ST', 18, sharesClassId, sharesSalt, initialDeposit, depositor, 0]
+    : [assetContract.address, 1, 'SharesToken', 'ST', 18, sharesClassId, sharesSalt];
 
   const { address: vaultAddress } = await deriveContractAddressWithConstructor(
     VaultContractArtifact,
     constructorName,
     constructorArgs,
     deployer,
-    salt,
+    vaultSalt,
   );
 
   // Deploy shares token with precomputed vault address as minter
@@ -344,21 +345,36 @@ export async function deployVaultWithInitialDeposit(
     'ST',
     18,
     vaultAddress,
-  ).send({ ...options, from: deployer });
+  ).send({ ...options, from: deployer, contractAddressSalt: sharesSalt });
 
   if (initialDeposit > 0n) {
     // Authorize vault to transfer assets from depositor
-    const transfer = assetContract.methods.transfer_public_to_public(
-      depositor,
-      vaultContract.address,
+    const transfer = assetContract.methods.transfer_public_to_public(depositor, vaultAddress, initialDeposit, 0);
+    await setPublicAuthWit(vaultAddress, transfer, depositor, wallet as EmbeddedWallet);
+
+    // Deploy vault with initial deposit
+    const { contract: vaultContract } = await VaultContract.deployWithOpts(
+      { method: 'constructor_with_initial_deposit', wallet },
+      assetContract.address,
+      1,
+      'SharesToken',
+      'ST',
+      18,
+      sharesClassId,
+      sharesSalt,
       initialDeposit,
       depositor,
       0,
-    );
-    await setPublicAuthWit(vaultContract.address, transfer, depositor, wallet as EmbeddedWallet);
-    
-    // Deploy vault without initial deposit
-    const vaultContract = await VaultContract.deployWithOpts(
+    ).send({
+      ...options,
+      from: deployer,
+      contractAddressSalt: vaultSalt,
+    });
+
+    return [vaultContract as VaultContract, sharesContract as TokenContract];
+  } else {
+    // Deploy vault at precomputed address
+    const { contract: vaultContract } = await VaultContract.deployWithOpts(
       { method: 'constructor', wallet },
       assetContract.address,
       1,
@@ -366,20 +382,11 @@ export async function deployVaultWithInitialDeposit(
       'ST',
       18,
       sharesClassId,
-      salt,
+      sharesSalt,
     ).send({
       ...options,
       from: deployer,
-      contractAddressSalt: salt,
-    });
-
-    return [vaultContract as VaultContract, sharesContract as TokenContract];
-  } else {
-      // Deploy vault at precomputed address with #[initializer] constructor
-    const { contract: vaultContract } = await VaultContract.deploy(wallet, deployer, assetContract.address, 1).send({
-      ...options,
-      from: deployer,
-      contractAddressSalt: salt,
+      contractAddressSalt: vaultSalt,
     });
 
     return [vaultContract as VaultContract, sharesContract as TokenContract];
