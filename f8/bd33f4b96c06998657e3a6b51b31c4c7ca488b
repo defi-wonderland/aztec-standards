@@ -1,0 +1,23 @@
+scripts/deploy.ts
+  c007fbf252441527 161-162,199-200,229,253-254,276-277,448-449
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.15",
+  "base_commit_sha": "f8bd33f4b96c06998657e3a6b51b31c4c7ca488b",
+  "prompts": {
+    "c007fbf252441527": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "c056c1bd-0bbe-4438-ad7f-e73855c319c4",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "xorsal <zorzal@wonderland.xyz>",
+      "messages": [],
+      "total_additions": 11,
+      "total_deletions": 11,
+      "accepted_lines": 11,
+      "overriden_lines": 0
+    }
+  }
+}
