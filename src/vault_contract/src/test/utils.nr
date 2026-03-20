@@ -1,12 +1,18 @@
 use crate::Vault;
 use aztec::{
-    protocol::{address::AztecAddress, contract_class_id::ContractClassId, traits::FromField},
-    test::helpers::test_environment::TestEnvironment,
+    oracle::random::random,
+    protocol::{address::AztecAddress, contract_class_id::ContractClassId},
+    test::helpers::{test_environment::TestEnvironment, txe_oracles as cheatcodes},
 };
 use aztec::test::helpers::authwit as authwit_cheatcodes;
 use token_contract::Token;
 
 pub global mint_amount: u128 = 10_000 as u128;
+
+pub unconstrained fn get_token_class_id() -> ContractClassId {
+    let token_instance = cheatcodes::deploy("@token_contract/Token", "", [], random());
+    token_instance.contract_class_id
+}
 
 /// @notice Sets up a vault with an asset token and a shares token.
 /// Deploys 3 contracts: asset token (with owner as minter), vault (deployed without initializer
@@ -28,11 +34,11 @@ pub global mint_amount: u128 = 10_000 as u128;
 /// (https://github.com/AztecProtocol/aztec-packages/pull/21191).
 /// Re-enable Noir tests for both vault and escrow contracts during the upgrade that brings this change.
 ///
-/// Dummy values are used for shares_class_id (0), shares_salt (0), and shares_deployer (owner)
-/// because:
-/// - The utility oracle get_contract_instance is not available in the TXE handler
+/// Dummy values are used for shares_salt (0) and shares_deployer (owner) because:
 /// - The AVM opcode get_contract_instance_deployer_avm is not available in TXE public context
 /// - The shares address mismatch makes correct values irrelevant until custom salts are supported
+///
+/// The shares_class_id is obtained dynamically via a throwaway deploy of the token contract.
 pub unconstrained fn setup_with_vault(
     with_account_contracts: bool,
 ) -> (TestEnvironment, AztecAddress, AztecAddress, AztecAddress, AztecAddress, AztecAddress) {
@@ -46,6 +52,8 @@ pub unconstrained fn setup_with_vault(
         let recipient = env.create_light_account();
         (owner, recipient)
     };
+
+    let shares_class_id = get_token_class_id();
 
     // Deploy asset token with owner as minter
     let asset_initializer = Token::interface().constructor_with_minter(
@@ -70,7 +78,7 @@ pub unconstrained fn setup_with_vault(
     let shares_address =
         env.deploy("@token_contract/Token").with_public_initializer(owner, shares_initializer);
 
-    // Initialize vault (dummy values for shares_class_id, shares_salt - see TODO above)
+    // Initialize vault (dummy values for shares_salt - see TODO above)
     env.call_public(
         owner,
         Vault::at(vault_address).constructor(
@@ -79,7 +87,7 @@ pub unconstrained fn setup_with_vault(
             "SharesToken00000000000000000000",
             "SHARES0000000000000000000000000",
             18,
-            ContractClassId::from_field(0),
+            shares_class_id,
             0,
         ),
     );
@@ -108,6 +116,8 @@ pub unconstrained fn setup_with_vault_initial_deposit(
         let recipient = env.create_light_account();
         (owner, recipient)
     };
+
+    let shares_class_id = get_token_class_id();
 
     // Deploy asset token with owner as minter
     let asset_initializer = Token::interface().constructor_with_minter(
@@ -138,7 +148,7 @@ pub unconstrained fn setup_with_vault_initial_deposit(
     // Authorize vault to transfer assets from owner during initialization
     authorize_transfer_public_to_public(env, asset_address, vault_address, owner, initial_deposit);
 
-    // Initialize vault with initial deposit (dummy values for shares_class_id, shares_salt)
+    // Initialize vault with initial deposit (dummy values for shares_salt - see TODO above)
     env.call_public(
         owner,
         Vault::at(vault_address).constructor_with_initial_deposit(
@@ -147,7 +157,7 @@ pub unconstrained fn setup_with_vault_initial_deposit(
             "SharesToken00000000000000000000",
             "SHARES0000000000000000000000000",
             18,
-            ContractClassId::from_field(0),
+            shares_class_id,
             0,
             initial_deposit,
             owner,
