@@ -20,10 +20,9 @@ pub contract Vault {
         macros::{functions::{external, initializer, internal, only_self, view}, storage::storage},
         oracle::get_contract_instance::get_contract_instance_deployer_avm,
         protocol::{
-            abis::function_selector::FunctionSelector, address::AztecAddress,
-            constants::DOM_SEP__INITIALIZER, contract_class_id::ContractClassId,
-            contract_instance::ContractInstance, hash::poseidon2_hash_with_separator,
-            public_keys::PublicKeys, traits::ToField,
+            address::AztecAddress, constants::DOM_SEP__INITIALIZER,
+            contract_class_id::ContractClassId, contract_instance::ContractInstance,
+            hash::poseidon2_hash_with_separator, public_keys::PublicKeys, traits::ToField,
         },
         state_vars::PublicImmutable,
     };
@@ -1473,24 +1472,13 @@ pub contract Vault {
         salt: Field,
         deployer: AztecAddress,
     ) -> AztecAddress {
-        // ABI-encode constructor args: str<31> encodes as 31 individual Field elements (one per char)
-        let mut args: [Field; 64] = [0; 64];
-        let name_bytes = name.as_bytes();
-        for i in 0..31 {
-            args[i] = name_bytes[i] as Field;
-        }
-        let symbol_bytes = symbol.as_bytes();
-        for i in 0..31 {
-            args[31 + i] = symbol_bytes[i] as Field;
-        }
-        args[62] = decimals as Field;
-        args[63] = minter.to_field();
-
-        let args_hash = hash_args(args);
-        let selector =
-            FunctionSelector::from_signature("constructor_with_minter(str<31>,str<31>,u8,(Field))");
-        let initialization_hash =
-            poseidon2_hash_with_separator([selector.to_field(), args_hash], DOM_SEP__INITIALIZER);
+        let constructor_interface =
+            Token::interface().constructor_with_minter(name, symbol, decimals, minter);
+        let args_hash = hash_args(constructor_interface.args);
+        let initialization_hash = poseidon2_hash_with_separator(
+            [constructor_interface.selector.to_field(), args_hash],
+            DOM_SEP__INITIALIZER,
+        );
 
         let instance = ContractInstance {
             salt,
