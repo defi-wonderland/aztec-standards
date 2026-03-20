@@ -299,6 +299,10 @@ export async function deployVaultAndAssetWithMinter(
     sharesSalt,
   ).send({ ...options, from: deployer, contractAddressSalt: vaultSalt });
 
+  expect(vaultContract.address.equals(vaultAddress)).toBe(true);
+  const { result: onChainSharesAddress } = await vaultContract.methods.shares().simulate({ from: deployer });
+  expect(onChainSharesAddress.equals(sharesContract.address)).toBe(true);
+
   return [vaultContract as VaultContract, assetContract as TokenContract, sharesContract as TokenContract];
 }
 
