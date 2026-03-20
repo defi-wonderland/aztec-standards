@@ -158,8 +158,8 @@ export async function createSponsoredFeeOptions(wallet: Wallet): Promise<Interac
   try {
     await wallet.registerContract(sponsoredFPCInstance, SponsoredFPCContract.artifact);
     logger.info(`Registered SponsoredFPC at: ${sponsoredFPCInstance.address.toString()}`);
-  } catch (error: any) {
-    const msg = error?.message ?? String(error);
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : String(error);
     if (msg.includes('already')) {
       logger.debug('SponsoredFPC already registered');
     } else {
@@ -196,8 +196,8 @@ async function deployAccount(
     const deployMethod = await manager.getDeployMethod();
     const result = await deployMethod.send({ fee: feeOptions, from: AztecAddress.ZERO });
     logger.info(`Account contract deployed at ${result.contract.address.toString()}`);
-  } catch (error: any) {
-    const msg = error?.message ?? String(error);
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : String(error);
     if (msg.includes('Existing nullifier')) {
       logger.info('Account contract already deployed (nullifier exists)');
     } else {
@@ -226,7 +226,7 @@ async function deployContractGeneric(
   deployer: Wallet,
   node: AztecNode,
   artifact: ContractArtifact,
-  constructorArgs: any[],
+  constructorArgs: unknown[],
   constructorArtifact: string,
   salt: Fr,
   options: DeployOptions,
@@ -250,8 +250,8 @@ async function deployContractGeneric(
     try {
       await deployer.registerContract(instance, artifact);
       logger.debug(`${label} registered with PXE`);
-    } catch (error: any) {
-      const msg = error?.message ?? String(error);
+    } catch (error: unknown) {
+      const msg = error instanceof Error ? error.message : String(error);
       if (msg.includes('already')) {
         logger.debug(`${label} already registered with PXE`);
       } else {
@@ -273,8 +273,8 @@ async function deployContractGeneric(
       universalDeploy: true,
       wait: { waitForStatus: TxStatus.PROPOSED },
     });
-  } catch (error: any) {
-    const msg = error?.message || error?.cause?.message || String(error);
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : (error instanceof Object && 'cause' in error && error.cause instanceof Error ? error.cause.message : String(error));
     if (msg.includes('Existing nullifier')) {
       logger.info(`${label} already deployed (existing nullifier) at: ${instance.address.toString()}`);
       return { address: instance.address, status: 'existing' };
@@ -445,8 +445,8 @@ export async function deployContracts(options: CLIOptions, config: DeploymentCon
       try {
         await wallet.registerContract(dripperInstance, DripperContractArtifact);
         logger.debug('Dripper registered with PXE');
-      } catch (error: any) {
-        const msg = error?.message ?? String(error);
+      } catch (error: unknown) {
+        const msg = error instanceof Error ? error.message : String(error);
         if (msg.includes('already')) {
           logger.debug('Dripper already registered');
         } else {
