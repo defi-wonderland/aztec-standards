@@ -238,6 +238,9 @@ impl PartialNFTNote {
         // Here we finalize the note hash by including the (public) storage slot and token id into the partial note
         // commitment. Note that we use the same separator as we used for the first round of poseidon - this is not
         // an issue.
-        poseidon2_hash_with_separator([self.commitment, storage_slot, token_id], DOM_SEP__NOTE_HASH)
+        poseidon2_hash_with_separator(
+            [self.commitment, storage_slot, token_id],
+            DOM_SEP__NOTE_HASH,
+        )
     }
 }
