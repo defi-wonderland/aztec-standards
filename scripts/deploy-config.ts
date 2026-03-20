@@ -30,7 +30,7 @@ export interface DeploymentConfig {
 }
 
 // TODO: add mainnet-alpha
-export type Network = 'devnet' | 'testnet' | 'sandbox';
+export type Network = 'devnet' | 'testnet' | 'local-network';
 
 const TOKENS: Record<string, TokenConfig> = {
   weth: { name: 'WETH', symbol: 'WETH', decimals: 18, salt: DEFAULT_SALT },

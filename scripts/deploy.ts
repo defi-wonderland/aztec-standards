@@ -400,10 +400,10 @@ export async function deployContracts(options: CLIOptions, config: DeploymentCon
   const deployerSecret = await poseidon2Hash([Fr.fromBufferReduce(Buffer.from(deployerSecretStr, 'utf8'))]);
 
   const node = createAztecNodeClient(nodeUrl);
-  const isSandbox = config.network.name === 'sandbox';
+  const isLocalNetwork = config.network.name === 'local-network';
   const wallet = await EmbeddedWallet.create(nodeUrl, {
     pxeConfig: {
-      proverEnabled: !isSandbox,
+      proverEnabled: !isLocalNetwork,
       dataDirectory: config.deployer.dataDirectory,
       dataStoreMapSizeKb: 1e6,
     },
@@ -520,7 +520,7 @@ program
   .option('--dry-run', 'Show configuration without deploying')
   .option('--output <file>', 'Write deployment JSON to file')
   .addOption(
-    new Option('-n, --network <network>', 'Target network').choices(['devnet', 'testnet', 'sandbox']).default('devnet'),
+    new Option('-n, --network <network>', 'Target network').choices(['devnet', 'testnet', 'local-network']).default('devnet'),
   )
   .action(async (options: CLIOptions) => {
     try {

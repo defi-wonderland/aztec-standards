@@ -2,6 +2,6 @@ export const DEFAULT_SALT = 1337;
 
 export const NETWORK_URLS: Record<string, string> = {
   devnet: 'https://v4-devnet-2.aztec-labs.com',
-  testnet: 'https://testnet.aztec-labs.com',
-  sandbox: 'http://localhost:8080',
+  testnet: 'https://rpc.testnet.aztec-labs.com',
+  'local-network': 'http://localhost:8080',
 };
