@@ -150,10 +150,192 @@ jobs:
           script -e -c "aztec test"
 
   benchmark:
-    uses: defi-wonderland/aztec-benchmark/.github/workflows/pr-benchmark.yml@4.1.0-rc.4
+    name: Benchmark
+    runs-on: ubuntu-latest-m
+    timeout-minutes: 120
     permissions:
       contents: read
       pull-requests: write
       issues: write
       actions: read
-    secrets: inherit
+    env:
+      BENCH_DIR: ./benchmarks
+      CURRENT_SUFFIX: _latest
+      PR_SUFFIX: _new
+      BASELINE_WORKFLOW: update-baseline.yml
+      PR_WORKFLOW: pr-checks.yml
+      CIRCUIT_DETAILS: 'false'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: 'yarn'
+
+      - name: Update PATH for Aztec
+        run: |
+          echo "$HOME/.aztec/current/bin" >> $GITHUB_PATH
+          echo "$HOME/.aztec/current/node_modules/.bin" >> $GITHUB_PATH
+          echo "$HOME/.aztec/bin" >> $GITHUB_PATH
+
+      - name: Detect Aztec version
+        id: aztec-version
+        run: |
+          VER=$(node -p "require('./package.json').config.aztecVersion")
+          echo "version=$VER" >> "$GITHUB_OUTPUT"
+          echo "Aztec version: $VER"
+
+      - name: Install Foundry
+        uses: foundry-rs/foundry-toolchain@v1
+
+      - name: Cache Aztec CLI
+        id: cache-aztec
+        uses: actions/cache@v4
+        with:
+          path: /home/runner/.aztec
+          key: aztec-${{ runner.os }}-${{ steps.aztec-version.outputs.version }}
+
+      - name: Install Aztec CLI
+        if: steps.cache-aztec.outputs.cache-hit != 'true'
+        run: |
+          INSTALL_URL="https://install.aztec.network/${{ steps.aztec-version.outputs.version }}/"
+          echo "Installing from: $INSTALL_URL"
+          curl -fsSL "$INSTALL_URL" -o tmp.sh
+          VERSION=${{ steps.aztec-version.outputs.version }} bash tmp.sh <<< yes "yes"
+
+      - name: Switch CLI to target version
+        if: steps.cache-aztec.outputs.cache-hit != 'true'
+        run: aztec-up install ${{ steps.aztec-version.outputs.version }}
+
+      - name: Start local network
+        run: aztec start --local-network &
+
+      - name: Install dependencies
+        run: yarn --frozen-lockfile
+
+      - name: Compile contracts
+        run: aztec compile
+
+      - name: Codegen wrappers
+        run: aztec codegen target --outdir src/artifacts -f
+
+      - name: Wait for local network (port 8080)
+        run: |
+          echo "Waiting for local network on port 8080..."
+          timeout=120
+          elapsed=0
+          while ! nc -z localhost 8080 2>/dev/null; do
+            if [ $elapsed -ge $timeout ]; then
+              echo "::error::Timed out waiting for port 8080 after ${timeout}s"
+              exit 1
+            fi
+            sleep 2
+            elapsed=$((elapsed + 2))
+            echo " waiting... (${elapsed}s)"
+          done
+          echo "Port 8080 is ready (took ${elapsed}s)"
+
+      - name: Run benchmarks
+        run: yarn aztec-benchmark --suffix "$PR_SUFFIX" --output-dir "$BENCH_DIR"
+
+      - name: Encode base branch name
+        id: encode-base
+        env:
+          BASE_REF: ${{ github.event.pull_request.base.ref }}
+        run: |
+          encoded=$(echo "${BASE_REF}" | sed 's/\//-/g')
+          echo "base-ref-encoded=${encoded}" >> $GITHUB_OUTPUT
+          if [[ "${BASE_REF}" == "dev" || "${BASE_REF}" == "main" ]]; then
+            echo "workflow=${BASELINE_WORKFLOW}" >> $GITHUB_OUTPUT
+          else
+            echo "workflow=${PR_WORKFLOW}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Download baseline artifact
+        id: download-baseline
+        continue-on-error: true
+        uses: dawidd6/action-download-artifact@0bd50d53a6d7fb5cb921e607957e9cc12b4ce392
+        with:
+          workflow: ${{ steps.encode-base.outputs.workflow }}
+          branch: ${{ github.event.pull_request.base.ref }}
+          name: benchmark-baseline-${{ steps.encode-base.outputs.base-ref-encoded }}
+          path: ${{ env.BENCH_DIR }}
+          if_no_artifact_found: warn
+
+      - name: Generate comparison report
+        run: |
+          node -e "
+            let runComparison;
+            try {
+              ({ runComparison } = require('@defi-wonderland/aztec-benchmark/action/comparison.cjs'));
+            } catch (e) {
+              if (e.code === 'MODULE_NOT_FOUND') {
+                console.error(
+                  'ERROR: @defi-wonderland/aztec-benchmark is not installed.\n' +
+                  'Add it as a dev-dependency (yarn add -D @defi-wonderland/aztec-benchmark) ' +
+                  'and make sure dependencies are installed before this step.'
+                );
+              }
+              throw e;
+            }
+            const fs = require('fs');
+            const result = runComparison({
+              reportsDir: process.env.BENCH_DIR,
+              baseSuffix: process.env.CURRENT_SUFFIX,
+              prSuffix: process.env.PR_SUFFIX,
+              threshold: 2.5,
+              circuitDetails: process.env.CIRCUIT_DETAILS === 'true'
+            });
+            fs.writeFileSync('benchmark-comparison.md', result);
+          "
+
+      - name: Minimize previous benchmark comments
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          node_ids=$(gh api "/repos/${{ github.repository }}/issues/${{ github.event.pull_request.number }}/comments" \
+            --paginate --jq '.[] | select(.body | contains("<!-- benchmark-diff -->")) | .node_id')
+          for node_id in $node_ids; do
+            gh api graphql -f query='
+              mutation($id: ID!) {
+                minimizeComment(input: {subjectId: $id, classifier: OUTDATED}) {
+                  minimizedComment { isMinimized }
+                }
+              }' -f id="$node_id"
+          done
+
+      - name: Comment diff on PR
+        uses: peter-evans/create-or-update-comment@v4
+        with:
+          issue-number: ${{ github.event.pull_request.number }}
+          body-path: benchmark-comparison.md
+
+      - name: Rename to baseline format
+        run: |
+          rm -f "$BENCH_DIR"/*"$CURRENT_SUFFIX".benchmark.json
+          for file in "$BENCH_DIR"/*"$PR_SUFFIX".benchmark.json; do
+            [ -f "$file" ] && mv "$file" "${file/${PR_SUFFIX}.benchmark.json/${CURRENT_SUFFIX}.benchmark.json}"
+          done
+
+      - name: Encode head branch name
+        id: encode-head
+        env:
+          HEAD_REF: ${{ github.event.pull_request.head.ref }}
+        run: |
+          encoded=$(echo "${HEAD_REF}" | sed 's/\//-/g')
+          echo "head-ref-encoded=${encoded}" >> $GITHUB_OUTPUT
+
+      - name: Upload baseline
+        uses: actions/upload-artifact@v4
+        with:
+          name: benchmark-baseline-${{ steps.encode-head.outputs.head-ref-encoded }}
+          path: ${{ env.BENCH_DIR }}/*${{ env.CURRENT_SUFFIX }}.benchmark.json
+          retention-days: 90
+          if-no-files-found: error
