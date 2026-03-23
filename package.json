@@ -1,6 +1,6 @@
 {
   "name": "@defi-wonderland/aztec-standards",
-  "version": "4.0.0-devnet.2-patch.1",
+  "version": "4.1.0-rc.4",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/defi-wonderland/aztec-standards.git"
@@ -19,20 +19,24 @@
     "test:nr": "aztec test",
     "lint:prettier": "prettier '**/*.{js,ts}' --write",
     "bench": "NODE_NO_WARNINGS=1 aztec-benchmark --suffix _base",
-    "ccc": "yarn clean && yarn compile && yarn codegen"
+    "ccc": "yarn clean && yarn compile && yarn codegen",
+    "deploy": "NODE_NO_WARNINGS=1 tsx scripts/deploy.ts"
   },
   "lint-staged": {
     "*.ts": "prettier --write -u"
   },
   "dependencies": {
-    "@aztec/accounts": "4.0.0-devnet.2-patch.1",
-    "@aztec/aztec.js": "4.0.0-devnet.2-patch.1",
-    "@aztec/noir-contracts.js": "4.0.0-devnet.2-patch.1",
-    "@aztec/protocol-contracts": "4.0.0-devnet.2-patch.1",
-    "@aztec/pxe": "4.0.0-devnet.2-patch.1",
-    "@aztec/stdlib": "4.0.0-devnet.2-patch.1",
-    "@aztec/wallets": "4.0.0-devnet.2-patch.1",
-    "@defi-wonderland/aztec-benchmark": "4.0.0-devnet.2-patch.1"
+    "@aztec/accounts": "4.1.0-rc.4",
+    "@aztec/aztec.js": "4.1.0-rc.4",
+    "@aztec/noir-contracts.js": "4.1.0-rc.4",
+    "@aztec/protocol-contracts": "4.1.0-rc.4",
+    "@aztec/pxe": "4.1.0-rc.4",
+    "@aztec/stdlib": "4.1.0-rc.4",
+    "@aztec/wallet-sdk": "4.1.0-rc.4",
+    "@aztec/wallets": "4.1.0-rc.4",
+    "@defi-wonderland/aztec-benchmark": "4.1.0-rc.4",
+    "commander": "14.0.1",
+    "dotenv": "16.4.7"
   },
   "devDependencies": {
     "@commitlint/cli": "20.3.1",
@@ -46,7 +50,10 @@
     "vitest": "4.0.17"
   },
   "config": {
-    "aztecVersion": "4.0.0-devnet.2-patch.1"
+    "aztecVersion": "4.1.0-rc.4"
+  },
+  "engines": {
+    "node": ">=22"
   },
   "packageManager": "yarn@1.22.22+sha512.a6b2f7906b721bba3d67d4aff083df04dad64c399707841b7acf00f6b133b7ac24255f2652fa22ae3534329dc6180534e98d17432037ff6fd140556e2bb3137e"
 }

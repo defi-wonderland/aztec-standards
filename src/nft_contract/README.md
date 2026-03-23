@@ -4,6 +4,25 @@ The `NFT` contract implements an ERC-721-like non-fungible token with Aztec-spec
 
 This contract provides a comprehensive NFT implementation that allows seamless transitions between private and public ownership states, making it ideal for applications requiring flexible privacy controls.
 
+## Transfer Events
+
+The contract emits a public `Transfer { from, to, token_id }` event on every ownership-changing operation (mints, burns, public transfers, and cross-domain private ↔ public moves), enabling indexers to track NFT movements.
+
+| Operation | Event Pattern |
+|-----------|---------------|
+| Mint to public | `Transfer(0x0, recipient, tokenId)` |
+| Mint to private | `Transfer(0x0, PRIVATE_ADDRESS, tokenId)` |
+| Burn from public | `Transfer(from, 0x0, tokenId)` |
+| Burn from private | `Transfer(PRIVATE_ADDRESS, 0x0, tokenId)` |
+| Public-to-public | `Transfer(from, to, tokenId)` |
+| Public-to-private | `Transfer(from, PRIVATE_ADDRESS, tokenId)` |
+| Private-to-public | `Transfer(PRIVATE_ADDRESS, to, tokenId)` |
+| Public-to-commitment | `Transfer(from, PRIVATE_ADDRESS, tokenId)` |
+| Private-to-private | _(no public events)_ |
+| Private-to-commitment | _(no public events)_ |
+
+**Sentinel values:** `0x0` denotes mint origin (`from`) or burn destination (`to`), following ERC-721. `PRIVATE_ADDRESS` (sha224 of `"PRIVATE_ADDRESS"`) denotes the private side of an ownership change when the counterpart cannot be revealed.
+
 ## Storage Fields
 
 - `name: FieldCompressedString`: NFT collection name (compressed).
@@ -12,7 +31,6 @@ This contract provides a comprehensive NFT implementation that allows seamless t
 - `nft_exists: Map<Field, bool>`: Mapping from token ID to existence status.
 - `public_owners: Map<Field, AztecAddress>`: Public ownership mapping from token ID to owner address.
 - `minter: AztecAddress`: Authorized minter address.
-- `upgrade_authority: AztecAddress`: Address allowed to perform contract upgrades (zero address if not upgradeable).
 
 ## Initializer Functions
 
@@ -22,14 +40,12 @@ This contract provides a comprehensive NFT implementation that allows seamless t
 /// @param name The name of the NFT collection
 /// @param symbol The symbol of the NFT collection
 /// @param minter The address of the minter
-/// @param upgrade_authority The address of the upgrade authority (zero if not upgradeable)
 #[public]
 #[initializer]
 fn constructor_with_minter(
     name: str<31>,
     symbol: str<31>,
     minter: AztecAddress,
-    upgrade_authority: AztecAddress,
 ) { /* ... */ }
 ```
 
@@ -125,11 +141,11 @@ fn transfer_public_to_private(
 ```rust
 /// @notice Initializes a transfer commitment to be used for transfers
 /// @dev Returns a partial nft note that can be used to execute transfers
-/// @param from The address of the sender
 /// @param to The address of the recipient
+/// @param completer The address allowed to complete the partial note
 /// @return commitment The partial nft note utilized for the transfer commitment (privacy entrance)
 #[private]
-fn initialize_transfer_commitment(from: AztecAddress, to: AztecAddress) -> Field { /* ... */ }
+fn initialize_transfer_commitment(to: AztecAddress, completer: AztecAddress) -> Field { /* ... */ }
 ```
 
 ### mint_to_private
@@ -208,15 +224,6 @@ fn mint_to_public(to: AztecAddress, token_id: Field) { /* ... */ }
 /// @param _nonce The nonce used for authwit
 #[public]
 fn burn_public(from: AztecAddress, token_id: Field, _nonce: Field) { /* ... */ }
-```
-
-### upgrade_contract
-```rust
-/// @notice Upgrades the contract to a new contract class id
-/// @dev The upgrade authority must be set and the upgrade will only be effective after the upgrade delay has passed
-/// @param new_contract_class_id The new contract class id
-#[public]
-fn upgrade_contract(new_contract_class_id: Field) { /* ... */ }
 ```
 
 ## View Functions

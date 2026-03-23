@@ -7,34 +7,34 @@ use aztec::{
         address::AztecAddress,
         contract_class_id::ContractClassId,
         contract_instance::ContractInstance,
-        public_keys::{IvpkM, NpkM, OvpkM, PublicKeys, TpkM},
+        public_keys::PublicKeys,
         traits::{FromField, ToField},
     },
 };
-// standard library
-use std::embedded_curve_ops::{EmbeddedCurvePoint, EmbeddedCurveScalar, fixed_base_scalar_mul};
 // escrow contract
 use crate::Escrow;
+// key derivation
+use crate::key_derivation::secret_key_to_public_keys;
 // escrow details event
-pub use crate::types::escrow_details_event::{EscrowDetailsLogContent, MasterSecretKeys};
+pub use crate::types::escrow_details_event::EscrowDetailsLogContent;
 
 /** ==========================================================
  * =================== LOGIC LIBRARIES =======================
  * ======================================================== */
 
-/// @notice Returns the escrow address that corresponds to the given master secret keys and class ID.
+/// @notice Returns the escrow address that corresponds to the given secret key and class ID.
 /// @param context The private context
 /// @param escrow_class_id The contract class id of the escrow contract
-/// @param master_secret_keys The master secret keys
+/// @param secret_key The secret key used to derive master secret keys and public keys
 /// @return The escrow address
 #[contract_library_method]
 pub fn _get_escrow(
     context: &mut PrivateContext,
     escrow_class_id: Field,
-    master_secret_keys: MasterSecretKeys,
+    secret_key: Field,
 ) -> AztecAddress {
-    // Compute the public keys from the secret keys
-    let computed_public_keys: PublicKeys = _secret_keys_to_public_keys(master_secret_keys);
+    // Compute the public keys from the secret key (sk -> msks -> pks)
+    let computed_public_keys: PublicKeys = secret_key_to_public_keys(secret_key);
 
     let escrow_instance = ContractInstance {
         salt: context.this_address().to_field(),
@@ -52,15 +52,15 @@ pub fn _get_escrow(
 /// @param context The private context
 /// @param account The address of the account that will use the escrow
 /// @param escrow The address of the escrow
-/// @param master_secret_keys The master secret keys
+/// @param secret_key The secret key used to derive master secret keys and public keys
 #[contract_library_method]
 pub fn _share_escrow(
     context: &mut PrivateContext,
     account: AztecAddress,
     escrow: AztecAddress,
-    master_secret_keys: MasterSecretKeys,
+    secret_key: Field,
 ) {
-    let event_struct = EscrowDetailsLogContent { escrow, master_secret_keys };
+    let event_struct = EscrowDetailsLogContent { escrow, secret_key };
 
     emit_event_in_private(context, event_struct).deliver_to(
         account,
@@ -100,26 +100,4 @@ pub fn _withdraw_nft(
     token_id: Field,
 ) {
     Escrow::at(escrow).withdraw_nft(nft, token_id, account).call(context);
-}
-
-/// @notice Derives public keys from secret keys.
-/// @param master_secret_keys The master secret keys
-/// @return PublicKeys containing the derived public keys.
-#[contract_library_method]
-pub fn _secret_keys_to_public_keys(master_secret_keys: MasterSecretKeys) -> PublicKeys {
-    let npk_m: EmbeddedCurvePoint =
-        fixed_base_scalar_mul(EmbeddedCurveScalar::from_field(master_secret_keys.nsk_m));
-    let ivpk_m: EmbeddedCurvePoint =
-        fixed_base_scalar_mul(EmbeddedCurveScalar::from_field(master_secret_keys.ivsk_m));
-    let ovpk_m: EmbeddedCurvePoint =
-        fixed_base_scalar_mul(EmbeddedCurveScalar::from_field(master_secret_keys.ovsk_m));
-    let tpk_m: EmbeddedCurvePoint =
-        fixed_base_scalar_mul(EmbeddedCurveScalar::from_field(master_secret_keys.tsk_m));
-
-    PublicKeys {
-        npk_m: NpkM { inner: npk_m },
-        ivpk_m: IvpkM { inner: ivpk_m },
-        ovpk_m: OvpkM { inner: ovpk_m },
-        tpk_m: TpkM { inner: tpk_m },
-    }
 }
