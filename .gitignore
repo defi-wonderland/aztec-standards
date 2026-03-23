@@ -19,3 +19,5 @@ pxe_data_*
 wallet_data_*
 .tsbuildinfo
 *-store/
+
+.claude/worktrees

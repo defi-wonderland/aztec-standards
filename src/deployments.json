@@ -1,28 +1,46 @@
 {
     "tokens": [
         {
-            "name": "WETH",
-            "symbol": "WETH",
-            "address": "0x0000000000000000000000000000000000000000000000000000000000000000",
-            "decimals": 18,
-            "minter": "0x0000000000000000000000000000000000000000000000000000000000000000"
+            "address": "0x279166aac58e136c6fa26639053663b542658d51382e84ec77de64cd449c0ff4",
+            "salt": 1337,
+            "deployer": "0x0000000000000000000000000000000000000000000000000000000000000000",
+            "constructorArtifact": "constructor_with_minter",
+            "constructorArgs": {
+                "name": "WETH",
+                "symbol": "WETH",
+                "decimals": 18,
+                "minter": "0x095afaaab2eee145326825b0f32e4998e698b2776f1604124b59cc29aa528eab"
+            }
         },
         {
-            "name": "DAI",
-            "symbol": "DAI",
-            "address": "0x0000000000000000000000000000000000000000000000000000000000000000",
-            "decimals": 9,
-            "minter": "0x0000000000000000000000000000000000000000000000000000000000000000"
+            "address": "0x147160e0fb609d5e32c776e7a1b367ce0b038431c780491d4f3af3d164818a1e",
+            "salt": 1337,
+            "deployer": "0x0000000000000000000000000000000000000000000000000000000000000000",
+            "constructorArtifact": "constructor_with_minter",
+            "constructorArgs": {
+                "name": "DAI",
+                "symbol": "DAI",
+                "decimals": 9,
+                "minter": "0x095afaaab2eee145326825b0f32e4998e698b2776f1604124b59cc29aa528eab"
+            }
         },
         {
-            "name": "USDC",
-            "symbol": "USDC",
-            "address": "0x0000000000000000000000000000000000000000000000000000000000000000",
-            "decimals": 6,
-            "minter": "0x0000000000000000000000000000000000000000000000000000000000000000"
+            "address": "0x0af1b0f2e4cacc74746fc2c0ae2dc43c49d8ef781294a262ad2373d26230abd0",
+            "salt": 1337,
+            "deployer": "0x0000000000000000000000000000000000000000000000000000000000000000",
+            "constructorArtifact": "constructor_with_minter",
+            "constructorArgs": {
+                "name": "USDC",
+                "symbol": "USDC",
+                "decimals": 6,
+                "minter": "0x095afaaab2eee145326825b0f32e4998e698b2776f1604124b59cc29aa528eab"
+            }
         }
     ],
     "dripper": {
-        "address": "0x0000000000000000000000000000000000000000000000000000000000000000"
+        "address": "0x095afaaab2eee145326825b0f32e4998e698b2776f1604124b59cc29aa528eab",
+        "salt": 1337,
+        "deployer": "0x0000000000000000000000000000000000000000000000000000000000000000",
+        "constructorArtifact": "constructor"
     }
 }
