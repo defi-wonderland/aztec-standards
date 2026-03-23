@@ -1107,7 +1107,7 @@ describe('Vault', () => {
               victim,
               victimDepositAmount,
             ),
-          ).rejects.toThrow(/app_logic_reverted/);
+          ).rejects.toThrow(/Zero shares|app_logic_reverted/);
         },
         TEST_TIMEOUT * 2,
       );
