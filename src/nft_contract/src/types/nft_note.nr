@@ -132,7 +132,6 @@ impl NFTNote {
         let encrypted_log = partial_note::compute_partial_note_private_content_log(
             private_log_content,
             owner,
-            storage_slot,
             randomness,
             recipient,
             commitment,
