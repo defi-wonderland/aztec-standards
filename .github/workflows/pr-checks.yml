@@ -145,6 +145,9 @@ jobs:
       - name: Install dependencies
         run: yarn --frozen-lockfile
 
+      - name: Compile contracts
+        run: aztec compile
+
       - name: Run Noir tests
         run: |
           script -e -c "aztec test"
