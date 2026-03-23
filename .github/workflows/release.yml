@@ -34,12 +34,55 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Setup Aztec environment
-        id: setup-aztec
-        uses: defi-wonderland/aztec-ci-actions/actions/setup-aztec@v0
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
         with:
-          start-pxe: 'false'
-          run-codegen: 'true'
+          node-version: '24'
+          cache: 'yarn'
+
+      - name: Update PATH for Aztec
+        run: |
+          echo "$HOME/.aztec/current/bin" >> $GITHUB_PATH
+          echo "$HOME/.aztec/current/node_modules/.bin" >> $GITHUB_PATH
+          echo "$HOME/.aztec/bin" >> $GITHUB_PATH
+
+      - name: Detect Aztec version
+        id: aztec-version
+        run: |
+          VER=$(node -p "require('./package.json').config.aztecVersion")
+          echo "version=$VER" >> "$GITHUB_OUTPUT"
+          echo "Aztec version: $VER"
+
+      - name: Install Foundry
+        uses: foundry-rs/foundry-toolchain@v1
+
+      - name: Cache Aztec CLI
+        id: cache-aztec
+        uses: actions/cache@v4
+        with:
+          path: /home/runner/.aztec
+          key: aztec-${{ runner.os }}-${{ steps.aztec-version.outputs.version }}
+
+      - name: Install Aztec CLI
+        if: steps.cache-aztec.outputs.cache-hit != 'true'
+        run: |
+          INSTALL_URL="https://install.aztec.network/${{ steps.aztec-version.outputs.version }}/"
+          echo "Installing from: $INSTALL_URL"
+          curl -sL $INSTALL_URL > tmp.sh
+          VERSION=${{ steps.aztec-version.outputs.version }} bash tmp.sh <<< yes "yes"
+
+      - name: Switch CLI to target version
+        if: steps.cache-aztec.outputs.cache-hit != 'true'
+        run: aztec-up install ${{ steps.aztec-version.outputs.version }}
+
+      - name: Install dependencies
+        run: yarn --frozen-lockfile
+
+      - name: Compile contracts
+        run: aztec compile
+
+      - name: Codegen wrappers
+        run: aztec codegen target --outdir src/artifacts -f
 
       # TODO: Automate changing package.json version from the workflow input
       #       (e.g., open a PR or push a signed commit) so manual edits are not required.

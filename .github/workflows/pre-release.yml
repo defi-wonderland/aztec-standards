@@ -6,9 +6,151 @@ on:
 
 jobs:
   pre-release:
-    uses: defi-wonderland/aztec-ci-actions/.github/workflows/pre-release.yml@v0
-    with:
-      package-dir: export/@defi-wonderland/aztec-standards
-    secrets: inherit
+    name: Pre-Release
+    runs-on: ubuntu-latest-m
+    timeout-minutes: 30
     permissions:
       contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: 'yarn'
+
+      - name: Update PATH for Aztec
+        run: |
+          echo "$HOME/.aztec/current/bin" >> $GITHUB_PATH
+          echo "$HOME/.aztec/current/node_modules/.bin" >> $GITHUB_PATH
+          echo "$HOME/.aztec/bin" >> $GITHUB_PATH
+
+      - name: Detect Aztec version
+        id: aztec-version
+        run: |
+          VER=$(node -p "require('./package.json').config.aztecVersion")
+          echo "version=$VER" >> "$GITHUB_OUTPUT"
+          echo "Aztec version: $VER"
+
+      - name: Install Foundry
+        uses: foundry-rs/foundry-toolchain@v1
+
+      - name: Cache Aztec CLI
+        id: cache-aztec
+        uses: actions/cache@v4
+        with:
+          path: /home/runner/.aztec
+          key: aztec-${{ runner.os }}-${{ steps.aztec-version.outputs.version }}
+
+      - name: Install Aztec CLI
+        if: steps.cache-aztec.outputs.cache-hit != 'true'
+        run: |
+          INSTALL_URL="https://install.aztec.network/${{ steps.aztec-version.outputs.version }}/"
+          echo "Installing from: $INSTALL_URL"
+          curl -sL $INSTALL_URL > tmp.sh
+          VERSION=${{ steps.aztec-version.outputs.version }} bash tmp.sh <<< yes "yes"
+
+      - name: Switch CLI to target version
+        if: steps.cache-aztec.outputs.cache-hit != 'true'
+        run: aztec-up install ${{ steps.aztec-version.outputs.version }}
+
+      - name: Install dependencies
+        run: yarn --frozen-lockfile
+
+      - name: Compile contracts
+        run: aztec compile
+
+      - name: Codegen wrappers
+        run: aztec codegen target --outdir src/artifacts -f
+
+      - name: Build package
+        run: yarn build
+
+      - name: Generate pre-release version
+        id: version
+        working-directory: export/@defi-wonderland/aztec-standards
+        run: |
+          BASE_VERSION=$(node -p "require('./package.json').version")
+          PKG_NAME=$(node -p "require('./package.json').name")
+          SHORT_SHA=$(git rev-parse --short HEAD)
+          PRERELEASE_VERSION="${BASE_VERSION}-prerelease.${SHORT_SHA}"
+          TAG="prerelease-${SHORT_SHA}"
+
+          echo "version=${PRERELEASE_VERSION}" >> $GITHUB_OUTPUT
+          echo "tag=${TAG}" >> $GITHUB_OUTPUT
+          echo "short-sha=${SHORT_SHA}" >> $GITHUB_OUTPUT
+          echo "pkg-name=${PKG_NAME}" >> $GITHUB_OUTPUT
+
+          echo "Package: ${PKG_NAME}"
+          echo "Pre-release version: ${PRERELEASE_VERSION}"
+          echo "Tag: ${TAG}"
+
+      - name: Set pre-release version
+        working-directory: export/@defi-wonderland/aztec-standards
+        run: npm pkg set "version=${{ steps.version.outputs.version }}"
+
+      - name: Create npm tarball
+        id: pack
+        working-directory: export/@defi-wonderland/aztec-standards
+        run: |
+          npm pack
+          TARBALL=$(ls *.tgz)
+          echo "tarball=${TARBALL}" >> $GITHUB_OUTPUT
+          echo "Packed: ${TARBALL}"
+
+      - name: Create dist tarball
+        working-directory: export/@defi-wonderland/aztec-standards
+        run: tar -czf dist.tar.gz dist/
+
+      - name: Create GitHub Pre-Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.version.outputs.tag }}
+          name: "${{ steps.version.outputs.pkg-name }}@${{ steps.version.outputs.version }}"
+          prerelease: true
+          generate_release_notes: false
+          body: |
+            Pre-release build from `${{ github.ref_name }}` at [`${{ steps.version.outputs.short-sha }}`](${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }}).
+
+            ## Install via tarball URL
+
+            ```bash
+            npm install ${{ github.server_url }}/${{ github.repository }}/releases/download/${{ steps.version.outputs.tag }}/${{ steps.pack.outputs.tarball }}
+            ```
+
+            Or in `package.json`:
+
+            ```json
+            "${{ steps.version.outputs.pkg-name }}": "${{ github.server_url }}/${{ github.repository }}/releases/download/${{ steps.version.outputs.tag }}/${{ steps.pack.outputs.tarball }}"
+            ```
+
+            ## Assets
+
+            | File | Description |
+            |------|-------------|
+            | `${{ steps.pack.outputs.tarball }}` | npm-installable tarball (`npm install <url>`) |
+            | `dist.tar.gz` | Built `dist/` directory for manual extraction |
+
+          files: |
+            export/@defi-wonderland/aztec-standards/${{ steps.pack.outputs.tarball }}
+            export/@defi-wonderland/aztec-standards/dist.tar.gz
+
+      - name: Installation instructions
+        run: |
+          echo ""
+          echo "══════════════════════════════════════════════════════════════"
+          echo " Pre-release published successfully!"
+          echo "══════════════════════════════════════════════════════════════"
+          echo ""
+          echo " Add to package.json:"
+          echo ""
+          echo " \"${{ steps.version.outputs.pkg-name }}\": \"${{ github.server_url }}/${{ github.repository }}/releases/download/${{ steps.version.outputs.tag }}/${{ steps.pack.outputs.tarball }}\""
+          echo ""
+          echo " Then run: yarn install"
+          echo ""
+          echo "══════════════════════════════════════════════════════════════"
+          echo ""

@@ -10,6 +10,143 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  tests:
-    uses: defi-wonderland/aztec-ci-actions/.github/workflows/run-tests.yml@v0
-    secrets: inherit
+  js-tests:
+    name: JS Tests
+    runs-on: ubuntu-latest-m
+    timeout-minutes: 60
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: 'yarn'
+
+      - name: Update PATH for Aztec
+        run: |
+          echo "$HOME/.aztec/current/bin" >> $GITHUB_PATH
+          echo "$HOME/.aztec/current/node_modules/.bin" >> $GITHUB_PATH
+          echo "$HOME/.aztec/bin" >> $GITHUB_PATH
+
+      - name: Detect Aztec version
+        id: aztec-version
+        run: |
+          VER=$(node -p "require('./package.json').config.aztecVersion")
+          echo "version=$VER" >> "$GITHUB_OUTPUT"
+          echo "Aztec version: $VER"
+
+      - name: Install Foundry
+        uses: foundry-rs/foundry-toolchain@v1
+
+      - name: Cache Aztec CLI
+        id: cache-aztec
+        uses: actions/cache@v4
+        with:
+          path: /home/runner/.aztec
+          key: aztec-${{ runner.os }}-${{ steps.aztec-version.outputs.version }}
+
+      - name: Install Aztec CLI
+        if: steps.cache-aztec.outputs.cache-hit != 'true'
+        run: |
+          INSTALL_URL="https://install.aztec.network/${{ steps.aztec-version.outputs.version }}/"
+          echo "Installing from: $INSTALL_URL"
+          curl -sL $INSTALL_URL > tmp.sh
+          VERSION=${{ steps.aztec-version.outputs.version }} bash tmp.sh <<< yes "yes"
+
+      - name: Switch CLI to target version
+        if: steps.cache-aztec.outputs.cache-hit != 'true'
+        run: aztec-up install ${{ steps.aztec-version.outputs.version }}
+
+      - name: Start local network
+        run: aztec start --local-network &
+
+      - name: Install dependencies
+        run: yarn --frozen-lockfile
+
+      - name: Compile contracts
+        run: aztec compile
+
+      - name: Codegen wrappers
+        run: aztec codegen target --outdir src/artifacts -f
+
+      - name: Wait for local network (port 8080)
+        run: |
+          echo "Waiting for local network on port 8080..."
+          timeout=120
+          elapsed=0
+          while ! nc -z localhost 8080 2>/dev/null; do
+            if [ $elapsed -ge $timeout ]; then
+              echo "::error::Timed out waiting for port 8080 after ${timeout}s"
+              exit 1
+            fi
+            sleep 2
+            elapsed=$((elapsed + 2))
+            echo " waiting... (${elapsed}s)"
+          done
+          echo "Port 8080 is ready (took ${elapsed}s)"
+
+      - name: Run JS tests
+        run: |
+          script -e -c "BASE_PXE_URL=http://localhost NODE_NO_WARNINGS=1 yarn test:js"
+
+  noir-tests:
+    name: Noir Tests
+    runs-on: ubuntu-latest-m
+    timeout-minutes: 60
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: 'yarn'
+
+      - name: Update PATH for Aztec
+        run: |
+          echo "$HOME/.aztec/current/bin" >> $GITHUB_PATH
+          echo "$HOME/.aztec/current/node_modules/.bin" >> $GITHUB_PATH
+          echo "$HOME/.aztec/bin" >> $GITHUB_PATH
+
+      - name: Detect Aztec version
+        id: aztec-version
+        run: |
+          VER=$(node -p "require('./package.json').config.aztecVersion")
+          echo "version=$VER" >> "$GITHUB_OUTPUT"
+          echo "Aztec version: $VER"
+
+      - name: Install Foundry
+        uses: foundry-rs/foundry-toolchain@v1
+
+      - name: Cache Aztec CLI
+        id: cache-aztec
+        uses: actions/cache@v4
+        with:
+          path: /home/runner/.aztec
+          key: aztec-${{ runner.os }}-${{ steps.aztec-version.outputs.version }}
+
+      - name: Install Aztec CLI
+        if: steps.cache-aztec.outputs.cache-hit != 'true'
+        run: |
+          INSTALL_URL="https://install.aztec.network/${{ steps.aztec-version.outputs.version }}/"
+          echo "Installing from: $INSTALL_URL"
+          curl -sL $INSTALL_URL > tmp.sh
+          VERSION=${{ steps.aztec-version.outputs.version }} bash tmp.sh <<< yes "yes"
+
+      - name: Switch CLI to target version
+        if: steps.cache-aztec.outputs.cache-hit != 'true'
+        run: aztec-up install ${{ steps.aztec-version.outputs.version }}
+
+      - name: Install dependencies
+        run: yarn --frozen-lockfile
+
+      - name: Run Noir tests
+        run: |
+          script -e -c "aztec test"
