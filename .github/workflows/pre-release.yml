@@ -6,7 +6,7 @@ on:
 
 jobs:
   pre-release:
-    uses: defi-wonderland/aztec-ci-actions/.github/workflows/pre-release.yml@v0
+    uses: defi-wonderland/aztec-ci-actions/.github/workflows/pre-release.yml@feat/next
     with:
       package-dir: export/@defi-wonderland/aztec-standards
     secrets: inherit

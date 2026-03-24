@@ -36,7 +36,7 @@ jobs:
 
       - name: Setup Aztec environment
         id: setup-aztec
-        uses: defi-wonderland/aztec-ci-actions/actions/setup-aztec@v0
+        uses: defi-wonderland/aztec-ci-actions/actions/setup-aztec@feat/next
         with:
           start-pxe: 'false'
           run-codegen: 'true'
