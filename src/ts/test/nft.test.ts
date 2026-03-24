@@ -211,8 +211,14 @@ describe('NFT', () => {
       };
       const witness = await wallet.createAuthWit(alice, intent);
 
-      // Bob executes the transfer with alice's authorization
-      const { receipt: transferTx } = await transferCallInterface.send({ from: bob, authWitnesses: [witness] });
+      // Bob executes the transfer with alice's authorization.
+      // additionalScopes: [alice] is required so the PXE can execute alice's account contract
+      // for authwit verification (static_call_private_function to verify_private_authwit).
+      const { receipt: transferTx } = await transferCallInterface.send({
+        from: bob,
+        authWitnesses: [witness],
+        additionalScopes: [alice],
+      });
 
       // transfer_public_to_private: Transfer(alice, PRIVATE, tokenId)
       await expectNFTTransferEvents(transferTx.txHash, nft.address, [

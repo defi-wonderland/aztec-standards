@@ -321,7 +321,10 @@ describe('Escrow', () => {
       await expectTokenBalances(token, escrow.address, wad(0), AMOUNT, escrow.address);
       await expectTokenBalances(token, bob, wad(0), wad(0), bob);
 
-      await logic.withWallet(wallet).methods.withdraw(escrow.address, bob, token.address, AMOUNT).send({ from: bob });
+      await logic
+        .withWallet(wallet)
+        .methods.withdraw(escrow.address, bob, token.address, AMOUNT)
+        .send({ from: bob, additionalScopes: [escrow.address] });
 
       await expectTokenBalances(token, escrow.address, wad(0), wad(0), escrow.address);
       await expectTokenBalances(token, bob, wad(0), AMOUNT, bob);
@@ -367,7 +370,7 @@ describe('Escrow', () => {
       await logic
         .withWallet(wallet)
         .methods.withdraw_nft(escrow.address, bob, nft.address, tokenId)
-        .send({ from: bob });
+        .send({ from: bob, additionalScopes: [escrow.address] });
 
       await assertOwnsPrivateNFT(nft, tokenId, escrow.address, false);
       await assertOwnsPrivateNFT(nft, tokenId, bob, true);
