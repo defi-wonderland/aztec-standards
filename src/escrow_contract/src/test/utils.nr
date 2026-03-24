@@ -2,7 +2,8 @@ use aztec::{
     oracle::random::random,
     protocol::{address::AztecAddress, traits::ToField},
     test::helpers::{
-        test_environment::TestEnvironment, txe_oracles as cheatcodes, utils::ContractDeployment,
+        test_environment::{DeployOptions, TestEnvironment},
+        txe_oracles as cheatcodes,
     },
 };
 use nft::test::utils as nft_utils;
@@ -35,18 +36,21 @@ pub unconstrained fn deploy_escrow_with_secret(
     // This registers the public keys with the test environment so the escrow can decrypt notes
     let _escrow_account = cheatcodes::add_account(escrow_secret);
 
-    // Deploy the Escrow contract using escrow_secret as the secret
-    // In v1.2.1, deploy_with_public_keys accepted a secret
-    // In v2.0.3, we manually create ContractDeployment with a secret
-    // TODO: The salt will be stored in the contract instance and checked by _assert_msg_sender
-    //       The test extracts logic_contract_address from escrow_instance.salt
+    // Deploy the Escrow contract using escrow_secret as the secret via DeployOptions
     let _escrow_contract =
-        ContractDeployment { env: *env, path: "@escrow_contract/Escrow", secret: escrow_secret };
+        env.deploy_opts(DeployOptions::new().with_secret(escrow_secret), "@escrow_contract/Escrow");
 
     _escrow_contract.without_initializer()
 }
 
 pub unconstrained fn get_escrow_class_id() -> Field {
-    let escrow_instance = cheatcodes::deploy("@escrow_contract/Escrow", "", [], random());
+    let escrow_instance = cheatcodes::deploy(
+        "@escrow_contract/Escrow",
+        "",
+        [],
+        random(),
+        random(),
+        AztecAddress::zero(),
+    );
     escrow_instance.contract_class_id.to_field()
 }
