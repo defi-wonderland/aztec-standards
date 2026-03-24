@@ -1,0 +1,23 @@
+package.json
+  89d4793b7cefc7c9 53
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.17",
+  "base_commit_sha": "dc79d3c3b9b69dbe4ae4bd881133555802d2227a",
+  "prompts": {
+    "89d4793b7cefc7c9": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "cf52f04b-f5bf-4405-8036-6f7b75ef9803",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "xorsal <zorzal@wonderland.xyz>",
+      "messages": [],
+      "total_additions": 3,
+      "total_deletions": 0,
+      "accepted_lines": 3,
+      "overriden_lines": 0
+    }
+  }
+}
