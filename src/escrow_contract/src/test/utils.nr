@@ -41,12 +41,12 @@ pub unconstrained fn deploy_escrow_with_secret(
     // TODO: The salt will be stored in the contract instance and checked by _assert_msg_sender
     //       The test extracts logic_contract_address from escrow_instance.salt
     let _escrow_contract =
-        ContractDeployment { env: *env, path: "@escrow_contract/Escrow", secret: escrow_secret };
+        ContractDeployment { env: *env, path: "@escrow_contract/Escrow", secret: escrow_secret, salt: 0 };
 
     _escrow_contract.without_initializer()
 }
 
 pub unconstrained fn get_escrow_class_id() -> Field {
-    let escrow_instance = cheatcodes::deploy("@escrow_contract/Escrow", "", [], random());
+    let escrow_instance = cheatcodes::deploy("@escrow_contract/Escrow", "", [], random(), random(), AztecAddress::zero());
     escrow_instance.contract_class_id.to_field()
 }
