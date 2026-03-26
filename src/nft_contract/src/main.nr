@@ -113,7 +113,7 @@ pub contract NFT {
         self.enqueue_self.update_public_token_owner_from_zero_internal(to, token_id);
         let completer = self.msg_sender();
         let commitment = self.internal._initialize_transfer_commitment(to, completer);
-        commitment.commitment()
+        commitment.commitment
     }
 
     /// @notice Transfers token by id from private owner to another private owner
@@ -186,7 +186,7 @@ pub contract NFT {
     #[external("private")]
     fn initialize_transfer_commitment(to: AztecAddress, completer: AztecAddress) -> Field {
         let commitment = self.internal._initialize_transfer_commitment(to, completer);
-        commitment.commitment()
+        commitment.commitment
     }
 
     /** ==========================================================
@@ -441,7 +441,7 @@ pub contract NFT {
     /// @param commitment The commitment to store
     #[internal("public")]
     fn _store_commitment_in_storage(commitment: PartialNFTNote) {
-        self.context.storage_write(commitment.commitment(), true);
+        self.context.storage_write(commitment.commitment, true);
     }
 
     /// @notice Initializes a transfer commitment
@@ -500,8 +500,8 @@ pub contract NFT {
         // used once, but since the AVM offers no gas refunds for doing so this would just make the transaction be more
         // expensive.
         assert(self.context.storage_read(commitment), "invalid commitment");
-        PartialNFTNote::new(commitment).complete(
-            &mut self.context,
+        PartialNFTNote { commitment }.complete(
+            self.context,
             completer,
             self.storage.private_nfts.get_storage_slot(),
             token_id,
