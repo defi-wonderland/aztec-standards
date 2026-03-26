@@ -1,0 +1,29 @@
+.github/workflows/pr-checks.yml
+  604570e40e200ec8 16
+.github/workflows/update-baseline.yml
+  604570e40e200ec8 18
+package.json
+  604570e40e200ec8 37
+benchmarks/escrow_contract.benchmark.ts
+  604570e40e200ec8 7-12,26-69,153-155,164,174,182
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.19",
+  "base_commit_sha": "0e4faa7aa8b4ab662a921e9663ef10a2b1d0dcbf",
+  "prompts": {
+    "604570e40e200ec8": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "54ddff62-88aa-4c5c-acd6-e1bf652b41aa",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "xorsal <zorzal@wonderland.xyz>",
+      "messages": [],
+      "total_additions": 0,
+      "total_deletions": 0,
+      "accepted_lines": 73,
+      "overriden_lines": 0
+    }
+  }
+}
