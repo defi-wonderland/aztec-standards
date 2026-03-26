@@ -4,6 +4,12 @@ import { deriveKeys } from '@aztec/stdlib/keys';
 import type { Wallet } from '@aztec/aztec.js/wallet';
 import { AztecAddress } from '@aztec/aztec.js/addresses';
 import type { ContractFunctionInteractionCallIntent } from '@aztec/aztec.js/authorization';
+import {
+  ContractFunctionInteraction,
+  type SimulateInteractionOptions,
+  type ProfileInteractionOptions,
+  type SendInteractionOptions,
+} from '@aztec/aztec.js/contracts';
 
 // Import the new Benchmark base class and context
 import { Benchmark, BenchmarkContext } from '@defi-wonderland/aztec-benchmark';
@@ -16,6 +22,50 @@ import { NFTContract } from '../src/artifacts/NFT.js';
 
 // Import test utilities
 import { setupTestSuite, deployEscrow, deployTokenWithMinter, deployNFTWithMinter } from '../src/ts/test/utils.js';
+
+/**
+ * Wraps a ContractFunctionInteraction so that the profiler includes extra
+ * addresses in the PXE note-lookup scopes. Without this, the PXE will only
+ * look up notes belonging to the `from` address, which is the caller. The
+ * escrow benchmark needs the escrow contract's own notes to be accessible
+ * during simulation/profiling/sending.
+ */
+class ScopedInteraction {
+  constructor(
+    private readonly inner: ContractFunctionInteraction,
+    private readonly additionalScopes: AztecAddress[],
+  ) {}
+
+  async request(...args: Parameters<ContractFunctionInteraction['request']>) {
+    return this.inner.request(...args);
+  }
+
+  async simulate(options: SimulateInteractionOptions) {
+    return this.inner.simulate({
+      ...options,
+      additionalScopes: [...(options.additionalScopes ?? []), ...this.additionalScopes],
+    });
+  }
+
+  async profile(options: ProfileInteractionOptions) {
+    return this.inner.profile({
+      ...options,
+      additionalScopes: [...(options.additionalScopes ?? []), ...this.additionalScopes],
+    });
+  }
+
+  async send(options: SendInteractionOptions) {
+    return this.inner.send({
+      ...options,
+      additionalScopes: [...(options.additionalScopes ?? []), ...this.additionalScopes],
+    });
+  }
+}
+
+/** Wraps an interaction with additional scopes, cast to ContractFunctionInteraction for the profiler. */
+function withScopes(inner: ContractFunctionInteraction, additionalScopes: AztecAddress[]): ContractFunctionInteraction {
+  return new ScopedInteraction(inner, additionalScopes) as unknown as ContractFunctionInteraction;
+}
 
 // Extend the BenchmarkContext from the new package
 interface EscrowBenchmarkContext extends BenchmarkContext {
@@ -97,24 +147,39 @@ export default class EscrowContractBenchmark extends Benchmark {
     const recipient = accounts[2];
     const halfAmount = 50;
 
+    // The escrow contract holds private notes. The profiler's simulate/profile/send calls
+    // only include the caller (logicMock) in the PXE note-lookup scopes by default.
+    // We wrap the interactions to inject the escrow address as an additional scope so the
+    // PXE can find the escrow's private token/NFT notes.
+    const escrowScopes = [escrowContract.address];
+
     const methods: Array<NamedBenchmarkedInteraction | ContractFunctionInteractionCallIntent> = [
       // Partial token withdrawal (with change)
       {
         interaction: {
           caller: logicMock,
-          action: escrowContract.withWallet(wallet).methods.withdraw(tokenContract.address, halfAmount, recipient),
+          action: withScopes(
+            escrowContract.withWallet(wallet).methods.withdraw(tokenContract.address, halfAmount, recipient),
+            escrowScopes,
+          ),
         },
         name: '(partial) withdraw',
       },
       // Full token withdrawal
       {
         caller: logicMock,
-        action: escrowContract.withWallet(wallet).methods.withdraw(tokenContract.address, halfAmount, recipient),
+        action: withScopes(
+          escrowContract.withWallet(wallet).methods.withdraw(tokenContract.address, halfAmount, recipient),
+          escrowScopes,
+        ),
       },
       // NFT withdrawal
       {
         caller: logicMock,
-        action: escrowContract.withWallet(wallet).methods.withdraw_nft(nftContract.address, tokenId, recipient),
+        action: withScopes(
+          escrowContract.withWallet(wallet).methods.withdraw_nft(nftContract.address, tokenId, recipient),
+          escrowScopes,
+        ),
       },
     ];
 
