@@ -312,7 +312,10 @@ describe('Escrow', () => {
 
       await wallet.registerContract(escrowInstance, EscrowContractArtifact, escrowSk);
 
-      await token.withWallet(wallet).methods.mint_to_private(escrow.address, AMOUNT).send({ from: alice });
+      await token
+        .withWallet(wallet)
+        .methods.mint_to_private(escrow.address, AMOUNT)
+        .send({ from: alice, additionalScopes: [escrow.address] });
     });
 
     it('should be able to withdraw from escrow correctly', async () => {
@@ -321,7 +324,10 @@ describe('Escrow', () => {
       await expectTokenBalances(token, escrow.address, wad(0), AMOUNT, escrow.address);
       await expectTokenBalances(token, bob, wad(0), wad(0), bob);
 
-      await logic.withWallet(wallet).methods.withdraw(escrow.address, bob, token.address, AMOUNT).send({ from: bob });
+      await logic
+        .withWallet(wallet)
+        .methods.withdraw(escrow.address, bob, token.address, AMOUNT)
+        .send({ from: bob, additionalScopes: [escrow.address] });
 
       await expectTokenBalances(token, escrow.address, wad(0), wad(0), escrow.address);
       await expectTokenBalances(token, bob, wad(0), AMOUNT, bob);
@@ -357,7 +363,10 @@ describe('Escrow', () => {
 
       await wallet.registerContract(escrowInstance, EscrowContractArtifact, escrowSk);
 
-      await nft.withWallet(wallet).methods.mint_to_private(escrow.address, tokenId).send({ from: alice });
+      await nft
+        .withWallet(wallet)
+        .methods.mint_to_private(escrow.address, tokenId)
+        .send({ from: alice, additionalScopes: [escrow.address] });
     });
 
     it('should be able to withdraw NFT from escrow correctly', async () => {
@@ -367,7 +376,7 @@ describe('Escrow', () => {
       await logic
         .withWallet(wallet)
         .methods.withdraw_nft(escrow.address, bob, nft.address, tokenId)
-        .send({ from: bob });
+        .send({ from: bob, additionalScopes: [escrow.address] });
 
       await assertOwnsPrivateNFT(nft, tokenId, escrow.address, false);
       await assertOwnsPrivateNFT(nft, tokenId, bob, true);
