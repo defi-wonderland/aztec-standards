@@ -1,0 +1,25 @@
+src/ts/test/vault.test.ts
+  2165b2f140f52c50 1110
+src/ts/test/utils.ts
+  2165b2f140f52c50 28,656,660-661,664-665,721,725-726,729-730
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.20",
+  "base_commit_sha": "96112cc31492b82ce87297a3e81e595391d4e1d5",
+  "prompts": {
+    "2165b2f140f52c50": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "bab55ee1-f73f-400e-adf6-954ef8e7171f",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "xorsal <zorzal@wonderland.xyz>",
+      "messages": [],
+      "total_additions": 12,
+      "total_deletions": 10,
+      "accepted_lines": 12,
+      "overriden_lines": 0
+    }
+  }
+}
