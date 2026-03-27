@@ -25,7 +25,7 @@ import {
   SetPublicAuthwitContractInteraction,
   type ContractFunctionInteractionCallIntent,
 } from '@aztec/aztec.js/authorization';
-import { EventSelector, decodeFromAbi } from '@aztec/aztec.js/abi';
+import { decodeFromAbi } from '@aztec/aztec.js/abi';
 import { getDefaultInitializer, getInitializer } from '@aztec/stdlib/abi';
 import {
   CompleteAddress,
@@ -653,15 +653,16 @@ export async function getTransferEvents(txHash: TxHash, contractAddress: AztecAd
   });
 
   const eventMetadata = TokenContract.events.Transfer;
+  const expectedFieldCount = 3; // from, to, amount
 
   return response.logs
     .filter((extLog) => {
-      const logFields = extLog.log.getEmittedFields();
-      // Match the Transfer event selector (last field)
-      return EventSelector.fromField(logFields[logFields.length - 1]).equals(eventMetadata.eventSelector);
+      const eventFields = extLog.log.getEmittedFieldsWithoutTag();
+      return eventFields.length === expectedFieldCount;
     })
     .map((extLog) => {
-      return decodeFromAbi([eventMetadata.abiType], extLog.log.fields) as TransferEvent;
+      const eventFields = extLog.log.getEmittedFieldsWithoutTag();
+      return decodeFromAbi([eventMetadata.abiType], eventFields) as TransferEvent;
     });
 }
 
@@ -717,15 +718,16 @@ export async function getNFTTransferEvents(txHash: TxHash, contractAddress: Azte
   });
 
   const eventMetadata = NFTContract.events.Transfer;
+  const expectedFieldCount = 3; // from, to, token_id
 
   return response.logs
     .filter((extLog) => {
-      const logFields = extLog.log.getEmittedFields();
-      // Match the Transfer event selector (last field)
-      return EventSelector.fromField(logFields[logFields.length - 1]).equals(eventMetadata.eventSelector);
+      const eventFields = extLog.log.getEmittedFieldsWithoutTag();
+      return eventFields.length === expectedFieldCount;
     })
     .map((extLog) => {
-      return decodeFromAbi([eventMetadata.abiType], extLog.log.fields) as NFTTransferEvent;
+      const eventFields = extLog.log.getEmittedFieldsWithoutTag();
+      return decodeFromAbi([eventMetadata.abiType], eventFields) as NFTTransferEvent;
     });
 }
 
