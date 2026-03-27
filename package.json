@@ -34,7 +34,7 @@
     "@aztec/stdlib": "4.2.0-aztecnr-rc.2",
     "@aztec/wallet-sdk": "4.2.0-aztecnr-rc.2",
     "@aztec/wallets": "4.2.0-aztecnr-rc.2",
-    "@defi-wonderland/aztec-benchmark": "file:../aztec-benchmark",
+    "@defi-wonderland/aztec-benchmark": "https://github.com/defi-wonderland/aztec-benchmark/releases/download/prerelease-e5175de/defi-wonderland-aztec-benchmark-4.2.0-nightly.20260323-prerelease.e5175de.tgz",
     "commander": "14.0.1",
     "dotenv": "16.4.7"
   },
