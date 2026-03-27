@@ -1,0 +1,37 @@
+src/ts/test/nft.test.ts
+  2165b2f140f52c50 215-219
+src/ts/test/vault.test.ts
+  2165b2f140f52c50 1110
+src/nft_contract/src/types/nft_note.nr
+  2165b2f140f52c50 5-9,14-15,17,72,84,126-136,138,160-161,176,183,198-199,206-207,211-212
+src/token_contract/src/test/mint_to_commitment.nr
+  2165b2f140f52c50 118-120
+src/nft_contract/src/main.nr
+  2165b2f140f52c50 116,189,444,503-504
+package.json
+  2165b2f140f52c50 29-36,53
+src/ts/test/utils.ts
+  2165b2f140f52c50 28,656,660-661,664-665,721,725-726,729-730
+src/ts/test/escrow.test.ts
+  2165b2f140f52c50 315-318,329-330,368-369
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.20",
+  "base_commit_sha": "32b48d49f619c360561e362971d6321e698bc03a",
+  "prompts": {
+    "2165b2f140f52c50": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "bab55ee1-f73f-400e-adf6-954ef8e7171f",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "xorsal <zorzal@wonderland.xyz>",
+      "messages": [],
+      "total_additions": 21,
+      "total_deletions": 6,
+      "accepted_lines": 74,
+      "overriden_lines": 0
+    }
+  }
+}
