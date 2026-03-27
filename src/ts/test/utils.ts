@@ -1,7 +1,7 @@
 import { createLogger } from '@aztec/aztec.js/log';
 import { AztecAddress } from '@aztec/aztec.js/addresses';
 import { Aes128 } from '@aztec/foundation/crypto/aes128';
-import { deriveEcdhSharedSecret } from '@aztec/stdlib/logs';
+import { deriveAppSiloedSharedSecret } from '@aztec/stdlib/logs';
 import { type Wallet, AccountManager } from '@aztec/aztec.js/wallet';
 import { Fr, type GrumpkinScalar, Point } from '@aztec/aztec.js/fields';
 import { createAztecNodeClient, waitForNode, waitForTx, type AztecNode } from '@aztec/aztec.js/node';
@@ -842,6 +842,7 @@ export async function decryptRawPrivateLog(
   ciphertext: Fr[],
   recipientCompleteAddress: CompleteAddress,
   recipientIvskM: GrumpkinScalar,
+  contractAddress: AztecAddress,
 ): Promise<Fr[]> {
   if (ciphertext.length !== MESSAGE_CIPHERTEXT_LEN) {
     throw new Error(`Ciphertext must be ${MESSAGE_CIPHERTEXT_LEN} fields, got ${ciphertext.length}`);
@@ -868,7 +869,7 @@ export async function decryptRawPrivateLog(
   // where addressSecret = preaddress + ivskM (with proper sign handling)
   const preaddress = await recipientCompleteAddress.getPreaddress();
   const addressSecret = await computeAddressSecret(preaddress, recipientIvskM);
-  const sharedSecret = await deriveEcdhSharedSecret(addressSecret, ephPk);
+  const sharedSecret = await deriveAppSiloedSharedSecret(addressSecret, ephPk, contractAddress);
 
   // Derive symmetric keys for header and body
   const headerKeyIv = await deriveAesSymmetricKeyAndIv(sharedSecret, 1);
