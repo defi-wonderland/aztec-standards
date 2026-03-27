@@ -1,0 +1,23 @@
+src/ts/test/utils.ts
+  2165b2f140f52c50 4,845,872
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.20",
+  "base_commit_sha": "2c85e0c82a25de061aade8d188de9e70b9c7beed",
+  "prompts": {
+    "2165b2f140f52c50": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "bab55ee1-f73f-400e-adf6-954ef8e7171f",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "xorsal <zorzal@wonderland.xyz>",
+      "messages": [],
+      "total_additions": 3,
+      "total_deletions": 2,
+      "accepted_lines": 3,
+      "overriden_lines": 0
+    }
+  }
+}
