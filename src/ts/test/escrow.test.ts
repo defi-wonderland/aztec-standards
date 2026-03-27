@@ -312,7 +312,10 @@ describe('Escrow', () => {
 
       await wallet.registerContract(escrowInstance, EscrowContractArtifact, escrowSk);
 
-      await token.withWallet(wallet).methods.mint_to_private(escrow.address, AMOUNT).send({ from: alice });
+      await token
+        .withWallet(wallet)
+        .methods.mint_to_private(escrow.address, AMOUNT)
+        .send({ from: alice, additionalScopes: [escrow.address] });
     });
 
     it('should be able to withdraw from escrow correctly', async () => {
@@ -360,7 +363,10 @@ describe('Escrow', () => {
 
       await wallet.registerContract(escrowInstance, EscrowContractArtifact, escrowSk);
 
-      await nft.withWallet(wallet).methods.mint_to_private(escrow.address, tokenId).send({ from: alice });
+      await nft
+        .withWallet(wallet)
+        .methods.mint_to_private(escrow.address, tokenId)
+        .send({ from: alice, additionalScopes: [escrow.address] });
     });
 
     it('should be able to withdraw NFT from escrow correctly', async () => {
