@@ -97,6 +97,10 @@ export default class EscrowContractBenchmark extends Benchmark {
     const recipient = accounts[2];
     const halfAmount = 50;
 
+    // The escrow contract holds private notes. The profiler needs the escrow
+    // address in scope so the PXE can find its private token/NFT notes.
+    const escrowScopes = [escrowContract.address];
+
     const methods: Array<NamedBenchmarkedInteraction | ContractFunctionInteractionCallIntent> = [
       // Partial token withdrawal (with change)
       {
@@ -105,16 +109,25 @@ export default class EscrowContractBenchmark extends Benchmark {
           action: escrowContract.withWallet(wallet).methods.withdraw(tokenContract.address, halfAmount, recipient),
         },
         name: '(partial) withdraw',
+        additionalScopes: escrowScopes,
       },
       // Full token withdrawal
       {
-        caller: logicMock,
-        action: escrowContract.withWallet(wallet).methods.withdraw(tokenContract.address, halfAmount, recipient),
+        interaction: {
+          caller: logicMock,
+          action: escrowContract.withWallet(wallet).methods.withdraw(tokenContract.address, halfAmount, recipient),
+        },
+        name: 'withdraw',
+        additionalScopes: escrowScopes,
       },
       // NFT withdrawal
       {
-        caller: logicMock,
-        action: escrowContract.withWallet(wallet).methods.withdraw_nft(nftContract.address, tokenId, recipient),
+        interaction: {
+          caller: logicMock,
+          action: escrowContract.withWallet(wallet).methods.withdraw_nft(nftContract.address, tokenId, recipient),
+        },
+        name: 'withdraw_nft',
+        additionalScopes: escrowScopes,
       },
     ];
 
