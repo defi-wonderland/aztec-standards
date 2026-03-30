@@ -5,11 +5,10 @@ use aztec::macros::aztec;
 #[aztec]
 pub contract Vault {
     use aztec::{
-        authwit::auth::{
-            assert_current_call_valid_authwit, assert_current_call_valid_authwit_public,
+        macros::{
+            functions::{authorize_once, external, initializer, internal, only_self, view},
+            storage::storage,
         },
-        context::PrivateContext,
-        macros::{functions::{external, initializer, internal, only_self, view}, storage::storage},
         protocol::address::AztecAddress,
         state_vars::PublicImmutable,
     };
@@ -134,11 +133,11 @@ pub contract Vault {
     /// @param to The address of the recipient
     /// @param assets The amount of assets to deposit
     /// @param nonce The nonce used for authwitness
+    #[authorize_once("from", "nonce")]
     #[external("public")]
     fn deposit_public_to_public(from: AztecAddress, to: AztecAddress, assets: u128, nonce: Field) {
         let asset_token = self.storage.asset.read();
         let shares_token = self.storage.shares.read();
-        self.internal._validate_from_public(from);
 
         // Calculate shares to mint
         let total_assets = self.internal._total_assets();
@@ -169,6 +168,7 @@ pub contract Vault {
     /// @param assets The amount of assets to deposit
     /// @param shares The amount of shares that should be minted to the recipient
     /// @param nonce The nonce used for authwitness
+    #[authorize_once("from", "nonce")]
     #[external("private")]
     fn deposit_public_to_private(
         from: AztecAddress,
@@ -178,7 +178,6 @@ pub contract Vault {
         nonce: Field,
     ) {
         let shares_token = self.storage.shares.read();
-        _validate_from_private::<5>(self.context, from);
 
         // Validate in public that `assets` is sufficient for the requested shares
         // Order matters: enqueue settlement first so asset transfer executes before shares total_supply increase
@@ -196,6 +195,7 @@ pub contract Vault {
     /// @param assets The amount of assets to deposit
     /// @param shares The amount of shares that should be minted to the recipient
     /// @param nonce The nonce used for authwitness
+    #[authorize_once("from", "nonce")]
     #[external("private")]
     fn deposit_private_to_private(
         from: AztecAddress,
@@ -206,7 +206,6 @@ pub contract Vault {
     ) {
         let asset_token = self.storage.asset.read();
         let shares_token = self.storage.shares.read();
-        _validate_from_private::<5>(self.context, from);
 
         // Order matters: transfer before minting to neutralize ARC-403 reentrancy.
         // Take the assets from the sender
@@ -229,10 +228,10 @@ pub contract Vault {
     /// @param to The address of the recipient
     /// @param assets The amount of assets to deposit
     /// @param nonce The nonce used for authwitness
+    #[authorize_once("from", "nonce")]
     #[external("private")]
     fn deposit_private_to_public(from: AztecAddress, to: AztecAddress, assets: u128, nonce: Field) {
         let asset_token = self.storage.asset.read();
-        _validate_from_private::<4>(self.context, from);
 
         // Order matters: transfer before minting to neutralize ARC-403 reentrancy.
         // Take the assets from the sender
@@ -256,6 +255,7 @@ pub contract Vault {
     /// @param assets The amount of assets to deposit
     /// @param min_shares The amount of shares that should be minted to the recipient in private
     /// @param nonce The nonce used for authwitness
+    #[authorize_once("from", "nonce")]
     #[external("private")]
     fn deposit_public_to_private_exact(
         from: AztecAddress,
@@ -265,7 +265,6 @@ pub contract Vault {
         nonce: Field,
     ) {
         let shares_token = self.storage.shares.read();
-        _validate_from_private::<5>(self.context, from);
 
         // Initialize commitment on the shares token that allows to mint outstanding shares to the recipient in public
         let partial_note =
@@ -295,6 +294,7 @@ pub contract Vault {
     /// @param assets The amount of assets to deposit
     /// @param min_shares The amount of shares that should be minted to the recipient in private
     /// @param nonce The nonce used for authwitness
+    #[authorize_once("from", "nonce")]
     #[external("private")]
     fn deposit_private_to_private_exact(
         from: AztecAddress,
@@ -305,7 +305,6 @@ pub contract Vault {
     ) {
         let asset_token = self.storage.asset.read();
         let shares_token = self.storage.shares.read();
-        _validate_from_private::<5>(self.context, from);
 
         // Initialize commitment on the shares token that allows to mint outstanding shares to the recipient in public
         let partial_note =
@@ -342,6 +341,7 @@ pub contract Vault {
     /// @param shares The amount of shares to issue
     /// @param max_assets The maximum amount of assets that should be deposited
     /// @param nonce The nonce used for authwitness
+    #[authorize_once("from", "nonce")]
     #[external("public")]
     fn issue_public_to_public(
         from: AztecAddress,
@@ -352,7 +352,6 @@ pub contract Vault {
     ) {
         let asset_token = self.storage.asset.read();
         let shares_token = self.storage.shares.read();
-        self.internal._validate_from_public(from);
 
         // Calculate assets required
         let total_assets = self.internal._total_assets();
@@ -390,6 +389,7 @@ pub contract Vault {
     /// @param shares The amount of shares to issue
     /// @param max_assets The maximum amount of assets that should be deposited
     /// @param nonce The nonce used for authwitness
+    #[authorize_once("from", "nonce")]
     #[external("private")]
     fn issue_public_to_private(
         from: AztecAddress,
@@ -400,7 +400,6 @@ pub contract Vault {
     ) {
         let asset_token = self.storage.asset.read();
         let shares_token = self.storage.shares.read();
-        _validate_from_private::<5>(self.context, from);
 
         // Order matters: enqueue asset transfer first so it executes before shares total_supply increase,
         // neutralizing ARC-403 reentrancy.
@@ -425,6 +424,7 @@ pub contract Vault {
     /// @param shares The amount of shares to issue
     /// @param max_assets The maximum amount of assets that should be deposited
     /// @param nonce The nonce used for authwitness
+    #[authorize_once("from", "nonce")]
     #[external("private")]
     fn issue_private_to_public_exact(
         from: AztecAddress,
@@ -434,7 +434,6 @@ pub contract Vault {
         nonce: Field,
     ) {
         let asset_token = self.storage.asset.read();
-        _validate_from_private::<5>(self.context, from);
 
         // Initialize commitment on the asset token that allows to refund excess assets to the sender in public
         let asset_commitment =
@@ -465,6 +464,7 @@ pub contract Vault {
     /// @param shares The amount of shares to issue
     /// @param max_assets The maximum amount of assets that should be deposited
     /// @param nonce The nonce used for authwitness
+    #[authorize_once("from", "nonce")]
     #[external("private")]
     fn issue_private_to_private_exact(
         from: AztecAddress,
@@ -475,7 +475,6 @@ pub contract Vault {
     ) {
         let asset_token = self.storage.asset.read();
         let shares_token = self.storage.shares.read();
-        _validate_from_private::<5>(self.context, from);
 
         // Initialize commitment on the asset token that allows to refund excess assets to the sender in public
         let asset_commitment =
@@ -511,11 +510,11 @@ pub contract Vault {
     /// @param to The address of the recipient
     /// @param assets The amount of assets to withdraw
     /// @param nonce The nonce used for authwitness
+    #[authorize_once("from", "nonce")]
     #[external("public")]
     fn withdraw_public_to_public(from: AztecAddress, to: AztecAddress, assets: u128, nonce: Field) {
         let asset_token = self.storage.asset.read();
         let shares_token = self.storage.shares.read();
-        self.internal._validate_from_public(from);
 
         // Calculate shares to burn
         let total_assets = self.internal._total_assets();
@@ -537,6 +536,7 @@ pub contract Vault {
     /// @param to The address of the recipient
     /// @param assets The amount of assets to withdraw
     /// @param nonce The nonce used for authwitness
+    #[authorize_once("from", "nonce")]
     #[external("private")]
     fn withdraw_public_to_private(
         from: AztecAddress,
@@ -545,7 +545,6 @@ pub contract Vault {
         nonce: Field,
     ) {
         let asset_token = self.storage.asset.read();
-        _validate_from_private::<4>(self.context, from);
 
         // Order matters: burn after calculating shares in public to neutralize ARC-403 reentrancy.
         // Calculate and burn the sender's shares
@@ -563,6 +562,7 @@ pub contract Vault {
     /// @param assets The amount of assets to withdraw
     /// @param shares The amount of shares to burn
     /// @param nonce The nonce used for authwitness
+    #[authorize_once("from", "nonce")]
     #[external("private")]
     fn withdraw_private_to_private(
         from: AztecAddress,
@@ -573,7 +573,6 @@ pub contract Vault {
     ) {
         let asset_token = self.storage.asset.read();
         let shares_token = self.storage.shares.read();
-        _validate_from_private::<5>(self.context, from);
 
         // Burn shares from the sender's private balance on the shares token
         self.call(Token::at(shares_token).burn_private(from, shares, nonce));
@@ -595,6 +594,7 @@ pub contract Vault {
     /// @param assets The amount of underlying asset to withdraw
     /// @param max_shares The maximum amount of shares to burn
     /// @param nonce The nonce used for authwitness
+    #[authorize_once("from", "nonce")]
     #[external("private")]
     fn withdraw_private_to_public_exact(
         from: AztecAddress,
@@ -604,7 +604,6 @@ pub contract Vault {
         nonce: Field,
     ) {
         let shares_token = self.storage.shares.read();
-        _validate_from_private::<5>(self.context, from);
 
         // Initialize commitment on the shares token that allows to refund excess shares to the sender in public
         let partial_note =
@@ -633,6 +632,7 @@ pub contract Vault {
     /// @param assets The amount of underlying asset to withdraw
     /// @param max_shares The maximum amount of shares to burn
     /// @param nonce The nonce used for authwitness
+    #[authorize_once("from", "nonce")]
     #[external("private")]
     fn withdraw_private_to_private_exact(
         from: AztecAddress,
@@ -643,7 +643,6 @@ pub contract Vault {
     ) {
         let asset_token = self.storage.asset.read();
         let shares_token = self.storage.shares.read();
-        _validate_from_private::<5>(self.context, from);
 
         // Initialize commitment on the shares token that allows to refund excess shares to the sender in public
         let partial_note =
@@ -676,11 +675,11 @@ pub contract Vault {
     /// @param to The address of the recipient
     /// @param shares The amount of shares to redeem
     /// @param nonce The nonce used for authwitness
+    #[authorize_once("from", "nonce")]
     #[external("public")]
     fn redeem_public_to_public(from: AztecAddress, to: AztecAddress, shares: u128, nonce: Field) {
         let asset_token = self.storage.asset.read();
         let shares_token = self.storage.shares.read();
-        self.internal._validate_from_public(from);
 
         // Calculate assets to redeem
         let total_assets = self.internal._total_assets();
@@ -703,10 +702,10 @@ pub contract Vault {
     /// @param to The address of the recipient
     /// @param shares The amount of shares to redeem
     /// @param nonce The nonce used for authwitness
+    #[authorize_once("from", "nonce")]
     #[external("private")]
     fn redeem_private_to_public(from: AztecAddress, to: AztecAddress, shares: u128, nonce: Field) {
         let shares_token = self.storage.shares.read();
-        _validate_from_private::<4>(self.context, from);
 
         // Burn shares from the sender's private balance on the shares token
         self.call(Token::at(shares_token).burn_private(from, shares, nonce));
@@ -724,6 +723,7 @@ pub contract Vault {
     /// @param shares The amount of shares to burn
     /// @param min_assets The minimum amount of assets to withdraw, immediately in private
     /// @param nonce The nonce used for authwitness
+    #[authorize_once("from", "nonce")]
     #[external("private")]
     fn redeem_private_to_private_exact(
         from: AztecAddress,
@@ -734,7 +734,6 @@ pub contract Vault {
     ) {
         let asset_token = self.storage.asset.read();
         let shares_token = self.storage.shares.read();
-        _validate_from_private::<5>(self.context, from);
 
         // Initialize commitment on the asset token that allows to transfer outstanding assets to the recipient in public
         let asset_commitment =
@@ -765,6 +764,7 @@ pub contract Vault {
     /// @param shares The amount of shares to redeem
     /// @param min_assets The minimum amount of assets to withdraw, immediately in private
     /// @param nonce The nonce used for authwitness
+    #[authorize_once("from", "nonce")]
     #[external("private")]
     fn redeem_public_to_private_exact(
         from: AztecAddress,
@@ -774,7 +774,6 @@ pub contract Vault {
         nonce: Field,
     ) {
         let asset_token = self.storage.asset.read();
-        _validate_from_private::<5>(self.context, from);
 
         // Initialize commitment on the asset token that allows to transfer outstanding assets to the recipient in public
         let asset_commitment =
@@ -1480,23 +1479,4 @@ pub contract Vault {
         assets
     }
 
-    /** ==========================================================
-     * ================= AUTH LIBRARIES =========================
-     * ======================================================== */
-
-    /// @notice Validates that the caller possesses authwit from the `from` address or the caller is the `from` address
-    #[contract_library_method]
-    fn _validate_from_private<let N: u32>(context: &mut PrivateContext, from: AztecAddress) {
-        if (!from.eq(context.maybe_msg_sender().unwrap())) {
-            assert_current_call_valid_authwit::<N>(context, from);
-        }
-    }
-
-    /// @notice Validates that the caller possesses authwit from the `from` address or the caller is the `from` address
-    #[internal("public")]
-    fn _validate_from_public(from: AztecAddress) {
-        if (!from.eq(self.msg_sender())) {
-            assert_current_call_valid_authwit_public(self.context, from);
-        }
-    }
 }
