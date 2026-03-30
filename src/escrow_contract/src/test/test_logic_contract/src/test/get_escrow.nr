@@ -26,9 +26,7 @@ unconstrained fn get_escrow_correct_instance() {
     let escrow = env.call_private(caller, TestLogic::at(logic).get_escrow(secret_key));
     assert_eq(deployed_escrow, escrow, "Incorrect escrow deployed");
 
-    let escrow_instance: ContractInstance = env.utility_context(|_| {
-        get_contract_instance(escrow)
-    });
+    let escrow_instance: ContractInstance = env.utility_context(|_| get_contract_instance(escrow));
 
     assert_eq(escrow_instance.salt, logic.to_field(), "Salt is not the logic contract");
     assert_eq(escrow_instance.deployer, AztecAddress::from_field(0), "Deployer is not zero");
