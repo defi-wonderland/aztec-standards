@@ -2,10 +2,7 @@ use crate::Vault;
 use aztec::{
     oracle::random::random,
     protocol::{address::AztecAddress, contract_class_id::ContractClassId},
-    test::helpers::{
-        test_environment::{DeployOptions, TestEnvironment},
-        txe_oracles as cheatcodes,
-    },
+    test::helpers::{test_environment::{DeployOptions, TestEnvironment}, txe_oracles as cheatcodes},
 };
 use aztec::test::helpers::authwit as authwit_cheatcodes;
 use token_contract::Token;
@@ -13,8 +10,14 @@ use token_contract::Token;
 pub global mint_amount: u128 = 10_000 as u128;
 
 pub unconstrained fn get_token_class_id() -> ContractClassId {
-    let token_instance =
-        cheatcodes::deploy("@token_contract/Token", "", [], random(), random(), AztecAddress::zero());
+    let token_instance = cheatcodes::deploy(
+        "@token_contract/Token",
+        "",
+        [],
+        random(),
+        random(),
+        AztecAddress::zero(),
+    );
     token_instance.contract_class_id
 }
 
@@ -67,9 +70,8 @@ pub unconstrained fn setup_with_vault(
         shares_class_id,
         shares_salt,
     );
-    let vault_address = env
-        .deploy("@vault_contract/Vault")
-        .with_public_initializer(owner, vault_initializer);
+    let vault_address =
+        env.deploy("@vault_contract/Vault").with_public_initializer(owner, vault_initializer);
 
     // Deploy shares token at the address the vault computed, using the matching shares_salt.
     // secret=0 gives PublicKeys::default(), matching the vault's _compute_token_address.
