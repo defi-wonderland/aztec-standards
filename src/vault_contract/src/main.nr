@@ -1,11 +1,4 @@
-// TODO: Noir unit tests are disabled because the TXE test environment does not support custom
-// deployment salts nor the get_contract_instance / get_contract_instance_deployer_avm oracles.
-// The vault constructor computes the shares token address deterministically, which requires
-// matching salts between the vault and shares deployments.
-//
-// aztec-packages issue #16656 fixed upstream in PR #21183, pending backport to v4 via PR #21191.
-// Re-enable Noir tests for both vault and escrow contracts during the upgrade that brings this change.
-// pub mod test;
+pub mod test;
 
 use aztec::macros::aztec;
 
