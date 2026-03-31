@@ -1,4 +1,11 @@
-pub mod test;
+// TODO: Noir unit tests are disabled because the TXE test environment does not support custom
+// deployment salts nor the get_contract_instance / get_contract_instance_deployer_avm oracles.
+// The vault constructor computes the shares token address deterministically, which requires
+// matching salts between the vault and shares deployments.
+//
+// aztec-packages issue #16656 fixed upstream in PR #21183, pending backport to v4 via PR #21191.
+// Re-enable Noir tests for both vault and escrow contracts during the upgrade that brings this change.
+// pub mod test;
 
 use aztec::macros::aztec;
 
@@ -9,8 +16,14 @@ pub contract Vault {
             assert_current_call_valid_authwit, assert_current_call_valid_authwit_public,
         },
         context::PrivateContext,
+        hash::hash_args,
         macros::{functions::{external, initializer, internal, only_self, view}, storage::storage},
-        protocol::address::AztecAddress,
+        oracle::get_contract_instance::get_contract_instance_deployer_avm,
+        protocol::{
+            address::AztecAddress, constants::DOM_SEP__INITIALIZER,
+            contract_class_id::ContractClassId, contract_instance::ContractInstance,
+            hash::poseidon2_hash_with_separator, public_keys::PublicKeys, traits::ToField,
+        },
         state_vars::PublicImmutable,
     };
     use token_contract::Token;
@@ -22,79 +35,110 @@ pub contract Vault {
     // Maximum value for a u128 (2**128 - 1)
     global MAX_U128_VALUE: u128 = 340282366920938463463374607431768211455;
 
-    /// @param admin The address with permission to set the shares token (one-time setup)
     /// @param asset The underlying asset token address
     /// @param shares The shares token address (minter must be this vault)
     /// @param vault_offset The offset used to prevent inflation attacks
     #[storage]
     struct Storage<Context> {
-        admin: PublicImmutable<AztecAddress, Context>,
         asset: PublicImmutable<AztecAddress, Context>,
         shares: PublicImmutable<AztecAddress, Context>,
         vault_offset: PublicImmutable<u128, Context>,
     }
 
-    /// @notice Initializes the vault with asset, offset, and configuration
-    /// @dev The admin must call set_shares() after deploying the shares token with this vault as minter.
-    ///      The vault address can be precomputed before shares exists since shares is not a constructor arg.
-    ///      This 2-step deployment exists because contract instance publishing is private-only, so a public
-    ///      factory cannot deploy and wire both contracts atomically. Once public instance registration is
-    ///      supported, this can be simplified to a single-step deployment.
-    ///      See: https://github.com/AztecProtocol/aztec-packages/issues/20771
-    /// @param admin The address with permission to set the shares token (one-time setup)
+    /// @notice Initializes the vault with asset, offset, and shares token configuration
+    /// @dev Computes the shares token address deterministically from the provided parameters.
+    ///      The shares token must be deployed separately with constructor_with_minter using matching
+    ///      parameters and this vault as minter. The shares token deployment must use the same salt
+    ///      and deployer as the vault.
     /// @param asset The underlying asset token address
     /// @param vault_offset The offset used to prevent inflation attacks (typically 1)
+    /// @param shares_name The name of the shares token
+    /// @param shares_symbol The symbol of the shares token
+    /// @param shares_decimals The number of decimals for the shares token
+    /// @param shares_class_id The contract class ID of the shares token contract
+    /// @param shares_salt The salt used for the shares token deployment
     #[external("public")]
     #[initializer]
-    fn constructor(admin: AztecAddress, asset: AztecAddress, vault_offset: u128) {
+    fn constructor(
+        asset: AztecAddress,
+        vault_offset: u128,
+        shares_name: str<31>,
+        shares_symbol: str<31>,
+        shares_decimals: u8,
+        shares_class_id: ContractClassId,
+        shares_salt: Field,
+    ) {
         assert(vault_offset > 0, "vault_offset must be greater than 0");
-        self.storage.admin.initialize(admin);
+
+        let deployer = get_contract_instance_deployer_avm(self.address).unwrap();
+        let shares = _compute_token_address(
+            shares_name,
+            shares_symbol,
+            shares_decimals,
+            self.address,
+            shares_class_id,
+            shares_salt,
+            deployer,
+        );
+
         self.storage.asset.initialize(asset);
+        self.storage.shares.initialize(shares);
         self.storage.vault_offset.initialize(vault_offset);
     }
 
-    /// @notice Sets the shares token address (one-time, admin-only, immutable after set)
-    /// @dev Must be called after deploying the shares token with this vault as minter.
-    ///      PublicImmutable.initialize() ensures this can only ever be set once -- any subsequent
-    ///      call will revert. All vault operations read shares via PublicImmutable.read() which
-    ///      reverts if shares has not been initialized, so the vault is inoperable until this is called.
-    /// @param shares The shares token address (minter must be this vault)
-    #[external("public")]
-    fn set_shares_token(shares: AztecAddress) {
-        let admin = self.storage.admin.read();
-        assert(self.msg_sender().eq(admin), "caller is not admin");
-        self.storage.shares.initialize(shares);
-    }
-
-    /// @notice Sets the shares token and makes an initial deposit for inflation-attack protection
-    /// @dev Must be called after deploying the shares token with this vault as minter.
-    ///      PublicImmutable.initialize() ensures this can only ever be set once -- any subsequent
-    ///      call will revert. All vault operations read shares via PublicImmutable.read() which
-    ///      reverts if shares has not been initialized, so the vault is inoperable until this is called.
-    /// @param shares The shares token address (minter must be this vault)
+    /// @notice Initializes the vault and makes an initial deposit for inflation-attack protection
+    /// @dev Computes the shares token address deterministically, initializes storage, then transfers
+    ///      assets from the depositor and mints shares to this contract (permanently locked).
+    ///      Assets donated to the vault's precomputed address before deployment are ignored to ensure
+    ///      the asset<>share conversion is 1:1 for the initial deposit.
+    /// @param asset The underlying asset token address
+    /// @param vault_offset The offset used to prevent inflation attacks (typically 1)
+    /// @param shares_name The name of the shares token
+    /// @param shares_symbol The symbol of the shares token
+    /// @param shares_decimals The number of decimals for the shares token
+    /// @param shares_class_id The contract class ID of the shares token contract
+    /// @param shares_salt The salt used for the shares token deployment
     /// @param initial_deposit The initial deposit amount of the asset
     /// @param depositor The address of the initial depositor of the assets
     /// @param nonce The nonce used for authwitness for the transfer of the initial deposit
     #[external("public")]
-    fn set_shares_token_with_initial_deposit(
-        shares: AztecAddress,
+    #[initializer]
+    fn constructor_with_initial_deposit(
+        asset: AztecAddress,
+        vault_offset: u128,
+        shares_name: str<31>,
+        shares_symbol: str<31>,
+        shares_decimals: u8,
+        shares_class_id: ContractClassId,
+        shares_salt: Field,
         initial_deposit: u128,
         depositor: AztecAddress,
         nonce: Field,
     ) {
-        let admin = self.storage.admin.read();
-        assert(self.msg_sender().eq(admin), "caller is not admin");
+        assert(vault_offset > 0, "vault_offset must be greater than 0");
+
+        let deployer = get_contract_instance_deployer_avm(self.address).unwrap();
+        let shares = _compute_token_address(
+            shares_name,
+            shares_symbol,
+            shares_decimals,
+            self.address,
+            shares_class_id,
+            shares_salt,
+            deployer,
+        );
+
+        self.storage.asset.initialize(asset);
         self.storage.shares.initialize(shares);
+        self.storage.vault_offset.initialize(vault_offset);
 
         // Caller deposits assets, shares are minted to this contract and are permanently locked.
         let from = depositor;
-        let to = self.address;
 
         // Assets could be donated to the vault's precomputed address before deployment, but such assets are
         // ignored at this point to ensure the asset<>share conversion is 1:1 for the initial deposit.
         let total_assets: u128 = 0;
         let total_supply: u128 = 0;
-        let vault_offset = self.storage.vault_offset.read();
 
         // Calculate shares to mint for the initial deposit.
         let deposit_shares = _convert_to_shares(
@@ -106,11 +150,14 @@ pub contract Vault {
         );
 
         // Transfer the assets from the sender to the vault
-        let asset_token = self.storage.asset.read();
-        self.call(Token::at(asset_token).transfer_public_to_public(from, to, initial_deposit, nonce));
-
+        self.call(Token::at(asset).transfer_public_to_public(
+            from,
+            self.address,
+            initial_deposit,
+            nonce,
+        ));
         // Mint shares to this contract address (permanently locked)
-        self.call(Token::at(shares).mint_to_public(to, deposit_shares));
+        self.call(Token::at(shares).mint_to_public(self.address, deposit_shares));
     }
 
     /** ==========================================================
@@ -799,14 +846,6 @@ pub contract Vault {
      * ======================= VAULT VIEW ========================
      * ======================================================== */
 
-    /// @notice Returns the admin address
-    /// @return The address of the admin
-    #[external("public")]
-    #[view]
-    fn admin() -> AztecAddress {
-        self.storage.admin.read()
-    }
-
     /// @notice Returns the underlying asset address
     /// @return The address of the underlying asset
     #[external("public")]
@@ -1413,6 +1452,44 @@ pub contract Vault {
     /** ==========================================================
      * ================== VAULT LIBRARIES ========================
      * ======================================================== */
+
+    /// @notice Computes the address of a token contract deployed with constructor_with_minter
+    /// @param name The name of the token
+    /// @param symbol The symbol of the token
+    /// @param decimals The number of decimals of the token
+    /// @param minter The minter address passed to the token constructor
+    /// @param class_id The contract class ID of the token contract
+    /// @param salt The salt used for deployment
+    /// @param deployer The deployer address
+    /// @return The deterministic contract address
+    #[contract_library_method]
+    fn _compute_token_address(
+        name: str<31>,
+        symbol: str<31>,
+        decimals: u8,
+        minter: AztecAddress,
+        class_id: ContractClassId,
+        salt: Field,
+        deployer: AztecAddress,
+    ) -> AztecAddress {
+        let constructor_interface =
+            Token::interface().constructor_with_minter(name, symbol, decimals, minter);
+        let args_hash = hash_args(constructor_interface.args);
+        let initialization_hash = poseidon2_hash_with_separator(
+            [constructor_interface.selector.to_field(), args_hash],
+            DOM_SEP__INITIALIZER,
+        );
+
+        let instance = ContractInstance {
+            salt,
+            deployer,
+            contract_class_id: class_id,
+            initialization_hash,
+            public_keys: PublicKeys::default(),
+        };
+
+        instance.to_address()
+    }
 
     /// @notice Returns the total amount of underlying assets held by the vault
     /// @return The total amount of assets held by the vault
