@@ -26,14 +26,14 @@
     "*.ts": "prettier --write -u"
   },
   "dependencies": {
-    "@aztec/accounts": "4.2.0-aztecnr-rc.2",
-    "@aztec/aztec.js": "4.2.0-aztecnr-rc.2",
-    "@aztec/noir-contracts.js": "4.2.0-aztecnr-rc.2",
-    "@aztec/protocol-contracts": "4.2.0-aztecnr-rc.2",
-    "@aztec/pxe": "4.2.0-aztecnr-rc.2",
-    "@aztec/stdlib": "4.2.0-aztecnr-rc.2",
-    "@aztec/wallet-sdk": "4.2.0-aztecnr-rc.2",
-    "@aztec/wallets": "4.2.0-aztecnr-rc.2",
+    "@aztec/accounts": "4.2.0-nightly.20260331",
+    "@aztec/aztec.js": "4.2.0-nightly.20260331",
+    "@aztec/noir-contracts.js": "4.2.0-nightly.20260331",
+    "@aztec/protocol-contracts": "4.2.0-nightly.20260331",
+    "@aztec/pxe": "4.2.0-nightly.20260331",
+    "@aztec/stdlib": "4.2.0-nightly.20260331",
+    "@aztec/wallet-sdk": "4.2.0-nightly.20260331",
+    "@aztec/wallets": "4.2.0-nightly.20260331",
     "@defi-wonderland/aztec-benchmark": "4.2.0-aztecnr-rc.2",
     "commander": "14.0.1",
     "dotenv": "16.4.7"
@@ -50,7 +50,7 @@
     "vitest": "4.0.17"
   },
   "config": {
-    "aztecVersion": "4.2.0-aztecnr-rc.2"
+    "aztecVersion": "4.2.0-nightly.20260331"
   },
   "engines": {
     "node": ">=22"
