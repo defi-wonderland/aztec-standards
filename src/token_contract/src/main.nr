@@ -6,13 +6,9 @@ use aztec::macros::aztec;
 pub contract Token {
     // aztec library
     use aztec::{
-        authwit::auth::{
-            assert_current_call_valid_authwit, assert_current_call_valid_authwit_public,
-        },
-        context::PrivateContext,
         macros::{
             events::event,
-            functions::{external, initializer, internal, only_self, view},
+            functions::{authorize_once, external, initializer, internal, only_self, view},
             storage::storage,
         },
         messages::message_delivery::MessageDelivery,
@@ -109,6 +105,7 @@ pub contract Token {
     /// @param to The address of the recipient
     /// @param amount The amount of tokens to transfer
     /// @param _nonce The nonce used for authwitness
+    #[authorize_once("from", "_nonce")]
     #[external("private")]
     fn transfer_private_to_public(
         from: AztecAddress,
@@ -116,8 +113,6 @@ pub contract Token {
         amount: u128,
         _nonce: Field,
     ) {
-        _validate_from_private::<4>(self.context, from);
-
         self.internal._decrease_private_balance(from, amount, INITIAL_TRANSFER_CALL_MAX_NOTES);
 
         self.enqueue_self.increase_public_balance_internal(to, amount);
@@ -131,6 +126,7 @@ pub contract Token {
     /// @param amount The amount of tokens to transfer
     /// @param _nonce The nonce used for authwitness
     /// @return commitment The partial note utilized for the transfer commitment (privacy entrance)
+    #[authorize_once("from", "_nonce")]
     #[external("private")]
     fn transfer_private_to_public_with_commitment(
         from: AztecAddress,
@@ -138,8 +134,6 @@ pub contract Token {
         amount: u128,
         _nonce: Field,
     ) -> Field {
-        _validate_from_private::<4>(self.context, from);
-
         self.internal._decrease_private_balance(from, amount, INITIAL_TRANSFER_CALL_MAX_NOTES);
 
         self.enqueue_self.increase_public_balance_internal(to, amount);
@@ -156,6 +150,7 @@ pub contract Token {
     /// @param to The address of the recipient
     /// @param amount The amount of tokens to transfer
     /// @param _nonce The nonce used for authwitness
+    #[authorize_once("from", "_nonce")]
     #[external("private")]
     fn transfer_private_to_private(
         from: AztecAddress,
@@ -163,8 +158,6 @@ pub contract Token {
         amount: u128,
         _nonce: Field,
     ) {
-        _validate_from_private::<4>(self.context, from);
-
         self.internal._decrease_private_balance(from, amount, INITIAL_TRANSFER_CALL_MAX_NOTES);
 
         self.internal._increase_private_balance(to, amount);
@@ -177,6 +170,7 @@ pub contract Token {
     /// @param commitment The partial note representing the commitment (privacy entrance that the recipient shares with the sender)
     /// @param amount The amount of tokens to transfer
     /// @param _nonce The nonce used for authwitness
+    #[authorize_once("from", "_nonce")]
     #[external("private")]
     fn transfer_private_to_commitment(
         from: AztecAddress,
@@ -184,8 +178,6 @@ pub contract Token {
         amount: u128,
         _nonce: Field,
     ) {
-        _validate_from_private::<4>(self.context, from);
-
         self.internal._decrease_private_balance(from, amount, INITIAL_TRANSFER_CALL_MAX_NOTES);
 
         let completer = self.msg_sender();
@@ -203,6 +195,7 @@ pub contract Token {
     /// @param to The address of the recipient
     /// @param amount The amount of tokens to transfer
     /// @param _nonce The nonce used for authwitness
+    #[authorize_once("from", "_nonce")]
     #[external("private")]
     fn transfer_public_to_private(
         from: AztecAddress,
@@ -210,8 +203,6 @@ pub contract Token {
         amount: u128,
         _nonce: Field,
     ) {
-        _validate_from_private::<4>(self.context, from);
-
         self.enqueue_self.decrease_public_balance_internal(from, amount);
 
         self.internal._increase_private_balance(to, amount);
@@ -249,6 +240,7 @@ pub contract Token {
     /// @param to The address of the recipient
     /// @param amount The amount of tokens to transfer
     /// @param _nonce The nonce used for authwitness
+    #[authorize_once("from", "_nonce")]
     #[external("public")]
     fn transfer_public_to_public(
         from: AztecAddress,
@@ -256,8 +248,6 @@ pub contract Token {
         amount: u128,
         _nonce: Field,
     ) {
-        self.internal._validate_from_public(from);
-
         self.internal._decrease_public_balance(from, amount);
         self.internal._increase_public_balance(to, amount);
 
@@ -272,6 +262,7 @@ pub contract Token {
     /// @param commitment The partial note representing the commitment (privacy entrance)
     /// @param amount The amount of tokens to transfer
     /// @param _nonce The nonce used for authwitness
+    #[authorize_once("from", "_nonce")]
     #[external("public")]
     fn transfer_public_to_commitment(
         from: AztecAddress,
@@ -279,8 +270,6 @@ pub contract Token {
         amount: u128,
         _nonce: Field,
     ) {
-        self.internal._validate_from_public(from);
-
         self.internal._decrease_public_balance(from, amount);
 
         let completer = self.msg_sender();
@@ -435,10 +424,9 @@ pub contract Token {
     /// @param from The address of the sender
     /// @param amount The amount of tokens to burn
     /// @param _nonce The nonce used for authwitness
+    #[authorize_once("from", "_nonce")]
     #[external("private")]
     fn burn_private(from: AztecAddress, amount: u128, _nonce: Field) {
-        _validate_from_private::<3>(self.context, from);
-
         self.internal._burn_private(from, amount);
     }
 
@@ -447,10 +435,9 @@ pub contract Token {
     /// @param from The address of the sender
     /// @param amount The amount of tokens to burn
     /// @param _nonce The nonce used for authwitness
+    #[authorize_once("from", "_nonce")]
     #[external("public")]
     fn burn_public(from: AztecAddress, amount: u128, _nonce: Field) {
-        self.internal._validate_from_public(from);
-
         self.internal._burn_public(from, amount);
     }
 
@@ -632,30 +619,6 @@ pub contract Token {
     fn _burn_private(from: AztecAddress, amount: u128) {
         self.internal._decrease_private_balance(from, amount, INITIAL_TRANSFER_CALL_MAX_NOTES);
         self.enqueue_self.decrease_total_supply_internal(amount);
-    }
-
-    /** ==========================================================
-     * ================== AUTH LIBRARIES =========================
-     * ======================================================== */
-
-    /// @notice Validates that the caller possesses authwit from the `from` address or the caller is the `from` address
-    /// @param context The context of the private call
-    /// @param from The address of the sender
-    #[contract_library_method]
-    fn _validate_from_private<let N: u32>(context: &mut PrivateContext, from: AztecAddress) {
-        if (!from.eq(context.maybe_msg_sender().unwrap())) {
-            assert_current_call_valid_authwit::<N>(context, from);
-        }
-    }
-
-    /// @notice Validates that the caller possesses authwit from the `from` address or the caller is the `from` address
-    /// @param context The context of the public call
-    /// @param from The address of the sender
-    #[internal("public")]
-    fn _validate_from_public(from: AztecAddress) {
-        if (!from.eq(self.msg_sender())) {
-            assert_current_call_valid_authwit_public(self.context, from);
-        }
     }
 
 }
