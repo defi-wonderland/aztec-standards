@@ -22,8 +22,7 @@ unconstrained fn get_private_events_oracle(
     selector: EventSelector,
     contract_address: AztecAddress,
     scope: AztecAddress,
-) -> ([[Field; MAX_EVENT_SERIALIZATION_LENGTH]; MAX_PRIVATE_EVENTS_PER_TXE_QUERY], [u32; MAX_PRIVATE_EVENTS_PER_TXE_QUERY], u32) {
-}
+    ) -> ([[Field; MAX_EVENT_SERIALIZATION_LENGTH]; MAX_PRIVATE_EVENTS_PER_TXE_QUERY], [u32; MAX_PRIVATE_EVENTS_PER_TXE_QUERY], u32) {}
 
 pub unconstrained fn deploy_logic(
     env: &mut TestEnvironment,
@@ -89,7 +88,7 @@ pub unconstrained fn get_private_events_from_last_tx(
     selector: EventSelector,
     contract_address: AztecAddress,
     scope: AztecAddress,
-) -> BoundedVec<BoundedVec<Field, MAX_EVENT_SERIALIZATION_LENGTH>, MAX_PRIVATE_EVENTS_PER_TXE_QUERY> {
+    ) -> BoundedVec<BoundedVec<Field, MAX_EVENT_SERIALIZATION_LENGTH>, MAX_PRIVATE_EVENTS_PER_TXE_QUERY> {
     let (raw_array_storage, event_lengths, query_length) =
         get_private_events_oracle(selector, contract_address, scope);
 
@@ -112,10 +111,8 @@ pub unconstrained fn assert_escrow_details_private_event(
     assert_eq(events.len(), 1);
 
     let payload = events.get(0);
-    let expected = EscrowDetailsLogContent {
-        escrow: expected_escrow,
-        secret_key: expected_secret_key,
-    };
+    let expected =
+        EscrowDetailsLogContent { escrow: expected_escrow, secret_key: expected_secret_key };
     let serialized = expected.serialize();
     assert_eq(payload.len(), serialized.len());
     for i in 0..serialized.len() {
