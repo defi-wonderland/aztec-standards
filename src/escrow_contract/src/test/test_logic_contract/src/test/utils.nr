@@ -11,9 +11,11 @@ use aztec::{
 };
 use escrow_contract::types::escrow_details_event::EscrowDetailsLogContent;
 
-// --- TXE private events (`aztec::test::helpers::txe_oracles::get_private_events` is crate-private) ---
-
-/// Must match `aztec::test::helpers::txe_oracles` (TXE caps query size and per-event field count).
+// --- TXE private events (`txe_oracles::get_private_events` is crate-private; we duplicate its oracle only) ---
+//
+// CANONICAL VALUES: keep in lockstep with aztec-nr when bumping the `aztec` dependency (this crate's Nargo.toml tag).
+// Source: https://github.com/AztecProtocol/aztec-packages/blob/v4.2.0-aztecnr-rc.2/noir-projects/aztec-nr/aztec/src/test/helpers/txe_oracles.nr#L13-L14
+// (`MAX_PRIVATE_EVENTS_PER_TXE_QUERY` and `MAX_EVENT_SERIALIZATION_LENGTH` are module-private there, so not importable.)
 global MAX_PRIVATE_EVENTS_PER_TXE_QUERY: u32 = 5;
 global MAX_EVENT_SERIALIZATION_LENGTH: u32 = 10;
 
@@ -89,12 +91,27 @@ pub unconstrained fn get_private_events_from_last_tx(
     contract_address: AztecAddress,
     scope: AztecAddress,
     ) -> BoundedVec<BoundedVec<Field, MAX_EVENT_SERIALIZATION_LENGTH>, MAX_PRIVATE_EVENTS_PER_TXE_QUERY> {
+    std::static_assert(
+        <EscrowDetailsLogContent as Serialize>::N <= MAX_EVENT_SERIALIZATION_LENGTH,
+        "EscrowDetailsLogContent::N exceeds MAX_EVENT_SERIALIZATION_LENGTH - sync with aztec-nr txe_oracles and TXE",
+    );
+
     let (raw_array_storage, event_lengths, query_length) =
         get_private_events_oracle(selector, contract_address, scope);
 
+    assert(
+        query_length <= MAX_PRIVATE_EVENTS_PER_TXE_QUERY,
+        "TXE query_length exceeds MAX_PRIVATE_EVENTS_PER_TXE_QUERY — sync constants with aztec-nr txe_oracles",
+    );
+
     let mut events = BoundedVec::new();
     for i in 0..query_length {
-        events.push(BoundedVec::from_parts(raw_array_storage[i], event_lengths[i]));
+        let len = event_lengths[i];
+        assert(
+            len <= MAX_EVENT_SERIALIZATION_LENGTH,
+            "TXE event payload length exceeds MAX_EVENT_SERIALIZATION_LENGTH — sync constants with aztec-nr txe_oracles",
+        );
+        events.push(BoundedVec::from_parts(raw_array_storage[i], len));
     }
     events
 }
