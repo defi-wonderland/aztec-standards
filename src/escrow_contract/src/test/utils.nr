@@ -44,7 +44,6 @@ pub unconstrained fn deploy_escrow_with_secret(
         env: *env,
         path: "@escrow_contract/Escrow",
         secret: escrow_secret,
-        salt: 0,
     };
 
     _escrow_contract.without_initializer()
@@ -56,8 +55,6 @@ pub unconstrained fn get_escrow_class_id() -> Field {
         "",
         [],
         random(),
-        random(),
-        AztecAddress::zero(),
     );
     escrow_instance.contract_class_id.to_field()
 }
