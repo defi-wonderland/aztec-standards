@@ -184,7 +184,6 @@ pub contract Token {
         PartialUintNote::from_field(commitment).complete_from_private(
             self.context,
             completer,
-            self.storage.private_balances.get_storage_slot(),
             amount,
         );
     }
@@ -522,7 +521,6 @@ pub contract Token {
         commitment.complete(
             self.context,
             completer,
-            self.storage.private_balances.get_storage_slot(),
             amount,
         );
     }
@@ -576,7 +574,7 @@ pub contract Token {
         to: AztecAddress,
         completer: AztecAddress,
     ) -> PartialUintNote {
-        let commitment = UintNote::partial(to, self.context, to, completer);
+        let commitment = UintNote::partial(to, self.storage.private_balances.get_storage_slot(), self.context, to, completer);
 
         commitment
     }
