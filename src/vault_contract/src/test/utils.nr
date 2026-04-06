@@ -1,13 +1,37 @@
 use crate::Vault;
-use aztec::{protocol::address::AztecAddress, test::helpers::test_environment::TestEnvironment};
+use aztec::{
+    oracle::random::random,
+    protocol::{address::AztecAddress, contract_class_id::ContractClassId},
+    test::helpers::{test_environment::{DeployOptions, TestEnvironment}, txe_oracles as cheatcodes},
+};
 use aztec::test::helpers::authwit as authwit_cheatcodes;
 use token_contract::Token;
 
 pub global mint_amount: u128 = 10_000 as u128;
 
+pub unconstrained fn get_token_class_id() -> ContractClassId {
+    let token_instance = cheatcodes::deploy(
+        "@token_contract/Token",
+        "",
+        [],
+        random(),
+        random(),
+        AztecAddress::zero(),
+    );
+    token_instance.contract_class_id
+}
+
 /// @notice Sets up a vault with an asset token and a shares token.
-/// Deploys 3 contracts: asset token (with owner as minter), vault (with initializer, admin=owner),
-/// shares token (with vault as minter), then calls set_shares on the vault.
+/// Deploys 3 contracts: asset token (with owner as minter), vault, and shares token (with vault
+/// as minter). The vault constructor computes the shares token address deterministically using
+/// salt, deployer, class_id, and initialization parameters. The shares token is deployed with a
+/// known salt (shares_salt) so that the vault's computed address matches the actual shares
+/// deployment.
+///
+/// Since the regular constructor only computes and stores the shares address (without interacting
+/// with the shares contract), the vault can be deployed and initialized before shares exists.
+///
+/// The shares_class_id is obtained dynamically via a throwaway deploy of the token contract.
 pub unconstrained fn setup_with_vault(
     with_account_contracts: bool,
 ) -> (TestEnvironment, AztecAddress, AztecAddress, AztecAddress, AztecAddress, AztecAddress) {
@@ -22,6 +46,9 @@ pub unconstrained fn setup_with_vault(
         (owner, recipient)
     };
 
+    let shares_class_id = get_token_class_id();
+    let shares_salt: Field = random();
+
     // Deploy asset token with owner as minter
     let asset_initializer = Token::interface().constructor_with_minter(
         "AssetToken000000000000000000000",
@@ -32,28 +59,47 @@ pub unconstrained fn setup_with_vault(
     let asset_address =
         env.deploy("@token_contract/Token").with_public_initializer(owner, asset_initializer);
 
-    // Deploy vault with initializer (admin=owner, no shares yet)
-    let vault_initializer = Vault::interface().constructor(owner, asset_address, 1);
+    // Deploy and initialize vault - the constructor computes the shares address deterministically
+    // without interacting with the shares contract, so shares doesn't need to exist yet
+    let vault_initializer = Vault::interface().constructor(
+        asset_address,
+        1,
+        "SharesToken00000000000000000000",
+        "SHARES0000000000000000000000000",
+        18,
+        shares_class_id,
+        shares_salt,
+    );
     let vault_address =
         env.deploy("@vault_contract/Vault").with_public_initializer(owner, vault_initializer);
 
-    // Deploy shares token with vault as minter
+    // Deploy shares token at the address the vault computed, using the matching shares_salt.
+    // secret=0 gives PublicKeys::default(), matching the vault's _compute_token_address.
     let shares_initializer = Token::interface().constructor_with_minter(
         "SharesToken00000000000000000000",
         "SHARES0000000000000000000000000",
         18,
         vault_address,
     );
-    let shares_address =
-        env.deploy("@token_contract/Token").with_public_initializer(owner, shares_initializer);
-
-    // Set the shares token on the vault (admin-only, one-shot)
-    env.call_public(owner, Vault::at(vault_address).set_shares_token(shares_address));
+    let shares_address = env
+        .deploy_opts(
+            DeployOptions::new().with_salt(shares_salt).with_secret(0),
+            "@token_contract/Token",
+        )
+        .with_public_initializer(owner, shares_initializer);
 
     (env, vault_address, owner, recipient, asset_address, shares_address)
 }
 
-/// @notice Sets up a vault with an initial deposit for inflation-attack protection
+/// @notice Sets up a vault with an initial deposit for inflation-attack protection.
+/// Uses constructor_with_initial_deposit which transfers assets from the depositor and mints
+/// permanently-locked shares to the vault during initialization.
+///
+/// Because the initializer mints shares to the vault, the shares token must exist before the
+/// initializer runs. We deploy the vault instance with the real constructor data (so the address
+/// includes the correct initialization_hash) but defer the initializer call until after shares
+/// is deployed. This mirrors the TS test flow where the vault address is precomputed, shares is
+/// deployed first, then the vault is deployed with its constructor.
 pub unconstrained fn setup_with_vault_initial_deposit(
     with_account_contracts: bool,
     initial_deposit: u128,
@@ -69,6 +115,9 @@ pub unconstrained fn setup_with_vault_initial_deposit(
         (owner, recipient)
     };
 
+    let shares_class_id = get_token_class_id();
+    let shares_salt: Field = random();
+
     // Deploy asset token with owner as minter
     let asset_initializer = Token::interface().constructor_with_minter(
         "AssetToken000000000000000000000",
@@ -79,32 +128,63 @@ pub unconstrained fn setup_with_vault_initial_deposit(
     let asset_address =
         env.deploy("@token_contract/Token").with_public_initializer(owner, asset_initializer);
 
-    // Deploy vault with initializer (admin=owner, no shares yet)
-    let vault_initializer = Vault::interface().constructor(owner, asset_address, 1);
-    let vault_address =
-        env.deploy("@vault_contract/Vault").with_public_initializer(owner, vault_initializer);
+    // Mint initial_deposit of assets to owner before vault deployment
+    env.call_public(owner, Token::at(asset_address).mint_to_public(owner, initial_deposit));
 
-    // Deploy shares token with vault as minter
+    // Deploy vault instance with the actual constructor_with_initial_deposit data so the
+    // initialization_hash (and therefore the vault address) is correct. The initializer is
+    // deferred until after shares is deployed since it mints shares to the vault.
+    let vault_init = Vault::interface().constructor_with_initial_deposit(
+        asset_address,
+        1,
+        "SharesToken00000000000000000000",
+        "SHARES0000000000000000000000000",
+        18,
+        shares_class_id,
+        shares_salt,
+        initial_deposit,
+        owner,
+        0,
+    );
+    let vault_instance = cheatcodes::deploy(
+        "@vault_contract/Vault",
+        vault_init.name,
+        vault_init.args,
+        random(),
+        random(),
+        AztecAddress::zero(),
+    );
+    let vault_address = vault_instance.to_address();
+
+    // Deploy shares token with vault as minter, using the matching shares_salt.
+    // secret=0 gives PublicKeys::default(), matching the vault's _compute_token_address.
     let shares_initializer = Token::interface().constructor_with_minter(
         "SharesToken00000000000000000000",
         "SHARES0000000000000000000000000",
         18,
         vault_address,
     );
-    let shares_address =
-        env.deploy("@token_contract/Token").with_public_initializer(owner, shares_initializer);
+    let shares_address = env
+        .deploy_opts(
+            DeployOptions::new().with_salt(shares_salt).with_secret(0),
+            "@token_contract/Token",
+        )
+        .with_public_initializer(owner, shares_initializer);
 
-    // Mint initial_deposit of assets to owner
-    env.call_public(owner, Token::at(asset_address).mint_to_public(owner, initial_deposit));
-
-    // Authorize vault to transfer assets from owner
+    // Authorize vault to transfer assets from owner during initialization
     authorize_transfer_public_to_public(env, asset_address, vault_address, owner, initial_deposit);
 
-    // Set shares and make initial deposit (admin-only, one-shot)
+    // Now call the vault initializer - shares exists so the constructor can mint shares
     env.call_public(
         owner,
-        Vault::at(vault_address).set_shares_token_with_initial_deposit(
-            shares_address,
+        Vault::at(vault_address).constructor_with_initial_deposit(
+            asset_address,
+            1,
+            "SharesToken00000000000000000000",
+            "SHARES0000000000000000000000000",
+            18,
+            shares_class_id,
+            shares_salt,
             initial_deposit,
             owner,
             0,
@@ -114,7 +194,8 @@ pub unconstrained fn setup_with_vault_initial_deposit(
     (env, vault_address, owner, recipient, asset_address, shares_address)
 }
 
-/// @notice Deploys a vault with initializer but without setting shares (for failure tests)
+/// @notice Deploys a vault without calling any initializer (for failure tests).
+/// All PublicImmutable fields remain uninitialized, so any operation that reads storage will revert.
 pub unconstrained fn setup_vault_without_shares() -> (TestEnvironment, AztecAddress, AztecAddress, AztecAddress, AztecAddress) {
     let mut env = TestEnvironment::new();
     let owner = env.create_light_account();
@@ -130,10 +211,8 @@ pub unconstrained fn setup_vault_without_shares() -> (TestEnvironment, AztecAddr
     let asset_address =
         env.deploy("@token_contract/Token").with_public_initializer(owner, asset_initializer);
 
-    // Deploy vault with initializer (admin=owner) but do NOT call set_shares
-    let vault_initializer = Vault::interface().constructor(owner, asset_address, 1);
-    let vault_address =
-        env.deploy("@vault_contract/Vault").with_public_initializer(owner, vault_initializer);
+    // Deploy vault without initializer - all storage remains uninitialized
+    let vault_address = env.deploy("@vault_contract/Vault").without_initializer();
 
     (env, vault_address, owner, recipient, asset_address)
 }
