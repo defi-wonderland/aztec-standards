@@ -1,6 +1,6 @@
 {
   "name": "@defi-wonderland/aztec-standards",
-  "version": "4.2.0-nightly.20260404",
+  "version": "4.1.3",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/defi-wonderland/aztec-standards.git"
@@ -26,15 +26,15 @@
     "*.ts": "prettier --write -u"
   },
   "dependencies": {
-    "@aztec/accounts": "4.2.0-nightly.20260404",
-    "@aztec/aztec.js": "4.2.0-nightly.20260404",
-    "@aztec/noir-contracts.js": "4.2.0-nightly.20260404",
-    "@aztec/protocol-contracts": "4.2.0-nightly.20260404",
-    "@aztec/pxe": "4.2.0-nightly.20260404",
-    "@aztec/stdlib": "4.2.0-nightly.20260404",
-    "@aztec/wallet-sdk": "4.2.0-nightly.20260404",
-    "@aztec/wallets": "4.2.0-nightly.20260404",
-    "@defi-wonderland/aztec-benchmark": "4.2.0-aztecnr-rc.2",
+    "@aztec/accounts": "4.1.3",
+    "@aztec/aztec.js": "4.1.3",
+    "@aztec/noir-contracts.js": "4.1.3",
+    "@aztec/protocol-contracts": "4.1.3",
+    "@aztec/pxe": "4.1.3",
+    "@aztec/stdlib": "4.1.3",
+    "@aztec/wallet-sdk": "4.1.3",
+    "@aztec/wallets": "4.1.3",
+    "@defi-wonderland/aztec-benchmark": "4.1.0-rc.4",
     "commander": "14.0.1",
     "dotenv": "16.4.7"
   },
@@ -50,16 +50,16 @@
     "vitest": "4.0.17"
   },
   "config": {
-    "aztecVersion": "4.2.0-nightly.20260404"
+    "aztecVersion": "4.1.3"
   },
   "engines": {
     "node": ">=22"
   },
   "resolutions": {
-    "@aztec/foundation": "4.2.0-nightly.20260404",
-    "@aztec/aztec.js": "4.2.0-nightly.20260404",
-    "@aztec/wallets": "4.2.0-nightly.20260404",
-    "@aztec/stdlib": "4.2.0-nightly.20260404"
+    "@aztec/foundation": "4.1.3",
+    "@aztec/aztec.js": "4.1.3",
+    "@aztec/wallets": "4.1.3",
+    "@aztec/stdlib": "4.1.3"
   },
   "packageManager": "yarn@1.22.22+sha512.a6b2f7906b721bba3d67d4aff083df04dad64c399707841b7acf00f6b133b7ac24255f2652fa22ae3534329dc6180534e98d17432037ff6fd140556e2bb3137e"
 }

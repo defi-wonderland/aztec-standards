@@ -442,7 +442,7 @@ pub contract NFT {
         to: AztecAddress,
         completer: AztecAddress,
     ) -> PartialNFTNote {
-        let commitment = NFTNote::partial(to, self.context, to, completer);
+        let commitment = NFTNote::partial(to, self.storage.private_nfts.get_storage_slot(), self.context, to, completer);
         self.enqueue_self.store_commitment_in_storage_internal(commitment);
         commitment
     }
@@ -492,7 +492,6 @@ pub contract NFT {
         PartialNFTNote { commitment }.complete(
             self.context,
             completer,
-            self.storage.private_nfts.get_storage_slot(),
             token_id,
         );
     }
