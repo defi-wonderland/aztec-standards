@@ -3,7 +3,7 @@ use crate::Vault;
 use aztec::test::helpers::authwit as authwit_cheatcodes;
 use token_contract::Token;
 
-#[test(should_fail_with = "Trying to read from uninitialized PublicImmutable")]
+#[test(should_fail_with = "Not initialized 'context.nullifier_exists_unsafe(init_nullifier, context.this_address())'")]
 unconstrained fn deposit_public_to_public_without_shares() {
     let (env, vault_address, owner, recipient, _asset_address) =
         utils::setup_vault_without_shares();

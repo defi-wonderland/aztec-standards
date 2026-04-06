@@ -8,9 +8,6 @@ use crate::{
 use token_contract::test::utils::{check_total_supply, get_total_supply};
 use token_contract::Token;
 
-// TODO: When salt setting in env deployment is supported we can precompute the vault address and
-// compute the authwit before deployment. Deployment use constructor_with_asset for now.
-
 #[test]
 unconstrained fn vault_with_initial_deposit_success() {
     let initial_deposit: u128 = 1000;
