@@ -157,6 +157,21 @@ export const expectTokenBalances = async (
   );
 };
 
+export const assertSupply = async (
+  token: TokenContract,
+  expectedPublicSupply: bigint,
+  expectedPrivateSupply: bigint,
+  caller: AztecAddress,
+) => {
+  const totalSupply = (await token.methods.total_supply().simulate({ from: caller })).result;
+  const publicSupply = (await token.methods.public_supply().simulate({ from: caller })).result;
+  const privateSupply = (await token.methods.private_supply().simulate({ from: caller })).result;
+
+  expect(totalSupply).toBe(expectedPublicSupply + expectedPrivateSupply);
+  expect(publicSupply).toBe(expectedPublicSupply);
+  expect(privateSupply).toBe(expectedPrivateSupply);
+};
+
 export const AMOUNT = 1000n;
 export const wad = (n: number = 1) => AMOUNT * BigInt(n);
 

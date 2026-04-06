@@ -11,9 +11,7 @@ unconstrained fn mint_to_public_success() {
     env.call_public(minter, token.mint_to_public(owner, mint_amount));
 
     utils::check_public_balance(env, token_contract_address, owner, mint_amount);
-
-    let total_supply = env.view_public(token.total_supply());
-    assert(total_supply == mint_amount);
+    utils::assert_supply(env, token_contract_address, mint_amount, 0);
 }
 
 #[test(should_fail_with = "Contract execution has reverted: Assertion failed: caller is not minter 'minter.eq(sender)'")]

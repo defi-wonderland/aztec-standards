@@ -17,6 +17,7 @@ unconstrained fn burn_private_on_behalf_of_self() {
         owner,
         mint_amount - burn_amount,
     );
+    utils::assert_supply(env, token_contract_address, 0, mint_amount - burn_amount);
 }
 
 #[test]
@@ -44,6 +45,7 @@ unconstrained fn burn_private_on_behalf_of_other() {
         owner,
         mint_amount - burn_amount,
     );
+    utils::assert_supply(env, token_contract_address, 0, mint_amount - burn_amount);
 }
 
 #[test(should_fail_with = "Balance too low")]

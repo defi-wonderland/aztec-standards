@@ -27,6 +27,7 @@ unconstrained fn public_transfer() {
         mint_amount - transfer_amount,
     );
     utils::check_public_balance(env, token_contract_address, recipient, transfer_amount);
+    utils::assert_supply(env, token_contract_address, mint_amount, 0);
 }
 
 #[test]
@@ -47,6 +48,7 @@ unconstrained fn public_transfer_to_self() {
     );
     // Check balances
     utils::check_public_balance(env, token_contract_address, owner, mint_amount);
+    utils::assert_supply(env, token_contract_address, mint_amount, 0);
 }
 
 #[test]
@@ -74,6 +76,7 @@ unconstrained fn public_transfer_on_behalf_of_other() {
         mint_amount - transfer_amount,
     );
     utils::check_public_balance(env, token_contract_address, recipient, transfer_amount);
+    utils::assert_supply(env, token_contract_address, mint_amount, 0);
 }
 
 #[test(should_fail_with = "attempt to subtract with overflow 'self.storage.public_balances.at(from).read() - amount'")]
