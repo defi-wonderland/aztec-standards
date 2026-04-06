@@ -30,8 +30,14 @@ unconstrained fn transfer_public_to_private_success() {
             == transfer_amount,
         "public balance is not correct",
     );
-    // recipient private balance incre ases
+    // recipient private balance increases
     utils::check_private_balance(env, token_contract_address, recipient, transfer_amount);
+    utils::assert_supply(
+        env,
+        token_contract_address,
+        transfer_amount,
+        transfer_amount,
+    );
 }
 
 #[test(should_fail_with = "Assertion failed: attempt to subtract with overflow 'self.storage.public_balances.at(from).read() - amount'")]
@@ -85,6 +91,12 @@ unconstrained fn transfer_public_to_private_authwitness_success() {
     // Check balances changes as expected
     utils::check_private_balance(env, token_contract_address, recipient, transfer_amount);
     utils::check_public_balance(env, token_contract_address, sender, transfer_amount);
+    utils::assert_supply(
+        env,
+        token_contract_address,
+        transfer_amount,
+        transfer_amount,
+    );
 }
 
 #[test(should_fail_with = "Unknown auth witness for message hash")]

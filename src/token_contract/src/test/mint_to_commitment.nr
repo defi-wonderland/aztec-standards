@@ -18,9 +18,7 @@ unconstrained fn mint_to_commitment_success() {
     );
 
     utils::check_private_balance(env, token_contract_address, recipient, mint_amount);
-
-    let total_supply = env.view_public(Token::at(token_contract_address).total_supply());
-    assert(total_supply == mint_amount);
+    utils::assert_supply(env, token_contract_address, 0, mint_amount);
 }
 
 #[test(should_fail_with = "caller is not minter")]
