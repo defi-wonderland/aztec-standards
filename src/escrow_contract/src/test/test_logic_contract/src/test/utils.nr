@@ -1,12 +1,30 @@
 use crate::TestLogic;
 use aztec::{
+    event::{event_interface::EventInterface, EventSelector},
     protocol::{
         address::AztecAddress,
         point::Point,
         public_keys::{IvpkM, NpkM, OvpkM, PublicKeys, TpkM},
+        traits::Serialize,
     },
     test::helpers::test_environment::TestEnvironment,
 };
+use escrow_contract::types::escrow_details_event::EscrowDetailsLogContent;
+
+// --- TXE private events (`txe_oracles::get_private_events` is crate-private; we duplicate its oracle only) ---
+//
+// CANONICAL VALUES: keep in lockstep with aztec-nr when bumping the `aztec` dependency (this crate's Nargo.toml tag).
+// Source: https://github.com/AztecProtocol/aztec-packages/blob/v4.2.0-aztecnr-rc.2/noir-projects/aztec-nr/aztec/src/test/helpers/txe_oracles.nr#L13-L14
+// (`MAX_PRIVATE_EVENTS_PER_TXE_QUERY` and `MAX_EVENT_SERIALIZATION_LENGTH` are module-private there, so not importable.)
+global MAX_PRIVATE_EVENTS_PER_TXE_QUERY: u32 = 5;
+global MAX_EVENT_SERIALIZATION_LENGTH: u32 = 10;
+
+#[oracle(aztec_txe_getPrivateEvents)]
+unconstrained fn get_private_events_oracle(
+    selector: EventSelector,
+    contract_address: AztecAddress,
+    scope: AztecAddress,
+    ) -> ([[Field; MAX_EVENT_SERIALIZATION_LENGTH]; MAX_PRIVATE_EVENTS_PER_TXE_QUERY], [u32; MAX_PRIVATE_EVENTS_PER_TXE_QUERY], u32) {}
 
 pub unconstrained fn deploy_logic(
     env: &mut TestEnvironment,
@@ -65,4 +83,56 @@ pub unconstrained fn get_test_vector() -> (PublicKeys, Field, PublicKeys, Field)
     };
 
     (public_keys_1, secret_key_1, public_keys_2, secret_key_2)
+}
+
+/// Private events emitted in the last mined transaction, visible to `scope` (the recipient), from `contract_address`.
+pub unconstrained fn get_private_events_from_last_tx(
+    selector: EventSelector,
+    contract_address: AztecAddress,
+    scope: AztecAddress,
+    ) -> BoundedVec<BoundedVec<Field, MAX_EVENT_SERIALIZATION_LENGTH>, MAX_PRIVATE_EVENTS_PER_TXE_QUERY> {
+    std::static_assert(
+        <EscrowDetailsLogContent as Serialize>::N <= MAX_EVENT_SERIALIZATION_LENGTH,
+        "EscrowDetailsLogContent::N exceeds MAX_EVENT_SERIALIZATION_LENGTH - sync with aztec-nr txe_oracles and TXE",
+    );
+
+    let (raw_array_storage, event_lengths, query_length) =
+        get_private_events_oracle(selector, contract_address, scope);
+
+    assert(
+        query_length <= MAX_PRIVATE_EVENTS_PER_TXE_QUERY,
+        "TXE query_length exceeds MAX_PRIVATE_EVENTS_PER_TXE_QUERY — sync constants with aztec-nr txe_oracles",
+    );
+
+    let mut events = BoundedVec::new();
+    for i in 0..query_length {
+        let len = event_lengths[i];
+        assert(
+            len <= MAX_EVENT_SERIALIZATION_LENGTH,
+            "TXE event payload length exceeds MAX_EVENT_SERIALIZATION_LENGTH — sync constants with aztec-nr txe_oracles",
+        );
+        events.push(BoundedVec::from_parts(raw_array_storage[i], len));
+    }
+    events
+}
+
+/// Asserts the last transaction emitted exactly one `EscrowDetailsLogContent` private event to `recipient` from `logic`.
+pub unconstrained fn assert_escrow_details_private_event(
+    logic: AztecAddress,
+    recipient: AztecAddress,
+    expected_escrow: AztecAddress,
+    expected_secret_key: Field,
+) {
+    let selector = EscrowDetailsLogContent::get_event_type_id();
+    let events = get_private_events_from_last_tx(selector, logic, recipient);
+    assert_eq(events.len(), 1);
+
+    let payload = events.get(0);
+    let expected =
+        EscrowDetailsLogContent { escrow: expected_escrow, secret_key: expected_secret_key };
+    let serialized = expected.serialize();
+    assert_eq(payload.len(), serialized.len());
+    for i in 0..serialized.len() {
+        assert_eq(payload.get(i), serialized[i]);
+    }
 }
