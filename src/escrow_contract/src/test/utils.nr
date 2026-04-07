@@ -37,12 +37,8 @@ pub unconstrained fn deploy_escrow_with_secret(
 ) -> AztecAddress {
     let _escrow_account = cheatcodes::add_account(escrow_secret);
 
-    let _escrow_contract = ContractDeployment {
-        env: *env,
-        path: "@escrow_contract/Escrow",
-        secret: escrow_secret,
-        salt: logic_contract.to_field(),
-    };
+    let _escrow_contract =
+        ContractDeployment { env: *env, path: "@escrow_contract/Escrow", secret: escrow_secret };
 
     _escrow_contract.without_initializer()
 }
