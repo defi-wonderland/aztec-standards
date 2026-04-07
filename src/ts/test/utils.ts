@@ -662,12 +662,7 @@ export async function getTransferEvents(txHash: TxHash, contractAddress: AztecAd
     })
     .map((extLog) => {
       const eventFields = extLog.log.getEmittedFieldsWithoutTag();
-      const decoded = decodeFromAbi([eventMetadata.abiType], eventFields) as any;
-      return {
-        from: decoded.from instanceof AztecAddress ? decoded.from : AztecAddress.fromField(decoded.from.inner),
-        to: decoded.to instanceof AztecAddress ? decoded.to : AztecAddress.fromField(decoded.to.inner),
-        amount: decoded.amount,
-      } as TransferEvent;
+      return decodeFromAbi([eventMetadata.abiType], eventFields) as TransferEvent;
     });
 }
 
@@ -732,12 +727,7 @@ export async function getNFTTransferEvents(txHash: TxHash, contractAddress: Azte
     })
     .map((extLog) => {
       const eventFields = extLog.log.getEmittedFieldsWithoutTag();
-      const decoded = decodeFromAbi([eventMetadata.abiType], eventFields) as any;
-      return {
-        from: decoded.from instanceof AztecAddress ? decoded.from : AztecAddress.fromField(decoded.from.inner),
-        to: decoded.to instanceof AztecAddress ? decoded.to : AztecAddress.fromField(decoded.to.inner),
-        token_id: decoded.token_id,
-      } as NFTTransferEvent;
+      return decodeFromAbi([eventMetadata.abiType], eventFields) as NFTTransferEvent;
     });
 }
 
