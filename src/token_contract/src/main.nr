@@ -46,6 +46,7 @@ pub contract Token {
     /// @param total_supply The total supply of the token
     /// @param public_balances The public balances of the token
     /// @param minter The account permissioned to mint the token
+    /// @param public_supply The total supply of the token that are public
     #[storage]
     struct Storage<Context> {
         name: PublicImmutable<FieldCompressedString, Context>,
@@ -55,6 +56,7 @@ pub contract Token {
         total_supply: PublicMutable<u128, Context>,
         public_balances: Map<AztecAddress, PublicMutable<u128, Context>, Context>,
         minter: PublicImmutable<AztecAddress, Context>,
+        public_supply: PublicMutable<u128, Context>,
     }
 
     /// @notice Initializes the token with an initial supply
@@ -115,7 +117,7 @@ pub contract Token {
     ) {
         self.internal._decrease_private_balance(from, amount, INITIAL_TRANSFER_CALL_MAX_NOTES);
 
-        self.enqueue_self.increase_public_balance_internal(to, amount);
+        self.enqueue_self.increase_public_balance_and_public_supply_internal(to, amount);
     }
 
     /// @notice Transfer tokens from private balance to public balance and initializes a commitment
@@ -136,7 +138,7 @@ pub contract Token {
     ) -> Field {
         self.internal._decrease_private_balance(from, amount, INITIAL_TRANSFER_CALL_MAX_NOTES);
 
-        self.enqueue_self.increase_public_balance_internal(to, amount);
+        self.enqueue_self.increase_public_balance_and_public_supply_internal(to, amount);
 
         // Only the sender will be able to complete the partial note
         let completer = self.msg_sender();
@@ -203,7 +205,7 @@ pub contract Token {
         amount: u128,
         _nonce: Field,
     ) {
-        self.enqueue_self.decrease_public_balance_internal(from, amount);
+        self.enqueue_self.decrease_public_balance_and_supply_internal(from, amount);
 
         self.internal._increase_private_balance(to, amount);
     }
@@ -271,6 +273,7 @@ pub contract Token {
         _nonce: Field,
     ) {
         self.internal._decrease_public_balance(from, amount);
+        self.internal._decrease_public_supply(amount);
 
         let completer = self.msg_sender();
         self.internal._increase_commitment_balance(
@@ -282,24 +285,26 @@ pub contract Token {
         self.emit(Transfer { from, to: PRIVATE_ADDRESS_MAGIC_VALUE, amount });
     }
 
-    /// @notice Increases the public balance of `to` by `amount`
+    /// @notice Increases the public balance of `to` by `amount` and updates the public supply
     /// @param to The address of the recipient
     /// @param amount The amount of tokens to increase the balance by
     #[external("public")]
     #[only_self]
-    fn increase_public_balance_internal(to: AztecAddress, amount: u128) {
+    fn increase_public_balance_and_public_supply_internal(to: AztecAddress, amount: u128) {
         self.internal._increase_public_balance(to, amount);
+        self.internal._increase_public_supply(amount);
 
         self.emit(Transfer { from: PRIVATE_ADDRESS_MAGIC_VALUE, to, amount });
     }
 
-    /// @notice Decreases the public balance of `from` by `amount`
+    /// @notice Decreases the public balance of `from` by `amount` and updates the public supply
     /// @param from The address of the sender
     /// @param amount The amount of tokens to decrease the balance by
     #[external("public")]
     #[only_self]
-    fn decrease_public_balance_internal(from: AztecAddress, amount: u128) {
+    fn decrease_public_balance_and_supply_internal(from: AztecAddress, amount: u128) {
         self.internal._decrease_public_balance(from, amount);
+        self.internal._decrease_public_supply(amount);
 
         self.emit(Transfer { from, to: PRIVATE_ADDRESS_MAGIC_VALUE, amount });
     }
@@ -323,6 +328,22 @@ pub contract Token {
     #[view]
     fn total_supply() -> u128 {
         self.storage.total_supply.read()
+    }
+
+    /// @notice Returns the public total supply of the token
+    /// @return The public total supply of the token
+    #[external("public")]
+    #[view]
+    fn public_supply() -> u128 {
+        self.storage.public_supply.read()
+    }
+
+    /// @notice Returns the private total supply of the token
+    /// @return The private total supply of the token
+    #[external("public")]
+    #[view]
+    fn private_supply() -> u128 {
+        self.storage.total_supply.read() - self.storage.public_supply.read()
     }
 
     /// @notice Returns the name of the token
@@ -567,6 +588,22 @@ pub contract Token {
         self.storage.total_supply.write(new_supply);
     }
 
+    /// @notice Increases the public supply by `amount`
+    /// @param amount The amount of tokens to increase the public supply by
+    #[internal("public")]
+    fn _increase_public_supply(amount: u128) {
+        let new_supply = self.storage.public_supply.read() + amount;
+        self.storage.public_supply.write(new_supply);
+    }
+
+    /// @notice Decreases the public supply by `amount`
+    /// @param amount The amount to decrease the public supply by
+    #[internal("public")]
+    fn _decrease_public_supply(amount: u128) {
+        let new_supply = self.storage.public_supply.read() - amount;
+        self.storage.public_supply.write(new_supply);
+    }
+
     /// @notice Initializes a transfer commitment to be used for transfers/mints
     /// @param to The address of the recipient
     /// @param completer The address used to compute the validity commitment
@@ -581,13 +618,14 @@ pub contract Token {
         commitment
     }
 
-    /// @notice Mints tokens to a public balance and increases the total supply
+    /// @notice Mints tokens to a public balance and increases the total supply and public supply
     /// @param to The address of the recipient
     /// @param amount The amount of tokens to mint
     #[internal("public")]
     fn _mint_to_public(to: AztecAddress, amount: u128) {
         self.internal._increase_public_balance(to, amount);
         self.internal._increase_total_supply(amount);
+        self.internal._increase_public_supply(amount);
 
         self.emit(Transfer { from: AztecAddress::zero(), to, amount });
     }
@@ -601,13 +639,14 @@ pub contract Token {
         self.enqueue_self.increase_total_supply_internal(amount);
     }
 
-    /// @notice Burns tokens from a public balance and decreases the total supply
+    /// @notice Burns tokens from a public balance and decreases the total supply and public supply
     /// @param from The address to burn tokens from
     /// @param amount The amount of tokens to burn
     #[internal("public")]
     fn _burn_public(from: AztecAddress, amount: u128) {
         self.internal._decrease_public_balance(from, amount);
         self.internal._decrease_total_supply(amount);
+        self.internal._decrease_public_supply(amount);
 
         self.emit(Transfer { from, to: AztecAddress::zero(), amount });
     }
