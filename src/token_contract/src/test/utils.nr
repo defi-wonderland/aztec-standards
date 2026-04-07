@@ -70,6 +70,7 @@ pub unconstrained fn deploy_token_with_initial_supply(
         18,
         initial_supply,
         to,
+        AztecAddress::zero(),
     );
     let token_contract_address = env.deploy("@token_contract/Token").with_public_initializer(
         owner,
@@ -90,6 +91,7 @@ pub unconstrained fn deploy_token_with_minter(
         "TT00000000000000000000000000000",
         18,
         minter,
+        AztecAddress::zero(),
     );
     let token_contract_address = env.deploy("@token_contract/Token").with_public_initializer(
         owner,
@@ -241,6 +243,97 @@ pub unconstrained fn setup_and_mint_to_public_with_proxy() -> (TestEnvironment, 
         setup_and_mint_to_public_without_minter(/* with_account_contracts */ true);
     let proxy = env.deploy("@generic_proxy/GenericProxy").without_initializer();
     (env, token_contract_address, owner, recipient, proxy)
+}
+
+pub unconstrained fn deploy_token_with_minter_and_auth(
+    env: &mut TestEnvironment,
+    owner: AztecAddress,
+    minter: AztecAddress,
+    auth_contract: AztecAddress,
+) -> AztecAddress {
+    let initializer_call_interface = Token::interface().constructor_with_minter(
+        "TestToken0000000000000000000000",
+        "TT00000000000000000000000000000",
+        18,
+        minter,
+        auth_contract,
+    );
+    env.deploy("@token_contract/Token").with_public_initializer(owner, initializer_call_interface)
+}
+
+// --------- Authorization Test Utilities ---------
+
+pub unconstrained fn deploy_auth_contract(env: &mut TestEnvironment) -> AztecAddress {
+    env.deploy("@test_authorization_contract/AuthorizationContract").without_initializer()
+}
+
+pub unconstrained fn deploy_token_with_initial_supply_and_auth(
+    env: &mut TestEnvironment,
+    owner: AztecAddress,
+    initial_supply: u128,
+    to: AztecAddress,
+    auth_contract: AztecAddress,
+) -> AztecAddress {
+    let initializer_call_interface = Token::interface().constructor_with_initial_supply(
+        "TestToken0000000000000000000000",
+        "TT00000000000000000000000000000",
+        18,
+        initial_supply,
+        to,
+        auth_contract,
+    );
+    env.deploy("@token_contract/Token").with_public_initializer(owner, initializer_call_interface)
+}
+
+pub unconstrained fn setup_with_initial_supply_and_auth(
+    with_account_contracts: bool,
+    initial_supply: u128,
+) -> (TestEnvironment, AztecAddress, AztecAddress, AztecAddress, AztecAddress) {
+    let mut env = TestEnvironment::new();
+
+    let (owner, recipient) = if with_account_contracts {
+        let owner = env.create_contract_account();
+        let recipient = env.create_contract_account();
+        (owner, recipient)
+    } else {
+        let owner = env.create_light_account();
+        let recipient = env.create_light_account();
+        (owner, recipient)
+    };
+
+    let auth_contract_address = deploy_auth_contract(&mut env);
+    let token_contract_address = deploy_token_with_initial_supply_and_auth(
+        &mut env,
+        owner,
+        initial_supply,
+        owner,
+        auth_contract_address,
+    );
+
+    (env, token_contract_address, owner, recipient, auth_contract_address)
+}
+
+pub unconstrained fn setup_with_minter_and_auth(
+    with_account_contracts: bool,
+) -> (TestEnvironment, AztecAddress, AztecAddress, AztecAddress, AztecAddress, AztecAddress) {
+    let mut env = TestEnvironment::new();
+    let (owner, recipient, minter) = if with_account_contracts {
+        let owner = env.create_contract_account();
+        let recipient = env.create_contract_account();
+        let minter = env.create_contract_account();
+        (owner, recipient, minter)
+    } else {
+        let owner = env.create_light_account();
+        let recipient = env.create_light_account();
+        let minter = env.create_light_account();
+        (owner, recipient, minter)
+    };
+
+    let auth_contract_address = deploy_auth_contract(&mut env);
+    let token_contract_address =
+        deploy_token_with_minter_and_auth(&mut env, owner, minter, auth_contract_address);
+
+    (env, token_contract_address, owner, recipient, minter, auth_contract_address)
 }
 
 /// @notice Returns the u128 maximum value
