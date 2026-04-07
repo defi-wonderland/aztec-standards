@@ -117,7 +117,7 @@ pub contract Token {
     ) {
         self.internal._decrease_private_balance(from, amount, INITIAL_TRANSFER_CALL_MAX_NOTES);
 
-        self.enqueue_self.increase_public_balance_and_supply_internal(to, amount);
+        self.enqueue_self.increase_public_balance_and_public_supply_internal(to, amount);
     }
 
     /// @notice Transfer tokens from private balance to public balance and initializes a commitment
@@ -138,7 +138,7 @@ pub contract Token {
     ) -> Field {
         self.internal._decrease_private_balance(from, amount, INITIAL_TRANSFER_CALL_MAX_NOTES);
 
-        self.enqueue_self.increase_public_balance_and_supply_internal(to, amount);
+        self.enqueue_self.increase_public_balance_and_public_supply_internal(to, amount);
 
         // Only the sender will be able to complete the partial note
         let completer = self.msg_sender();
@@ -290,7 +290,7 @@ pub contract Token {
     /// @param amount The amount of tokens to increase the balance by
     #[external("public")]
     #[only_self]
-    fn increase_public_balance_and_supply_internal(to: AztecAddress, amount: u128) {
+    fn increase_public_balance_and_public_supply_internal(to: AztecAddress, amount: u128) {
         self.internal._increase_public_balance(to, amount);
         self.internal._increase_public_supply(amount);
 

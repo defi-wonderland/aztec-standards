@@ -163,9 +163,9 @@ export const assertSupply = async (
   expectedPrivateSupply: bigint,
   caller: AztecAddress,
 ) => {
-  const totalSupply = (await token.methods.total_supply().simulate({ from: caller })).result;
-  const publicSupply = (await token.methods.public_supply().simulate({ from: caller })).result;
-  const privateSupply = (await token.methods.private_supply().simulate({ from: caller })).result;
+  const { result: totalSupply } = await token.methods.total_supply().simulate({ from: caller });
+  const { result: publicSupply } = await token.methods.public_supply().simulate({ from: caller });
+  const { result: privateSupply } = await token.methods.private_supply().simulate({ from: caller });
 
   expect(totalSupply).toBe(expectedPublicSupply + expectedPrivateSupply);
   expect(publicSupply).toBe(expectedPublicSupply);
