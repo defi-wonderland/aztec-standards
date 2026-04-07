@@ -1,16 +1,24 @@
 use crate::Escrow;
 use crate::test::utils as escrow_utils;
+use aztec::oracle::get_contract_instance::get_contract_instance;
+use aztec::protocol::{address::AztecAddress, traits::FromField};
 use token::{test::utils as token_utils, Token};
 
-// TODO (reenable test): TXE scope enforcement means only the `from` address's notes are accessible during
-// private execution. The escrow's token notes are not in scope when called from logic_contract_address.
-// The TS tests handle this via `additionalScopes: [escrow.address]`, but TXE doesn't support it yet.
-// See: https://github.com/AztecProtocol/aztec-packages/blob/v4.2.0-aztecnr-rc.2/noir-projects/aztec-nr/aztec/src/test/helpers/test_environment.nr#L953-L954
+// TODO: Fix error "No public key registered for address 0x0000000000000000000000000000000000000000000000000000000000000001."
+// Previously, with env.impersonate(any address) we could impersonate any address even if it didn't have keys,
+// but now with env.call_private(any address, ...) it is not possible.
+// The sender must have keys and the address must be registered in PXE like this.
+// Because the escrow contract cannot be deployed with the salt that we want yet,
+// it defaults to address 0x1 which we don't know the secret of.
+// #[test]
 #[allow(dead_code)]
 unconstrained fn escrow_withdraw_success() {
     let escrow_secret: Field = 123456;
-    let (mut env, escrow_contract_address, token_contract_address, _, _, recipient, minter, logic_contract_address) =
+    let (mut env, escrow_contract_address, token_contract_address, _, _, recipient, minter) =
         escrow_utils::set_escrow_with_token_and_nft(false, escrow_secret);
+
+    let escrow_instance = get_contract_instance(escrow_contract_address);
+    let logic_contract_address = AztecAddress::from_field(escrow_instance.salt);
 
     // Mint some tokens to escrow
     let amount: u128 = token_utils::mint_amount;
@@ -36,12 +44,15 @@ unconstrained fn escrow_withdraw_success() {
     token_utils::check_private_balance(env, token_contract_address, recipient, amount);
 }
 
-// TODO (reenable test): same TXE scope enforcement issue as escrow_withdraw_success (see comment above).
+// #[test]
 #[allow(dead_code)]
 unconstrained fn escrow_withdraw_twice_success() {
     let escrow_secret: Field = 123456;
-    let (mut env, escrow_contract_address, token_contract_address, _, _, recipient, minter, logic_contract_address) =
+    let (mut env, escrow_contract_address, token_contract_address, _, _, recipient, minter) =
         escrow_utils::set_escrow_with_token_and_nft(false, escrow_secret);
+
+    let escrow_instance = get_contract_instance(escrow_contract_address);
+    let logic_contract_address = AztecAddress::from_field(escrow_instance.salt);
 
     // Mint some tokens to escrow
     let total_amount: u128 = token_utils::mint_amount * 2;
@@ -88,7 +99,7 @@ unconstrained fn escrow_withdraw_twice_success() {
 #[test(should_fail_with = "Not Authorized")]
 unconstrained fn escrow_withdraw_unauthorized() {
     let escrow_secret: Field = 123456;
-    let (mut env, escrow_contract_address, token_contract_address, _, owner, recipient, _, _) =
+    let (mut env, escrow_contract_address, token_contract_address, _, owner, recipient, _) =
         escrow_utils::set_escrow_with_token_and_nft(false, escrow_secret);
 
     let amount: u128 = token_utils::mint_amount;
