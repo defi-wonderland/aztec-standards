@@ -26,15 +26,15 @@
     "*.ts": "prettier --write -u"
   },
   "dependencies": {
-    "@aztec/accounts": "4.1.3",
-    "@aztec/aztec.js": "4.1.3",
-    "@aztec/noir-contracts.js": "4.1.3",
-    "@aztec/protocol-contracts": "4.1.3",
-    "@aztec/pxe": "4.1.3",
-    "@aztec/stdlib": "4.1.3",
-    "@aztec/wallet-sdk": "4.1.3",
-    "@aztec/wallets": "4.1.3",
-    "@defi-wonderland/aztec-benchmark": "4.1.0-rc.4",
+    "@aztec/accounts": "4.2.0-nightly.20260407",
+    "@aztec/aztec.js": "4.2.0-nightly.20260407",
+    "@aztec/noir-contracts.js": "4.2.0-nightly.20260407",
+    "@aztec/protocol-contracts": "4.2.0-nightly.20260407",
+    "@aztec/pxe": "4.2.0-nightly.20260407",
+    "@aztec/stdlib": "4.2.0-nightly.20260407",
+    "@aztec/wallet-sdk": "4.2.0-nightly.20260407",
+    "@aztec/wallets": "4.2.0-nightly.20260407",
+    "@defi-wonderland/aztec-benchmark": "4.2.0-aztecnr-rc.2",
     "commander": "14.0.1",
     "dotenv": "16.4.7"
   },
@@ -50,16 +50,16 @@
     "vitest": "4.0.17"
   },
   "config": {
-    "aztecVersion": "4.1.3"
+    "aztecVersion": "4.2.0-nightly.20260407"
   },
   "engines": {
     "node": ">=22"
   },
   "resolutions": {
-    "@aztec/foundation": "4.1.3",
-    "@aztec/aztec.js": "4.1.3",
-    "@aztec/wallets": "4.1.3",
-    "@aztec/stdlib": "4.1.3"
+    "@aztec/foundation": "4.2.0-nightly.20260407",
+    "@aztec/aztec.js": "4.2.0-nightly.20260407",
+    "@aztec/wallets": "4.2.0-nightly.20260407",
+    "@aztec/stdlib": "4.2.0-nightly.20260407"
   },
   "packageManager": "yarn@1.22.22+sha512.a6b2f7906b721bba3d67d4aff083df04dad64c399707841b7acf00f6b133b7ac24255f2652fa22ae3534329dc6180534e98d17432037ff6fd140556e2bb3137e"
 }
