@@ -2,8 +2,7 @@ use aztec::{
     oracle::random::random,
     protocol::{address::AztecAddress, traits::ToField},
     test::helpers::{
-        test_environment::TestEnvironment, txe_oracles as cheatcodes,
-        utils::ContractDeployment,
+        test_environment::TestEnvironment, txe_oracles as cheatcodes, utils::ContractDeployment,
     },
 };
 use nft::test::utils as nft_utils;
@@ -37,13 +36,24 @@ pub unconstrained fn deploy_escrow_with_secret(
     let _escrow_account = cheatcodes::add_account(escrow_secret);
 
     // Deploy the Escrow contract using escrow_secret as the secret
-    let _escrow_contract =
-        ContractDeployment { env: *env, path: "@escrow_contract/Escrow", secret: escrow_secret, salt: random() };
+    let _escrow_contract = ContractDeployment {
+        env: *env,
+        path: "@escrow_contract/Escrow",
+        secret: escrow_secret,
+        salt: random(),
+    };
 
     _escrow_contract.without_initializer()
 }
 
 pub unconstrained fn get_escrow_class_id() -> Field {
-    let escrow_instance = cheatcodes::deploy("@escrow_contract/Escrow", "", [], random(), random(), AztecAddress::zero());
+    let escrow_instance = cheatcodes::deploy(
+        "@escrow_contract/Escrow",
+        "",
+        [],
+        random(),
+        random(),
+        AztecAddress::zero(),
+    );
     escrow_instance.contract_class_id.to_field()
 }

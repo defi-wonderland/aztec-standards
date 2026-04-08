@@ -50,9 +50,8 @@ impl NoteHash for NFTNote {
         // perform both steps of the partial note computation.
 
         // First we create the partial note from a commitment to the private content.
-        let partial_note = PartialNFTNote {
-            commitment: compute_partial_commitment(owner, randomness),
-        };
+        let partial_note =
+            PartialNFTNote { commitment: compute_partial_commitment(owner, randomness) };
 
         // Then compute the completion note hash. In a real partial note this step would be performed in public.
         partial_note.compute_complete_note_hash(storage_slot, self.token_id)
@@ -179,7 +178,13 @@ pub struct PartialNFTNote {
 
 impl PartialNFTNote {
     /// Completes the partial note, creating a new note that can be used like any other NFTNote.
-    pub fn complete(self, context: PublicContext, completer: AztecAddress, storage_slot: Field, token_id: Field) {
+    pub fn complete(
+        self,
+        context: PublicContext,
+        completer: AztecAddress,
+        storage_slot: Field,
+        token_id: Field,
+    ) {
         // A note with a value of zero is valid, but we cannot currently complete a partial note with such a value
         // because this will result in the completion log having its last field set to 0. Public logs currently do not
         // track their length, and so trailing zeros are simply trimmed. This results in the completion log missing its
