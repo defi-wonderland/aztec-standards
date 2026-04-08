@@ -21,3 +21,4 @@ wallet_data_*
 *-store/
 
 .claude/worktrees
+.bb-crs/
