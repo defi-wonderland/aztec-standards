@@ -49,7 +49,7 @@ impl NoteHash for NFTNote {
         // values, so that notes all behave the same way regardless of how they were created. To achieve this, we
         // perform both steps of the partial note computation.
 
-        // First we create the partial note from a commitment to the private content (including storage slot).
+        // First we create the partial note from a commitment to the private content.
         let partial_note =
             PartialNFTNote { commitment: compute_partial_commitment(owner, randomness) };
 
@@ -203,8 +203,8 @@ impl PartialNFTNote {
         );
 
         // We need to do two things:
-        //  - emit a public log containing the public fields (the storage slot and token id). The contract will later
-        //  find it by searching for the domain-separated commitment as the tag.
+        //  - emit a public log containing the public fields (the token id). The contract will later find it by
+        //  searching for the expected tag (which is simply the partial note commitment).
         //  - insert the completion note hash (i.e. the hash of the note) into the note hash tree. This is typically
         //  only done in private to hide the preimage of the hash that is inserted, but completed partial notes are
         //  inserted in public as the public values are provided and the note hash computed.
