@@ -1,0 +1,25 @@
+src/token_contract/src/test/transfer_private_to_commitment.nr
+  4023a308184cf733 79
+package.json
+  4023a308184cf733 3,29-37,53
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.2.6",
+  "base_commit_sha": "481560f28a70a1eb7267d710a24f66a5c6970946",
+  "prompts": {
+    "4023a308184cf733": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "e78580ad-8134-4b9a-b394-8f7f6a7b5cdf",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "xorsal",
+      "messages": [],
+      "total_additions": 14,
+      "total_deletions": 14,
+      "accepted_lines": 12,
+      "overriden_lines": 0
+    }
+  }
+}
