@@ -247,6 +247,11 @@ export async function deployNFTWithMinter(wallet: EmbeddedWallet, deployer: Azte
  * Call this once (e.g. in beforeAll) and pass the result to deployVaultAndAssetWithMinter.
  */
 export async function setupVaultDeployer(wallet: Wallet, deployer: AztecAddress): Promise<VaultDeployerContract> {
+  // NOTE: ContractDeployer doesn't publish dependent contract classes.
+  // Deploying a throwaway vault forces Vault class publication on-chain.
+  // Token class is already published at this point.
+  await VaultContract.deploy(wallet, deployer, 1).send({ from: deployer });
+
   const factory = new ContractDeployer(VaultDeployerContractArtifact, wallet);
   const { contract } = await factory.deploy().send({ from: deployer });
   return contract as VaultDeployerContract;
