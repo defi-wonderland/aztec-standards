@@ -246,15 +246,10 @@ export async function deployNFTWithMinter(wallet: EmbeddedWallet, deployer: Azte
  * The VaultDeployer deployment also registers all dependent classes (Vault, Token).
  * Call this once (e.g. in beforeAll) and pass the result to deployVaultAndAssetWithMinter.
  */
-export async function setupVaultDeployer(wallet: Wallet, deployer: AztecAddress) {
-  // Deploy a throwaway vault to publish the Vault contract class on-chain
-  // (required before VaultDeployer can publish vault instances)
-  await VaultContract.deploy(wallet, deployer, 1).send({ from: deployer });
-
-  // Deploy VaultDeployer (no initializer)
-  const cd = new ContractDeployer(VaultDeployerContractArtifact, wallet);
-  const { contract: vaultDeployer } = await cd.deploy().send({ from: deployer });
-  return vaultDeployer as VaultDeployerContract;
+export async function setupVaultDeployer(wallet: Wallet, deployer: AztecAddress): Promise<VaultDeployerContract> {
+  const factory = new ContractDeployer(VaultDeployerContractArtifact, wallet);
+  const { contract } = await factory.deploy().send({ from: deployer });
+  return contract as VaultDeployerContract;
 }
 
 /**
@@ -271,7 +266,7 @@ export async function deployVaultAndAssetWithMinter(
   deployer: AztecAddress,
   vaultDeployer: VaultDeployerContract,
 ): Promise<[VaultContract, TokenContract, TokenContract]> {
-  // Deploy asset token with deployer as minter (also publishes Token class)
+  // Deploy asset token with deployer as minter
   const { contract: assetContract } = await TokenContract.deployWithOpts(
     { method: 'constructor_with_minter', wallet },
     'AssetToken',
@@ -369,49 +364,27 @@ export async function deployVaultWithInitialDeposit(
   await wallet.registerContract(vaultInstance, VaultContractArtifact);
   await wallet.registerContract(sharesInstance, TokenContractArtifact);
 
-  if (initialDeposit > 0n) {
-    // Authorize vault to transfer assets from depositor (vault address is precomputed)
-    const transfer = assetContract.methods.transfer_public_to_public(
-      depositor,
-      vaultInstance.address,
-      initialDeposit,
-      0,
-    );
-    await setPublicAuthWit(vaultInstance.address, transfer, depositor, wallet as EmbeddedWallet);
+  // Authorize vault to transfer assets from depositor
+  const transfer = assetContract.methods.transfer_public_to_public(depositor, vaultInstance.address, initialDeposit, 0);
+  await setPublicAuthWit(vaultInstance.address, transfer, depositor, wallet as EmbeddedWallet);
 
-    // Atomically deploy vault + shares with initial deposit
-    await vaultDeployer.methods
-      .deploy_vault_with_initial_deposit(
-        assetContract.address,
-        1,
-        vaultClass.id,
-        vaultSalt,
-        'SharesToken',
-        'ST',
-        18,
-        tokenClass.id,
-        sharesSalt,
-        initialDeposit,
-        depositor,
-        0,
-      )
-      .send({ from: deployer });
-  } else {
-    // Atomically deploy vault + shares without initial deposit
-    await vaultDeployer.methods
-      .deploy_vault(
-        assetContract.address,
-        1,
-        vaultClass.id,
-        vaultSalt,
-        'SharesToken',
-        'ST',
-        18,
-        tokenClass.id,
-        sharesSalt,
-      )
-      .send({ from: deployer });
-  }
+  // Atomically deploy vault + shares with initial deposit
+  await vaultDeployer.methods
+    .deploy_vault_with_initial_deposit(
+      assetContract.address,
+      1,
+      vaultClass.id,
+      vaultSalt,
+      'SharesToken',
+      'ST',
+      18,
+      tokenClass.id,
+      sharesSalt,
+      initialDeposit,
+      depositor,
+      0,
+    )
+    .send({ from: deployer });
 
   // Create contract handles at the computed addresses
   const vaultContract = await VaultContract.at(vaultInstance.address, wallet);

@@ -1055,13 +1055,9 @@ describe('Vault', () => {
       it(
         'zero-share deposit reverts',
         async () => {
-          // Deploy vault with initial deposit = 0 (no protection)
-          const initialDeposit = 0n;
-          const [vaultContract, sharesContract] = await deployVaultWithInitialDeposit(
+          // Deploy vault without initial deposit (no protection)
+          const [vaultContract, assetContract, sharesContract] = await deployVaultAndAssetWithMinter(
             wallet,
-            alice,
-            asset,
-            initialDeposit,
             alice,
             vaultDeployer,
           );
@@ -1070,8 +1066,8 @@ describe('Vault', () => {
           const victim = carl;
 
           // Fund attacker and victim
-          await asset.methods.mint_to_public(attacker, 20_000n * scale).send({ from: alice });
-          await asset.methods.mint_to_public(victim, 20_000n * scale).send({ from: alice });
+          await assetContract.methods.mint_to_public(attacker, 20_000n * scale).send({ from: alice });
+          await assetContract.methods.mint_to_public(victim, 20_000n * scale).send({ from: alice });
 
           // 1) Attacker inflates the exchange rate: donate + mint 1 share
           const donationAmount = 1000n * scale;
@@ -1086,7 +1082,7 @@ describe('Vault', () => {
 
           await callVaultWithPublicAuthWitFromWallet(
             vaultContract,
-            asset,
+            assetContract,
             attackerDepositAction,
             wallet,
             attacker,
@@ -1097,7 +1093,7 @@ describe('Vault', () => {
           expect(supplyAfterAttacker).toBe(1n);
 
           // 2) Victim deposits dust below threshold — would yield 0 shares, reverts
-          const currentVaultAssets = await publicBalance(asset, vaultContract.address, attacker);
+          const currentVaultAssets = await publicBalance(assetContract, vaultContract.address, attacker);
           const thresholdForOneShare = (currentVaultAssets + 1n) / 2n;
           const victimDepositAmount = thresholdForOneShare - 1n;
 
@@ -1107,7 +1103,7 @@ describe('Vault', () => {
           await expect(
             callVaultWithPublicAuthWitFromWallet(
               vaultContract,
-              asset,
+              assetContract,
               victimDepositAction,
               wallet,
               victim,
