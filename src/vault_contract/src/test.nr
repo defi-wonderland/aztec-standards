@@ -31,4 +31,5 @@ mod preview_deposit;
 mod preview_issue;
 mod preview_withdraw;
 mod preview_redeem;
+mod constructor;
 mod constructor_with_initial_deposit;
