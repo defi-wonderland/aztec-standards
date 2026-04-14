@@ -11,6 +11,7 @@ import { Benchmark, BenchmarkContext } from '@defi-wonderland/aztec-benchmark';
 import { TokenContract } from '../src/artifacts/Token.js';
 import { VaultContract } from '../src/artifacts/Vault.js';
 import {
+  setupVaultDeployer,
   deployVaultAndAssetWithMinter,
   setPrivateAuthWit,
   setPublicAuthWit,
@@ -47,7 +48,12 @@ export default class TokenContractBenchmark extends Benchmark {
     const { cleanup, wallet, accounts } = await setupTestSuite(true);
     const [deployer] = accounts;
     const bob = accounts[1];
-    const [vaultContract, assetContract, sharesContract] = await deployVaultAndAssetWithMinter(wallet, deployer);
+    const vaultDeployer = await setupVaultDeployer(wallet, deployer);
+    const [vaultContract, assetContract, sharesContract] = await deployVaultAndAssetWithMinter(
+      wallet,
+      deployer,
+      vaultDeployer,
+    );
     const assetMethods = assetContract.withWallet(wallet).methods;
     const sharesMethods = sharesContract.withWallet(wallet).methods;
 
