@@ -1,5 +1,6 @@
 import {
   setupTestSuite,
+  setupVaultDeployer,
   deployVaultAndAssetWithMinter,
   deployVaultWithInitialDeposit,
   deployTokenWithMinter,
@@ -19,6 +20,7 @@ import { describe, it, expect, beforeAll, beforeEach, afterAll } from 'vitest';
 
 import { TokenContract } from '../../../src/artifacts/Token.js';
 import { VaultContract } from '../../../src/artifacts/Vault.js';
+import { type VaultDeployerContract } from '../../../src/artifacts/VaultDeployer.js';
 
 const TEST_TIMEOUT = 300_000;
 
@@ -29,6 +31,7 @@ describe('Vault', () => {
   let alice: AztecAddress;
   let bob: AztecAddress;
   let carl: AztecAddress;
+  let vaultDeployer: VaultDeployerContract;
   let vault: VaultContract;
   let asset: TokenContract;
   let shares: TokenContract;
@@ -107,10 +110,12 @@ describe('Vault', () => {
     ({ cleanup, wallet, accounts } = await setupTestSuite());
 
     [alice, bob, carl] = accounts;
+
+    vaultDeployer = await setupVaultDeployer(wallet, alice);
   });
 
   beforeEach(async () => {
-    [vault, asset, shares] = await deployVaultAndAssetWithMinter(wallet, alice);
+    [vault, asset, shares] = await deployVaultAndAssetWithMinter(wallet, alice, vaultDeployer);
   });
 
   afterAll(async () => {
@@ -1058,6 +1063,7 @@ describe('Vault', () => {
             asset,
             initialDeposit,
             alice,
+            vaultDeployer,
           );
 
           const attacker = bob;
@@ -1127,6 +1133,7 @@ describe('Vault', () => {
             assetContract,
             initialDeposit,
             alice,
+            vaultDeployer,
           );
 
           const attacker = bob;
