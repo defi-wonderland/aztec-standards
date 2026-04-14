@@ -797,13 +797,6 @@ pub contract Vault {
      * ======================= VAULT VIEW ========================
      * ======================================================== */
 
-    /// @notice Returns the deployer address (from the contract instance, not storage)
-    /// @return The address of the deployer
-    #[external("public")]
-    #[view]
-    fn deployer() -> AztecAddress {
-        get_contract_instance_deployer_avm(self.address).unwrap()
-    }
 
     /// @notice Returns the underlying asset address
     /// @return The address of the underlying asset
