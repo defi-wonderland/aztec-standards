@@ -16,7 +16,7 @@ use aztec::macros::aztec;
 pub contract VaultDeployer {
     use aztec::{
         hash::hash_args,
-        macros::functions::{external, initializer},
+        macros::functions::external,
         protocol::{
             address::AztecAddress, constants::DOM_SEP__INITIALIZER,
             contract_class_id::ContractClassId, contract_instance::ContractInstance,
@@ -26,10 +26,6 @@ pub contract VaultDeployer {
     };
     use token_contract::Token;
     use vault_contract::Vault;
-
-    #[external("public")]
-    #[initializer]
-    fn constructor() {}
 
     /// @notice Deploys a vault and its shares token atomically
     /// @param asset The underlying asset token address
@@ -42,7 +38,7 @@ pub contract VaultDeployer {
     /// @param shares_class_id The contract class ID of the shares token contract
     /// @param shares_salt The salt for shares token deployment
     #[external("private")]
-    fn deploy(
+    fn deploy_vault(
         asset: AztecAddress,
         vault_offset: u128,
         vault_class_id: ContractClassId,
@@ -95,7 +91,7 @@ pub contract VaultDeployer {
     /// @dev The depositor must have authorized the vault to transfer initial_deposit of
     ///      the asset token via authwit before this tx is submitted.
     #[external("private")]
-    fn deploy_with_initial_deposit(
+    fn deploy_vault_with_initial_deposit(
         asset: AztecAddress,
         vault_offset: u128,
         vault_class_id: ContractClassId,

@@ -61,7 +61,8 @@ interface WalletWithInternals {
 
 import { TokenContract, TokenContractArtifact } from '../../../src/artifacts/Token.js';
 import { VaultContract, VaultContractArtifact } from '../../../src/artifacts/Vault.js';
-import { VaultDeployerContract } from '../../../src/artifacts/VaultDeployer.js';
+import { VaultDeployerContract, VaultDeployerContractArtifact } from '../../../src/artifacts/VaultDeployer.js';
+import { ContractDeployer } from '@aztec/aztec.js/deployment';
 import { NFTContract } from '../../../src/artifacts/NFT.js';
 import { TestLogicContract } from '../../../src/artifacts/TestLogic.js';
 import { EscrowContract } from '../../../src/artifacts/Escrow.js';
@@ -245,14 +246,20 @@ export async function deployNFTWithMinter(wallet: EmbeddedWallet, deployer: Azte
  * The VaultDeployer deployment also registers all dependent classes (Vault, Token).
  * Call this once (e.g. in beforeAll) and pass the result to deployVaultAndAssetWithMinter.
  */
-export async function setupVaultDeployer(wallet: Wallet, deployer: AztecAddress, options?: DeployOptions) {
-  const { contract: vaultDeployer } = await VaultDeployerContract.deploy(wallet).send({ ...options, from: deployer });
-  return vaultDeployer;
+export async function setupVaultDeployer(wallet: Wallet, deployer: AztecAddress) {
+  // Deploy a throwaway vault to publish the Vault contract class on-chain
+  // (required before VaultDeployer can publish vault instances)
+  await VaultContract.deploy(wallet, deployer, 1).send({ from: deployer });
+
+  // Deploy VaultDeployer (no initializer)
+  const cd = new ContractDeployer(VaultDeployerContractArtifact, wallet);
+  const { contract: vaultDeployer } = await cd.deploy().send({ from: deployer });
+  return vaultDeployer as VaultDeployerContract;
 }
 
 /**
  * Deploys 3 contracts atomically via VaultDeployer: asset token, vault, and shares token.
- * Pre-registers instances with PXE, then calls VaultDeployer.deploy() which publishes both
+ * Pre-registers instances with PXE, then calls VaultDeployer.deploy_vault() which publishes both
  * instances and initializes them in a single transaction.
  * @param wallet - The wallet to deploy the contract with.
  * @param deployer - The account to deploy the contract with.
@@ -271,7 +278,7 @@ export async function deployVaultAndAssetWithMinter(
     'AT',
     6,
     deployer,
-  ).send({ ...options, from: deployer });
+  ).send({ from: deployer });
 
   // Get class IDs
   const vaultClass = await getContractClassFromArtifact(VaultContractArtifact);
@@ -302,7 +309,17 @@ export async function deployVaultAndAssetWithMinter(
 
   // Atomically deploy vault + shares via VaultDeployer
   await vaultDeployer.methods
-    .deploy(assetContract.address, 1, vaultClass.id, vaultSalt, 'SharesToken', 'ST', 18, tokenClass.id, sharesSalt)
+    .deploy_vault(
+      assetContract.address,
+      1,
+      vaultClass.id,
+      vaultSalt,
+      'SharesToken',
+      'ST',
+      18,
+      tokenClass.id,
+      sharesSalt,
+    )
     .send({ from: deployer });
 
   // Create contract handles at the computed addresses
@@ -364,7 +381,7 @@ export async function deployVaultWithInitialDeposit(
 
     // Atomically deploy vault + shares with initial deposit
     await vaultDeployer.methods
-      .deploy_with_initial_deposit(
+      .deploy_vault_with_initial_deposit(
         assetContract.address,
         1,
         vaultClass.id,
@@ -382,7 +399,17 @@ export async function deployVaultWithInitialDeposit(
   } else {
     // Atomically deploy vault + shares without initial deposit
     await vaultDeployer.methods
-      .deploy(assetContract.address, 1, vaultClass.id, vaultSalt, 'SharesToken', 'ST', 18, tokenClass.id, sharesSalt)
+      .deploy_vault(
+        assetContract.address,
+        1,
+        vaultClass.id,
+        vaultSalt,
+        'SharesToken',
+        'ST',
+        18,
+        tokenClass.id,
+        sharesSalt,
+      )
       .send({ from: deployer });
   }
 

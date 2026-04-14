@@ -797,7 +797,6 @@ pub contract Vault {
      * ======================= VAULT VIEW ========================
      * ======================================================== */
 
-
     /// @notice Returns the underlying asset address
     /// @return The address of the underlying asset
     #[external("public")]

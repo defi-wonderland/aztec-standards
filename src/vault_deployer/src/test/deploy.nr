@@ -83,7 +83,8 @@ unconstrained fn vault_deployer_computes_correct_vault_address() {
 
 /// @notice Tests that the VaultDeployer's full flow works end-to-end using the two-step
 /// pattern (since TXE doesn't support publish_contract_instance_for_public_execution).
-/// This simulates what VaultDeployer.deploy() does: deploy vault, deploy shares, link them.
+/// Uses cheatcodes::deploy with explicit deployer so instance.deployer == owner,
+/// matching the deployer-based auth in set_shares_token.
 #[test]
 unconstrained fn vault_deployer_e2e_simulation() {
     let mut env = TestEnvironment::new();
@@ -99,10 +100,18 @@ unconstrained fn vault_deployer_e2e_simulation() {
     let asset_address =
         env.deploy("@token_contract/Token").with_public_initializer(owner, asset_initializer);
 
-    // Deploy vault (deployer=owner)
-    let vault_initializer = Vault::interface().constructor(asset_address, 1);
-    let vault_address =
-        env.deploy("@vault_contract/Vault").with_public_initializer(owner, vault_initializer);
+    // Deploy vault with explicit deployer=owner, then call initializer
+    let vault_init = Vault::interface().constructor(asset_address, 1);
+    let vault_instance = cheatcodes::deploy(
+        "@vault_contract/Vault",
+        vault_init.name,
+        vault_init.args,
+        0,
+        random(),
+        owner,
+    );
+    let vault_address = vault_instance.to_address();
+    env.call_public(owner, Vault::at(vault_address).constructor(asset_address, 1));
 
     // Deploy shares with vault as minter
     let shares_initializer = Token::interface().constructor_with_minter(
@@ -114,7 +123,7 @@ unconstrained fn vault_deployer_e2e_simulation() {
     let shares_address =
         env.deploy("@token_contract/Token").with_public_initializer(owner, shares_initializer);
 
-    // Link shares to vault (deployer-only)
+    // Link shares to vault (deployer-only, msg_sender=owner matches instance.deployer=owner)
     env.call_public(owner, Vault::at(vault_address).set_shares_token(shares_address));
 
     // Verify vault is functional
