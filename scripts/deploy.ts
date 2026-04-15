@@ -279,7 +279,12 @@ async function deployContract(
       wait: { waitForStatus: TxStatus.PROPOSED },
     });
   } catch (error: unknown) {
-    const msg = error instanceof Error ? error.message : (error instanceof Object && 'cause' in error && error.cause instanceof Error ? error.cause.message : String(error));
+    const msg =
+      error instanceof Error
+        ? error.message
+        : error instanceof Object && 'cause' in error && error.cause instanceof Error
+          ? error.cause.message
+          : String(error);
     if (msg.includes('Existing nullifier')) {
       logger.info(`${label} already deployed (existing nullifier) at: ${instance.address.toString()}`);
       return { address: instance.address, status: 'existing' };
@@ -520,7 +525,9 @@ program
   .option('--dry-run', 'Show configuration without deploying')
   .option('--output <file>', 'Write deployment JSON to file')
   .addOption(
-    new Option('-n, --network <network>', 'Target network').choices(['devnet', 'testnet', 'local-network']).default('devnet'),
+    new Option('-n, --network <network>', 'Target network')
+      .choices(['devnet', 'testnet', 'local-network'])
+      .default('devnet'),
   )
   .action(async (options: CLIOptions) => {
     try {
