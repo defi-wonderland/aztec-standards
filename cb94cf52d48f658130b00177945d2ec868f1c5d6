@@ -1,0 +1,37 @@
+src/token_contract/Nargo.toml
+  2b06f7c1abecca6a 8-11
+src/escrow_contract/src/test/test_logic_contract/Nargo.toml
+  2b06f7c1abecca6a 8
+src/generic_proxy/Nargo.toml
+  2b06f7c1abecca6a 8
+src/dripper/Nargo.toml
+  2b06f7c1abecca6a 8
+src/escrow_contract/Nargo.toml
+  2b06f7c1abecca6a 8-9
+package.json
+  2b06f7c1abecca6a 3,29-37,53
+src/vault_contract/Nargo.toml
+  2b06f7c1abecca6a 8
+src/nft_contract/Nargo.toml
+  2b06f7c1abecca6a 8-9
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.2.8",
+  "base_commit_sha": "cb94cf52d48f658130b00177945d2ec868f1c5d6",
+  "prompts": {
+    "2b06f7c1abecca6a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "610fbbdb-bf28-4bda-8a10-063e7ddd88bf",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "xorsal",
+      "messages": [],
+      "total_additions": 23,
+      "total_deletions": 23,
+      "accepted_lines": 23,
+      "overriden_lines": 0
+    }
+  }
+}
