@@ -1,6 +1,6 @@
 {
   "name": "@defi-wonderland/aztec-standards",
-  "version": "4.2.0-aztecnr-rc.2",
+  "version": "4.2.0",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/defi-wonderland/aztec-standards.git"
@@ -26,19 +26,20 @@
     "*.ts": "prettier --write -u"
   },
   "dependencies": {
-    "@aztec/accounts": "4.2.0-aztecnr-rc.2",
-    "@aztec/aztec.js": "4.2.0-aztecnr-rc.2",
-    "@aztec/noir-contracts.js": "4.2.0-aztecnr-rc.2",
-    "@aztec/protocol-contracts": "4.2.0-aztecnr-rc.2",
-    "@aztec/pxe": "4.2.0-aztecnr-rc.2",
-    "@aztec/stdlib": "4.2.0-aztecnr-rc.2",
-    "@aztec/wallet-sdk": "4.2.0-aztecnr-rc.2",
-    "@aztec/wallets": "4.2.0-aztecnr-rc.2",
+    "@aztec/accounts": "4.2.0",
+    "@aztec/aztec.js": "4.2.0",
+    "@aztec/noir-contracts.js": "4.2.0",
+    "@aztec/protocol-contracts": "4.2.0",
+    "@aztec/pxe": "4.2.0",
+    "@aztec/stdlib": "4.2.0",
+    "@aztec/wallet-sdk": "4.2.0",
+    "@aztec/wallets": "4.2.0",
     "@defi-wonderland/aztec-benchmark": "4.2.0-aztecnr-rc.2",
     "commander": "14.0.1",
     "dotenv": "16.4.7"
   },
   "devDependencies": {
+    "@aztec/aztec": "4.2.0",
     "@commitlint/cli": "20.3.1",
     "@commitlint/config-conventional": "20.2.0",
     "@types/node": "25.0.10",
@@ -50,7 +51,7 @@
     "vitest": "4.0.17"
   },
   "config": {
-    "aztecVersion": "4.2.0-aztecnr-rc.2"
+    "aztecVersion": "4.2.0"
   },
   "engines": {
     "node": ">=22"
