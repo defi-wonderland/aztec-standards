@@ -1,20 +1,24 @@
 use aztec::macros::aztec;
 
 /// @title VaultDeployer
-/// @notice Atomically deploys a Vault + shares token pair in a single transaction.
-/// @dev Computes both contract addresses on-chain from the provided class IDs, salts, and
-///      constructor args. Both instances use this contract as their deployer (non-universal
-///      deploy) so that:
+/// @notice Atomically deploys a Vault + shares token pair when this contract instance is created.
+/// @dev Each pool deploys a new VaultDeployer instance whose initializer runs deploy_vault or
+///      deploy_vault_with_initial_deposit. The vault and shares addresses depend on this instance's
+///      address as deployer, so their preimage commits to the full parameter set (including shares
+///      class ID) through the deployer's initialization hash, unlike a reusable factory.
+///
+///      Computes both child addresses on-chain from class IDs, salts, and constructor args. Both
+///      children use this deployer instance (non-universal deploy) so that:
 ///      1. publish_contract_instance_for_public_execution passes the deployer check
 ///      2. vault.set_shares_token passes the deployer == msg_sender check
 ///
-///      The SDK must register the same instance preimages with the PXE before calling deploy()
-///      so the get_contract_instance oracle can resolve them.
+///      The SDK must register the same instance preimages with the PXE before deploying this
+///      contract so the get_contract_instance oracle can resolve them.
 #[aztec]
 pub contract VaultDeployer {
     use aztec::{
         hash::hash_args,
-        macros::functions::external,
+        macros::functions::{external, initializer},
         protocol::{
             address::AztecAddress, constants::DOM_SEP__INITIALIZER,
             contract_class_id::ContractClassId, contract_instance::ContractInstance,
@@ -36,6 +40,7 @@ pub contract VaultDeployer {
     /// @param shares_class_id The contract class ID of the shares token contract
     /// @param shares_salt The salt for shares token deployment
     #[external("private")]
+    #[initializer]
     fn deploy_vault(
         asset: AztecAddress,
         vault_offset: u128,
@@ -89,6 +94,7 @@ pub contract VaultDeployer {
     /// @dev The depositor must have authorized the vault to transfer initial_deposit of
     ///      the asset token via authwit before this tx is submitted.
     #[external("private")]
+    #[initializer]
     fn deploy_vault_with_initial_deposit(
         asset: AztecAddress,
         vault_offset: u128,

@@ -1,6 +1,6 @@
 import {
   setupTestSuite,
-  setupVaultDeployer,
+  ensureVaultContractClassPublished,
   deployVaultAndAssetWithMinter,
   deployVaultWithInitialDeposit,
   deployTokenWithMinter,
@@ -20,8 +20,6 @@ import { describe, it, expect, beforeAll, beforeEach, afterAll } from 'vitest';
 
 import { TokenContract } from '../../../src/artifacts/Token.js';
 import { VaultContract } from '../../../src/artifacts/Vault.js';
-import { type VaultDeployerContract } from '../../../src/artifacts/VaultDeployer.js';
-
 const TEST_TIMEOUT = 300_000;
 
 describe('Vault', () => {
@@ -31,7 +29,6 @@ describe('Vault', () => {
   let alice: AztecAddress;
   let bob: AztecAddress;
   let carl: AztecAddress;
-  let vaultDeployer: VaultDeployerContract;
   let vault: VaultContract;
   let asset: TokenContract;
   let shares: TokenContract;
@@ -111,11 +108,11 @@ describe('Vault', () => {
 
     [alice, bob, carl] = accounts;
 
-    vaultDeployer = await setupVaultDeployer(wallet, alice);
+    await ensureVaultContractClassPublished(wallet, alice);
   });
 
   beforeEach(async () => {
-    [vault, asset, shares] = await deployVaultAndAssetWithMinter(wallet, alice, vaultDeployer);
+    [vault, asset, shares] = await deployVaultAndAssetWithMinter(wallet, alice);
   });
 
   afterAll(async () => {
@@ -1056,11 +1053,7 @@ describe('Vault', () => {
         'zero-share deposit reverts',
         async () => {
           // Deploy vault without initial deposit (no protection)
-          const [vaultContract, assetContract, sharesContract] = await deployVaultAndAssetWithMinter(
-            wallet,
-            alice,
-            vaultDeployer,
-          );
+          const [vaultContract, assetContract, sharesContract] = await deployVaultAndAssetWithMinter(wallet, alice);
 
           const attacker = bob;
           const victim = carl;
@@ -1129,7 +1122,6 @@ describe('Vault', () => {
             assetContract,
             initialDeposit,
             alice,
-            vaultDeployer,
           );
 
           const attacker = bob;
