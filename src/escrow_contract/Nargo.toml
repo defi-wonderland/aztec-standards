@@ -10,4 +10,4 @@ serde = { git = "https://github.com/AztecProtocol/aztec-packages/", tag = "v4.2.
 token = { path = "../token_contract" }
 nft = { path = "../nft_contract" }
 sha512 = { git = "https://github.com/noir-lang/sha512", tag = "master" } # TODO: pin to release tag/stable branch when available
-bignum = { git = "https://github.com/noir-lang/noir-bignum", tag = "v0.9.2" }
+bignum = { git = "https://github.com/noir-lang/noir-bignum", tag = "v0.10.0" }
