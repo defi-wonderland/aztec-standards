@@ -18,11 +18,15 @@ use aztec::macros::aztec;
 pub contract VaultDeployer {
     use aztec::{
         hash::hash_args,
-        macros::functions::{external, initializer},
+        macros::functions::{
+            external, initializer, initialization_utils::compute_initialization_hash,
+        },
         protocol::{
-            address::AztecAddress, constants::DOM_SEP__INITIALIZER,
-            contract_class_id::ContractClassId, contract_instance::ContractInstance,
-            hash::poseidon2_hash_with_separator, public_keys::PublicKeys, traits::ToField,
+            abis::function_selector::FunctionSelector,
+            address::AztecAddress,
+            contract_class_id::ContractClassId,
+            contract_instance::ContractInstance,
+            public_keys::PublicKeys,
         },
         publish_contract_instance::publish_contract_instance_for_public_execution,
     };
@@ -54,13 +58,12 @@ pub contract VaultDeployer {
     ) {
         let vault_constructor = Vault::interface().constructor(asset, vault_offset);
         let vault = _build_instance(
-            vault_constructor.selector.to_field(),
+            vault_constructor.selector,
             hash_args(vault_constructor.args),
             vault_class_id,
             vault_salt,
             self.address,
-        )
-            .to_address();
+        );
 
         let shares_constructor = Token::interface().constructor_with_minter(
             shares_name,
@@ -69,13 +72,12 @@ pub contract VaultDeployer {
             vault,
         );
         let shares = _build_instance(
-            shares_constructor.selector.to_field(),
+            shares_constructor.selector,
             hash_args(shares_constructor.args),
             shares_class_id,
             shares_salt,
             self.address,
-        )
-            .to_address();
+        );
 
         publish_contract_instance_for_public_execution(self.context, vault);
         publish_contract_instance_for_public_execution(self.context, shares);
@@ -111,13 +113,12 @@ pub contract VaultDeployer {
     ) {
         let vault_constructor = Vault::interface().constructor(asset, vault_offset);
         let vault = _build_instance(
-            vault_constructor.selector.to_field(),
+            vault_constructor.selector,
             hash_args(vault_constructor.args),
             vault_class_id,
             vault_salt,
             self.address,
-        )
-            .to_address();
+        );
 
         let shares_constructor = Token::interface().constructor_with_minter(
             shares_name,
@@ -126,13 +127,12 @@ pub contract VaultDeployer {
             vault,
         );
         let shares = _build_instance(
-            shares_constructor.selector.to_field(),
+            shares_constructor.selector,
             hash_args(shares_constructor.args),
             shares_class_id,
             shares_salt,
             self.address,
-        )
-            .to_address();
+        );
 
         publish_contract_instance_for_public_execution(self.context, vault);
         publish_contract_instance_for_public_execution(self.context, shares);
@@ -154,14 +154,13 @@ pub contract VaultDeployer {
 
     #[contract_library_method]
     fn _build_instance(
-        selector: Field,
+        init_selector: FunctionSelector,
         args_hash: Field,
         class_id: ContractClassId,
         salt: Field,
         deployer: AztecAddress,
-    ) -> ContractInstance {
-        let initialization_hash =
-            poseidon2_hash_with_separator([selector, args_hash], DOM_SEP__INITIALIZER);
+    ) -> AztecAddress {
+        let initialization_hash = compute_initialization_hash(init_selector, args_hash);
 
         ContractInstance {
             salt,
@@ -170,5 +169,6 @@ pub contract VaultDeployer {
             initialization_hash,
             public_keys: PublicKeys::default(),
         }
+        .to_address()
     }
 }
