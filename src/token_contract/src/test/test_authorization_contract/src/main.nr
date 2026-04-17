@@ -3,7 +3,7 @@ use aztec::macros::aztec;
 #[aztec]
 pub contract AuthorizationContract {
     use aztec::{
-        macros::{functions::{external, internal}, storage::storage},
+        macros::{functions::{external, internal, view}, storage::storage},
         protocol::{address::AztecAddress, traits::{Deserialize, Packable, Serialize}},
     };
     use aztec::state_vars::PublicMutable;
@@ -57,6 +57,12 @@ pub contract AuthorizationContract {
     #[external("public")]
     fn set_should_revert(value: bool) {
         self.storage.should_revert.write(value);
+    }
+
+    #[external("public")]
+    #[view]
+    fn get_last_call() -> AuthCall {
+        self.storage.last_call.read()
     }
 
     /// @notice Test-only. Persists the parameters received by the authorization hook into public storage
