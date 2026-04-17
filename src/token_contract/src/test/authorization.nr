@@ -363,7 +363,12 @@ unconstrained fn transfer_public_to_public_succeeds_when_auth_disabled() {
     );
 
     // Balances moved, confirming the short-circuit path did not block the transfer
-    utils::check_public_balance(env, token_contract_address, owner, mint_amount - transfer_amount);
+    utils::check_public_balance(
+        env,
+        token_contract_address,
+        owner,
+        mint_amount - transfer_amount,
+    );
     utils::check_public_balance(env, token_contract_address, recipient, transfer_amount);
 }
 
@@ -386,6 +391,11 @@ unconstrained fn transfer_private_to_private_succeeds_when_auth_disabled() {
     );
 
     // Balances moved, confirming the short-circuit path did not block the transfer
-    utils::check_private_balance(env, token_contract_address, owner, mint_amount - transfer_amount);
+    utils::check_private_balance(
+        env,
+        token_contract_address,
+        owner,
+        mint_amount - transfer_amount,
+    );
     utils::check_private_balance(env, token_contract_address, recipient, transfer_amount);
 }
