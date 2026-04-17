@@ -1,4 +1,6 @@
 use crate::Token;
+use authorization_contract::AuthorizationContract;
+use authorization_contract::AuthorizationContract::AuthCall;
 use aztec::{
     note::{constants::MAX_NOTES_PER_PAGE, note_viewer_options::NoteViewerOptions},
     oracle::random::random,
@@ -29,8 +31,13 @@ pub unconstrained fn setup_with_initial_supply(
         (owner, recipient)
     };
 
-    let token_contract_address =
-        deploy_token_with_initial_supply(&mut env, owner, initial_supply, owner);
+    let token_contract_address = deploy_token_with_initial_supply(
+        &mut env,
+        owner,
+        initial_supply,
+        owner,
+        AztecAddress::zero(),
+    );
 
     (env, token_contract_address, owner, recipient)
 }
@@ -52,7 +59,8 @@ pub unconstrained fn setup_with_minter(
         (owner, recipient, minter)
     };
 
-    let token_contract_address = deploy_token_with_minter(&mut env, owner, minter);
+    let token_contract_address =
+        deploy_token_with_minter(&mut env, owner, minter, AztecAddress::zero());
 
     (env, token_contract_address, owner, recipient, minter)
 }
@@ -62,6 +70,7 @@ pub unconstrained fn deploy_token_with_initial_supply(
     owner: AztecAddress,
     initial_supply: u128,
     to: AztecAddress,
+    auth_contract: AztecAddress,
 ) -> AztecAddress {
     // Deploy token contract
     let initializer_call_interface = Token::interface().constructor_with_initial_supply(
@@ -70,7 +79,7 @@ pub unconstrained fn deploy_token_with_initial_supply(
         18,
         initial_supply,
         to,
-        AztecAddress::zero(),
+        auth_contract,
     );
     let token_contract_address = env.deploy("@token_contract/Token").with_public_initializer(
         owner,
@@ -84,6 +93,7 @@ pub unconstrained fn deploy_token_with_minter(
     env: &mut TestEnvironment,
     owner: AztecAddress,
     minter: AztecAddress,
+    auth_contract: AztecAddress,
 ) -> AztecAddress {
     // Deploy token contract
     let initializer_call_interface = Token::interface().constructor_with_minter(
@@ -91,7 +101,7 @@ pub unconstrained fn deploy_token_with_minter(
         "TT00000000000000000000000000000",
         18,
         minter,
-        AztecAddress::zero(),
+        auth_contract,
     );
     let token_contract_address = env.deploy("@token_contract/Token").with_public_initializer(
         owner,
@@ -245,7 +255,118 @@ pub unconstrained fn setup_and_mint_to_public_with_proxy() -> (TestEnvironment, 
     (env, token_contract_address, owner, recipient, proxy)
 }
 
-/// @notice Returns the u128 maximum value
+// @notice Returns the u128 maximum value
 pub unconstrained fn max_u128() -> u128 {
     (0 as u128).wrapping_sub(1)
+}
+
+// Test-only setup that wires an AuthorizationContract into the token, enabling the ARC-403
+// authorization hook. The default setup helpers above pass `AztecAddress::zero()` to the token,
+// which disables the hook.
+pub unconstrained fn setup_with_auth_contract(
+    with_account_contracts: bool,
+    initial_supply: u128,
+) -> (TestEnvironment, AztecAddress, AztecAddress, AztecAddress, AztecAddress) {
+    // Setup env, generate keys
+    let mut env = TestEnvironment::new();
+
+    let (owner, recipient) = if with_account_contracts {
+        let owner = env.create_contract_account();
+        let recipient = env.create_contract_account();
+        (owner, recipient)
+    } else {
+        let owner = env.create_light_account();
+        let recipient = env.create_light_account();
+        (owner, recipient)
+    };
+
+    // Deploy the test authorization contract first (no initializer) so we can pass its address
+    // to the token constructor.
+    let auth_contract_address =
+        env.deploy("@test_authorization_contract/AuthorizationContract").without_initializer();
+
+    let token_contract_address = deploy_token_with_initial_supply(
+        &mut env,
+        owner,
+        initial_supply,
+        owner,
+        auth_contract_address,
+    );
+
+    (env, token_contract_address, owner, recipient, auth_contract_address)
+}
+
+// @notice Deploys the auth contract, deploys the token wired to it via `constructor_with_minter`,
+// and mints `mint_amount` to the owner's private balance.
+// @dev `mint_to_private` does not trigger the authorization hook by design (see ARC-403 tech design),
+// so after this helper returns `last_call.called` is still false.
+pub unconstrained fn setup_and_mint_to_private_with_auth(
+    with_account_contracts: bool,
+) -> (TestEnvironment, AztecAddress, AztecAddress, AztecAddress, AztecAddress, AztecAddress) {
+    let (env, token_contract_address, owner, recipient, minter, auth_contract_address) =
+        setup_with_auth_contract_and_minter(with_account_contracts);
+
+    mint_to_private(env, token_contract_address, owner, mint_amount, minter);
+
+    (env, token_contract_address, owner, recipient, minter, auth_contract_address)
+}
+
+pub unconstrained fn setup_with_auth_contract_and_minter(
+    with_account_contracts: bool,
+) -> (TestEnvironment, AztecAddress, AztecAddress, AztecAddress, AztecAddress, AztecAddress) {
+    // Setup env, generate keys
+    let mut env = TestEnvironment::new();
+    let (owner, recipient, minter) = if with_account_contracts {
+        let owner = env.create_contract_account();
+        let recipient = env.create_contract_account();
+        let minter = env.create_contract_account();
+        (owner, recipient, minter)
+    } else {
+        let owner = env.create_light_account();
+        let recipient = env.create_light_account();
+        let minter = env.create_light_account();
+        (owner, recipient, minter)
+    };
+
+    // Deploy the test authorization contract first (no initializer) so we can pass its address
+    // to the token constructor.
+    let auth_contract_address =
+        env.deploy("@test_authorization_contract/AuthorizationContract").without_initializer();
+
+    let token_contract_address =
+        deploy_token_with_minter(&mut env, owner, minter, auth_contract_address);
+
+    (env, token_contract_address, owner, recipient, minter, auth_contract_address)
+}
+
+// @notice Reads the last recorded authorization hook invocation from the test AuthorizationContract
+pub unconstrained fn get_last_auth_call(
+    env: TestEnvironment,
+    auth_contract: AztecAddress,
+) -> AuthCall {
+    env.view_public(AuthorizationContract::at(auth_contract).get_last_call())
+}
+
+// @notice Asserts the test AuthorizationContract recorded a call with the expected `from`, `amount`, and selector
+pub unconstrained fn assert_auth_call(
+    env: TestEnvironment,
+    auth_contract: AztecAddress,
+    expected_from: AztecAddress,
+    expected_amount: u128,
+    expected_selector: Field,
+) {
+    let last_call = get_last_auth_call(env, auth_contract);
+    assert(last_call.called, "expected authorization hook to be called but it wasn't");
+    assert(last_call.from == expected_from, "authorization hook recorded unexpected `from`");
+    assert(last_call.amount == expected_amount, "authorization hook recorded unexpected `amount`");
+    assert(
+        last_call.selector == expected_selector,
+        "authorization hook recorded unexpected `selector`",
+    );
+}
+
+// @notice Asserts the test AuthorizationContract did NOT record any hook invocation
+pub unconstrained fn assert_auth_not_called(env: TestEnvironment, auth_contract: AztecAddress) {
+    let last_call = get_last_auth_call(env, auth_contract);
+    assert(!last_call.called, "expected authorization hook not to be called but it was");
 }
