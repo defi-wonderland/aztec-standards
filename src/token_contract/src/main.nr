@@ -496,7 +496,7 @@ pub contract Token {
      * ======================================================== */
 
     /// @notice ARC-403: calls the public authorization hook when one is configured
-    /// @dev Used for public-source operations (public balance decreases); no-ops when auth_contract is zero
+    /// @dev Invoked from external public functions; no-ops when auth_contract is zero
     /// @param from The address tokens are moved from (zero address for mints)
     /// @param amount The amount of tokens being moved
     /// @param selector The selector passed is the calling function's own selector
@@ -509,7 +509,7 @@ pub contract Token {
     }
 
     /// @notice ARC-403: calls the private authorization hook when one is configured
-    /// @dev Used for private-source operations (private note spends); no-ops when auth_contract is zero.
+    /// @dev Invoked from external private functions; no-ops when auth_contract is zero.
     ///      Runs entirely in private context - the auth call is never revealed on-chain.
     /// @param from The address tokens are moved from (zero address for mints)
     /// @param amount The amount of tokens being moved
