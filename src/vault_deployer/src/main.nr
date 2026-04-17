@@ -71,6 +71,18 @@ pub contract VaultDeployer {
     /// @notice Deploys a vault and its shares token atomically, with an initial deposit
     /// @dev The depositor must have authorized the vault to transfer initial_deposit of
     ///      the asset token via authwit before this tx is submitted.
+    /// @param asset The underlying asset token address
+    /// @param vault_offset The offset used to prevent inflation attacks (typically 1)
+    /// @param vault_class_id The contract class ID of the vault contract
+    /// @param vault_salt The salt for vault deployment
+    /// @param shares_name The name of the shares token
+    /// @param shares_symbol The symbol of the shares token
+    /// @param shares_decimals The number of decimals for the shares token
+    /// @param shares_class_id The contract class ID of the shares token contract
+    /// @param shares_salt The salt for shares token deployment
+    /// @param initial_deposit The amount of the asset token to deposit into the vault on deployment
+    /// @param depositor The address authorizing and funding the initial deposit
+    /// @param nonce The authwit nonce authorizing the vault to pull initial_deposit from depositor
     #[external("private")]
     #[initializer]
     fn deploy_vault_with_initial_deposit(
