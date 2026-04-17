@@ -271,20 +271,8 @@ export async function deployVaultAndAssetWithMinter(
   const tokenClass = await getContractClassFromArtifact(TokenContractArtifact);
 
   const poolDeployerSalt = Fr.random();
-  const vaultSalt = Fr.random();
-  const sharesSalt = Fr.random();
 
-  const poolDeployerArgs = [
-    assetContract.address,
-    1,
-    vaultClass.id,
-    vaultSalt,
-    'SharesToken',
-    'ST',
-    18,
-    tokenClass.id,
-    sharesSalt,
-  ] as const;
+  const poolDeployerArgs = [assetContract.address, 1, vaultClass.id, 'SharesToken', 'ST', 18, tokenClass.id] as const;
 
   const poolDeployerInstance = await getContractInstanceFromInstantiationParams(VaultDeployerContractArtifact, {
     constructorArtifact: 'deploy_vault',
@@ -296,14 +284,14 @@ export async function deployVaultAndAssetWithMinter(
   const vaultInstance = await getContractInstanceFromInstantiationParams(VaultContractArtifact, {
     constructorArtifact: 'constructor',
     constructorArgs: [assetContract.address, 1],
-    salt: vaultSalt,
+    salt: poolDeployerSalt,
     deployer: poolDeployerInstance.address,
   });
 
   const sharesInstance = await getContractInstanceFromInstantiationParams(TokenContractArtifact, {
     constructorArtifact: 'constructor_with_minter',
     constructorArgs: ['SharesToken', 'ST', 18, vaultInstance.address],
-    salt: sharesSalt,
+    salt: poolDeployerSalt,
     deployer: poolDeployerInstance.address,
   });
 
@@ -338,19 +326,15 @@ export async function deployVaultWithInitialDeposit(
   const tokenClass = await getContractClassFromArtifact(TokenContractArtifact);
 
   const poolDeployerSalt = Fr.random();
-  const vaultSalt = Fr.random();
-  const sharesSalt = Fr.random();
 
   const poolDeployerArgs = [
     assetContract.address,
     1,
     vaultClass.id,
-    vaultSalt,
     'SharesToken',
     'ST',
     18,
     tokenClass.id,
-    sharesSalt,
     initialDeposit,
     depositor,
     0,
@@ -366,14 +350,14 @@ export async function deployVaultWithInitialDeposit(
   const vaultInstance = await getContractInstanceFromInstantiationParams(VaultContractArtifact, {
     constructorArtifact: 'constructor',
     constructorArgs: [assetContract.address, 1],
-    salt: vaultSalt,
+    salt: poolDeployerSalt,
     deployer: poolDeployerInstance.address,
   });
 
   const sharesInstance = await getContractInstanceFromInstantiationParams(TokenContractArtifact, {
     constructorArtifact: 'constructor_with_minter',
     constructorArgs: ['SharesToken', 'ST', 18, vaultInstance.address],
-    salt: sharesSalt,
+    salt: poolDeployerSalt,
     deployer: poolDeployerInstance.address,
   });
 

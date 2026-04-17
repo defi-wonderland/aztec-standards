@@ -21,6 +21,7 @@ pub contract VaultDeployer {
         macros::functions::{
             external, initialization_utils::compute_initialization_hash, initializer, internal,
         },
+        oracle::get_contract_instance::get_contract_instance,
         protocol::{
             abis::function_selector::FunctionSelector, address::AztecAddress,
             contract_class_id::ContractClassId, contract_instance::ContractInstance,
@@ -35,35 +36,29 @@ pub contract VaultDeployer {
     /// @param asset The underlying asset token address
     /// @param vault_offset The offset used to prevent inflation attacks (typically 1)
     /// @param vault_class_id The contract class ID of the vault contract
-    /// @param vault_salt The salt for vault deployment
     /// @param shares_name The name of the shares token
     /// @param shares_symbol The symbol of the shares token
     /// @param shares_decimals The number of decimals for the shares token
     /// @param shares_class_id The contract class ID of the shares token contract
-    /// @param shares_salt The salt for shares token deployment
     #[external("private")]
     #[initializer]
     fn deploy_vault(
         asset: AztecAddress,
         vault_offset: u128,
         vault_class_id: ContractClassId,
-        vault_salt: Field,
         shares_name: str<31>,
         shares_symbol: str<31>,
         shares_decimals: u8,
         shares_class_id: ContractClassId,
-        shares_salt: Field,
     ) {
         let (vault, shares) = self.internal._publish_vault_and_shares_instances(
             asset,
             vault_offset,
             vault_class_id,
-            vault_salt,
             shares_name,
             shares_symbol,
             shares_decimals,
             shares_class_id,
-            shares_salt,
         );
         self.enqueue(Vault::at(vault).set_shares_token(shares));
     }
@@ -74,12 +69,10 @@ pub contract VaultDeployer {
     /// @param asset The underlying asset token address
     /// @param vault_offset The offset used to prevent inflation attacks (typically 1)
     /// @param vault_class_id The contract class ID of the vault contract
-    /// @param vault_salt The salt for vault deployment
     /// @param shares_name The name of the shares token
     /// @param shares_symbol The symbol of the shares token
     /// @param shares_decimals The number of decimals for the shares token
     /// @param shares_class_id The contract class ID of the shares token contract
-    /// @param shares_salt The salt for shares token deployment
     /// @param initial_deposit The amount of the asset token to deposit into the vault on deployment
     /// @param depositor The address authorizing and funding the initial deposit
     /// @param nonce The authwit nonce authorizing the vault to pull initial_deposit from depositor
@@ -89,12 +82,10 @@ pub contract VaultDeployer {
         asset: AztecAddress,
         vault_offset: u128,
         vault_class_id: ContractClassId,
-        vault_salt: Field,
         shares_name: str<31>,
         shares_symbol: str<31>,
         shares_decimals: u8,
         shares_class_id: ContractClassId,
-        shares_salt: Field,
         initial_deposit: u128,
         depositor: AztecAddress,
         nonce: Field,
@@ -103,12 +94,10 @@ pub contract VaultDeployer {
             asset,
             vault_offset,
             vault_class_id,
-            vault_salt,
             shares_name,
             shares_symbol,
             shares_decimals,
             shares_class_id,
-            shares_salt,
         );
         self.enqueue(Vault::at(vault).set_shares_token_with_initial_deposit(
             shares,
@@ -124,19 +113,19 @@ pub contract VaultDeployer {
         asset: AztecAddress,
         vault_offset: u128,
         vault_class_id: ContractClassId,
-        vault_salt: Field,
         shares_name: str<31>,
         shares_symbol: str<31>,
         shares_decimals: u8,
         shares_class_id: ContractClassId,
-        shares_salt: Field,
     ) -> (AztecAddress, AztecAddress) {
+        let salt = get_contract_instance(self.address).salt;
+
         let vault_constructor = Vault::interface().constructor(asset, vault_offset);
-        let vault = _build_instance(
+        let vault = _derive_instance(
             vault_constructor.selector,
             hash_args(vault_constructor.args),
             vault_class_id,
-            vault_salt,
+            salt,
             self.address,
         );
 
@@ -146,11 +135,11 @@ pub contract VaultDeployer {
             shares_decimals,
             vault,
         );
-        let shares = _build_instance(
+        let shares = _derive_instance(
             shares_constructor.selector,
             hash_args(shares_constructor.args),
             shares_class_id,
-            shares_salt,
+            salt,
             self.address,
         );
 
@@ -169,7 +158,7 @@ pub contract VaultDeployer {
     }
 
     #[contract_library_method]
-    fn _build_instance(
+    fn _derive_instance(
         init_selector: FunctionSelector,
         init_args_hash: Field,
         contract_class_id: ContractClassId,
