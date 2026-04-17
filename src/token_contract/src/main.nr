@@ -518,9 +518,7 @@ pub contract Token {
     fn _call_auth_private(from: AztecAddress, amount: u128, selector: Field) {
         let auth = self.storage.auth_contract.read();
         if !auth.eq(AztecAddress::zero()) {
-            AuthorizationContract::at(auth).authorize_private(from, amount, selector).call(
-                self.context,
-            );
+            self.call(AuthorizationContract::at(auth).authorize_private(from, amount, selector));
         }
     }
 
