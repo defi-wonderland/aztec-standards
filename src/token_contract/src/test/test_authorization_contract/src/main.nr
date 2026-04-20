@@ -9,17 +9,18 @@ pub contract AuthorizationContract {
     use aztec::state_vars::PublicMutable;
 
     /// @notice Records the parameters of the last authorization hook invocation
-    /// @dev Used by tests to assert that the token passes the expected arguments to the hook
+    /// @dev Used by tests to assert that the token passes the expected arguments to the hook.
+    /// A non-zero `selector` signals the hook has been invoked; default storage has `selector == 0`.
     /// @param from The address whose balance was spent in the triggering token operation
     /// @param amount The amount of tokens being moved
     /// @param selector The function selector of the token operation that triggered the hook
-    /// @param called Whether the hook has been invoked at least once; distinguishes a real call from default storage values
+    /// @param from_public Whether the hook was invoked through authorize_public (true) or authorize_private (false)
     #[derive(Packable, Serialize, Deserialize)]
     pub struct AuthCall {
         pub from: AztecAddress,
         pub amount: u128,
         pub selector: Field,
-        pub called: bool,
+        pub from_public: bool,
     }
 
     /// @notice Test-only storage used to verify hook invocations from the token contract
@@ -47,8 +48,8 @@ pub contract AuthorizationContract {
     /// @param selector The function selector of the token operation that triggered the hook
     #[external("public")]
     fn authorize_public(from: AztecAddress, amount: u128, selector: Field) {
-        // Records the call synchronously. Allows all operations - this test contract never rejects.
-        self.internal._record_call(from, amount, selector)
+        // Records the call synchronously with from_public=true since this entrypoint is the public hook.
+        self.internal._record_call(from, amount, selector, true)
     }
 
     /// @notice Test-only setter to toggle whether the hook rejects incoming calls
@@ -66,25 +67,28 @@ pub contract AuthorizationContract {
     }
 
     /// @notice Public entrypoint for enqueued dispatch from authorize_private; shared write path lives in _record_call
+    /// @dev authorize_private always forwards with from_public=false, since this path is only reached from the private hook
     /// @param from The address whose balance was spent in the triggering token operation
     /// @param amount The amount of tokens being moved
     /// @param selector The function selector of the token operation that triggered the hook
     #[external("public")]
     #[only_self]
     fn record_call_internal(from: AztecAddress, amount: u128, selector: Field) {
-        self.internal._record_call(from, amount, selector);
+        self.internal._record_call(from, amount, selector, false);
     }
 
     /// @notice Test-only. Persists the parameters received by the authorization hook into public storage
-    /// @dev Shared write path for both authorize_private (via record_call_internal) and authorize_public (via self.internal)
+    /// @dev Shared write path for both authorize_private (via record_call_internal) and authorize_public (via self.internal).
+    /// The `from_public` flag lets tests distinguish which hook variant the token contract invoked.
     /// @param from The address whose balance was spent in the triggering token operation
     /// @param amount The amount of tokens being moved
     /// @param selector The function selector of the token operation that triggered the hook
+    /// @param from_public True if the caller is authorize_public, false if the caller is authorize_private (via record_call_internal)
     #[internal("public")]
-    fn _record_call(from: AztecAddress, amount: u128, selector: Field) {
+    fn _record_call(from: AztecAddress, amount: u128, selector: Field, from_public: bool) {
         // Test-only switch: when should_revert is true, simulate an authorization contract that rejects the call.
         assert(!self.storage.should_revert.read(), "operation not authorized");
 
-        self.storage.last_call.write(AuthCall { from, amount, selector, called: true });
+        self.storage.last_call.write(AuthCall { from, amount, selector, from_public });
     }
 }

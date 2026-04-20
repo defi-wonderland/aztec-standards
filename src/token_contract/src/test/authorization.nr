@@ -22,13 +22,14 @@ unconstrained fn authorization_hook_called_on_transfer_public_to_public() {
     // Transfer tokens
     env.call_public(owner, call_interface);
 
-    // Hook recorded (from, amount, selector) from the transfer
+    // Hook recorded (from, amount, selector) from the transfer; transfer_public_to_public -> authorize_public
     utils::assert_auth_call(
         env,
         auth_contract,
         owner,
         transfer_amount,
         expected_selector,
+        true,
     );
 }
 
@@ -46,8 +47,8 @@ unconstrained fn authorization_hook_called_on_burn_public() {
     // Burn tokens
     env.call_public(owner, call_interface);
 
-    // Hook recorded (from, amount, selector) from the burn
-    utils::assert_auth_call(env, auth_contract, owner, burn_amount, expected_selector);
+    // Hook recorded (from, amount, selector) from the burn; burn_public -> authorize_public
+    utils::assert_auth_call(env, auth_contract, owner, burn_amount, expected_selector, true);
 }
 
 #[test]
@@ -75,13 +76,14 @@ unconstrained fn authorization_hook_called_on_transfer_public_to_commitment() {
     // Transfer tokens into the commitment
     env.call_public(owner, call_interface);
 
-    // Hook recorded (from, amount, selector) from the transfer
+    // Hook recorded (from, amount, selector) from the transfer; transfer_public_to_commitment -> authorize_public
     utils::assert_auth_call(
         env,
         auth_contract,
         owner,
         transfer_amount,
         expected_selector,
+        true,
     );
 }
 
@@ -99,8 +101,8 @@ unconstrained fn authorization_hook_called_on_burn_private() {
     // Burn tokens
     env.call_private(owner, call_interface);
 
-    // Hook recorded (from, amount, selector) from the burn
-    utils::assert_auth_call(env, auth_contract, owner, burn_amount, expected_selector);
+    // Hook recorded (from, amount, selector) from the burn; burn_private -> authorize_private
+    utils::assert_auth_call(env, auth_contract, owner, burn_amount, expected_selector, false);
 }
 
 #[test]
@@ -122,13 +124,14 @@ unconstrained fn authorization_hook_called_on_transfer_private_to_private() {
     // Transfer tokens
     env.call_private(owner, call_interface);
 
-    // Hook recorded (from, amount, selector) from the transfer
+    // Hook recorded (from, amount, selector) from the transfer; transfer_private_to_private -> authorize_private
     utils::assert_auth_call(
         env,
         auth_contract,
         owner,
         transfer_amount,
         expected_selector,
+        false,
     );
 }
 
@@ -151,13 +154,14 @@ unconstrained fn authorization_hook_called_on_transfer_private_to_public() {
     // Transfer tokens
     env.call_private(owner, call_interface);
 
-    // Hook recorded (from, amount, selector) from the transfer
+    // Hook recorded (from, amount, selector) from the transfer; transfer_private_to_public -> authorize_private
     utils::assert_auth_call(
         env,
         auth_contract,
         owner,
         transfer_amount,
         expected_selector,
+        false,
     );
 }
 
@@ -180,13 +184,15 @@ unconstrained fn authorization_hook_called_on_transfer_public_to_private() {
     // Function is private despite operating on public balance (ARC-403 privacy caveat)
     env.call_private(owner, call_interface);
 
-    // Hook recorded (from, amount, selector) from the transfer
+    // Hook recorded (from, amount, selector) from the transfer; transfer_public_to_private is a
+    // private function so it dispatches to authorize_private (from_public = false)
     utils::assert_auth_call(
         env,
         auth_contract,
         owner,
         transfer_amount,
         expected_selector,
+        false,
     );
 }
 
@@ -215,13 +221,14 @@ unconstrained fn authorization_hook_called_on_transfer_private_to_commitment() {
     // Transfer tokens into the commitment
     env.call_private(owner, call_interface);
 
-    // Hook recorded (from, amount, selector) from the transfer
+    // Hook recorded (from, amount, selector) from the transfer; transfer_private_to_commitment -> authorize_private
     utils::assert_auth_call(
         env,
         auth_contract,
         owner,
         transfer_amount,
         expected_selector,
+        false,
     );
 }
 
@@ -241,13 +248,14 @@ unconstrained fn authorization_hook_called_on_transfer_private_to_public_with_co
     // Transfer tokens
     let _ = env.call_private(owner, call_interface);
 
-    // Hook recorded (from, amount, selector) from the transfer
+    // Hook recorded (from, amount, selector) from the transfer; transfer_private_to_public_with_commitment -> authorize_private
     utils::assert_auth_call(
         env,
         auth_contract,
         owner,
         transfer_amount,
         expected_selector,
+        false,
     );
 }
 
@@ -343,4 +351,3 @@ unconstrained fn transfer_private_to_private_reverts_when_auth_rejects() {
         ),
     );
 }
-

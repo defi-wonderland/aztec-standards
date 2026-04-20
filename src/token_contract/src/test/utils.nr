@@ -299,7 +299,7 @@ pub unconstrained fn setup_with_auth_contract(
 // @notice Deploys the auth contract, deploys the token wired to it via `constructor_with_minter`,
 // and mints `mint_amount` to the owner's private balance.
 // @dev `mint_to_private` does not trigger the authorization hook by design (see ARC-403 tech design),
-// so after this helper returns `last_call.called` is still false.
+// so after this helper returns `last_call.selector` is still 0 (default).
 pub unconstrained fn setup_and_mint_to_private_with_auth(
     with_account_contracts: bool,
 ) -> (TestEnvironment, AztecAddress, AztecAddress, AztecAddress, AztecAddress, AztecAddress) {
@@ -347,26 +347,43 @@ pub unconstrained fn get_last_auth_call(
     env.view_public(AuthorizationContract::at(auth_contract).get_last_call())
 }
 
-// @notice Asserts the test AuthorizationContract recorded a call with the expected `from`, `amount`, and selector
+// @notice Asserts the test AuthorizationContract recorded a call with the expected `from`, `amount`,
+// selector, and hook variant (private vs public).
+// @dev A non-zero selector signals the hook was invoked; default storage has selector == 0.
+// `expected_from_public` encodes the ARC-403 dispatch table: true if the token called authorize_public,
+// false if it called authorize_private.
 pub unconstrained fn assert_auth_call(
     env: TestEnvironment,
     auth_contract: AztecAddress,
     expected_from: AztecAddress,
     expected_amount: u128,
     expected_selector: Field,
+    expected_from_public: bool,
 ) {
     let last_call = get_last_auth_call(env, auth_contract);
-    assert(last_call.called, "expected authorization hook to be called but it wasn't");
+    assert(
+        last_call.selector != 0,
+        "expected authorization hook to be called but it wasn't (selector is 0)",
+    );
     assert(last_call.from == expected_from, "authorization hook recorded unexpected `from`");
     assert(last_call.amount == expected_amount, "authorization hook recorded unexpected `amount`");
     assert(
         last_call.selector == expected_selector,
         "authorization hook recorded unexpected `selector`",
     );
+    assert(
+        last_call.from_public == expected_from_public,
+        "authorization hook invoked via unexpected variant (authorize_private vs authorize_public)",
+    );
 }
 
 // @notice Asserts the test AuthorizationContract did NOT record any hook invocation
+// @dev A default-initialized `AuthCall` has `selector == 0`, which is not a valid token selector,
+// so `selector == 0` unambiguously means the hook was never called.
 pub unconstrained fn assert_auth_not_called(env: TestEnvironment, auth_contract: AztecAddress) {
     let last_call = get_last_auth_call(env, auth_contract);
-    assert(!last_call.called, "expected authorization hook not to be called but it was");
+    assert(
+        last_call.selector == 0,
+        "expected authorization hook not to be called but it was (selector is non-zero)",
+    );
 }
