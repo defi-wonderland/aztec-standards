@@ -1,0 +1,34 @@
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.3.0",
+  "base_commit_sha": "39534e271bfaaad4da9f27e8123ef51dda3c04d6",
+  "prompts": {
+    "5c5d1709dbce7611": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "204fc577-a96c-4195-bfdf-dadea64b08e3",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "xorsal",
+      "messages": [],
+      "total_additions": 88,
+      "total_deletions": 0,
+      "accepted_lines": 88,
+      "overriden_lines": 0
+    },
+    "d0de254a135655dc": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "c04117d6-4d92-4c10-bb98-410d7042d766",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "xorsal",
+      "messages": [],
+      "total_additions": 1,
+      "total_deletions": 1,
+      "accepted_lines": 1,
+      "overriden_lines": 0
+    }
+  }
+}
