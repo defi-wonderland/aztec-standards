@@ -48,7 +48,14 @@ unconstrained fn authorization_hook_called_on_burn_public() {
     env.call_public(owner, call_interface);
 
     // Hook recorded (from, amount, selector) from the burn; burn_public -> authorize_public
-    utils::assert_auth_call(env, auth_contract, owner, burn_amount, expected_selector, true);
+    utils::assert_auth_call(
+        env,
+        auth_contract,
+        owner,
+        burn_amount,
+        expected_selector,
+        true,
+    );
 }
 
 #[test]
@@ -102,7 +109,14 @@ unconstrained fn authorization_hook_called_on_burn_private() {
     env.call_private(owner, call_interface);
 
     // Hook recorded (from, amount, selector) from the burn; burn_private -> authorize_private
-    utils::assert_auth_call(env, auth_contract, owner, burn_amount, expected_selector, false);
+    utils::assert_auth_call(
+        env,
+        auth_contract,
+        owner,
+        burn_amount,
+        expected_selector,
+        false,
+    );
 }
 
 #[test]
