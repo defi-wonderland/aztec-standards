@@ -53,6 +53,7 @@ interface TokenConstructorArgs {
   symbol: string;
   decimals: number;
   minter: AztecAddress;
+  authContract: AztecAddress;
 }
 
 interface DeploymentToken {
@@ -105,6 +106,7 @@ function getDeploymentData(
         symbol: tokenConfig.symbol,
         decimals: tokenConfig.decimals,
         minter: minterAddress,
+        authContract: AztecAddress.ZERO,
       },
     }));
 
@@ -279,7 +281,12 @@ async function deployContract(
       wait: { waitForStatus: TxStatus.PROPOSED },
     });
   } catch (error: unknown) {
-    const msg = error instanceof Error ? error.message : (error instanceof Object && 'cause' in error && error.cause instanceof Error ? error.cause.message : String(error));
+    const msg =
+      error instanceof Error
+        ? error.message
+        : error instanceof Object && 'cause' in error && error.cause instanceof Error
+          ? error.cause.message
+          : String(error);
     if (msg.includes('Existing nullifier')) {
       logger.info(`${label} already deployed (existing nullifier) at: ${instance.address.toString()}`);
       return { address: instance.address, status: 'existing' };
@@ -303,7 +310,7 @@ export async function deployToken(
     deployer,
     node,
     TokenContractArtifact,
-    [params.name, params.symbol, params.decimals, minter],
+    [params.name, params.symbol, params.decimals, minter, AztecAddress.ZERO],
     'constructor_with_minter',
     params.salt,
     options,
@@ -357,7 +364,7 @@ async function computeContractAddresses(config: DeploymentConfig): Promise<Compu
   const tokens: Record<string, AztecAddress> = {};
   for (const [key, tokenConfig] of Object.entries(config.contracts.tokens)) {
     const instance = await getContractInstanceFromInstantiationParams(TokenContractArtifact, {
-      constructorArgs: [tokenConfig.name, tokenConfig.symbol, tokenConfig.decimals, dripper],
+      constructorArgs: [tokenConfig.name, tokenConfig.symbol, tokenConfig.decimals, dripper, AztecAddress.ZERO],
       salt: new Fr(tokenConfig.salt),
       publicKeys: PublicKeys.default(),
       deployer: AztecAddress.ZERO,
@@ -520,7 +527,9 @@ program
   .option('--dry-run', 'Show configuration without deploying')
   .option('--output <file>', 'Write deployment JSON to file')
   .addOption(
-    new Option('-n, --network <network>', 'Target network').choices(['devnet', 'testnet', 'local-network']).default('devnet'),
+    new Option('-n, --network <network>', 'Target network')
+      .choices(['devnet', 'testnet', 'local-network'])
+      .default('devnet'),
   )
   .action(async (options: CLIOptions) => {
     try {
