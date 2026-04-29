@@ -2,7 +2,7 @@
 
 The `Vault` contract is a standalone yield-bearing vault that holds an underlying AIP-20 asset and issues AIP-20 share tokens to depositors. The vault and shares token are separate contracts — the vault manages deposit/withdraw/redeem logic while delegating share token operations (mint, burn, transfer) to an external AIP-20 `Token` contract configured with the vault as its minter.
 
-The design is an adaptation of the [ERC-4626](https://eips.ethereum.org/EIPS/eip-4626). While the vault publicly holds the underlying asset deposits and accrued yield, shares can be held either publicly or privately. Likewise, underlying assets can be deposited from or withdrawn to both public and private balances.
+This vault is **inspired by** [ERC-4626](https://eips.ethereum.org/EIPS/eip-4626) but **diverges substantially** from it. In particular, the share token is a **separate AIP-20 contract** rather than the vault itself — a structure closer in spirit to [ERC-7575](https://eips.ethereum.org/EIPS/eip-7575), which decouples the share token from the vault entrypoint. On top of that, Aztec's privacy model adds capabilities that have no counterpart in either standard: the vault publicly holds the underlying asset deposits and accrued yield, but shares can be held either publicly or privately, and underlying assets can be deposited from or withdrawn to both public and private balances.
 
 ## AIP-4626: Aztec Tokenized Vault Standard
 
@@ -29,7 +29,6 @@ This separation enables cleaner composability — the shares token is a standard
 
 ## Storage Fields
 
-- `admin: AztecAddress`: Address with permission to set the shares token (one-time setup).
 - `asset: AztecAddress`: The underlying asset token address.
 - `shares: AztecAddress`: The shares token address (set post-deployment via `set_shares_token`).
 - `vault_offset: u128`: Offset used to prevent inflation attacks.
@@ -39,14 +38,15 @@ This separation enables cleaner composability — the shares token is a standard
 ### constructor
 
 ```rust
-/// @notice Initializes the vault with asset, offset, and configuration
-/// @dev The admin must call set_shares_token() after deploying the shares token with this vault as minter.
-/// @param admin The address with permission to set the shares token (one-time setup)
+/// @notice Initializes the vault with asset and offset
+/// @dev The deployer must call set_shares_token() after deploying the shares token with this vault as minter.
+///      The vault must NOT use universal deploy (deployer must be non-zero) so the deployer address can
+///      authorize set_shares_token calls.
 /// @param asset The underlying asset token address
 /// @param vault_offset The offset used to prevent inflation attacks (typically 1)
 #[public]
 #[initializer]
-fn constructor(admin: AztecAddress, asset: AztecAddress, vault_offset: u128) { /* ... */ }
+fn constructor(asset: AztecAddress, vault_offset: u128) { /* ... */ }
 ```
 
 ## Setup Functions
@@ -54,8 +54,9 @@ fn constructor(admin: AztecAddress, asset: AztecAddress, vault_offset: u128) { /
 ### set_shares_token
 
 ```rust
-/// @notice Sets the shares token address (one-time, admin-only, immutable after set)
+/// @notice Sets the shares token address (one-time, deployer-only, immutable after set)
 /// @dev Must be called after deploying the shares token with this vault as minter.
+///      Only the contract deployer (from the contract instance) can call this.
 ///      PublicImmutable.initialize() ensures this can only ever be set once.
 ///      All vault operations revert until this is called.
 /// @param shares The shares token address (minter must be this vault)
@@ -68,18 +69,19 @@ fn set_shares_token(shares: AztecAddress) { /* ... */ }
 ```rust
 /// @notice Sets the shares token and makes an initial deposit for inflation-attack protection
 /// @dev Must be called after deploying the shares token with this vault as minter.
+///      Only the contract deployer (from the contract instance) can call this.
 ///      PublicImmutable.initialize() ensures this can only ever be set once.
 ///      All vault operations revert until this is called.
 /// @param shares The shares token address (minter must be this vault)
 /// @param initial_deposit The initial deposit amount of the asset
 /// @param depositor The address of the initial depositor of the assets
-/// @param _nonce The nonce used for authwitness for the transfer of the initial deposit
+/// @param nonce The nonce used for authwitness for the transfer of the initial deposit
 #[public]
 fn set_shares_token_with_initial_deposit(
     shares: AztecAddress,
     initial_deposit: u128,
     depositor: AztecAddress,
-    _nonce: Field,
+    nonce: Field,
 ) { /* ... */ }
 ```
 
@@ -379,16 +381,6 @@ fn redeem_public_to_private_exact(from: AztecAddress, to: AztecAddress, shares: 
 
 ## View Functions
 
-### admin
-
-```rust
-/// @notice Returns the admin address
-/// @return The address of the admin
-#[public]
-#[view]
-fn admin() -> AztecAddress { /* ... */ }
-```
-
 ### asset
 
 ```rust
@@ -543,34 +535,30 @@ fn get_vault_offset() -> u128 { /* ... */ }
 
 ## Deployment Guide
 
-<!-- TODO: Simplify to single-step deployment once public instance registration lands (https://github.com/AztecProtocol/aztec-packages/issues/20771) -->
+Deploying a Vault requires a two-step process because the vault and shares token are separate contracts with a circular dependency — the shares token needs the vault as its minter, and the vault needs to know the shares token address. To simplify this, the [`VaultDeployer`](../vault_deployer) contract wraps both steps into a single user-facing transaction: deploying a fresh `VaultDeployer` instance per vault atomically deploys and wires the vault + shares token pair.
 
-Deploying a Vault requires a two-step process because the vault and shares token are separate contracts with a circular dependency — the shares token needs the vault as its minter, and the vault needs to know the shares token address.
+A public factory that deploys and wires both contracts in one step is not currently possible because contract instance publishing (`publish_contract_instance_for_public_execution`) is private-only — it relies on a private oracle and `PrivateContext`. The `VaultDeployer` works around this by running the publishing + linking logic in its own private initializer, instead of as a reusable public factory. This approach can be revisited once [public instance registration](https://github.com/AztecProtocol/aztec-packages/issues/20771) is supported.
 
-Ideally, a single public transaction could precompute the shares token address, publish it via the registry, deploy it with the vault as minter, and link them together atomically. However, this is not currently possible because contract instance publishing (`publish_contract_instance_for_public_execution`) is private-only — it relies on a private oracle and `PrivateContext`. A public factory pattern that deploys and wires both contracts in one step is blocked until [public instance registration](https://github.com/AztecProtocol/aztec-packages/issues/20771) is supported.
+### Step 1: Publish the contract classes
 
-### Step 1: Deploy the vault
+The `Vault` and `Token` contract classes must be published on-chain once per network before any vault can be deployed. Each vault then references them by `ContractClassId`.
 
-Deploy the `Vault` contract with the asset token address, offset, and an admin who will complete setup:
+### Step 2: Deploy a `VaultDeployer` instance for the vault
 
-```rust
-Vault::interface().constructor(admin, asset, vault_offset)
-```
+Deploy a new `VaultDeployer` instance with one of its two initializers. The initializer derives the vault and shares addresses (with the deployer instance as their `deployer`), publishes both contract instances, enqueues their constructors, and finally enqueues `set_shares_token` (or `set_shares_token_with_initial_deposit`) on the vault — all within the same transaction. The deployer-of-instance check on the vault ensures only this `VaultDeployer` instance can perform the link.
 
-### Step 2: Deploy the shares token and link it
-
-Deploy an AIP-20 `Token` contract with the vault address as its minter:
+#### Deployment without initial deposit
 
 ```rust
-Token::interface().constructor_with_minter(name, symbol, decimals, vault_address)
-```
-
-Then call either `set_shares_token` or `set_shares_token_with_initial_deposit` on the vault to link the shares token. This can only be called once by the admin.
-
-### Deployment without initial deposit
-
-```rust
-vault.set_shares_token(shares_token_address)
+VaultDeployer::interface().deploy_vault(
+    asset,
+    vault_offset,
+    vault_class_id,
+    shares_name,
+    shares_symbol,
+    shares_decimals,
+    shares_class_id,
+)
 ```
 
 When using this deployment method, the vault relies on a **virtual shares offset** mechanism to mitigate inflation (donation) attacks. The deployer specifies the `vault_offset` value during vault construction.
@@ -597,12 +585,23 @@ https://www.openzeppelin.com/news/a-novel-defense-against-erc4626-inflation-atta
 >
 > **An `offset = 1` provides baseline protection, but may not be sufficient in all scenarios — particularly when multiple deposits can be front-run or when very small deposits are expected.**
 
-### Deployment with initial deposit
+#### Deployment with initial deposit
 
-For stronger protection, use `set_shares_token_with_initial_deposit` to seed the vault:
+For stronger protection, use the `deploy_vault_with_initial_deposit` initializer to seed the vault as part of the same transaction:
 
 ```rust
-vault.set_shares_token_with_initial_deposit(shares_token_address, initial_deposit, depositor, nonce)
+VaultDeployer::interface().deploy_vault_with_initial_deposit(
+    asset,
+    vault_offset,
+    vault_class_id,
+    shares_name,
+    shares_symbol,
+    shares_decimals,
+    shares_class_id,
+    initial_deposit,
+    depositor,
+    nonce,
+)
 ```
 
 The `depositor` can be any address that provides an authwit for the `initial_deposit` amount on the asset token. During setup:
@@ -623,7 +622,7 @@ Rather than relying on virtual math alone, this method ensures that an attacker 
 > - An **authwit must be signed** authorizing this public transfer
 > - The **vault contract address must be known in advance** in order to correctly compute and sign the authwit
 >
-> Deployers should ensure the vault address is precomputed and that the depositor's public balance and authorization are set up prior to calling `set_shares_token_with_initial_deposit`.
+> The vault address is fully determined by the `VaultDeployer` instance address (used as the `deployer`), the deployer's salt, the vault `ContractClassId`, and the vault's initialization hash (derived from the constructor selector and args). Deployers should precompute it from the `VaultDeployer` instantiation params and set up the depositor's public balance and authwit before submitting the `deploy_vault_with_initial_deposit` transaction.
 
 **Choosing the Initial Deposit Amount:**
 
