@@ -622,7 +622,7 @@ Rather than relying on virtual math alone, this method ensures that an attacker 
 > - An **authwit must be signed** authorizing this public transfer
 > - The **vault contract address must be known in advance** in order to correctly compute and sign the authwit
 >
-> The vault address is fully determined by the `VaultDeployer` instance address (used as the `deployer`), the deployer's salt, and the vault constructor args. Deployers should precompute it from the `VaultDeployer` instantiation params and set up the depositor's public balance and authwit before submitting the `deploy_vault_with_initial_deposit` transaction.
+> The vault address is fully determined by the `VaultDeployer` instance address (used as the `deployer`), the deployer's salt, the vault `ContractClassId`, and the vault's initialization hash (derived from the constructor selector and args). Deployers should precompute it from the `VaultDeployer` instantiation params and set up the depositor's public balance and authwit before submitting the `deploy_vault_with_initial_deposit` transaction.
 
 **Choosing the Initial Deposit Amount:**
 

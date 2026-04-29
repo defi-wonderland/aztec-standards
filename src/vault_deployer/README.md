@@ -76,4 +76,4 @@ fn deploy_vault_with_initial_deposit(
 
 - Publish the `Vault` and `Token` contract classes once per network before deploying any `VaultDeployer` instance.
 - The SDK must register the vault and shares contract instance preimages with the PXE before submitting the deployer transaction so the `get_contract_instance` oracle can resolve them.
-- The vault address can be precomputed off-chain from the deployer instance address, the salt, and the vault constructor args. This is required when using `deploy_vault_with_initial_deposit` so the depositor can sign an authwit for the asset transfer to the vault.
+- The vault address can be precomputed off-chain from the deployer instance address (used as the vault's `deployer`), the salt, the vault `ContractClassId`, and the vault's initialization hash (derived from the constructor selector and args). This is required when using `deploy_vault_with_initial_deposit` so the depositor can sign an authwit for the asset transfer to the vault.
