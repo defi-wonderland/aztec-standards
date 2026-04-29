@@ -2,7 +2,7 @@
 
 The `Vault` contract is a standalone yield-bearing vault that holds an underlying AIP-20 asset and issues AIP-20 share tokens to depositors. The vault and shares token are separate contracts — the vault manages deposit/withdraw/redeem logic while delegating share token operations (mint, burn, transfer) to an external AIP-20 `Token` contract configured with the vault as its minter.
 
-The design is an adaptation of the [ERC-4626](https://eips.ethereum.org/EIPS/eip-4626). While the vault publicly holds the underlying asset deposits and accrued yield, shares can be held either publicly or privately. Likewise, underlying assets can be deposited from or withdrawn to both public and private balances.
+This vault is **inspired by** [ERC-4626](https://eips.ethereum.org/EIPS/eip-4626) but **diverges substantially** from it. In particular, the share token is a **separate AIP-20 contract** rather than the vault itself — a structure closer in spirit to [ERC-7575](https://eips.ethereum.org/EIPS/eip-7575), which decouples the share token from the vault entrypoint. On top of that, Aztec's privacy model adds capabilities that have no counterpart in either standard: the vault publicly holds the underlying asset deposits and accrued yield, but shares can be held either publicly or privately, and underlying assets can be deposited from or withdrawn to both public and private balances.
 
 ## AIP-4626: Aztec Tokenized Vault Standard
 
