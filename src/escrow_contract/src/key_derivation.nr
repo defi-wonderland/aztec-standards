@@ -3,8 +3,8 @@ use bignum::U512;
 use sha512::sha512;
 
 use aztec::protocol::constants::{DOM_SEP__IVSK_M, DOM_SEP__NHK_M, DOM_SEP__OVSK_M, DOM_SEP__TSK_M};
-use aztec::protocol::public_keys::{IvpkM, NpkM, OvpkM, PublicKeys, TpkM};
 use aztec::protocol::point::Point;
+use aztec::protocol::public_keys::{IvpkM, NpkM, OvpkM, PublicKeys, TpkM};
 use std::embedded_curve_ops::{EmbeddedCurveScalar, fixed_base_scalar_mul};
 
 pub use crate::types::master_secret_keys::MasterSecretKeys;

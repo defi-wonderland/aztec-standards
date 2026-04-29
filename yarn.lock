@@ -1214,9 +1214,10 @@
     "@crate-crypto/node-eth-kzg-win32-arm64-msvc" "0.10.0"
     "@crate-crypto/node-eth-kzg-win32-x64-msvc" "0.10.0"
 
-"@defi-wonderland/aztec-benchmark@https://github.com/defi-wonderland/aztec-benchmark/releases/download/prerelease-022ee63/defi-wonderland-aztec-benchmark-4.2.0-prerelease.022ee63.tgz":
-  version "4.2.0-prerelease.022ee63"
-  resolved "https://github.com/defi-wonderland/aztec-benchmark/releases/download/prerelease-022ee63/defi-wonderland-aztec-benchmark-4.2.0-prerelease.022ee63.tgz#7eadacc1d39124ba5f809886cb5ab4736ce07ca6"
+"@defi-wonderland/aztec-benchmark@4.2.0":
+  version "4.2.0"
+  resolved "https://registry.yarnpkg.com/@defi-wonderland/aztec-benchmark/-/aztec-benchmark-4.2.0.tgz#37dff26e9b7dbbd7e46d50ed8b074ed2fb6697af"
+  integrity sha512-RW74B4oIZ4G+nuYVpjDlbcx6SOq0DpN0nEC7mmIBb2GQ9pjbVnq4f02Am26W3WIgNbXJg4n9A+io9ujbFghdDA==
   dependencies:
     "@actions/core" "1.10.1"
     "@actions/exec" "1.1.1"
