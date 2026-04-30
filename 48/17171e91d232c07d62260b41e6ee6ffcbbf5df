@@ -1,0 +1,27 @@
+.github/workflows/pr-checks.yml
+  3784cf88b5831e33 16
+.github/workflows/update-baseline.yml
+  3784cf88b5831e33 18
+src/vault_deployer/Nargo.toml
+  3784cf88b5831e33 8
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.3.4",
+  "base_commit_sha": "4817171e91d232c07d62260b41e6ee6ffcbbf5df",
+  "prompts": {
+    "3784cf88b5831e33": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "6439a682-d65c-42ce-9239-24dd01b5758e",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "xorsal",
+      "messages": [],
+      "total_additions": 3,
+      "total_deletions": 3,
+      "accepted_lines": 3,
+      "overriden_lines": 0
+    }
+  }
+}
