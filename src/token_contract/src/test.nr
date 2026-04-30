@@ -11,4 +11,5 @@ mod transfer_private_to_commitment;
 mod transfer_public_to_public;
 mod transfer_public_to_commitment;
 mod transfer_public_to_private;
+mod authorization;
 pub mod utils;
