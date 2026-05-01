@@ -32,6 +32,7 @@ unconstrained fn transfer_private_to_commitment() {
     // Check balances
     utils::check_private_balance(env, token_contract_address, owner, 0 as u128);
     utils::check_private_balance(env, token_contract_address, recipient, transfer_amount);
+    utils::assert_supply(env, token_contract_address, 0, mint_amount);
 }
 
 #[test]
@@ -74,6 +75,7 @@ unconstrained fn transfer_private_to_commitment_on_behalf_of_other() {
     // Check balances
     utils::check_private_balance(env, token_contract_address, owner, 0 as u128);
     utils::check_private_balance(env, token_contract_address, recipient, transfer_amount);
+    utils::assert_supply(env, token_contract_address, 0, mint_amount);
 }
 
 #[test(should_fail_with = "is reading an unknown nullifier")]
