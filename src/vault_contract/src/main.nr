@@ -10,6 +10,7 @@ pub contract Vault {
         },
         context::PrivateContext,
         macros::{functions::{external, initializer, internal, only_self, view}, storage::storage},
+        oracle::get_contract_instance::get_contract_instance_deployer_avm,
         protocol::address::AztecAddress,
         state_vars::PublicImmutable,
     };
@@ -22,52 +23,50 @@ pub contract Vault {
     // Maximum value for a u128 (2**128 - 1)
     global MAX_U128_VALUE: u128 = 340282366920938463463374607431768211455;
 
-    /// @param admin The address with permission to set the shares token (one-time setup)
     /// @param asset The underlying asset token address
     /// @param shares The shares token address (minter must be this vault)
     /// @param vault_offset The offset used to prevent inflation attacks
     #[storage]
     struct Storage<Context> {
-        admin: PublicImmutable<AztecAddress, Context>,
         asset: PublicImmutable<AztecAddress, Context>,
         shares: PublicImmutable<AztecAddress, Context>,
         vault_offset: PublicImmutable<u128, Context>,
     }
 
-    /// @notice Initializes the vault with asset, offset, and configuration
-    /// @dev The admin must call set_shares() after deploying the shares token with this vault as minter.
+    /// @notice Initializes the vault with asset and offset
+    /// @dev The deployer must call set_shares_token() after deploying the shares token with this
+    ///      vault as minter. The vault must NOT use universal deploy (deployer must be non-zero)
+    ///      so the deployer address can authorize set_shares_token calls.
     ///      The vault address can be precomputed before shares exists since shares is not a constructor arg.
-    ///      This 2-step deployment exists because contract instance publishing is private-only, so a public
-    ///      factory cannot deploy and wire both contracts atomically. Once public instance registration is
-    ///      supported, this can be simplified to a single-step deployment.
-    ///      See: https://github.com/AztecProtocol/aztec-packages/issues/20771
-    /// @param admin The address with permission to set the shares token (one-time setup)
     /// @param asset The underlying asset token address
     /// @param vault_offset The offset used to prevent inflation attacks (typically 1)
     #[external("public")]
     #[initializer]
-    fn constructor(admin: AztecAddress, asset: AztecAddress, vault_offset: u128) {
+    fn constructor(asset: AztecAddress, vault_offset: u128) {
         assert(vault_offset > 0, "vault_offset must be greater than 0");
-        self.storage.admin.initialize(admin);
+        let deployer = get_contract_instance_deployer_avm(self.address).unwrap();
+        assert(!deployer.is_zero(), "universal deploy not supported");
         self.storage.asset.initialize(asset);
         self.storage.vault_offset.initialize(vault_offset);
     }
 
-    /// @notice Sets the shares token address (one-time, admin-only, immutable after set)
+    /// @notice Sets the shares token address (one-time, deployer-only, immutable after set)
     /// @dev Must be called after deploying the shares token with this vault as minter.
+    ///      Only the contract deployer (from the contract instance) can call this.
     ///      PublicImmutable.initialize() ensures this can only ever be set once -- any subsequent
     ///      call will revert. All vault operations read shares via PublicImmutable.read() which
     ///      reverts if shares has not been initialized, so the vault is inoperable until this is called.
     /// @param shares The shares token address (minter must be this vault)
     #[external("public")]
     fn set_shares_token(shares: AztecAddress) {
-        let admin = self.storage.admin.read();
-        assert(self.msg_sender().eq(admin), "caller is not admin");
+        let deployer = get_contract_instance_deployer_avm(self.address).unwrap();
+        assert(self.msg_sender().eq(deployer), "caller is not deployer");
         self.storage.shares.initialize(shares);
     }
 
     /// @notice Sets the shares token and makes an initial deposit for inflation-attack protection
     /// @dev Must be called after deploying the shares token with this vault as minter.
+    ///      Only the contract deployer (from the contract instance) can call this.
     ///      PublicImmutable.initialize() ensures this can only ever be set once -- any subsequent
     ///      call will revert. All vault operations read shares via PublicImmutable.read() which
     ///      reverts if shares has not been initialized, so the vault is inoperable until this is called.
@@ -82,8 +81,8 @@ pub contract Vault {
         depositor: AztecAddress,
         nonce: Field,
     ) {
-        let admin = self.storage.admin.read();
-        assert(self.msg_sender().eq(admin), "caller is not admin");
+        let deployer = get_contract_instance_deployer_avm(self.address).unwrap();
+        assert(self.msg_sender().eq(deployer), "caller is not deployer");
         self.storage.shares.initialize(shares);
 
         // Caller deposits assets, shares are minted to this contract and are permanently locked.
@@ -798,14 +797,6 @@ pub contract Vault {
     /** ==========================================================
      * ======================= VAULT VIEW ========================
      * ======================================================== */
-
-    /// @notice Returns the admin address
-    /// @return The address of the admin
-    #[external("public")]
-    #[view]
-    fn admin() -> AztecAddress {
-        self.storage.admin.read()
-    }
 
     /// @notice Returns the underlying asset address
     /// @return The address of the underlying asset
