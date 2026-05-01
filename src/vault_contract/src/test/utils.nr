@@ -1,13 +1,17 @@
 use crate::Vault;
-use aztec::{protocol::address::AztecAddress, test::helpers::test_environment::TestEnvironment};
+use aztec::{
+    oracle::random::random,
+    protocol::address::AztecAddress,
+    test::helpers::{test_environment::TestEnvironment, txe_oracles as cheatcodes},
+};
 use aztec::test::helpers::authwit as authwit_cheatcodes;
 use token_contract::Token;
 
 pub global mint_amount: u128 = 10_000 as u128;
 
 /// @notice Sets up a vault with an asset token and a shares token.
-/// Deploys 3 contracts: asset token (with owner as minter), vault (with initializer, admin=owner),
-/// shares token (with vault as minter), then calls set_shares on the vault.
+/// Deploys 3 contracts: asset token (with owner as minter), vault (with initializer, deployer=owner),
+/// shares token (with vault as minter), then calls set_shares_token on the vault.
 pub unconstrained fn setup_with_vault(
     with_account_contracts: bool,
 ) -> (TestEnvironment, AztecAddress, AztecAddress, AztecAddress, AztecAddress, AztecAddress) {
@@ -33,10 +37,18 @@ pub unconstrained fn setup_with_vault(
     let asset_address =
         env.deploy("@token_contract/Token").with_public_initializer(owner, asset_initializer);
 
-    // Deploy vault with initializer (admin=owner, no shares yet)
-    let vault_initializer = Vault::interface().constructor(owner, asset_address, 1);
-    let vault_address =
-        env.deploy("@vault_contract/Vault").with_public_initializer(owner, vault_initializer);
+    // Deploy vault with explicit deployer=owner, then call initializer
+    let vault_init = Vault::interface().constructor(asset_address, 1);
+    let vault_instance = cheatcodes::deploy(
+        "@vault_contract/Vault",
+        vault_init.name,
+        vault_init.args,
+        0,
+        random(),
+        owner,
+    );
+    let vault_address = vault_instance.to_address();
+    env.call_public(owner, Vault::at(vault_address).constructor(asset_address, 1));
 
     // Deploy shares token with vault as minter
     let shares_initializer = Token::interface().constructor_with_minter(
@@ -49,7 +61,7 @@ pub unconstrained fn setup_with_vault(
     let shares_address =
         env.deploy("@token_contract/Token").with_public_initializer(owner, shares_initializer);
 
-    // Set the shares token on the vault (admin-only, one-shot)
+    // Set the shares token on the vault (deployer-only, one-shot)
     env.call_public(owner, Vault::at(vault_address).set_shares_token(shares_address));
 
     (env, vault_address, owner, recipient, asset_address, shares_address)
@@ -82,10 +94,18 @@ pub unconstrained fn setup_with_vault_initial_deposit(
     let asset_address =
         env.deploy("@token_contract/Token").with_public_initializer(owner, asset_initializer);
 
-    // Deploy vault with initializer (admin=owner, no shares yet)
-    let vault_initializer = Vault::interface().constructor(owner, asset_address, 1);
-    let vault_address =
-        env.deploy("@vault_contract/Vault").with_public_initializer(owner, vault_initializer);
+    // Deploy vault with explicit deployer=owner, then call initializer
+    let vault_init = Vault::interface().constructor(asset_address, 1);
+    let vault_instance = cheatcodes::deploy(
+        "@vault_contract/Vault",
+        vault_init.name,
+        vault_init.args,
+        0,
+        random(),
+        owner,
+    );
+    let vault_address = vault_instance.to_address();
+    env.call_public(owner, Vault::at(vault_address).constructor(asset_address, 1));
 
     // Deploy shares token with vault as minter
     let shares_initializer = Token::interface().constructor_with_minter(
@@ -104,7 +124,7 @@ pub unconstrained fn setup_with_vault_initial_deposit(
     // Authorize vault to transfer assets from owner
     authorize_transfer_public_to_public(env, asset_address, vault_address, owner, initial_deposit);
 
-    // Set shares and make initial deposit (admin-only, one-shot)
+    // Set shares and make initial deposit (deployer-only, one-shot)
     env.call_public(
         owner,
         Vault::at(vault_address).set_shares_token_with_initial_deposit(
@@ -135,10 +155,18 @@ pub unconstrained fn setup_vault_without_shares() -> (TestEnvironment, AztecAddr
     let asset_address =
         env.deploy("@token_contract/Token").with_public_initializer(owner, asset_initializer);
 
-    // Deploy vault with initializer (admin=owner) but do NOT call set_shares
-    let vault_initializer = Vault::interface().constructor(owner, asset_address, 1);
-    let vault_address =
-        env.deploy("@vault_contract/Vault").with_public_initializer(owner, vault_initializer);
+    // Deploy vault with explicit deployer=owner, call initializer, but do NOT call set_shares
+    let vault_init = Vault::interface().constructor(asset_address, 1);
+    let vault_instance = cheatcodes::deploy(
+        "@vault_contract/Vault",
+        vault_init.name,
+        vault_init.args,
+        0,
+        random(),
+        owner,
+    );
+    let vault_address = vault_instance.to_address();
+    env.call_public(owner, Vault::at(vault_address).constructor(asset_address, 1));
 
     (env, vault_address, owner, recipient, asset_address)
 }
