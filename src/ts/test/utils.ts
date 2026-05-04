@@ -59,8 +59,9 @@ interface WalletWithInternals {
   pxe: { proveTx(txRequest: TxExecutionRequest, scopes: AztecAddress[]): Promise<TxProvingResult> };
 }
 
-import { TokenContract } from '../../../src/artifacts/Token.js';
+import { TokenContract, TokenContractArtifact } from '../../../src/artifacts/Token.js';
 import { VaultContract, VaultContractArtifact } from '../../../src/artifacts/Vault.js';
+import { VaultDeployerContract, VaultDeployerContractArtifact } from '../../../src/artifacts/VaultDeployer.js';
 import { NFTContract } from '../../../src/artifacts/NFT.js';
 import { TestLogicContract } from '../../../src/artifacts/TestLogic.js';
 import { EscrowContract } from '../../../src/artifacts/Escrow.js';
@@ -240,64 +241,78 @@ export async function deployNFTWithMinter(wallet: EmbeddedWallet, deployer: Azte
 // --- Vault Utils ---
 
 /**
- * Deploys 3 contracts: asset token, shares token, and vault.
- * The vault is deployed first without initializer to get its address,
- * then the shares token is deployed with the vault as minter,
- * then the vault is initialized with asset and shares addresses.
+ * Publishes the Vault contract class on-chain (needed before deploying pool VaultDeployer instances).
+ * Each vault pool deploys its own VaultDeployer instance via initializers; there is no shared factory.
+ */
+export async function ensureVaultContractClassPublished(wallet: Wallet, deployer: AztecAddress): Promise<void> {
+  await VaultContract.deploy(wallet, deployer, 1).send({ from: deployer });
+}
+
+/**
+ * Deploys asset token plus a new VaultDeployer instance (initializer deploy_vault) that atomically
+ * publishes and wires vault + shares. Child deployer addresses use this pool deployer instance address.
  * @param wallet - The wallet to deploy the contract with.
- * @param deployer - The account to deploy the contract with.
+ * @param deployer - The account that deploys the pool VaultDeployer instance (parent deployer).
  * @returns [vault, asset, shares] contract instances.
  */
 export async function deployVaultAndAssetWithMinter(
   wallet: Wallet,
   deployer: AztecAddress,
-  options?: DeployOptions,
 ): Promise<[VaultContract, TokenContract, TokenContract]> {
-  // Deploy asset token with deployer as minter
   const { contract: assetContract } = await TokenContract.deployWithOpts(
     { method: 'constructor_with_minter', wallet },
     'AssetToken',
     'AT',
     6,
     deployer,
-  ).send({ ...options, from: deployer });
+  ).send({ from: deployer });
 
-  // Precompute vault address (no shares needed — breaks circular dependency)
-  const salt = Fr.random();
-  const { address: vaultAddress } = await deriveContractAddressWithConstructor(
-    VaultContractArtifact,
-    'constructor',
-    [deployer, assetContract.address, 1],
+  const vaultClass = await getContractClassFromArtifact(VaultContractArtifact);
+  const tokenClass = await getContractClassFromArtifact(TokenContractArtifact);
+
+  const poolDeployerSalt = Fr.random();
+
+  const poolDeployerArgs = [assetContract.address, 1, vaultClass.id, 'SharesToken', 'ST', 18, tokenClass.id] as const;
+
+  const poolDeployerInstance = await getContractInstanceFromInstantiationParams(VaultDeployerContractArtifact, {
+    constructorArtifact: 'deploy_vault',
+    constructorArgs: [...poolDeployerArgs],
+    salt: poolDeployerSalt,
     deployer,
-    salt,
-  );
-
-  // Deploy shares token with precomputed vault address as minter
-  const { contract: sharesContract } = await TokenContract.deployWithOpts(
-    { method: 'constructor_with_minter', wallet },
-    'SharesToken',
-    'ST',
-    18,
-    vaultAddress,
-  ).send({ ...options, from: deployer });
-
-  // Deploy vault at precomputed address with #[initializer] constructor
-  const { contract: vaultContract } = await VaultContract.deploy(wallet, deployer, assetContract.address, 1).send({
-    ...options,
-    from: deployer,
-    contractAddressSalt: salt,
   });
 
-  // Set the shares token on the vault (admin-only, one-shot)
-  await vaultContract.methods.set_shares_token(sharesContract.address).send({ from: deployer });
+  const vaultInstance = await getContractInstanceFromInstantiationParams(VaultContractArtifact, {
+    constructorArtifact: 'constructor',
+    constructorArgs: [assetContract.address, 1],
+    salt: poolDeployerSalt,
+    deployer: poolDeployerInstance.address,
+  });
+
+  const sharesInstance = await getContractInstanceFromInstantiationParams(TokenContractArtifact, {
+    constructorArtifact: 'constructor_with_minter',
+    constructorArgs: ['SharesToken', 'ST', 18, vaultInstance.address],
+    salt: poolDeployerSalt,
+    deployer: poolDeployerInstance.address,
+  });
+
+  await wallet.registerContract(poolDeployerInstance, VaultDeployerContractArtifact);
+  await wallet.registerContract(vaultInstance, VaultContractArtifact);
+  await wallet.registerContract(sharesInstance, TokenContractArtifact);
+
+  await VaultDeployerContract.deployWithOpts({ method: 'deploy_vault', wallet }, ...poolDeployerArgs).send({
+    from: deployer,
+    contractAddressSalt: poolDeployerSalt,
+  });
+
+  const vaultContract = await VaultContract.at(vaultInstance.address, wallet);
+  const sharesContract = await TokenContract.at(sharesInstance.address, wallet);
 
   return [vaultContract as VaultContract, assetContract as TokenContract, sharesContract as TokenContract];
 }
 
 /**
- * Deploys a vault with an optional initial deposit for inflation-attack protection.
- * Deploys 3 contracts: vault (without initializer), shares token (with vault as minter), then initializes vault.
- * If initialDeposit > 0, authorizes vault to transfer assets and deposits them.
+ * Deploys a new pool VaultDeployer (initializer deploy_vault_with_initial_deposit) to atomically
+ * deploy vault + shares and seed the vault from the depositor.
  * @returns [vault, shares] contract instances.
  */
 export async function deployVaultWithInitialDeposit(
@@ -306,52 +321,60 @@ export async function deployVaultWithInitialDeposit(
   assetContract: TokenContract,
   initialDeposit: bigint,
   depositor: AztecAddress,
-  options?: DeployOptions,
 ): Promise<[VaultContract, TokenContract]> {
-  // Precompute vault address (no shares needed — breaks circular dependency)
-  const salt = Fr.random();
-  const { address: vaultAddress } = await deriveContractAddressWithConstructor(
-    VaultContractArtifact,
-    'constructor',
-    [deployer, assetContract.address, 1],
-    deployer,
-    salt,
-  );
+  const vaultClass = await getContractClassFromArtifact(VaultContractArtifact);
+  const tokenClass = await getContractClassFromArtifact(TokenContractArtifact);
 
-  // Deploy shares token with precomputed vault address as minter
-  const { contract: sharesContract } = await TokenContract.deployWithOpts(
-    { method: 'constructor_with_minter', wallet },
+  const poolDeployerSalt = Fr.random();
+
+  const poolDeployerArgs = [
+    assetContract.address,
+    1,
+    vaultClass.id,
     'SharesToken',
     'ST',
     18,
-    vaultAddress,
-  ).send({ ...options, from: deployer });
+    tokenClass.id,
+    initialDeposit,
+    depositor,
+    0,
+  ] as const;
 
-  // Deploy vault at precomputed address with #[initializer] constructor
-  const { contract: vaultContract } = await VaultContract.deploy(wallet, deployer, assetContract.address, 1).send({
-    ...options,
-    from: deployer,
-    contractAddressSalt: salt,
+  const poolDeployerInstance = await getContractInstanceFromInstantiationParams(VaultDeployerContractArtifact, {
+    constructorArtifact: 'deploy_vault_with_initial_deposit',
+    constructorArgs: [...poolDeployerArgs],
+    salt: poolDeployerSalt,
+    deployer,
   });
 
-  if (initialDeposit > 0n) {
-    // Authorize vault to transfer assets from depositor
-    const transfer = assetContract.methods.transfer_public_to_public(
-      depositor,
-      vaultContract.address,
-      initialDeposit,
-      0,
-    );
-    await setPublicAuthWit(vaultContract.address, transfer, depositor, wallet as EmbeddedWallet);
+  const vaultInstance = await getContractInstanceFromInstantiationParams(VaultContractArtifact, {
+    constructorArtifact: 'constructor',
+    constructorArgs: [assetContract.address, 1],
+    salt: poolDeployerSalt,
+    deployer: poolDeployerInstance.address,
+  });
 
-    // Set shares and make initial deposit
-    await vaultContract.methods
-      .set_shares_token_with_initial_deposit(sharesContract.address, initialDeposit, depositor, 0)
-      .send({ from: deployer });
-  } else {
-    // Just set shares without initial deposit
-    await vaultContract.methods.set_shares_token(sharesContract.address).send({ from: deployer });
-  }
+  const sharesInstance = await getContractInstanceFromInstantiationParams(TokenContractArtifact, {
+    constructorArtifact: 'constructor_with_minter',
+    constructorArgs: ['SharesToken', 'ST', 18, vaultInstance.address],
+    salt: poolDeployerSalt,
+    deployer: poolDeployerInstance.address,
+  });
+
+  await wallet.registerContract(poolDeployerInstance, VaultDeployerContractArtifact);
+  await wallet.registerContract(vaultInstance, VaultContractArtifact);
+  await wallet.registerContract(sharesInstance, TokenContractArtifact);
+
+  const transfer = assetContract.methods.transfer_public_to_public(depositor, vaultInstance.address, initialDeposit, 0);
+  await setPublicAuthWit(vaultInstance.address, transfer, depositor, wallet as EmbeddedWallet);
+
+  await VaultDeployerContract.deployWithOpts(
+    { method: 'deploy_vault_with_initial_deposit', wallet },
+    ...poolDeployerArgs,
+  ).send({ from: deployer, contractAddressSalt: poolDeployerSalt });
+
+  const vaultContract = await VaultContract.at(vaultInstance.address, wallet);
+  const sharesContract = await TokenContract.at(sharesInstance.address, wallet);
 
   return [vaultContract as VaultContract, sharesContract as TokenContract];
 }
