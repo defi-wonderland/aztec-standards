@@ -174,6 +174,7 @@ export async function deployTokenWithMinter(wallet: Wallet, deployer: AztecAddre
     'PT',
     18,
     deployer,
+    AztecAddress.ZERO,
   ).send({ ...options, from: deployer });
   return contract;
 }
@@ -192,6 +193,7 @@ export async function deployTokenWithInitialSupply(wallet: Wallet, deployer: Azt
     18,
     0,
     deployer,
+    AztecAddress.ZERO,
   ).send({ ...options, from: deployer });
   return contract;
 }
@@ -265,6 +267,7 @@ export async function deployVaultAndAssetWithMinter(
     'AT',
     6,
     deployer,
+    AztecAddress.ZERO,
   ).send({ from: deployer });
 
   const vaultClass = await getContractClassFromArtifact(VaultContractArtifact);
@@ -290,7 +293,7 @@ export async function deployVaultAndAssetWithMinter(
 
   const sharesInstance = await getContractInstanceFromInstantiationParams(TokenContractArtifact, {
     constructorArtifact: 'constructor_with_minter',
-    constructorArgs: ['SharesToken', 'ST', 18, vaultInstance.address],
+    constructorArgs: ['SharesToken', 'ST', 18, vaultInstance.address, AztecAddress.ZERO],
     salt: poolDeployerSalt,
     deployer: poolDeployerInstance.address,
   });
@@ -356,7 +359,7 @@ export async function deployVaultWithInitialDeposit(
 
   const sharesInstance = await getContractInstanceFromInstantiationParams(TokenContractArtifact, {
     constructorArtifact: 'constructor_with_minter',
-    constructorArgs: ['SharesToken', 'ST', 18, vaultInstance.address],
+    constructorArgs: ['SharesToken', 'ST', 18, vaultInstance.address, AztecAddress.ZERO],
     salt: poolDeployerSalt,
     deployer: poolDeployerInstance.address,
   });
