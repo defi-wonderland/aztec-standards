@@ -16,6 +16,7 @@ unconstrained fn constructor_success() {
         "ASSET00000000000000000000000000",
         6,
         owner,
+        AztecAddress::zero(),
     );
     let asset_address =
         env.deploy("@token_contract/Token").with_public_initializer(owner, asset_initializer);
@@ -43,6 +44,7 @@ unconstrained fn constructor_fail_zero_offset() {
         "ASSET00000000000000000000000000",
         6,
         owner,
+        AztecAddress::zero(),
     );
     let asset_address =
         env.deploy("@token_contract/Token").with_public_initializer(owner, asset_initializer);
@@ -70,6 +72,7 @@ unconstrained fn constructor_fail_universal_deploy() {
         "ASSET00000000000000000000000000",
         6,
         owner,
+        AztecAddress::zero(),
     );
     let asset_address =
         env.deploy("@token_contract/Token").with_public_initializer(owner, asset_initializer);
