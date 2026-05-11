@@ -53,6 +53,7 @@ interface TokenConstructorArgs {
   symbol: string;
   decimals: number;
   minter: AztecAddress;
+  authContract: AztecAddress;
 }
 
 interface DeploymentToken {
@@ -105,6 +106,7 @@ function getDeploymentData(
         symbol: tokenConfig.symbol,
         decimals: tokenConfig.decimals,
         minter: minterAddress,
+        authContract: AztecAddress.ZERO,
       },
     }));
 
@@ -308,7 +310,7 @@ export async function deployToken(
     deployer,
     node,
     TokenContractArtifact,
-    [params.name, params.symbol, params.decimals, minter],
+    [params.name, params.symbol, params.decimals, minter, AztecAddress.ZERO],
     'constructor_with_minter',
     params.salt,
     options,
@@ -362,7 +364,7 @@ async function computeContractAddresses(config: DeploymentConfig): Promise<Compu
   const tokens: Record<string, AztecAddress> = {};
   for (const [key, tokenConfig] of Object.entries(config.contracts.tokens)) {
     const instance = await getContractInstanceFromInstantiationParams(TokenContractArtifact, {
-      constructorArgs: [tokenConfig.name, tokenConfig.symbol, tokenConfig.decimals, dripper],
+      constructorArgs: [tokenConfig.name, tokenConfig.symbol, tokenConfig.decimals, dripper, AztecAddress.ZERO],
       salt: new Fr(tokenConfig.salt),
       publicKeys: PublicKeys.default(),
       deployer: AztecAddress.ZERO,
