@@ -81,9 +81,9 @@ pub contract Token {
         self.storage.name.initialize(FieldCompressedString::from_string(name));
         self.storage.symbol.initialize(FieldCompressedString::from_string(symbol));
         self.storage.decimals.initialize(decimals);
+        self.storage.auth_contract.initialize(auth_contract);
 
         self.internal._mint_to_public(to, initial_supply);
-        self.storage.auth_contract.initialize(auth_contract);
     }
 
     /// @notice Initializes the token with a minter
@@ -104,9 +104,9 @@ pub contract Token {
         self.storage.name.initialize(FieldCompressedString::from_string(name));
         self.storage.symbol.initialize(FieldCompressedString::from_string(symbol));
         self.storage.decimals.initialize(decimals);
+        self.storage.auth_contract.initialize(auth_contract);
 
         self.storage.minter.initialize(minter);
-        self.storage.auth_contract.initialize(auth_contract);
     }
 
     /** ==========================================================
