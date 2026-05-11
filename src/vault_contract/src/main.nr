@@ -43,6 +43,7 @@ pub contract Vault {
     #[external("public")]
     #[initializer]
     fn constructor(asset: AztecAddress, vault_offset: u128) {
+        assert(!asset.is_zero(), "asset must not be zero");
         assert(vault_offset > 0, "vault_offset must be greater than 0");
         let deployer = get_contract_instance_deployer_avm(self.address).unwrap();
         assert(!deployer.is_zero(), "universal deploy not supported");
@@ -81,6 +82,7 @@ pub contract Vault {
         depositor: AztecAddress,
         nonce: Field,
     ) {
+        assert(initial_deposit > 0, "initial_deposit must be greater than 0");
         let deployer = get_contract_instance_deployer_avm(self.address).unwrap();
         assert(self.msg_sender().eq(deployer), "caller is not deployer");
         self.storage.shares.initialize(shares);
