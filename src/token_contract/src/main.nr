@@ -68,6 +68,7 @@ pub contract Token {
     /// @param decimals The number of decimals of the token
     /// @param initial_supply The initial supply of the token
     /// @param to The address to mint the initial supply to
+    /// @param auth_contract The address of the authorization contract (zero address to disable)
     #[external("public")]
     #[initializer]
     fn constructor_with_initial_supply(
