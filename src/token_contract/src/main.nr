@@ -511,7 +511,8 @@ pub contract Token {
 
     /// @notice ARC-403: calls the private authorization hook when one is configured
     /// @dev Invoked from external private functions; no-ops when auth_contract is zero.
-    ///      Runs entirely in private context - the auth call is never revealed on-chain.
+    ///      Runs in private context, but the authorization contract may still create public
+    ///      side effects (e.g., via enqueued public calls or public events).
     /// @param from The address tokens are moved from (zero address for mints)
     /// @param amount The amount of tokens being moved
     /// @param selector The selector passed is the calling function's own selector
