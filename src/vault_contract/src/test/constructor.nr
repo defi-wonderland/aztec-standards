@@ -62,6 +62,26 @@ unconstrained fn constructor_fail_zero_offset() {
     env.call_public(owner, Vault::at(vault_address).constructor(asset_address, 0));
 }
 
+#[test(should_fail_with = "asset must not be zero")]
+unconstrained fn constructor_fail_zero_asset() {
+    let mut env = TestEnvironment::new();
+    let owner = env.create_light_account();
+
+    let zero_asset = AztecAddress::zero();
+
+    let vault_init = Vault::interface().constructor(zero_asset, 1);
+    let vault_instance = cheatcodes::deploy(
+        "@vault_contract/Vault",
+        vault_init.name,
+        vault_init.args,
+        0,
+        random(),
+        owner,
+    );
+    let vault_address = vault_instance.to_address();
+    env.call_public(owner, Vault::at(vault_address).constructor(zero_asset, 1));
+}
+
 #[test(should_fail_with = "universal deploy not supported")]
 unconstrained fn constructor_fail_universal_deploy() {
     let mut env = TestEnvironment::new();
