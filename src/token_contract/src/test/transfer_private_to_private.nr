@@ -36,6 +36,7 @@ unconstrained fn transfer_private_on_behalf_of_other() {
         mint_amount - transfer_amount,
     );
     utils::check_private_balance(env, token_contract_address, recipient, transfer_amount);
+    utils::assert_supply(env, token_contract_address, 0, mint_amount);
 }
 
 #[test]
@@ -51,6 +52,7 @@ unconstrained fn transfer_private_zero_amount() {
     // Check balances
     utils::check_private_balance(env, token_contract_address, owner, mint_amount);
     utils::check_private_balance(env, token_contract_address, recipient, 0);
+    utils::assert_supply(env, token_contract_address, 0, mint_amount);
 }
 
 #[test]
@@ -100,6 +102,7 @@ unconstrained fn transfer_private_multiple_notes_recursively() {
         total_amount - transfer_amount,
     );
     utils::check_private_balance(env, token_contract_address, recipient, transfer_amount);
+    utils::assert_supply(env, token_contract_address, 0, total_amount);
 }
 
 #[test(should_fail_with = "Balance too low")]

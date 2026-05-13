@@ -9,9 +9,7 @@ unconstrained fn mint_to_private_success() {
     env.call_private(minter, Token::at(token_contract_address).mint_to_private(owner, mint_amount));
 
     utils::check_private_balance(env, token_contract_address, owner, mint_amount);
-
-    let total_supply = env.view_public(Token::at(token_contract_address).total_supply());
-    assert(total_supply == mint_amount);
+    utils::assert_supply(env, token_contract_address, 0, mint_amount);
 }
 
 #[test(should_fail_with = "Assertion failed: caller is not minter")]

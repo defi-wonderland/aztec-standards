@@ -16,6 +16,7 @@ import {
   initializeTransferCommitment,
   expectTransferEvents,
   PRIVATE_ADDRESS,
+  assertSupply,
 } from './utils.js';
 
 import { TokenContractArtifact, TokenContract } from '../../../src/artifacts/Token.js';
@@ -124,7 +125,8 @@ describe('Token', () => {
     expect((await token.methods.balance_of_public(bob).simulate({ from: alice })).result).toBe(0n);
     expect((await token.methods.balance_of_private(bob).simulate({ from: alice })).result).toBe(0n);
 
-    expect((await token.methods.total_supply().simulate({ from: alice })).result).toBe(AMOUNT);
+    // After mint_to_public: all supply is public
+    await assertSupply(token, AMOUNT, 0n, alice);
 
     // alice prepares partial note for bob
     const commitment = await initializeTransferCommitment(token, alice, bobAccountManager, alice);
@@ -148,8 +150,8 @@ describe('Token', () => {
     // bob has tokens in private
     expect((await token.methods.balance_of_public(bob).simulate({ from: alice })).result).toBe(0n);
     expect((await token.methods.balance_of_private(bob).simulate({ from: bob })).result).toBe(AMOUNT);
-    // total supply is still the same
-    expect((await token.methods.total_supply().simulate({ from: alice })).result).toBe(AMOUNT);
+    // After transfer_public_to_commitment: all supply moved to private
+    await assertSupply(token, 0n, AMOUNT, alice);
   }, 300_000);
 
   it('public transfer with authwitness', async () => {
@@ -193,6 +195,8 @@ describe('Token', () => {
     expect((await token.methods.balance_of_public(alice).simulate({ from: carl })).result).toBe(0n);
     // Bob should have the a non-zero amount
     expect((await token.methods.balance_of_public(bob).simulate({ from: carl })).result).toBe(AMOUNT);
+    // Public to public: supply distribution unchanged
+    await assertSupply(token, AMOUNT, 0n, carl);
   }, 300_000);
 
   // Skipped: requires `additionalScopes` (not yet available) so carl's PXE can
@@ -243,5 +247,7 @@ describe('Token', () => {
 
     expect((await token.methods.balance_of_private(alice).simulate({ from: alice })).result).toBe(0n);
     expect((await token.methods.balance_of_private(bob).simulate({ from: bob })).result).toBe(AMOUNT);
+    // Private to private: all supply remains private
+    await assertSupply(token, 0n, AMOUNT, alice);
   }, 300_000);
 });

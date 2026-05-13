@@ -16,6 +16,7 @@ unconstrained fn burn_public_success() {
         owner,
         mint_amount - burn_amount,
     );
+    utils::assert_supply(env, token_contract_address, mint_amount - burn_amount, 0);
 }
 
 #[test]
@@ -24,7 +25,7 @@ unconstrained fn burn_public_decrease_total_supply() {
         utils::setup_and_mint_to_public_without_minter(false);
     let burn_amount = mint_amount / 10 as u128;
 
-    utils::check_total_supply(env, token_contract_address, mint_amount);
+    utils::assert_supply(env, token_contract_address, mint_amount, 0);
 
     // Burn less than balance
     env.call_public(owner, Token::at(token_contract_address).burn_public(owner, burn_amount, 0));
@@ -34,7 +35,7 @@ unconstrained fn burn_public_decrease_total_supply() {
         owner,
         mint_amount - burn_amount,
     );
-    utils::check_total_supply(env, token_contract_address, mint_amount - burn_amount);
+    utils::assert_supply(env, token_contract_address, mint_amount - burn_amount, 0);
 }
 
 #[test]
@@ -55,6 +56,7 @@ unconstrained fn burn_public_on_behalf_of_other() {
         owner,
         mint_amount - burn_amount,
     );
+    utils::assert_supply(env, token_contract_address, mint_amount - burn_amount, 0);
 }
 
 #[test(should_fail_with = "attempt to subtract with overflow 'self.storage.public_balances.at(from).read() - amount'")]

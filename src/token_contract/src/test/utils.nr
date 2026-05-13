@@ -185,6 +185,24 @@ pub unconstrained fn get_total_supply(
     total_supply
 }
 
+pub unconstrained fn assert_supply(
+    env: TestEnvironment,
+    token_contract_address: AztecAddress,
+    expected_public_supply: u128,
+    expected_private_supply: u128,
+) {
+    let total_supply = env.view_public(Token::at(token_contract_address).total_supply());
+    let public_supply = env.view_public(Token::at(token_contract_address).public_supply());
+    let private_supply = env.view_public(Token::at(token_contract_address).private_supply());
+
+    assert(
+        total_supply == expected_public_supply + expected_private_supply,
+        "Total supply is not correct",
+    );
+    assert(public_supply == expected_public_supply, "Public supply is not correct");
+    assert(private_supply == expected_private_supply, "Private supply is not correct");
+}
+
 pub unconstrained fn check_private_balance(
     env: TestEnvironment,
     token_contract_address: AztecAddress,

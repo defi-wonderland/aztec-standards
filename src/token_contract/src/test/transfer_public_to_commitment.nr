@@ -16,6 +16,7 @@ unconstrained fn transfer_public_to_commitment_internal_orchestration() {
 
     // User's private balance should be equal to the amount
     utils::check_private_balance(env, token_contract_address, user, mint_amount);
+    utils::assert_supply(env, token_contract_address, 0, mint_amount);
 }
 
 /// External orchestration means that the calls to prepare and finalize are not done by the Token contract. This flow
@@ -51,6 +52,7 @@ unconstrained fn transfer_public_to_commitment_external_orchestration() {
 
     // Recipient's private balance should be equal to the amount
     utils::check_private_balance(env, token_contract_address, recipient, mint_amount);
+    utils::assert_supply(env, token_contract_address, 0, mint_amount);
 }
 
 #[test(should_fail_with = "Invalid partial note or completer 'context.nullifier_exists_unsafe(validity_commitment, context.this_address())'")]
