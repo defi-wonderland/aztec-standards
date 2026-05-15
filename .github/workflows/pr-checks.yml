@@ -9,7 +9,7 @@ concurrency:
 
 jobs:
   checks:
-    uses: defi-wonderland/aztec-ci-actions/.github/workflows/run-tests.yml@v0
+    uses: defi-wonderland/aztec-ci-actions/.github/workflows/run-tests.yml@fix/v4.3.0-rc.1
     secrets: inherit
 
   benchmark:
