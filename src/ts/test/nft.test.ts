@@ -58,16 +58,16 @@ describe('NFT', () => {
 
       const deploymentData = await getContractInstanceFromInstantiationParams(NFTContractArtifact, {
         constructorArtifact: 'constructor_with_minter',
-        constructorArgs: ['TestNFT', 'TNFT', deployerWallet, deployerWallet],
+        constructorArgs: ['TestNFT', 'TNFT', deployerWallet],
         salt,
         deployer: deployerWallet,
       });
 
-      const deployer = new ContractDeployer(NFTContractArtifact, wallet, undefined, 'constructor_with_minter');
+      const deployer = new ContractDeployer(NFTContractArtifact, wallet, 'constructor_with_minter');
 
       const { contract } = await deployer
-        .deploy('TestNFT', 'TNFT', deployerWallet, deployerWallet)
-        .send({ contractAddressSalt: salt, from: deployerWallet });
+        .deploy(['TestNFT', 'TNFT', deployerWallet], { salt })
+        .send({ from: deployerWallet });
 
       const contractMetadata = await wallet.getContractMetadata(deploymentData.address);
       expect(contractMetadata).toBeDefined();
@@ -138,7 +138,10 @@ describe('NFT', () => {
         caller: bob,
         action: transferCallInterface,
       };
-      const witness = await wallet.createAuthWit(alice, intent);
+      const witness = await wallet.createAuthWit(alice, {
+        caller: intent.caller,
+        call: await intent.action.getFunctionCall(),
+      });
 
       // Bob executes the transfer with alice's authorization
       await transferCallInterface.send({ from: bob, authWitnesses: [witness] });
@@ -172,7 +175,10 @@ describe('NFT', () => {
         caller: bob,
         action: transferCallInterface,
       };
-      const witness = await wallet.createAuthWit(alice, intent);
+      const witness = await wallet.createAuthWit(alice, {
+        caller: intent.caller,
+        call: await intent.action.getFunctionCall(),
+      });
 
       // Bob executes the transfer with alice's authorization
       await transferCallInterface.send({ from: bob, authWitnesses: [witness] });
@@ -209,7 +215,10 @@ describe('NFT', () => {
         caller: bob,
         action: transferCallInterface,
       };
-      const witness = await wallet.createAuthWit(alice, intent);
+      const witness = await wallet.createAuthWit(alice, {
+        caller: intent.caller,
+        call: await intent.action.getFunctionCall(),
+      });
 
       // Bob executes the transfer with alice's authorization
       // additionalScopes includes alice so the PXE can access alice's account contract notes
@@ -260,12 +269,15 @@ describe('NFT', () => {
         caller: bob,
         action,
       };
-      const witness = await wallet.createAuthWit(alice, intent);
+      const witness = await wallet.createAuthWit(alice, {
+        caller: intent.caller,
+        call: await intent.action.getFunctionCall(),
+      });
 
       // alice authorizes the public authwit
       const setPublicAuthwitInteraction = await SetPublicAuthwitContractInteraction.create(wallet, alice, intent, true);
 
-      await setPublicAuthwitInteraction.send({ from: alice });
+      await setPublicAuthwitInteraction.send();
 
       const validity = await lookupValidity(wallet, alice, intent, witness);
       expect(validity.isValidInPrivate).toBeTruthy();
@@ -365,7 +377,10 @@ describe('NFT', () => {
       };
 
       // Create auth witness with wrong nonce
-      const witness = await wallet.createAuthWit(carl, intent); // Wrong signer (carl instead of alice)
+      const witness = await wallet.createAuthWit(carl, {
+        caller: intent.caller,
+        call: await intent.action.getFunctionCall(),
+      }); // Wrong signer (carl instead of alice)
 
       // Transfer should fail with invalid authorization
       await expect(transferCallInterface.send({ from: bob, authWitnesses: [witness] })).rejects.toThrow();
