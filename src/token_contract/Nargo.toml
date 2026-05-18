@@ -5,8 +5,8 @@ compiler_version = ">=1.0.0"
 type = "contract"
 
 [dependencies]
-aztec = { path = "../../../aztec-nr/aztec" }
-uint_note = { path = "../../../aztec-nr/uint-note" }
-balance_set = { path = "../../../aztec-nr/balance-set" }
-compressed_string = { path = "../../../aztec-nr/compressed-string" }
+aztec = { git = "https://github.com/defi-wonderland/aztec-nr", tag = "v4.2.1-test.0", directory = "aztec" }
+uint_note = { git = "https://github.com/defi-wonderland/aztec-nr", tag = "v4.2.1-test.0", directory = "uint-note" }
+balance_set = { git = "https://github.com/defi-wonderland/aztec-nr", tag = "v4.2.1-test.0", directory = "balance-set" }
+compressed_string = { git = "https://github.com/defi-wonderland/aztec-nr", tag = "v4.2.1-test.0", directory = "compressed-string" }
 generic_proxy = { path = "../generic_proxy" }

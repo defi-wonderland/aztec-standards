@@ -1,9 +1,14 @@
 use crate::{
     test::utils::{
         authorize_transfer_public_to_public, check_public_balance, get_public_balance,
-        redeem_public_to_public, setup_vault_without_shares, setup_with_vault_initial_deposit,
+        redeem_public_to_public, setup_with_vault_initial_deposit,
     },
     Vault,
+};
+use aztec::{
+    oracle::random::random,
+    protocol::address::AztecAddress,
+    test::helpers::{test_environment::TestEnvironment, txe_oracles as cheatcodes},
 };
 use token_contract::test::utils::{check_total_supply, get_total_supply};
 use token_contract::Token;
@@ -26,6 +31,7 @@ unconstrained fn vault_with_initial_deposit_success() {
     check_public_balance(env, asset_address, vault_address, initial_deposit);
 
     // Verify shares are locked in the vault contract itself (not owner)
+    // shares_address == vault_address since vault IS the shares token
     check_public_balance(env, shares_address, vault_address, initial_deposit);
 
     // Verify owner has no shares
@@ -112,22 +118,49 @@ unconstrained fn vault_with_initial_deposit_yield_distribution() {
 
 #[test(should_fail_with = "initial_deposit must be greater than 0")]
 unconstrained fn vault_with_initial_deposit_fail_zero_amount() {
-    let (mut env, vault_address, owner, _recipient, _asset_address) = setup_vault_without_shares();
+    let mut env = TestEnvironment::new();
+    let owner = env.create_light_account();
 
-    // Deploy shares token with vault as minter
-    let shares_initializer = Token::interface().constructor_with_minter(
+    let asset_initializer = Token::interface().constructor_with_minter(
+        "AssetToken000000000000000000000",
+        "ASSET00000000000000000000000000",
+        6,
+        owner,
+    );
+    let asset_address =
+        env.deploy("@token_contract/Token").with_public_initializer(owner, asset_initializer);
+
+    // constructor_with_initial_deposit with initial_deposit == 0 must revert
+    let vault_init = Vault::interface().constructor_with_initial_deposit(
+        asset_address,
+        1,
         "SharesToken00000000000000000000",
         "SHARES0000000000000000000000000",
         18,
-        vault_address,
+        0,
+        owner,
+        0,
     );
-    let shares_address =
-        env.deploy("@token_contract/Token").with_public_initializer(owner, shares_initializer);
-
-    // Calling with initial_deposit == 0 must revert and never silently succeed without
-    // providing the inflation-attack protection the function name implies.
+    let vault_instance = cheatcodes::deploy(
+        "@vault_contract/Vault",
+        vault_init.name,
+        vault_init.args,
+        0,
+        random(),
+        owner,
+    );
+    let vault_address = vault_instance.to_address();
     env.call_public(
         owner,
-        Vault::at(vault_address).set_shares_token_with_initial_deposit(shares_address, 0, owner, 0),
+        Vault::at(vault_address).constructor_with_initial_deposit(
+            asset_address,
+            1,
+            "SharesToken00000000000000000000",
+            "SHARES0000000000000000000000000",
+            18,
+            0,
+            owner,
+            0,
+        ),
     );
 }

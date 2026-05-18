@@ -5,7 +5,7 @@ compiler_version = ">=1.0.0"
 type = "contract"
 
 [dependencies]
-aztec = { path = "../../../../../../aztec-nr/aztec" }
+aztec = { git = "https://github.com/defi-wonderland/aztec-nr", tag = "v4.2.1-test.0", directory = "aztec" }
 escrow_contract = { path = "../../../" }
 token = { path = "../../../../token_contract" }
 nft = { path = "../../../../nft_contract" }
