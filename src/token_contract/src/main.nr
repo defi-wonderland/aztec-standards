@@ -12,12 +12,11 @@ pub contract Token {
             functions::{authorize_once, external, initializer, internal, only_self, view},
             storage::storage,
         },
-        messages::message_delivery::MessageDelivery,
-        protocol::{address::AztecAddress, traits::{FromField, ToField}},
+        protocol::{address::AztecAddress, traits::{FromField}},
         state_vars::{Map, Owned, PublicImmutable, PublicMutable, StateVariable},
     };
     // note library
-    use uint_note::{PartialUintNote, UintNote};
+    use uint_note;
     // compression library
     use compressed_string::FieldCompressedString;
     // private balance library

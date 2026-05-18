@@ -7,7 +7,6 @@ use crate::{
 };
 use aztec::{
     oracle::random::random,
-    protocol::address::AztecAddress,
     test::helpers::{test_environment::TestEnvironment, txe_oracles as cheatcodes},
 };
 use token_contract::test::utils::{check_total_supply, get_total_supply};

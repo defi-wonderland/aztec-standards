@@ -34,7 +34,7 @@
     "@aztec/stdlib": "4.2.1",
     "@aztec/wallet-sdk": "4.2.1",
     "@aztec/wallets": "4.2.1",
-    "@defi-wonderland/aztec-benchmark": "4.2.1",
+    "@defi-wonderland/aztec-benchmark": "4.2.0",
     "commander": "14.0.1",
     "dotenv": "16.4.7"
   },
