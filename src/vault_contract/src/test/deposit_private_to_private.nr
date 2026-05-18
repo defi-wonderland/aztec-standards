@@ -185,8 +185,6 @@ unconstrained fn deposit_private_to_private_request_too_many_shares() {
     );
 }
 
-// Unknown auth witness for message hash
-// Unknown auth witness for message hash
 #[test(should_fail_with = "Unknown auth witness for message hash ")]
 unconstrained fn deposit_private_to_private_on_behalf_of_wrong_caller() {
     // Setup with asset token

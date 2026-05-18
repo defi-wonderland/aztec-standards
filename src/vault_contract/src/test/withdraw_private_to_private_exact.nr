@@ -28,7 +28,6 @@ unconstrained fn withdraw_private_to_private_exact_success() {
     utils::withdraw_private_to_private_exact(
         env,
         vault_address,
-        shares_address,
         deposit_recipient,
         recipient,
         deposit_amount,
@@ -76,7 +75,6 @@ unconstrained fn withdraw_private_to_private_exact_after_yield() {
     utils::withdraw_private_to_private_exact(
         env,
         vault_address,
-        shares_address,
         deposit_recipient,
         recipient,
         deposit_amount + 1,
@@ -121,7 +119,6 @@ unconstrained fn withdraw_private_to_private_exact_request_fewer_assets() {
     utils::withdraw_private_to_private_exact(
         env,
         vault_address,
-        shares_address,
         deposit_recipient,
         recipient,
         requested_assets,
@@ -166,7 +163,6 @@ unconstrained fn withdraw_private_to_private_exact_request_too_many_assets() {
     utils::withdraw_private_to_private_exact(
         env,
         vault_address,
-        shares_address,
         deposit_recipient,
         recipient,
         deposit_amount,
@@ -261,15 +257,6 @@ unconstrained fn withdraw_private_to_private_exact_on_behalf_of_other_success() 
         deposit_recipient,
         proxy,
         call_interface,
-    );
-
-    // Authwit 2: Authorize the vault to burn shares from deposit_recipient on the shares token (private burn)
-    utils::authorize_burn_private(
-        env,
-        shares_address,
-        vault_address,
-        deposit_recipient,
-        shares_to_burn,
     );
 
     // Withdraw

@@ -93,14 +93,7 @@ unconstrained fn vault_with_initial_deposit_yield_distribution() {
     env.call_public(owner, Token::at(asset_address).mint_to_public(vault_address, yield_amount));
 
     // Recipient redeems their shares
-    redeem_public_to_public(
-        env,
-        vault_address,
-        shares_address,
-        recipient,
-        recipient,
-        deposit_amount,
-    );
+    redeem_public_to_public(env, vault_address, recipient, recipient, deposit_amount);
 
     // Recipient should have received more than deposit_amount due to yield
     // Total shares = initial_deposit + deposit_amount = 2000

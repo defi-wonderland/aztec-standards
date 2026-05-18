@@ -9,11 +9,8 @@ use token_contract::Token;
 
 pub global mint_amount: u128 = 10_000 as u128;
 
-// Vault IS the shares token - "shares_address" == vault_address in all helpers.
-
 /// @notice Sets up a vault (which is itself the shares token) with an asset token.
 /// Deploys 2 contracts: asset token (with owner as minter), vault (initializing token metadata).
-/// Returns shares_address == vault_address since the vault IS the shares token.
 pub unconstrained fn setup_with_vault(
     with_account_contracts: bool,
 ) -> (TestEnvironment, AztecAddress, AztecAddress, AztecAddress, AztecAddress, AztecAddress) {
@@ -38,7 +35,7 @@ pub unconstrained fn setup_with_vault(
     let asset_address =
         env.deploy("@token_contract/Token").with_public_initializer(owner, asset_initializer);
 
-    // Deploy vault with explicit deployer=owner; vault IS the shares token
+    // Deploy vault with explicit deployer=owner
     let vault_init = Vault::interface().constructor(
         asset_address,
         1,
@@ -66,7 +63,6 @@ pub unconstrained fn setup_with_vault(
         ),
     );
 
-    // vault_address == shares_address (vault IS the shares token)
     (env, vault_address, owner, recipient, asset_address, vault_address)
 }
 
@@ -137,7 +133,6 @@ pub unconstrained fn setup_with_vault_initial_deposit(
         ),
     );
 
-    // vault_address == shares_address (vault IS the shares token)
     (env, vault_address, owner, recipient, asset_address, vault_address)
 }
 
@@ -203,48 +198,26 @@ pub unconstrained fn authorize_transfer_private_to_public(
     authwit_cheatcodes::add_private_authwit_from_call(env, from, caller, call_interface);
 }
 
-/// @notice No-op: vault IS the shares token and is its own authority - no authwit needed for burns
-pub unconstrained fn authorize_burn_public(
-    _env: TestEnvironment,
-    _shares_token: AztecAddress,
-    _vault: AztecAddress,
-    _from: AztecAddress,
-    _amount: u128,
-) {}
-
-/// @notice No-op: vault IS the shares token and is its own authority - no authwit needed for burns
-pub unconstrained fn authorize_burn_private(
-    _env: TestEnvironment,
-    _shares_token: AztecAddress,
-    _vault: AztecAddress,
-    _from: AztecAddress,
-    _amount: u128,
-) {}
-
 // ====================== Redeem helpers ======================
 
 pub unconstrained fn redeem_public_to_public(
     env: TestEnvironment,
     vault_address: AztecAddress,
-    shares_address: AztecAddress,
     from: AztecAddress,
     to: AztecAddress,
     shares: u128,
 ) {
-    authorize_burn_public(env, shares_address, vault_address, from, shares);
     env.call_public(from, Vault::at(vault_address).redeem_public_to_public(from, to, shares));
 }
 
 pub unconstrained fn redeem_public_to_private_exact(
     env: TestEnvironment,
     vault_address: AztecAddress,
-    shares_address: AztecAddress,
     from: AztecAddress,
     to: AztecAddress,
     shares: u128,
     min_assets: u128,
 ) {
-    authorize_burn_public(env, shares_address, vault_address, from, shares);
     env.call_private(
         from,
         Vault::at(vault_address).redeem_public_to_private_exact(from, to, shares, min_assets),
@@ -254,25 +227,21 @@ pub unconstrained fn redeem_public_to_private_exact(
 pub unconstrained fn redeem_private_to_public(
     env: TestEnvironment,
     vault_address: AztecAddress,
-    shares_address: AztecAddress,
     from: AztecAddress,
     to: AztecAddress,
     shares: u128,
 ) {
-    authorize_burn_private(env, shares_address, vault_address, from, shares);
     env.call_private(from, Vault::at(vault_address).redeem_private_to_public(from, to, shares));
 }
 
 pub unconstrained fn redeem_private_to_private_exact(
     env: TestEnvironment,
     vault_address: AztecAddress,
-    shares_address: AztecAddress,
     from: AztecAddress,
     to: AztecAddress,
     shares: u128,
     min_assets: u128,
 ) {
-    authorize_burn_private(env, shares_address, vault_address, from, shares);
     env.call_private(
         from,
         Vault::at(vault_address).redeem_private_to_private_exact(from, to, shares, min_assets),
@@ -284,39 +253,31 @@ pub unconstrained fn redeem_private_to_private_exact(
 pub unconstrained fn withdraw_public_to_public(
     env: TestEnvironment,
     vault_address: AztecAddress,
-    shares_address: AztecAddress,
     from: AztecAddress,
     to: AztecAddress,
     assets: u128,
-    shares_to_burn: u128,
 ) {
-    authorize_burn_public(env, shares_address, vault_address, from, shares_to_burn);
     env.call_public(from, Vault::at(vault_address).withdraw_public_to_public(from, to, assets));
 }
 
 pub unconstrained fn withdraw_public_to_private(
     env: TestEnvironment,
     vault_address: AztecAddress,
-    shares_address: AztecAddress,
     from: AztecAddress,
     to: AztecAddress,
     assets: u128,
-    shares_to_burn: u128,
 ) {
-    authorize_burn_public(env, shares_address, vault_address, from, shares_to_burn);
     env.call_private(from, Vault::at(vault_address).withdraw_public_to_private(from, to, assets));
 }
 
 pub unconstrained fn withdraw_private_to_private(
     env: TestEnvironment,
     vault_address: AztecAddress,
-    shares_address: AztecAddress,
     from: AztecAddress,
     to: AztecAddress,
     assets: u128,
     shares_to_burn: u128,
 ) {
-    authorize_burn_private(env, shares_address, vault_address, from, shares_to_burn);
     env.call_private(
         from,
         Vault::at(vault_address).withdraw_private_to_private(from, to, assets, shares_to_burn),
@@ -326,13 +287,11 @@ pub unconstrained fn withdraw_private_to_private(
 pub unconstrained fn withdraw_private_to_public_exact(
     env: TestEnvironment,
     vault_address: AztecAddress,
-    shares_address: AztecAddress,
     from: AztecAddress,
     to: AztecAddress,
     assets: u128,
     shares_to_burn: u128,
 ) {
-    authorize_burn_private(env, shares_address, vault_address, from, shares_to_burn);
     env.call_private(
         from,
         Vault::at(vault_address).withdraw_private_to_public_exact(from, to, assets, shares_to_burn),
@@ -342,13 +301,11 @@ pub unconstrained fn withdraw_private_to_public_exact(
 pub unconstrained fn withdraw_private_to_private_exact(
     env: TestEnvironment,
     vault_address: AztecAddress,
-    shares_address: AztecAddress,
     from: AztecAddress,
     to: AztecAddress,
     assets: u128,
     shares_to_burn: u128,
 ) {
-    authorize_burn_private(env, shares_address, vault_address, from, shares_to_burn);
     env.call_private(
         from,
         Vault::at(vault_address).withdraw_private_to_private_exact(from, to, assets, shares_to_burn),

@@ -25,10 +25,8 @@ unconstrained fn withdraw_public_to_public_success() {
     utils::withdraw_public_to_public(
         env,
         vault_address,
-        shares_address,
         deposit_recipient,
         recipient,
-        deposit_amount,
         deposit_amount,
     );
 
@@ -71,11 +69,9 @@ unconstrained fn withdraw_public_to_public_after_yield() {
     utils::withdraw_public_to_public(
         env,
         vault_address,
-        shares_address,
         deposit_recipient,
         recipient,
         deposit_amount + 1,
-        deposit_amount,
     );
 
     // All shares are burnt
@@ -158,15 +154,6 @@ unconstrained fn withdraw_public_to_public_on_behalf_of_other_success() {
         deposit_recipient,
         recipient,
         public_withdraw_public_to_public_call_interface,
-    );
-
-    // Authwit 2: Authorize the vault to burn shares from deposit_recipient on the shares token
-    utils::authorize_burn_public(
-        env,
-        shares_address,
-        vault_address,
-        deposit_recipient,
-        deposit_amount,
     );
 
     // Withdraw

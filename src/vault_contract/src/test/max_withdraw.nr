@@ -131,15 +131,7 @@ unconstrained fn max_withdraw_updates_after_withdrawal() {
     // Withdraw half the assets
     let withdraw_amount: u128 = deposit_amount / 2;
 
-    utils::withdraw_public_to_public(
-        env,
-        vault_address,
-        shares_address,
-        owner,
-        recipient,
-        withdraw_amount,
-        withdraw_amount,
-    );
+    utils::withdraw_public_to_public(env, vault_address, owner, recipient, withdraw_amount);
 
     // max_withdraw should be reduced
     let final_max_withdraw = env.view_public(Vault::at(vault_address).max_withdraw(owner));

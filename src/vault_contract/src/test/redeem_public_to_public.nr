@@ -27,7 +27,6 @@ unconstrained fn redeem_public_to_public_success() {
     utils::redeem_public_to_public(
         env,
         vault_address,
-        shares_address,
         deposit_recipient,
         recipient,
         requested_shares,
@@ -74,7 +73,6 @@ unconstrained fn redeem_public_to_public_after_yield() {
     utils::redeem_public_to_public(
         env,
         vault_address,
-        shares_address,
         deposit_recipient,
         recipient,
         requested_shares,
@@ -162,15 +160,6 @@ unconstrained fn redeem_public_to_public_on_behalf_of_other_success() {
         deposit_recipient,
         recipient,
         public_redeem_public_to_public_call_interface,
-    );
-
-    // Authorize the vault to burn shares from deposit_recipient's public balance on the shares token
-    utils::authorize_burn_public(
-        env,
-        shares_address,
-        vault_address,
-        deposit_recipient,
-        requested_shares,
     );
 
     // Withdraw

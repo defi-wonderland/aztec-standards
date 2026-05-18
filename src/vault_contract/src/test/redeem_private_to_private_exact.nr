@@ -29,7 +29,6 @@ unconstrained fn redeem_private_to_private_exact_success() {
     utils::redeem_private_to_private_exact(
         env,
         vault_address,
-        shares_address,
         deposit_recipient,
         recipient,
         shares_to_burn,
@@ -79,7 +78,6 @@ unconstrained fn redeem_private_to_private_exact_after_yield() {
     utils::redeem_private_to_private_exact(
         env,
         vault_address,
-        shares_address,
         deposit_recipient,
         recipient,
         shares_to_burn,
@@ -124,7 +122,6 @@ unconstrained fn redeem_private_to_private_exact_request_fewer_assets() {
     utils::redeem_private_to_private_exact(
         env,
         vault_address,
-        shares_address,
         deposit_recipient,
         recipient,
         shares_to_burn,
@@ -170,7 +167,6 @@ unconstrained fn redeem_private_to_private_exact_request_too_many_assets() {
     utils::redeem_private_to_private_exact(
         env,
         vault_address,
-        shares_address,
         deposit_recipient,
         recipient,
         shares_to_burn,
@@ -262,15 +258,6 @@ unconstrained fn redeem_private_to_private_exact_on_behalf_of_other_success() {
         deposit_recipient,
         proxy,
         call_interface,
-    );
-
-    // Authorize the vault to burn shares from deposit_recipient's private balance on the shares token
-    utils::authorize_burn_private(
-        env,
-        shares_address,
-        vault_address,
-        deposit_recipient,
-        shares_to_burn,
     );
 
     // Withdraw
