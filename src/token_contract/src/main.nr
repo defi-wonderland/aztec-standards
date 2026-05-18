@@ -1,7 +1,8 @@
 pub mod test;
 
-use aztec::macros::aztec;
+use aztec::macros::{aztec, contract_template};
 
+#[contract_template("token")]
 #[aztec]
 pub contract Token {
     // aztec library
@@ -11,26 +12,15 @@ pub contract Token {
             functions::{authorize_once, external, initializer, internal, only_self, view},
             storage::storage,
         },
-        messages::message_delivery::MessageDelivery,
-        protocol::{address::AztecAddress, traits::{FromField, ToField}},
+        protocol::{address::AztecAddress, traits::FromField},
         state_vars::{Map, Owned, PublicImmutable, PublicMutable, StateVariable},
     };
     // note library
-    use uint_note::{PartialUintNote, UintNote};
+    use uint_note;
     // compression library
-    use compressed_string::FieldCompressedString;
+    use compressed_string;
     // private balance library
-    use balance_set::BalanceSet;
-
-    // gas-optimized max notes for initial transfer call
-    global INITIAL_TRANSFER_CALL_MAX_NOTES: u32 = 2;
-    // max notes transfer for recursive transfer call if initial max notes are exceeded
-    global RECURSIVE_TRANSFER_CALL_MAX_NOTES: u32 = 8;
-
-    // Sentinel address used in Transfer events to represent the private side of a balance change.
-    // sha224sum 'PRIVATE_ADDRESS'
-    global PRIVATE_ADDRESS_MAGIC_VALUE: AztecAddress =
-        AztecAddress::from_field(0x1ea7e01501975545617c2e694d931cb576b691a4a867fed81ebd3264);
+    use balance_set;
 
     #[event]
     struct Transfer {
@@ -48,10 +38,10 @@ pub contract Token {
     /// @param minter The account permissioned to mint the token
     #[storage]
     struct Storage<Context> {
-        name: PublicImmutable<FieldCompressedString, Context>,
-        symbol: PublicImmutable<FieldCompressedString, Context>,
+        name: PublicImmutable<compressed_string::FieldCompressedString, Context>,
+        symbol: PublicImmutable<compressed_string::FieldCompressedString, Context>,
         decimals: PublicImmutable<u8, Context>,
-        private_balances: Owned<BalanceSet<Context>, Context>,
+        private_balances: Owned<balance_set::BalanceSet<Context>, Context>,
         total_supply: PublicMutable<u128, Context>,
         public_balances: Map<AztecAddress, PublicMutable<u128, Context>, Context>,
         minter: PublicImmutable<AztecAddress, Context>,
@@ -73,9 +63,7 @@ pub contract Token {
         initial_supply: u128,
         to: AztecAddress,
     ) {
-        self.storage.name.initialize(FieldCompressedString::from_string(name));
-        self.storage.symbol.initialize(FieldCompressedString::from_string(symbol));
-        self.storage.decimals.initialize(decimals);
+        self.internal._initialize_token(name, symbol, decimals, AztecAddress::zero());
 
         self.internal._mint_to_public(to, initial_supply);
     }
@@ -88,11 +76,7 @@ pub contract Token {
     #[external("public")]
     #[initializer]
     fn constructor_with_minter(name: str<31>, symbol: str<31>, decimals: u8, minter: AztecAddress) {
-        self.storage.name.initialize(FieldCompressedString::from_string(name));
-        self.storage.symbol.initialize(FieldCompressedString::from_string(symbol));
-        self.storage.decimals.initialize(decimals);
-
-        self.storage.minter.initialize(minter);
+        self.internal._initialize_token(name, symbol, decimals, minter);
     }
 
     /** ==========================================================
@@ -113,7 +97,7 @@ pub contract Token {
         amount: u128,
         _nonce: Field,
     ) {
-        self.internal._decrease_private_balance(from, amount, INITIAL_TRANSFER_CALL_MAX_NOTES);
+        self.internal._decrease_private_balance(from, amount, _initial_transfer_call_max_notes());
 
         self.enqueue_self.increase_public_balance_internal(to, amount);
     }
@@ -134,14 +118,14 @@ pub contract Token {
         amount: u128,
         _nonce: Field,
     ) -> Field {
-        self.internal._decrease_private_balance(from, amount, INITIAL_TRANSFER_CALL_MAX_NOTES);
+        self.internal._decrease_private_balance(from, amount, _initial_transfer_call_max_notes());
 
         self.enqueue_self.increase_public_balance_internal(to, amount);
 
         // Only the sender will be able to complete the partial note
         let completer = self.msg_sender();
         let commitment = self.internal._initialize_transfer_commitment(to, completer);
-        commitment.to_field()
+        aztec::protocol::traits::ToField::to_field(commitment)
     }
 
     /// @notice Transfer tokens from private balance to another private balance
@@ -158,7 +142,7 @@ pub contract Token {
         amount: u128,
         _nonce: Field,
     ) {
-        self.internal._decrease_private_balance(from, amount, INITIAL_TRANSFER_CALL_MAX_NOTES);
+        self.internal._decrease_private_balance(from, amount, _initial_transfer_call_max_notes());
 
         self.internal._increase_private_balance(to, amount);
     }
@@ -178,10 +162,10 @@ pub contract Token {
         amount: u128,
         _nonce: Field,
     ) {
-        self.internal._decrease_private_balance(from, amount, INITIAL_TRANSFER_CALL_MAX_NOTES);
+        self.internal._decrease_private_balance(from, amount, _initial_transfer_call_max_notes());
 
         let completer = self.msg_sender();
-        PartialUintNote::from_field(commitment).complete_from_private(
+        uint_note::PartialUintNote::from_field(commitment).complete_from_private(
             self.context,
             completer,
             self.storage.private_balances.get_storage_slot(),
@@ -216,7 +200,7 @@ pub contract Token {
     #[external("private")]
     fn initialize_transfer_commitment(to: AztecAddress, completer: AztecAddress) -> Field {
         let commitment = self.internal._initialize_transfer_commitment(to, completer);
-        commitment.to_field()
+        aztec::protocol::traits::ToField::to_field(commitment)
     }
 
     /// @notice Recursively subtracts balance from private balance
@@ -227,7 +211,7 @@ pub contract Token {
     #[external("private")]
     #[only_self]
     fn recurse_subtract_balance_internal(account: AztecAddress, amount: u128) -> u128 {
-        self.internal._subtract_balance(account, amount, RECURSIVE_TRANSFER_CALL_MAX_NOTES)
+        self.internal._subtract_balance(account, amount, _recursive_transfer_call_max_notes())
     }
 
     /** ==========================================================
@@ -274,12 +258,12 @@ pub contract Token {
 
         let completer = self.msg_sender();
         self.internal._increase_commitment_balance(
-            PartialUintNote::from_field(commitment),
+            uint_note::PartialUintNote::from_field(commitment),
             completer,
             amount,
         );
 
-        self.emit(Transfer { from, to: PRIVATE_ADDRESS_MAGIC_VALUE, amount });
+        self.emit(Transfer { from, to: _private_address_magic_value(), amount });
     }
 
     /// @notice Increases the public balance of `to` by `amount`
@@ -290,7 +274,7 @@ pub contract Token {
     fn increase_public_balance_internal(to: AztecAddress, amount: u128) {
         self.internal._increase_public_balance(to, amount);
 
-        self.emit(Transfer { from: PRIVATE_ADDRESS_MAGIC_VALUE, to, amount });
+        self.emit(Transfer { from: _private_address_magic_value(), to, amount });
     }
 
     /// @notice Decreases the public balance of `from` by `amount`
@@ -301,7 +285,7 @@ pub contract Token {
     fn decrease_public_balance_internal(from: AztecAddress, amount: u128) {
         self.internal._decrease_public_balance(from, amount);
 
-        self.emit(Transfer { from, to: PRIVATE_ADDRESS_MAGIC_VALUE, amount });
+        self.emit(Transfer { from, to: _private_address_magic_value(), amount });
     }
 
     /** ==========================================================
@@ -329,7 +313,7 @@ pub contract Token {
     /// @return The name of the token
     #[external("public")]
     #[view]
-    fn name() -> FieldCompressedString {
+    fn name() -> compressed_string::FieldCompressedString {
         self.storage.name.read()
     }
 
@@ -337,7 +321,7 @@ pub contract Token {
     /// @return The symbol of the token
     #[external("public")]
     #[view]
-    fn symbol() -> FieldCompressedString {
+    fn symbol() -> compressed_string::FieldCompressedString {
         self.storage.symbol.read()
     }
 
@@ -397,12 +381,14 @@ pub contract Token {
         _validate_minter(completer, self.storage.minter.read());
         self.internal._increase_total_supply(amount);
         self.internal._increase_commitment_balance(
-            PartialUintNote::from_field(commitment),
+            uint_note::PartialUintNote::from_field(commitment),
             completer,
             amount,
         );
 
-        self.emit(Transfer { from: AztecAddress::zero(), to: PRIVATE_ADDRESS_MAGIC_VALUE, amount });
+        self.emit(
+            Transfer { from: AztecAddress::zero(), to: _private_address_magic_value(), amount },
+        );
     }
 
     /// @notice Internal function to increase the total supply by `amount`
@@ -412,7 +398,9 @@ pub contract Token {
     fn increase_total_supply_internal(amount: u128) {
         self.internal._increase_total_supply(amount);
 
-        self.emit(Transfer { from: AztecAddress::zero(), to: PRIVATE_ADDRESS_MAGIC_VALUE, amount });
+        self.emit(
+            Transfer { from: AztecAddress::zero(), to: _private_address_magic_value(), amount },
+        );
     }
 
     /** ==========================================================
@@ -448,12 +436,54 @@ pub contract Token {
     fn decrease_total_supply_internal(amount: u128) {
         self.internal._decrease_total_supply(amount);
 
-        self.emit(Transfer { from: PRIVATE_ADDRESS_MAGIC_VALUE, to: AztecAddress::zero(), amount });
+        self.emit(
+            Transfer { from: _private_address_magic_value(), to: AztecAddress::zero(), amount },
+        );
+    }
+
+    /** ==========================================================
+     * ==================== INITIALIZATION ======================
+     * ======================================================== */
+
+    /// @notice Initializes the token storage fields
+    /// @dev Called by constructors and by hosts that compose this template.
+    ///      The host is responsible for setting `minter` to the appropriate address.
+    /// @param name The name of the token
+    /// @param symbol The symbol of the token
+    /// @param decimals The number of decimals of the token
+    /// @param minter The address authorized to mint (zero = minting disabled)
+    #[internal("public")]
+    fn _initialize_token(name: str<31>, symbol: str<31>, decimals: u8, minter: AztecAddress) {
+        self.storage.name.initialize(compressed_string::FieldCompressedString::from_string(name));
+        self.storage.symbol.initialize(compressed_string::FieldCompressedString::from_string(
+            symbol,
+        ));
+        self.storage.decimals.initialize(decimals);
+        self.storage.minter.initialize(minter);
     }
 
     /** ==========================================================
      * ================= TOKEN LIBRARIES =========================
      * ======================================================== */
+
+    /// @notice Gas-optimized max notes for initial transfer call
+    #[contract_library_method]
+    fn _initial_transfer_call_max_notes() -> u32 {
+        2
+    }
+
+    /// @notice Max notes transfer for recursive transfer call if initial max notes are exceeded
+    #[contract_library_method]
+    fn _recursive_transfer_call_max_notes() -> u32 {
+        8
+    }
+
+    /// @notice Sentinel address used in Transfer events to represent the private side of a balance change.
+    /// @dev sha224sum 'PRIVATE_ADDRESS'
+    #[contract_library_method]
+    fn _private_address_magic_value() -> AztecAddress {
+        AztecAddress::from_field(0x1ea7e01501975545617c2e694d931cb576b691a4a867fed81ebd3264)
+    }
 
     /// @notice Validates that the caller is the minter
     /// @param sender The address of the caller
@@ -473,7 +503,7 @@ pub contract Token {
         let change = self.internal._subtract_balance(account, amount, max_notes);
         // Increases `change` to the private balance of `account`, and emits a private balance note to account
         self.storage.private_balances.at(account).add(change).deliver(
-            MessageDelivery.ONCHAIN_CONSTRAINED,
+            aztec::messages::message_delivery::MessageDelivery.ONCHAIN_CONSTRAINED,
         );
     }
 
@@ -483,7 +513,9 @@ pub contract Token {
     #[internal("private")]
     fn _increase_private_balance(to: AztecAddress, amount: u128) {
         // Increases `amount` to the private balance of `to`, and emits a private balance note to `to` from `from`
-        self.storage.private_balances.at(to).add(amount).deliver(MessageDelivery.ONCHAIN_CONSTRAINED);
+        self.storage.private_balances.at(to).add(amount).deliver(
+            aztec::messages::message_delivery::MessageDelivery.ONCHAIN_CONSTRAINED,
+        );
     }
 
     /// @notice Increases the public balance of `to` by `amount`
@@ -515,7 +547,7 @@ pub contract Token {
     /// @param amount The amount of tokens to increase the balance of the commitment by
     #[internal("public")]
     fn _increase_commitment_balance(
-        commitment: PartialUintNote,
+        commitment: uint_note::PartialUintNote,
         completer: AztecAddress,
         amount: u128,
     ) {
@@ -575,8 +607,8 @@ pub contract Token {
     fn _initialize_transfer_commitment(
         to: AztecAddress,
         completer: AztecAddress,
-    ) -> PartialUintNote {
-        let commitment = UintNote::partial(to, self.context, to, completer);
+    ) -> uint_note::PartialUintNote {
+        let commitment = uint_note::UintNote::partial(to, self.context, to, completer);
 
         commitment
     }
@@ -601,6 +633,23 @@ pub contract Token {
         self.enqueue_self.increase_total_supply_internal(amount);
     }
 
+    /// @notice Mints tokens to a partial note commitment (used internally, completer is this contract)
+    /// @param commitment The partial note representing the commitment
+    /// @param amount The amount of tokens to mint
+    #[internal("public")]
+    fn _mint_to_commitment(commitment: Field, amount: u128) {
+        let completer = self.address;
+        self.internal._increase_total_supply(amount);
+        self.internal._increase_commitment_balance(
+            uint_note::PartialUintNote::from_field(commitment),
+            completer,
+            amount,
+        );
+        self.emit(
+            Transfer { from: AztecAddress::zero(), to: _private_address_magic_value(), amount },
+        );
+    }
+
     /// @notice Burns tokens from a public balance and decreases the total supply
     /// @param from The address to burn tokens from
     /// @param amount The amount of tokens to burn
@@ -617,7 +666,7 @@ pub contract Token {
     /// @param amount The amount of tokens to burn
     #[internal("private")]
     fn _burn_private(from: AztecAddress, amount: u128) {
-        self.internal._decrease_private_balance(from, amount, INITIAL_TRANSFER_CALL_MAX_NOTES);
+        self.internal._decrease_private_balance(from, amount, _initial_transfer_call_max_notes());
         self.enqueue_self.decrease_total_supply_internal(amount);
     }
 
