@@ -3,17 +3,6 @@ use crate::Vault;
 use aztec::test::helpers::authwit as authwit_cheatcodes;
 use token_contract::Token;
 
-#[test(should_fail_with = "Trying to read from uninitialized PublicImmutable")]
-unconstrained fn withdraw_public_to_public_without_shares() {
-    let (env, vault_address, owner, recipient, _asset_address) =
-        utils::setup_vault_without_shares();
-
-    env.call_public(
-        owner,
-        Vault::at(vault_address).withdraw_public_to_public(owner, recipient, mint_amount, 0),
-    );
-}
-
 #[test]
 unconstrained fn withdraw_public_to_public_success() {
     // Setup with asset token
@@ -103,37 +92,6 @@ unconstrained fn withdraw_public_to_public_after_yield() {
 }
 
 #[test(should_fail_with = "unauthorized")]
-unconstrained fn withdraw_public_to_public_without_approval() {
-    // Setup with asset token
-    let (env, vault_address, owner, recipient, asset_address, shares_address) =
-        utils::setup_with_vault(false);
-
-    // Mint some asset tokens to owner
-    let deposit_amount: u128 = mint_amount;
-    let deposit_recipient = owner;
-    utils::mint_and_deposit_public_to_public(
-        env,
-        owner,
-        asset_address,
-        vault_address,
-        shares_address,
-        deposit_recipient,
-        deposit_amount,
-    );
-
-    // Withdraw (recipient calls, but has no approval from deposit_recipient on the vault)
-    env.call_public(
-        recipient,
-        Vault::at(vault_address).withdraw_public_to_public(
-            deposit_recipient,
-            recipient,
-            deposit_amount,
-            0,
-        ),
-    );
-}
-
-#[test(should_fail_with = "unauthorized")]
 unconstrained fn withdraw_public_to_public_on_behalf_of_wrong_caller() {
     // Setup with asset token
     let (env, vault_address, owner, recipient, asset_address, shares_address) =
@@ -154,7 +112,7 @@ unconstrained fn withdraw_public_to_public_on_behalf_of_wrong_caller() {
 
     // Authorize someone to call withdraw_public_to_public on the vault (but authorizes owner, not recipient)
     let public_withdraw_public_to_public_call_interface = Vault::at(vault_address)
-        .withdraw_public_to_public(deposit_recipient, recipient, deposit_amount, 0);
+        .withdraw_public_to_public(deposit_recipient, recipient, deposit_amount);
     authwit_cheatcodes::add_public_authwit_from_call(
         env,
         deposit_recipient,
@@ -169,7 +127,6 @@ unconstrained fn withdraw_public_to_public_on_behalf_of_wrong_caller() {
             deposit_recipient,
             recipient,
             deposit_amount,
-            0,
         ),
     );
 }
@@ -195,7 +152,7 @@ unconstrained fn withdraw_public_to_public_on_behalf_of_other_success() {
 
     // Authwit 1: Authorize recipient to call withdraw_public_to_public on the vault on behalf of deposit_recipient
     let public_withdraw_public_to_public_call_interface = Vault::at(vault_address)
-        .withdraw_public_to_public(deposit_recipient, recipient, deposit_amount, 0);
+        .withdraw_public_to_public(deposit_recipient, recipient, deposit_amount);
     authwit_cheatcodes::add_public_authwit_from_call(
         env,
         deposit_recipient,
@@ -219,7 +176,6 @@ unconstrained fn withdraw_public_to_public_on_behalf_of_other_success() {
             deposit_recipient,
             recipient,
             deposit_amount,
-            0,
         ),
     );
 

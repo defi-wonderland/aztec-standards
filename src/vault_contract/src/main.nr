@@ -1,8 +1,9 @@
 pub mod test;
 
-use aztec::macros::aztec;
+use aztec::macros::{aztec, AztecConfig, contract_template};
 
-#[aztec]
+#[contract_template("vault")]
+#[aztec(AztecConfig::new().compose("token"))]
 pub contract Vault {
     use aztec::{
         authwit::auth::{
@@ -11,107 +12,104 @@ pub contract Vault {
         context::PrivateContext,
         macros::{functions::{external, initializer, internal, only_self, view}, storage::storage},
         oracle::get_contract_instance::get_contract_instance_deployer_avm,
-        protocol::address::AztecAddress,
-        state_vars::PublicImmutable,
+        protocol::{address::AztecAddress, traits::FromField},
+        state_vars::{Map, Owned, PublicImmutable, PublicMutable, StateVariable},
     };
+    use balance_set::BalanceSet;
+    use compressed_string::FieldCompressedString;
     use token_contract::Token;
 
-    // Rounding direction that the vault uses to calculate shares and assets
-    global ROUND_DOWN: bool = false;
-    global ROUND_UP: bool = true;
-
-    // Maximum value for a u128 (2**128 - 1)
-    global MAX_U128_VALUE: u128 = 340282366920938463463374607431768211455;
-
     /// @param asset The underlying asset token address
-    /// @param shares The shares token address (minter must be this vault)
     /// @param vault_offset The offset used to prevent inflation attacks
+    /// @param name Token name (from composed Token template)
+    /// @param symbol Token symbol (from composed Token template)
+    /// @param decimals Token decimals (from composed Token template)
+    /// @param private_balances Private share balances (from composed Token template)
+    /// @param total_supply Total share supply (from composed Token template)
+    /// @param public_balances Public share balances (from composed Token template)
+    /// @param minter Minter address - set to this vault's address (from composed Token template)
     #[storage]
     struct Storage<Context> {
         asset: PublicImmutable<AztecAddress, Context>,
-        shares: PublicImmutable<AztecAddress, Context>,
         vault_offset: PublicImmutable<u128, Context>,
+        // Token template fields (shares are issued by this vault contract itself)
+        name: PublicImmutable<FieldCompressedString, Context>,
+        symbol: PublicImmutable<FieldCompressedString, Context>,
+        decimals: PublicImmutable<u8, Context>,
+        private_balances: Owned<BalanceSet<Context>, Context>,
+        total_supply: PublicMutable<u128, Context>,
+        public_balances: Map<AztecAddress, PublicMutable<u128, Context>, Context>,
+        minter: PublicImmutable<AztecAddress, Context>,
     }
 
-    /// @notice Initializes the vault with asset and offset
-    /// @dev The deployer must call set_shares_token() after deploying the shares token with this
-    ///      vault as minter. The vault must NOT use universal deploy (deployer must be non-zero)
-    ///      so the deployer address can authorize set_shares_token calls.
-    ///      The vault address can be precomputed before shares exists since shares is not a constructor arg.
+    /// @notice Initializes the vault with asset, offset, and token metadata
+    /// @dev The vault IS the shares token - no separate shares token needed.
+    ///      The vault must NOT use universal deploy (deployer must be non-zero).
     /// @param asset The underlying asset token address
     /// @param vault_offset The offset used to prevent inflation attacks (typically 1)
+    /// @param name The name of the shares token
+    /// @param symbol The symbol of the shares token
+    /// @param decimals The decimals of the shares token
     #[external("public")]
     #[initializer]
-    fn constructor(asset: AztecAddress, vault_offset: u128) {
-        assert(!asset.is_zero(), "asset must not be zero");
-        assert(vault_offset > 0, "vault_offset must be greater than 0");
-        let deployer = get_contract_instance_deployer_avm(self.address).unwrap();
-        assert(!deployer.is_zero(), "universal deploy not supported");
-        self.storage.asset.initialize(asset);
-        self.storage.vault_offset.initialize(vault_offset);
+    fn constructor(
+        asset: AztecAddress,
+        vault_offset: u128,
+        name: str<31>,
+        symbol: str<31>,
+        decimals: u8,
+    ) {
+        self.internal._initialize_vault(asset, vault_offset, name, symbol, decimals);
     }
 
-    /// @notice Sets the shares token address (one-time, deployer-only, immutable after set)
-    /// @dev Must be called after deploying the shares token with this vault as minter.
-    ///      Only the contract deployer (from the contract instance) can call this.
-    ///      PublicImmutable.initialize() ensures this can only ever be set once -- any subsequent
-    ///      call will revert. All vault operations read shares via PublicImmutable.read() which
-    ///      reverts if shares has not been initialized, so the vault is inoperable until this is called.
-    /// @param shares The shares token address (minter must be this vault)
-    #[external("public")]
-    fn set_shares_token(shares: AztecAddress) {
-        let deployer = get_contract_instance_deployer_avm(self.address).unwrap();
-        assert(self.msg_sender().eq(deployer), "caller is not deployer");
-        self.storage.shares.initialize(shares);
-    }
-
-    /// @notice Sets the shares token and makes an initial deposit for inflation-attack protection
-    /// @dev Must be called after deploying the shares token with this vault as minter.
-    ///      Only the contract deployer (from the contract instance) can call this.
-    ///      PublicImmutable.initialize() ensures this can only ever be set once -- any subsequent
-    ///      call will revert. All vault operations read shares via PublicImmutable.read() which
-    ///      reverts if shares has not been initialized, so the vault is inoperable until this is called.
-    /// @param shares The shares token address (minter must be this vault)
+    /// @notice Initializes the vault with an initial deposit for inflation-attack protection
+    /// @dev Sets up vault, token metadata, and makes a first deposit that permanently locks
+    ///      shares in this contract to prevent the inflation attack.
+    /// @param asset The underlying asset token address
+    /// @param vault_offset The offset used to prevent inflation attacks (typically 1)
+    /// @param name The name of the shares token
+    /// @param symbol The symbol of the shares token
+    /// @param decimals The decimals of the shares token
     /// @param initial_deposit The initial deposit amount of the asset
     /// @param depositor The address of the initial depositor of the assets
     /// @param nonce The nonce used for authwitness for the transfer of the initial deposit
     #[external("public")]
-    fn set_shares_token_with_initial_deposit(
-        shares: AztecAddress,
+    #[initializer]
+    fn constructor_with_initial_deposit(
+        asset: AztecAddress,
+        vault_offset: u128,
+        name: str<31>,
+        symbol: str<31>,
+        decimals: u8,
         initial_deposit: u128,
         depositor: AztecAddress,
         nonce: Field,
     ) {
         assert(initial_deposit > 0, "initial_deposit must be greater than 0");
-        let deployer = get_contract_instance_deployer_avm(self.address).unwrap();
-        assert(self.msg_sender().eq(deployer), "caller is not deployer");
-        self.storage.shares.initialize(shares);
+        self.internal._initialize_vault(asset, vault_offset, name, symbol, decimals);
 
         // Caller deposits assets, shares are minted to this contract and are permanently locked.
-        let from = depositor;
-        let to = self.address;
-
         // Assets could be donated to the vault's precomputed address before deployment, but such assets are
         // ignored at this point to ensure the asset<>share conversion is 1:1 for the initial deposit.
-        let total_assets: u128 = 0;
-        let total_supply: u128 = 0;
-        let vault_offset = self.storage.vault_offset.read();
-
-        // Calculate shares to mint for the initial deposit.
         let deposit_shares = _convert_to_shares(
             initial_deposit,
-            total_assets,
-            total_supply,
-            vault_offset,
-            ROUND_DOWN,
+            0,
+            0,
+            self.storage.vault_offset.read(),
+            false,
         );
 
-        // Transfer the assets from the sender to the vault
+        // Transfer the assets from the depositor to the vault
         let asset_token = self.storage.asset.read();
-        self.call(Token::at(asset_token).transfer_public_to_public(from, to, initial_deposit, nonce));
+        self.call(Token::at(asset_token).transfer_public_to_public(
+            depositor,
+            self.address,
+            initial_deposit,
+            nonce,
+        ));
 
         // Mint shares to this contract address (permanently locked)
-        self.call(Token::at(shares).mint_to_public(to, deposit_shares));
+        self.internal._mint_to_public(self.address, deposit_shares);
     }
 
     /** ==========================================================
@@ -138,15 +136,13 @@ pub contract Vault {
     #[external("public")]
     fn deposit_public_to_public(from: AztecAddress, to: AztecAddress, assets: u128, nonce: Field) {
         let asset_token = self.storage.asset.read();
-        let shares_token = self.storage.shares.read();
         self.internal._validate_from_public(from);
 
         // Calculate shares to mint
         let total_assets = self.internal._total_assets();
         let total_supply = self.internal._total_supply_of_shares();
         let vault_offset = self.storage.vault_offset.read();
-        let shares =
-            _convert_to_shares(assets, total_assets, total_supply, vault_offset, ROUND_DOWN);
+        let shares = _convert_to_shares(assets, total_assets, total_supply, vault_offset, false);
         assert(shares > 0, "Zero shares, insufficient assets");
 
         // Order matters: transfer before minting to neutralize ARC-403 reentrancy.
@@ -159,7 +155,7 @@ pub contract Vault {
         ));
 
         // Mint shares to the recipient
-        self.call(Token::at(shares_token).mint_to_public(to, shares));
+        self.internal._mint_to_public(to, shares);
     }
 
     /// @notice Deposits the underlying asset from a public balance and receives shares to a private balance
@@ -178,7 +174,6 @@ pub contract Vault {
         shares: u128,
         nonce: Field,
     ) {
-        let shares_token = self.storage.shares.read();
         _validate_from_private::<5>(self.context, from);
 
         // Validate in public that `assets` is sufficient for the requested shares
@@ -186,7 +181,7 @@ pub contract Vault {
         self.enqueue_self.settle_deposit_public_to_private_internal(from, assets, shares, nonce);
 
         // Mint shares to the recipient's private balance
-        self.call(Token::at(shares_token).mint_to_private(to, shares));
+        self.internal._mint_to_private(to, shares);
     }
 
     /// @notice Deposits the underlying asset from a private balance and receives shares to a private balance
@@ -206,7 +201,6 @@ pub contract Vault {
         nonce: Field,
     ) {
         let asset_token = self.storage.asset.read();
-        let shares_token = self.storage.shares.read();
         _validate_from_private::<5>(self.context, from);
 
         // Order matters: transfer before minting to neutralize ARC-403 reentrancy.
@@ -219,7 +213,7 @@ pub contract Vault {
         ));
 
         // Mint shares to the recipient's private balance
-        self.call(Token::at(shares_token).mint_to_private(to, shares));
+        self.internal._mint_to_private(to, shares);
 
         // Validate in public that `assets` is sufficient for the requested shares
         self.enqueue_self.settle_deposit_private_to_private_internal(assets, shares);
@@ -265,12 +259,12 @@ pub contract Vault {
         min_shares: u128,
         nonce: Field,
     ) {
-        let shares_token = self.storage.shares.read();
         _validate_from_private::<5>(self.context, from);
 
-        // Initialize commitment on the shares token that allows to mint outstanding shares to the recipient in public
-        let partial_note =
-            self.call(Token::at(shares_token).initialize_transfer_commitment(to, self.address));
+        // Initialize commitment that allows to mint outstanding shares to the recipient in public
+        let partial_note = aztec::protocol::traits::ToField::to_field(self
+            .internal
+            ._initialize_transfer_commitment(to, self.address));
 
         // Mint any outstanding shares without revealing the recipient and updates the shares total supply
         // Reverts if min_shares is greater than allowed
@@ -284,7 +278,7 @@ pub contract Vault {
         );
 
         // Mint min_shares to the recipient's private balance
-        self.call(Token::at(shares_token).mint_to_private(to, min_shares));
+        self.internal._mint_to_private(to, min_shares);
     }
 
     /// @notice Deposits the underlying asset from a private balance and receives shares to a private balance
@@ -305,12 +299,12 @@ pub contract Vault {
         nonce: Field,
     ) {
         let asset_token = self.storage.asset.read();
-        let shares_token = self.storage.shares.read();
         _validate_from_private::<5>(self.context, from);
 
-        // Initialize commitment on the shares token that allows to mint outstanding shares to the recipient in public
-        let partial_note =
-            self.call(Token::at(shares_token).initialize_transfer_commitment(to, self.address));
+        // Initialize commitment that allows to mint outstanding shares to the recipient in public
+        let partial_note = aztec::protocol::traits::ToField::to_field(self
+            .internal
+            ._initialize_transfer_commitment(to, self.address));
 
         // Order matters: transfer before minting to neutralize ARC-403 reentrancy.
         // Take the assets from the sender
@@ -322,7 +316,7 @@ pub contract Vault {
         ));
 
         // Mint min_shares to the recipient's private balance
-        self.call(Token::at(shares_token).mint_to_private(to, min_shares));
+        self.internal._mint_to_private(to, min_shares);
 
         // Mint any outstanding shares without revealing the recipient and updates the shares total supply
         // Reverts if min_shares is greater than allowed
@@ -352,14 +346,13 @@ pub contract Vault {
         nonce: Field,
     ) {
         let asset_token = self.storage.asset.read();
-        let shares_token = self.storage.shares.read();
         self.internal._validate_from_public(from);
 
         // Calculate assets required
         let total_assets = self.internal._total_assets();
         let total_supply = self.internal._total_supply_of_shares();
         let vault_offset = self.storage.vault_offset.read();
-        let assets = _convert_to_assets(shares, total_assets, total_supply, vault_offset, ROUND_UP);
+        let assets = _convert_to_assets(shares, total_assets, total_supply, vault_offset, true);
 
         // Order matters: transfer before minting to neutralize ARC-403 reentrancy.
         // Take the assets from the sender
@@ -371,7 +364,7 @@ pub contract Vault {
         ));
 
         // Mint shares to the recipient
-        self.call(Token::at(shares_token).mint_to_public(to, shares));
+        self.internal._mint_to_public(to, shares);
 
         // Refund
         let change = max_assets - assets; // Reverts with underflow if invalid
@@ -400,7 +393,6 @@ pub contract Vault {
         nonce: Field,
     ) {
         let asset_token = self.storage.asset.read();
-        let shares_token = self.storage.shares.read();
         _validate_from_private::<5>(self.context, from);
 
         // Order matters: enqueue asset transfer first so it executes before shares total_supply increase,
@@ -413,7 +405,7 @@ pub contract Vault {
         ));
 
         // Mint shares to the recipient's private balance
-        self.call(Token::at(shares_token).mint_to_private(to, shares));
+        self.internal._mint_to_private(to, shares);
 
         // Settle: compute actual assets needed and refund any excess
         self.enqueue_self.settle_issue_public_to_private_internal(from, shares, max_assets);
@@ -475,7 +467,6 @@ pub contract Vault {
         nonce: Field,
     ) {
         let asset_token = self.storage.asset.read();
-        let shares_token = self.storage.shares.read();
         _validate_from_private::<5>(self.context, from);
 
         // Initialize commitment on the asset token that allows to refund excess assets to the sender in public
@@ -492,7 +483,7 @@ pub contract Vault {
         ));
 
         // Mint shares to the recipient's private balance
-        self.call(Token::at(shares_token).mint_to_private(to, shares));
+        self.internal._mint_to_private(to, shares);
 
         // Validate max_assets in public and refunds any excess to the sender with a commitment
         self.enqueue_self.settle_issue_private_to_private_exact_internal(
@@ -507,50 +498,40 @@ pub contract Vault {
      * ======================================================== */
 
     /// @notice Withdraws an amount of the underlying asset from a public balance to a public balance
-    /// @dev User must provide a public authwit on the shares token authorizing this vault to burn shares
     /// @param from The address of the sender
     /// @param to The address of the recipient
     /// @param assets The amount of assets to withdraw
-    /// @param nonce The nonce used for authwitness
     #[external("public")]
-    fn withdraw_public_to_public(from: AztecAddress, to: AztecAddress, assets: u128, nonce: Field) {
+    fn withdraw_public_to_public(from: AztecAddress, to: AztecAddress, assets: u128) {
         let asset_token = self.storage.asset.read();
-        let shares_token = self.storage.shares.read();
         self.internal._validate_from_public(from);
 
         // Calculate shares to burn
         let total_assets = self.internal._total_assets();
         let total_supply = self.internal._total_supply_of_shares();
         let vault_offset = self.storage.vault_offset.read();
-        let shares = _convert_to_shares(assets, total_assets, total_supply, vault_offset, ROUND_UP);
+        let shares = _convert_to_shares(assets, total_assets, total_supply, vault_offset, true);
 
         // Order matters: burn before transferring to neutralize ARC-403 reentrancy.
-        // Burn the sender's shares on the shares token
-        self.call(Token::at(shares_token).burn_public(from, shares, nonce));
+        // Burn the sender's shares (vault is minter/authority, no separate authwit needed)
+        self.internal._burn_public(from, shares);
 
         // Transfer the assets to the recipient
         self.call(Token::at(asset_token).transfer_public_to_public(self.address, to, assets, 0));
     }
 
     /// @notice Withdraws an amount of the underlying asset from a public balance to a private balance
-    /// @dev User must provide a public authwit on the shares token authorizing this vault to burn shares
     /// @param from The address of the sender
     /// @param to The address of the recipient
     /// @param assets The amount of assets to withdraw
-    /// @param nonce The nonce used for authwitness
     #[external("private")]
-    fn withdraw_public_to_private(
-        from: AztecAddress,
-        to: AztecAddress,
-        assets: u128,
-        nonce: Field,
-    ) {
+    fn withdraw_public_to_private(from: AztecAddress, to: AztecAddress, assets: u128) {
         let asset_token = self.storage.asset.read();
-        _validate_from_private::<4>(self.context, from);
+        _validate_from_private::<3>(self.context, from);
 
         // Order matters: burn after calculating shares in public to neutralize ARC-403 reentrancy.
         // Calculate and burn the sender's shares
-        self.enqueue_self.settle_withdraw_public_to_private_internal(from, assets, nonce);
+        self.enqueue_self.settle_withdraw_public_to_private_internal(from, assets);
 
         // Transfer the assets to the recipient in private
         self.call(Token::at(asset_token).transfer_public_to_private(self.address, to, assets, 0));
@@ -558,26 +539,22 @@ pub contract Vault {
 
     /// @notice Withdraws an amount of the underlying asset from a private balance to a private balance
     /// @dev The shares are calculated with (total_supply + offset) / (total_assets + 1).
-    ///      User must provide a private authwit on the shares token authorizing this vault to burn shares.
     /// @param from The address of the sender
     /// @param to The address of the recipient
     /// @param assets The amount of assets to withdraw
     /// @param shares The amount of shares to burn
-    /// @param nonce The nonce used for authwitness
     #[external("private")]
     fn withdraw_private_to_private(
         from: AztecAddress,
         to: AztecAddress,
         assets: u128,
         shares: u128,
-        nonce: Field,
     ) {
         let asset_token = self.storage.asset.read();
-        let shares_token = self.storage.shares.read();
-        _validate_from_private::<5>(self.context, from);
+        _validate_from_private::<4>(self.context, from);
 
-        // Burn shares from the sender's private balance on the shares token
-        self.call(Token::at(shares_token).burn_private(from, shares, nonce));
+        // Burn shares from the sender's private balance (vault is authority, no separate authwit needed)
+        self.internal._burn_private(from, shares);
 
         // Order matters: transfer after burning to neutralize ARC-403 reentrancy.
         // Validate that the shares-assets ratio is correct
@@ -590,29 +567,26 @@ pub contract Vault {
     /// @notice Withdraws an amount of the underlying asset from a private balance to a public balance
     /// @dev max_shares is the amount of shares that will be burnt immediately in private.
     ///      Any excess shares the sender has transferred in private, will be returned to the sender through a commitment once the call is executed publicly.
-    ///      User must provide a private authwit on the shares token authorizing this vault to burn shares.
     /// @param from The address of the sender
     /// @param to The address of the recipient
     /// @param assets The amount of underlying asset to withdraw
     /// @param max_shares The maximum amount of shares to burn
-    /// @param nonce The nonce used for authwitness
     #[external("private")]
     fn withdraw_private_to_public_exact(
         from: AztecAddress,
         to: AztecAddress,
         assets: u128,
         max_shares: u128,
-        nonce: Field,
     ) {
-        let shares_token = self.storage.shares.read();
-        _validate_from_private::<5>(self.context, from);
+        _validate_from_private::<4>(self.context, from);
 
-        // Initialize commitment on the shares token that allows to refund excess shares to the sender in public
-        let partial_note =
-            self.call(Token::at(shares_token).initialize_transfer_commitment(from, self.address));
+        // Initialize commitment that allows to refund excess shares to the sender in public
+        let partial_note = aztec::protocol::traits::ToField::to_field(self
+            .internal
+            ._initialize_transfer_commitment(from, self.address));
 
-        // Burn max_shares from the sender's private balance on the shares token
-        self.call(Token::at(shares_token).burn_private(from, max_shares, nonce));
+        // Burn max_shares from the sender's private balance (vault is authority, no separate authwit needed)
+        self.internal._burn_private(from, max_shares);
 
         // Burn the correct amount of shares
         // Any excess amount of shares is sent back to the sender via commitment
@@ -628,30 +602,27 @@ pub contract Vault {
     /// @notice Withdraws an amount of the underlying asset from a private balance to a private balance
     /// @dev max_shares is the amount of shares that will be burnt immediately in private.
     ///      Any excess shares the sender has transferred in private, will be returned to the sender through a commitment once the call is executed publicly.
-    ///      User must provide a private authwit on the shares token authorizing this vault to burn shares.
     /// @param from The address of the sender
     /// @param to The address of the recipient
     /// @param assets The amount of underlying asset to withdraw
     /// @param max_shares The maximum amount of shares to burn
-    /// @param nonce The nonce used for authwitness
     #[external("private")]
     fn withdraw_private_to_private_exact(
         from: AztecAddress,
         to: AztecAddress,
         assets: u128,
         max_shares: u128,
-        nonce: Field,
     ) {
         let asset_token = self.storage.asset.read();
-        let shares_token = self.storage.shares.read();
-        _validate_from_private::<5>(self.context, from);
+        _validate_from_private::<4>(self.context, from);
 
-        // Initialize commitment on the shares token that allows to refund excess shares to the sender in public
-        let partial_note =
-            self.call(Token::at(shares_token).initialize_transfer_commitment(from, self.address));
+        // Initialize commitment that allows to refund excess shares to the sender in public
+        let partial_note = aztec::protocol::traits::ToField::to_field(self
+            .internal
+            ._initialize_transfer_commitment(from, self.address));
 
-        // Burn max_shares from the sender's private balance on the shares token
-        self.call(Token::at(shares_token).burn_private(from, max_shares, nonce));
+        // Burn max_shares from the sender's private balance (vault is authority, no separate authwit needed)
+        self.internal._burn_private(from, max_shares);
 
         // Order matters: transfer after burning to neutralize ARC-403 reentrancy.
         // Burn the correct amount of shares
@@ -672,45 +643,38 @@ pub contract Vault {
      * ======================================================== */
 
     /// @notice Redeems an amount of the shares from a public balance to a public balance
-    /// @dev User must provide a public authwit on the shares token authorizing this vault to burn shares
     /// @param from The address of the sender
     /// @param to The address of the recipient
     /// @param shares The amount of shares to redeem
-    /// @param nonce The nonce used for authwitness
     #[external("public")]
-    fn redeem_public_to_public(from: AztecAddress, to: AztecAddress, shares: u128, nonce: Field) {
+    fn redeem_public_to_public(from: AztecAddress, to: AztecAddress, shares: u128) {
         let asset_token = self.storage.asset.read();
-        let shares_token = self.storage.shares.read();
         self.internal._validate_from_public(from);
 
         // Calculate assets to redeem
         let total_assets = self.internal._total_assets();
         let total_supply = self.internal._total_supply_of_shares();
         let vault_offset = self.storage.vault_offset.read();
-        let assets =
-            _convert_to_assets(shares, total_assets, total_supply, vault_offset, ROUND_DOWN);
+        let assets = _convert_to_assets(shares, total_assets, total_supply, vault_offset, false);
 
         // Order matters: burn before transferring to neutralize ARC-403 reentrancy.
-        // Burn the sender's shares on the shares token
-        self.call(Token::at(shares_token).burn_public(from, shares, nonce));
+        // Burn the sender's shares (vault is authority, no separate authwit needed)
+        self.internal._burn_public(from, shares);
 
         // Transfer the assets to the recipient
         self.call(Token::at(asset_token).transfer_public_to_public(self.address, to, assets, 0));
     }
 
     /// @notice Redeems an amount of the shares from a private balance to a public balance
-    /// @dev User must provide a private authwit on the shares token authorizing this vault to burn shares
     /// @param from The address of the sender
     /// @param to The address of the recipient
     /// @param shares The amount of shares to redeem
-    /// @param nonce The nonce used for authwitness
     #[external("private")]
-    fn redeem_private_to_public(from: AztecAddress, to: AztecAddress, shares: u128, nonce: Field) {
-        let shares_token = self.storage.shares.read();
-        _validate_from_private::<4>(self.context, from);
+    fn redeem_private_to_public(from: AztecAddress, to: AztecAddress, shares: u128) {
+        _validate_from_private::<3>(self.context, from);
 
-        // Burn shares from the sender's private balance on the shares token
-        self.call(Token::at(shares_token).burn_private(from, shares, nonce));
+        // Burn shares from the sender's private balance (vault is authority, no separate authwit needed)
+        self.internal._burn_private(from, shares);
 
         // Burn shares and redeem public assets
         self.enqueue_self.settle_redeem_private_to_public_internal(to, shares);
@@ -719,30 +683,26 @@ pub contract Vault {
     /// @notice Redeems an amount of the shares from a private balance to a private balance
     /// @dev min_assets is the amount of assets that will be transferred to the recipient immediately in private.
     ///      Any outstanding assets the recipient is entitled to, will be sent through a commitment once the call is executed publicly.
-    ///      User must provide a private authwit on the shares token authorizing this vault to burn shares.
     /// @param from The address of the sender
     /// @param to The address of the recipient
     /// @param shares The amount of shares to burn
     /// @param min_assets The minimum amount of assets to withdraw, immediately in private
-    /// @param nonce The nonce used for authwitness
     #[external("private")]
     fn redeem_private_to_private_exact(
         from: AztecAddress,
         to: AztecAddress,
         shares: u128,
         min_assets: u128,
-        nonce: Field,
     ) {
         let asset_token = self.storage.asset.read();
-        let shares_token = self.storage.shares.read();
-        _validate_from_private::<5>(self.context, from);
+        _validate_from_private::<4>(self.context, from);
 
         // Initialize commitment on the asset token that allows to transfer outstanding assets to the recipient in public
         let asset_commitment =
             self.call(Token::at(asset_token).initialize_transfer_commitment(to, self.address));
 
-        // Burn shares from the sender's private balance on the shares token
-        self.call(Token::at(shares_token).burn_private(from, shares, nonce));
+        // Burn shares from the sender's private balance (vault is authority, no separate authwit needed)
+        self.internal._burn_private(from, shares);
 
         // Order matters: transfer after burning to neutralize ARC-403 reentrancy.
         // Transfers any outstanding assets without revealing the recipient
@@ -760,22 +720,19 @@ pub contract Vault {
     /// @notice Redeems an amount of the shares from a public balance to a private balance
     /// @dev min_assets is the amount of assets that will be transferred to the recipient immediately in private.
     ///      Any outstanding assets the recipient is entitled to, will be sent through a commitment once the call is executed publicly.
-    ///      User must provide a public authwit on the shares token authorizing this vault to burn shares.
     /// @param from The address of the sender
     /// @param to The address of the recipient
     /// @param shares The amount of shares to redeem
     /// @param min_assets The minimum amount of assets to withdraw, immediately in private
-    /// @param nonce The nonce used for authwitness
     #[external("private")]
     fn redeem_public_to_private_exact(
         from: AztecAddress,
         to: AztecAddress,
         shares: u128,
         min_assets: u128,
-        nonce: Field,
     ) {
         let asset_token = self.storage.asset.read();
-        _validate_from_private::<5>(self.context, from);
+        _validate_from_private::<4>(self.context, from);
 
         // Initialize commitment on the asset token that allows to transfer outstanding assets to the recipient in public
         let asset_commitment =
@@ -789,7 +746,6 @@ pub contract Vault {
             asset_commitment,
             shares,
             min_assets,
-            nonce,
         );
 
         // Transfer min_assets to the recipient
@@ -808,12 +764,12 @@ pub contract Vault {
         self.storage.asset.read()
     }
 
-    /// @notice Returns the shares token address
-    /// @return The address of the shares token
+    /// @notice Returns the shares token address (this vault IS the shares token)
+    /// @return The address of the shares token (same as the vault)
     #[external("public")]
     #[view]
     fn shares() -> AztecAddress {
-        self.storage.shares.read()
+        self.address
     }
 
     /// @notice Returns the total amount of underlying assets held by the vault
@@ -835,7 +791,7 @@ pub contract Vault {
             self.internal._total_assets(),
             self.internal._total_supply_of_shares(),
             self.storage.vault_offset.read(),
-            ROUND_DOWN,
+            false,
         )
     }
 
@@ -850,7 +806,7 @@ pub contract Vault {
             self.internal._total_assets(),
             self.internal._total_supply_of_shares(),
             self.storage.vault_offset.read(),
-            ROUND_DOWN,
+            false,
         )
     }
 
@@ -860,7 +816,7 @@ pub contract Vault {
     #[external("public")]
     #[view]
     fn max_deposit(_receiver: AztecAddress) -> u128 {
-        MAX_U128_VALUE
+        _max_u128_value()
     }
 
     /// @dev Allows an on-chain or off-chain user to simulate the effects of their deposit at the current block, given current on-chain conditions.
@@ -874,7 +830,7 @@ pub contract Vault {
             self.internal._total_assets(),
             self.internal._total_supply_of_shares(),
             self.storage.vault_offset.read(),
-            ROUND_DOWN,
+            false,
         )
     }
 
@@ -884,7 +840,7 @@ pub contract Vault {
     #[external("public")]
     #[view]
     fn max_issue(_receiver: AztecAddress) -> u128 {
-        MAX_U128_VALUE
+        _max_u128_value()
     }
 
     /// @dev Allows an on-chain or off-chain user to simulate the effects of their issue at the current block, given current on-chain conditions.
@@ -898,7 +854,7 @@ pub contract Vault {
             self.internal._total_assets(),
             self.internal._total_supply_of_shares(),
             self.storage.vault_offset.read(),
-            ROUND_UP,
+            true,
         )
     }
 
@@ -909,8 +865,7 @@ pub contract Vault {
     #[external("public")]
     #[view]
     fn max_withdraw(owner: AztecAddress) -> u128 {
-        let shares_token = self.storage.shares.read();
-        let owner_shares = self.view(Token::at(shares_token).balance_of_public(owner));
+        let owner_shares = self.storage.public_balances.at(owner).read();
         let total_assets = self.internal._total_assets();
         let total_supply = self.internal._total_supply_of_shares();
         let vault_offset = self.storage.vault_offset.read();
@@ -919,7 +874,7 @@ pub contract Vault {
             total_assets,
             total_supply,
             vault_offset,
-            ROUND_DOWN,
+            false,
         )
     }
 
@@ -934,7 +889,7 @@ pub contract Vault {
             self.internal._total_assets(),
             self.internal._total_supply_of_shares(),
             self.storage.vault_offset.read(),
-            ROUND_UP,
+            true,
         )
     }
 
@@ -945,8 +900,7 @@ pub contract Vault {
     #[external("public")]
     #[view]
     fn max_redeem(owner: AztecAddress) -> u128 {
-        let shares_token = self.storage.shares.read();
-        self.view(Token::at(shares_token).balance_of_public(owner))
+        self.storage.public_balances.at(owner).read()
     }
 
     /// @dev Allows an on-chain or off-chain user to simulate the effects of their redeem at the current block, given current on-chain conditions.
@@ -960,7 +914,7 @@ pub contract Vault {
             self.internal._total_assets(),
             self.internal._total_supply_of_shares(),
             self.storage.vault_offset.read(),
-            ROUND_DOWN,
+            false,
         )
     }
 
@@ -984,20 +938,17 @@ pub contract Vault {
     /// @notice Burns shares held in public for a given amount of assets
     /// @param from The address of the sender
     /// @param assets The amount of assets to burn shares for
-    /// @param nonce The nonce used for authwitness on the shares token
     #[external("public")]
     #[only_self]
-    fn settle_withdraw_public_to_private_internal(from: AztecAddress, assets: u128, nonce: Field) {
-        let shares_token = self.storage.shares.read();
+    fn settle_withdraw_public_to_private_internal(from: AztecAddress, assets: u128) {
         // No pre-applied state changes to shares (public burn happens here)
         // Asset balance NOT yet decreased (transfer_public_to_private enqueue runs after this)
         let total_assets = self.internal._total_assets();
         let total_supply = self.internal._total_supply_of_shares();
         let vault_offset = self.storage.vault_offset.read();
-        let shares = _convert_to_shares(assets, total_assets, total_supply, vault_offset, ROUND_UP);
+        let shares = _convert_to_shares(assets, total_assets, total_supply, vault_offset, true);
 
-        // Burn shares from user's public balance on shares token (requires authwit)
-        self.call(Token::at(shares_token).burn_public(from, shares, nonce));
+        self.internal._burn_public(from, shares);
     }
 
     /// @notice Validates that the requested shares amount is valid for the given assets
@@ -1012,8 +963,7 @@ pub contract Vault {
         let total_supply_post = self.internal._total_supply_of_shares();
         let total_supply = total_supply_post + shares;
         let vault_offset = self.storage.vault_offset.read();
-        let min_shares =
-            _convert_to_shares(assets, total_assets, total_supply, vault_offset, ROUND_UP);
+        let min_shares = _convert_to_shares(assets, total_assets, total_supply, vault_offset, true);
 
         assert(min_shares <= shares, "Insufficient shares burnt");
     }
@@ -1030,8 +980,7 @@ pub contract Vault {
         let total_supply = total_supply_post + shares;
         let total_assets = self.internal._total_assets();
         let vault_offset = self.storage.vault_offset.read();
-        let assets =
-            _convert_to_assets(shares, total_assets, total_supply, vault_offset, ROUND_DOWN);
+        let assets = _convert_to_assets(shares, total_assets, total_supply, vault_offset, false);
 
         // Transfer the assets to the recipient
         self.call(Token::at(asset_token).transfer_public_to_public(self.address, to, assets, 0));
@@ -1043,19 +992,17 @@ pub contract Vault {
     #[external("public")]
     #[only_self]
     fn settle_deposit_private_to_public_internal(to: AztecAddress, assets: u128) {
-        let shares_token = self.storage.shares.read();
         // Pre-applied: asset.increase_public_balance(self, assets) from transfer_private_to_public
         // No pre-applied changes to shares total_supply (public mint happens here)
         let total_assets_post = self.internal._total_assets();
         let total_assets = total_assets_post - assets;
         let total_supply = self.internal._total_supply_of_shares();
         let vault_offset = self.storage.vault_offset.read();
-        let shares =
-            _convert_to_shares(assets, total_assets, total_supply, vault_offset, ROUND_DOWN);
+        let shares = _convert_to_shares(assets, total_assets, total_supply, vault_offset, false);
         assert(shares > 0, "Zero shares, insufficient assets");
 
-        // Mint shares to the recipient on the shares token
-        self.call(Token::at(shares_token).mint_to_public(to, shares));
+        // Mint shares to the recipient
+        self.internal._mint_to_public(to, shares);
     }
 
     /// @notice Validates that the requested shares amount is valid for the deposited assets
@@ -1077,7 +1024,7 @@ pub contract Vault {
         let total_assets = self.internal._total_assets(); // Assets not transferred yet
         let vault_offset = self.storage.vault_offset.read();
         let max_shares =
-            _convert_to_shares(assets, total_assets, total_supply, vault_offset, ROUND_DOWN);
+            _convert_to_shares(assets, total_assets, total_supply, vault_offset, false);
 
         assert(shares <= max_shares, "Too many shares requested");
 
@@ -1104,7 +1051,7 @@ pub contract Vault {
         let total_supply = total_supply_post - shares;
         let vault_offset = self.storage.vault_offset.read();
         let max_shares =
-            _convert_to_shares(assets, total_assets, total_supply, vault_offset, ROUND_DOWN);
+            _convert_to_shares(assets, total_assets, total_supply, vault_offset, false);
 
         assert(shares <= max_shares, "Too many shares requested");
     }
@@ -1123,18 +1070,17 @@ pub contract Vault {
         to: AztecAddress,
     ) {
         let asset_token = self.storage.asset.read();
-        let shares_token = self.storage.shares.read();
         // Pre-applied: shares.decrease_total_supply(max_shares) from burn_private
         let total_supply_post = self.internal._total_supply_of_shares();
         let total_supply = total_supply_post + max_shares;
         let total_assets = self.internal._total_assets(); // Assets not transferred yet
         let vault_offset = self.storage.vault_offset.read();
-        let shares = _convert_to_shares(assets, total_assets, total_supply, vault_offset, ROUND_UP);
+        let shares = _convert_to_shares(assets, total_assets, total_supply, vault_offset, true);
 
         let surplus = max_shares - shares; // Reverts with underflow if invalid
         if surplus > 0 {
-            // Mint surplus back to the sender via commitment on shares token
-            self.call(Token::at(shares_token).mint_to_commitment(commitment, surplus));
+            // Mint surplus back to the sender via commitment
+            self.internal._mint_to_commitment(commitment, surplus);
         }
 
         // Transfer the assets to the recipient
@@ -1152,19 +1098,18 @@ pub contract Vault {
         assets: u128,
         max_shares: u128,
     ) {
-        let shares_token = self.storage.shares.read();
         // Pre-applied: shares.decrease_total_supply(max_shares)
         // Asset balance NOT yet decreased (transfer_public_to_private enqueue runs after this)
         let total_supply_post = self.internal._total_supply_of_shares();
         let total_assets = self.internal._total_assets();
         let total_supply = total_supply_post + max_shares;
         let vault_offset = self.storage.vault_offset.read();
-        let shares = _convert_to_shares(assets, total_assets, total_supply, vault_offset, ROUND_UP);
+        let shares = _convert_to_shares(assets, total_assets, total_supply, vault_offset, true);
 
         let surplus = max_shares - shares; // Reverts with underflow if invalid
         if surplus > 0 {
-            // Mint surplus back to the sender via commitment on shares token
-            self.call(Token::at(shares_token).mint_to_commitment(commitment, surplus));
+            // Mint surplus back to the sender via commitment
+            self.internal._mint_to_commitment(commitment, surplus);
         }
     }
 
@@ -1179,7 +1124,6 @@ pub contract Vault {
         assets: u128,
         min_shares: u128,
     ) {
-        let shares_token = self.storage.shares.read();
         // Pre-applied: asset.increase_public_balance(self, assets), shares.increase_total_supply(min_shares)
         let total_assets_post = self.internal._total_assets();
         let total_supply_post = self.internal._total_supply_of_shares();
@@ -1187,12 +1131,12 @@ pub contract Vault {
         let total_supply = total_supply_post - min_shares;
         let vault_offset = self.storage.vault_offset.read();
         let max_shares =
-            _convert_to_shares(assets, total_assets, total_supply, vault_offset, ROUND_DOWN);
+            _convert_to_shares(assets, total_assets, total_supply, vault_offset, false);
 
         let outstanding_shares = max_shares - min_shares; // Reverts with underflow if invalid
         if outstanding_shares > 0 {
-            // Mint outstanding shares via commitment on shares token
-            self.call(Token::at(shares_token).mint_to_commitment(commitment, outstanding_shares));
+            // Mint outstanding shares via commitment
+            self.internal._mint_to_commitment(commitment, outstanding_shares);
         }
     }
 
@@ -1212,14 +1156,13 @@ pub contract Vault {
         nonce: Field,
     ) {
         let asset_token = self.storage.asset.read();
-        let shares_token = self.storage.shares.read();
         // No pre-applied state changes: shares.increase_total_supply(min_shares) enqueues after this
         // Assets not transferred yet
         let total_supply = self.internal._total_supply_of_shares();
         let total_assets = self.internal._total_assets();
         let vault_offset = self.storage.vault_offset.read();
         let max_shares =
-            _convert_to_shares(assets, total_assets, total_supply, vault_offset, ROUND_DOWN);
+            _convert_to_shares(assets, total_assets, total_supply, vault_offset, false);
         let outstanding_shares = max_shares - min_shares; // Reverts with underflow if invalid
 
         // Order matters: transfer before minting to neutralize ARC-403 reentrancy.
@@ -1232,8 +1175,8 @@ pub contract Vault {
         ));
 
         if outstanding_shares > 0 {
-            // Mint outstanding shares via commitment on shares token
-            self.call(Token::at(shares_token).mint_to_commitment(commitment, outstanding_shares));
+            // Mint outstanding shares via commitment
+            self.internal._mint_to_commitment(commitment, outstanding_shares);
         }
     }
 
@@ -1251,14 +1194,13 @@ pub contract Vault {
         to: AztecAddress,
     ) {
         let asset_token = self.storage.asset.read();
-        let shares_token = self.storage.shares.read();
         // Pre-applied: asset.increase_public_balance(self, max_assets) from transfer_private_to_public
         // No pre-applied changes to shares total_supply (public mint happens here)
         let total_assets_post = self.internal._total_assets();
         let total_assets = total_assets_post - max_assets;
         let total_supply = self.internal._total_supply_of_shares();
         let vault_offset = self.storage.vault_offset.read();
-        let assets = _convert_to_assets(shares, total_assets, total_supply, vault_offset, ROUND_UP);
+        let assets = _convert_to_assets(shares, total_assets, total_supply, vault_offset, true);
 
         let change = max_assets - assets; // Reverts with underflow if invalid
         if change > 0 {
@@ -1270,8 +1212,8 @@ pub contract Vault {
             ));
         }
 
-        // Mint shares to the recipient on the shares token (after refund to prevent inflated total_assets via ARC-403 reentrancy)
-        self.call(Token::at(shares_token).mint_to_public(to, shares));
+        // Mint shares to the recipient (after refund to prevent inflated total_assets via ARC-403 reentrancy)
+        self.internal._mint_to_public(to, shares);
     }
 
     /// @notice Refunds excess assets to the sender via commitment while validating the shares amount requested
@@ -1292,7 +1234,7 @@ pub contract Vault {
         let total_assets = total_assets_post - max_assets;
         let total_supply = total_supply_post - shares;
         let vault_offset = self.storage.vault_offset.read();
-        let assets = _convert_to_assets(shares, total_assets, total_supply, vault_offset, ROUND_UP);
+        let assets = _convert_to_assets(shares, total_assets, total_supply, vault_offset, true);
 
         let change = max_assets - assets; // Reverts with underflow if invalid
         if change > 0 {
@@ -1323,8 +1265,7 @@ pub contract Vault {
         let total_assets = self.internal._total_assets();
         let total_supply = total_supply_post + shares;
         let vault_offset = self.storage.vault_offset.read();
-        let assets =
-            _convert_to_assets(shares, total_assets, total_supply, vault_offset, ROUND_DOWN);
+        let assets = _convert_to_assets(shares, total_assets, total_supply, vault_offset, false);
 
         let outstanding_assets = assets - min_assets; // Reverts with underflow if invalid
         if outstanding_assets > 0 {
@@ -1342,7 +1283,6 @@ pub contract Vault {
     /// @param asset_commitment The partial note representing the commitment (privacy entrance)
     /// @param shares The amount of shares being redeemed
     /// @param min_assets The minimum amount of assets that should be withdrawn
-    /// @param nonce The nonce used for authwitness on the shares token
     #[external("public")]
     #[only_self]
     fn settle_redeem_public_to_private_exact_internal(
@@ -1350,20 +1290,16 @@ pub contract Vault {
         asset_commitment: Field,
         shares: u128,
         min_assets: u128,
-        nonce: Field,
     ) {
         let asset_token = self.storage.asset.read();
-        let shares_token = self.storage.shares.read();
         // No pre-applied changes to shares total_supply (public burn happens here)
         // Asset balance NOT yet decreased (transfer_public_to_private enqueue runs after this)
         let total_assets = self.internal._total_assets();
         let total_supply = self.internal._total_supply_of_shares();
         let vault_offset = self.storage.vault_offset.read();
-        let assets =
-            _convert_to_assets(shares, total_assets, total_supply, vault_offset, ROUND_DOWN);
+        let assets = _convert_to_assets(shares, total_assets, total_supply, vault_offset, false);
 
-        // Burn the sender's shares on the shares token (requires authwit)
-        self.call(Token::at(shares_token).burn_public(from, shares, nonce));
+        self.internal._burn_public(from, shares);
 
         let outstanding_assets = assets - min_assets; // Reverts with underflow if invalid
         if outstanding_assets > 0 {
@@ -1390,7 +1326,7 @@ pub contract Vault {
         let total_assets = total_assets_post - max_assets;
         let total_supply = total_supply_post - shares;
         let vault_offset = self.storage.vault_offset.read();
-        let assets = _convert_to_assets(shares, total_assets, total_supply, vault_offset, ROUND_UP);
+        let assets = _convert_to_assets(shares, total_assets, total_supply, vault_offset, true);
 
         let change = max_assets - assets; // Reverts with underflow if invalid
         if change > 0 {
@@ -1407,6 +1343,26 @@ pub contract Vault {
      * ================== VAULT LIBRARIES ========================
      * ======================================================== */
 
+    /// @notice Initializes vault storage: validates inputs, stores asset and offset, initializes the token template
+    /// @dev Called by both `constructor` and `constructor_with_initial_deposit`.
+    #[internal("public")]
+    fn _initialize_vault(
+        asset: AztecAddress,
+        vault_offset: u128,
+        name: str<31>,
+        symbol: str<31>,
+        decimals: u8,
+    ) {
+        assert(!asset.is_zero(), "asset must not be zero");
+        assert(vault_offset > 0, "vault_offset must be greater than 0");
+        let deployer = get_contract_instance_deployer_avm(self.address).unwrap();
+        assert(!deployer.is_zero(), "universal deploy not supported");
+        self.storage.asset.initialize(asset);
+        self.storage.vault_offset.initialize(vault_offset);
+        // Vault address is the minter - only this vault can mint/burn shares
+        self.internal._initialize_token(name, symbol, decimals, self.address);
+    }
+
     /// @notice Returns the total amount of underlying assets held by the vault
     /// @return The total amount of assets held by the vault
     #[internal("public")]
@@ -1419,8 +1375,13 @@ pub contract Vault {
     /// @return The total supply of shares
     #[internal("public")]
     fn _total_supply_of_shares() -> u128 {
-        let shares_token = self.storage.shares.read();
-        self.view(Token::at(shares_token).total_supply())
+        self.storage.total_supply.read()
+    }
+
+    /// @notice Maximum value for a u128 (2**128 - 1)
+    #[contract_library_method]
+    fn _max_u128_value() -> u128 {
+        340282366920938463463374607431768211455
     }
 
     /// @notice Converts an amount of assets to shares using the given exchange rate parameters
@@ -1428,7 +1389,7 @@ pub contract Vault {
     /// @param total_assets The total amount of assets in the vault
     /// @param total_supply The total supply of shares
     /// @param vault_offset The vault offset
-    /// @param rounding The rounding direction (ROUND_UP or ROUND_DOWN)
+    /// @param round_up Whether to round up (true) or down (false)
     /// @return The equivalent amount of shares
     // TODO: The multiplication `assets * (total_supply + vault_offset)` can overflow u128 for large values.
     #[contract_library_method]
@@ -1437,12 +1398,12 @@ pub contract Vault {
         total_assets: u128,
         total_supply: u128,
         vault_offset: u128,
-        rounding: bool,
+        round_up: bool,
     ) -> u128 {
         let mul_term = assets * (total_supply + vault_offset);
         let denominator = total_assets + 1;
         let mut shares = mul_term / denominator;
-        if (rounding == ROUND_UP) & (mul_term % denominator > 0) {
+        if round_up & (mul_term % denominator > 0) {
             shares = shares + 1;
         }
         shares
@@ -1453,7 +1414,7 @@ pub contract Vault {
     /// @param total_assets The total amount of assets in the vault
     /// @param total_supply The total supply of shares
     /// @param vault_offset The vault offset
-    /// @param rounding The rounding direction (ROUND_UP or ROUND_DOWN)
+    /// @param round_up Whether to round up (true) or down (false)
     /// @return The equivalent amount of assets
     // TODO: The multiplication `shares * (total_assets + 1)` can overflow u128 for large values.
     #[contract_library_method]
@@ -1462,12 +1423,12 @@ pub contract Vault {
         total_assets: u128,
         total_supply: u128,
         vault_offset: u128,
-        rounding: bool,
+        round_up: bool,
     ) -> u128 {
         let mul_term = shares * (total_assets + 1);
         let denominator = total_supply + vault_offset;
         let mut assets = mul_term / denominator;
-        if (rounding == ROUND_UP) & (mul_term % denominator > 0) {
+        if round_up & (mul_term % denominator > 0) {
             assets = assets + 1;
         }
         assets
