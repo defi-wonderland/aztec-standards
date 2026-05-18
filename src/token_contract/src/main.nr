@@ -18,9 +18,9 @@ pub contract Token {
     // note library
     use uint_note;
     // compression library
-    use compressed_string::FieldCompressedString;
+    use compressed_string;
     // private balance library
-    use balance_set::BalanceSet;
+    use balance_set;
 
     #[event]
     struct Transfer {
@@ -38,10 +38,10 @@ pub contract Token {
     /// @param minter The account permissioned to mint the token
     #[storage]
     struct Storage<Context> {
-        name: PublicImmutable<FieldCompressedString, Context>,
-        symbol: PublicImmutable<FieldCompressedString, Context>,
+        name: PublicImmutable<compressed_string::FieldCompressedString, Context>,
+        symbol: PublicImmutable<compressed_string::FieldCompressedString, Context>,
         decimals: PublicImmutable<u8, Context>,
-        private_balances: Owned<BalanceSet<Context>, Context>,
+        private_balances: Owned<balance_set::BalanceSet<Context>, Context>,
         total_supply: PublicMutable<u128, Context>,
         public_balances: Map<AztecAddress, PublicMutable<u128, Context>, Context>,
         minter: PublicImmutable<AztecAddress, Context>,
@@ -313,7 +313,7 @@ pub contract Token {
     /// @return The name of the token
     #[external("public")]
     #[view]
-    fn name() -> FieldCompressedString {
+    fn name() -> compressed_string::FieldCompressedString {
         self.storage.name.read()
     }
 
@@ -321,7 +321,7 @@ pub contract Token {
     /// @return The symbol of the token
     #[external("public")]
     #[view]
-    fn symbol() -> FieldCompressedString {
+    fn symbol() -> compressed_string::FieldCompressedString {
         self.storage.symbol.read()
     }
 

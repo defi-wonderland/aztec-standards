@@ -15,9 +15,9 @@ pub contract Vault {
         protocol::{address::AztecAddress, traits::FromField},
         state_vars::{Map, Owned, PublicImmutable, PublicMutable, StateVariable},
     };
-    use balance_set::BalanceSet;
-    use compressed_string::FieldCompressedString;
-    use token_contract::Token;
+    use balance_set;
+    use compressed_string;
+    use token_contract;
 
     /// @param asset The underlying asset token address
     /// @param vault_offset The offset used to prevent inflation attacks
@@ -33,10 +33,10 @@ pub contract Vault {
         asset: PublicImmutable<AztecAddress, Context>,
         vault_offset: PublicImmutable<u128, Context>,
         // Token template fields (shares are issued by this vault contract itself)
-        name: PublicImmutable<FieldCompressedString, Context>,
-        symbol: PublicImmutable<FieldCompressedString, Context>,
+        name: PublicImmutable<compressed_string::FieldCompressedString, Context>,
+        symbol: PublicImmutable<compressed_string::FieldCompressedString, Context>,
         decimals: PublicImmutable<u8, Context>,
-        private_balances: Owned<BalanceSet<Context>, Context>,
+        private_balances: Owned<balance_set::BalanceSet<Context>, Context>,
         total_supply: PublicMutable<u128, Context>,
         public_balances: Map<AztecAddress, PublicMutable<u128, Context>, Context>,
         minter: PublicImmutable<AztecAddress, Context>,
@@ -101,7 +101,7 @@ pub contract Vault {
 
         // Transfer the assets from the depositor to the vault
         let asset_token = self.storage.asset.read();
-        self.call(Token::at(asset_token).transfer_public_to_public(
+        self.call(token_contract::Token::at(asset_token).transfer_public_to_public(
             depositor,
             self.address,
             initial_deposit,
@@ -147,7 +147,7 @@ pub contract Vault {
 
         // Order matters: transfer before minting to neutralize ARC-403 reentrancy.
         // Take the assets from the sender
-        self.call(Token::at(asset_token).transfer_public_to_public(
+        self.call(token_contract::Token::at(asset_token).transfer_public_to_public(
             from,
             self.address,
             assets,
@@ -205,7 +205,7 @@ pub contract Vault {
 
         // Order matters: transfer before minting to neutralize ARC-403 reentrancy.
         // Take the assets from the sender
-        self.call(Token::at(asset_token).transfer_private_to_public(
+        self.call(token_contract::Token::at(asset_token).transfer_private_to_public(
             from,
             self.address,
             assets,
@@ -231,7 +231,7 @@ pub contract Vault {
 
         // Order matters: transfer before minting to neutralize ARC-403 reentrancy.
         // Take the assets from the sender
-        self.call(Token::at(asset_token).transfer_private_to_public(
+        self.call(token_contract::Token::at(asset_token).transfer_private_to_public(
             from,
             self.address,
             assets,
@@ -308,7 +308,7 @@ pub contract Vault {
 
         // Order matters: transfer before minting to neutralize ARC-403 reentrancy.
         // Take the assets from the sender
-        self.call(Token::at(asset_token).transfer_private_to_public(
+        self.call(token_contract::Token::at(asset_token).transfer_private_to_public(
             from,
             self.address,
             assets,
@@ -356,7 +356,7 @@ pub contract Vault {
 
         // Order matters: transfer before minting to neutralize ARC-403 reentrancy.
         // Take the assets from the sender
-        self.call(Token::at(asset_token).transfer_public_to_public(
+        self.call(token_contract::Token::at(asset_token).transfer_public_to_public(
             from,
             self.address,
             max_assets,
@@ -369,7 +369,7 @@ pub contract Vault {
         // Refund
         let change = max_assets - assets; // Reverts with underflow if invalid
         if change > 0 {
-            self.call(Token::at(asset_token).transfer_public_to_public(
+            self.call(token_contract::Token::at(asset_token).transfer_public_to_public(
                 self.address,
                 from,
                 change,
@@ -397,7 +397,7 @@ pub contract Vault {
 
         // Order matters: enqueue asset transfer first so it executes before shares total_supply increase,
         // neutralizing ARC-403 reentrancy.
-        self.enqueue(Token::at(asset_token).transfer_public_to_public(
+        self.enqueue(token_contract::Token::at(asset_token).transfer_public_to_public(
             from,
             self.address,
             max_assets,
@@ -430,12 +430,12 @@ pub contract Vault {
         _validate_from_private::<5>(self.context, from);
 
         // Initialize commitment on the asset token that allows to refund excess assets to the sender in public
-        let asset_commitment =
-            self.call(Token::at(asset_token).initialize_transfer_commitment(from, self.address));
+        let asset_commitment = self.call(token_contract::Token::at(asset_token)
+            .initialize_transfer_commitment(from, self.address));
 
         // Order matters: transfer before minting to neutralize ARC-403 reentrancy.
         // Take max_assets from the sender
-        self.call(Token::at(asset_token).transfer_private_to_public(
+        self.call(token_contract::Token::at(asset_token).transfer_private_to_public(
             from,
             self.address,
             max_assets,
@@ -470,12 +470,12 @@ pub contract Vault {
         _validate_from_private::<5>(self.context, from);
 
         // Initialize commitment on the asset token that allows to refund excess assets to the sender in public
-        let asset_commitment =
-            self.call(Token::at(asset_token).initialize_transfer_commitment(from, self.address));
+        let asset_commitment = self.call(token_contract::Token::at(asset_token)
+            .initialize_transfer_commitment(from, self.address));
 
         // Order matters: transfer before minting to neutralize ARC-403 reentrancy.
         // Take max_assets from the sender
-        self.call(Token::at(asset_token).transfer_private_to_public(
+        self.call(token_contract::Token::at(asset_token).transfer_private_to_public(
             from,
             self.address,
             max_assets,
@@ -517,7 +517,12 @@ pub contract Vault {
         self.internal._burn_public(from, shares);
 
         // Transfer the assets to the recipient
-        self.call(Token::at(asset_token).transfer_public_to_public(self.address, to, assets, 0));
+        self.call(token_contract::Token::at(asset_token).transfer_public_to_public(
+            self.address,
+            to,
+            assets,
+            0,
+        ));
     }
 
     /// @notice Withdraws an amount of the underlying asset from a public balance to a private balance
@@ -534,7 +539,12 @@ pub contract Vault {
         self.enqueue_self.settle_withdraw_public_to_private_internal(from, assets);
 
         // Transfer the assets to the recipient in private
-        self.call(Token::at(asset_token).transfer_public_to_private(self.address, to, assets, 0));
+        self.call(token_contract::Token::at(asset_token).transfer_public_to_private(
+            self.address,
+            to,
+            assets,
+            0,
+        ));
     }
 
     /// @notice Withdraws an amount of the underlying asset from a private balance to a private balance
@@ -561,7 +571,12 @@ pub contract Vault {
         self.enqueue_self.settle_withdraw_private_to_private_internal(assets, shares);
 
         // Transfer the assets to the recipient in private
-        self.call(Token::at(asset_token).transfer_public_to_private(self.address, to, assets, 0));
+        self.call(token_contract::Token::at(asset_token).transfer_public_to_private(
+            self.address,
+            to,
+            assets,
+            0,
+        ));
     }
 
     /// @notice Withdraws an amount of the underlying asset from a private balance to a public balance
@@ -635,7 +650,12 @@ pub contract Vault {
         );
 
         // Transfer the assets to the recipient in private
-        self.call(Token::at(asset_token).transfer_public_to_private(self.address, to, assets, 0));
+        self.call(token_contract::Token::at(asset_token).transfer_public_to_private(
+            self.address,
+            to,
+            assets,
+            0,
+        ));
     }
 
     /** ==========================================================
@@ -662,7 +682,12 @@ pub contract Vault {
         self.internal._burn_public(from, shares);
 
         // Transfer the assets to the recipient
-        self.call(Token::at(asset_token).transfer_public_to_public(self.address, to, assets, 0));
+        self.call(token_contract::Token::at(asset_token).transfer_public_to_public(
+            self.address,
+            to,
+            assets,
+            0,
+        ));
     }
 
     /// @notice Redeems an amount of the shares from a private balance to a public balance
@@ -698,8 +723,8 @@ pub contract Vault {
         _validate_from_private::<4>(self.context, from);
 
         // Initialize commitment on the asset token that allows to transfer outstanding assets to the recipient in public
-        let asset_commitment =
-            self.call(Token::at(asset_token).initialize_transfer_commitment(to, self.address));
+        let asset_commitment = self.call(token_contract::Token::at(asset_token)
+            .initialize_transfer_commitment(to, self.address));
 
         // Burn shares from the sender's private balance (vault is authority, no separate authwit needed)
         self.internal._burn_private(from, shares);
@@ -714,7 +739,12 @@ pub contract Vault {
         );
 
         // Transfer min_assets to the recipient
-        self.call(Token::at(asset_token).transfer_public_to_private(self.address, to, min_assets, 0));
+        self.call(token_contract::Token::at(asset_token).transfer_public_to_private(
+            self.address,
+            to,
+            min_assets,
+            0,
+        ));
     }
 
     /// @notice Redeems an amount of the shares from a public balance to a private balance
@@ -735,8 +765,8 @@ pub contract Vault {
         _validate_from_private::<4>(self.context, from);
 
         // Initialize commitment on the asset token that allows to transfer outstanding assets to the recipient in public
-        let asset_commitment =
-            self.call(Token::at(asset_token).initialize_transfer_commitment(to, self.address));
+        let asset_commitment = self.call(token_contract::Token::at(asset_token)
+            .initialize_transfer_commitment(to, self.address));
 
         // Order matters: transfer after burning to neutralize ARC-403 reentrancy.
         // Burns shares and transfers any outstanding assets without revealing the recipient
@@ -749,7 +779,12 @@ pub contract Vault {
         );
 
         // Transfer min_assets to the recipient
-        self.call(Token::at(asset_token).transfer_public_to_private(self.address, to, min_assets, 0));
+        self.call(token_contract::Token::at(asset_token).transfer_public_to_private(
+            self.address,
+            to,
+            min_assets,
+            0,
+        ));
     }
 
     /** ==========================================================
@@ -983,7 +1018,12 @@ pub contract Vault {
         let assets = _convert_to_assets(shares, total_assets, total_supply, vault_offset, false);
 
         // Transfer the assets to the recipient
-        self.call(Token::at(asset_token).transfer_public_to_public(self.address, to, assets, 0));
+        self.call(token_contract::Token::at(asset_token).transfer_public_to_public(
+            self.address,
+            to,
+            assets,
+            0,
+        ));
     }
 
     /// @notice Mints shares to a public balance for a given amount of assets
@@ -1030,7 +1070,7 @@ pub contract Vault {
 
         // Order matters: transfer before minting to neutralize ARC-403 reentrancy.
         // Take the assets from the sender
-        self.call(Token::at(asset_token).transfer_public_to_public(
+        self.call(token_contract::Token::at(asset_token).transfer_public_to_public(
             from,
             self.address,
             assets,
@@ -1084,7 +1124,12 @@ pub contract Vault {
         }
 
         // Transfer the assets to the recipient
-        self.call(Token::at(asset_token).transfer_public_to_public(self.address, to, assets, 0));
+        self.call(token_contract::Token::at(asset_token).transfer_public_to_public(
+            self.address,
+            to,
+            assets,
+            0,
+        ));
     }
 
     /// @notice Decreases shares total supply and refunds excess shares via commitment
@@ -1167,7 +1212,7 @@ pub contract Vault {
 
         // Order matters: transfer before minting to neutralize ARC-403 reentrancy.
         // Take the assets from the sender
-        self.call(Token::at(asset_token).transfer_public_to_public(
+        self.call(token_contract::Token::at(asset_token).transfer_public_to_public(
             from,
             self.address,
             assets,
@@ -1204,7 +1249,7 @@ pub contract Vault {
 
         let change = max_assets - assets; // Reverts with underflow if invalid
         if change > 0 {
-            self.call(Token::at(asset_token).transfer_public_to_commitment(
+            self.call(token_contract::Token::at(asset_token).transfer_public_to_commitment(
                 self.address,
                 asset_commitment,
                 change,
@@ -1238,7 +1283,7 @@ pub contract Vault {
 
         let change = max_assets - assets; // Reverts with underflow if invalid
         if change > 0 {
-            self.call(Token::at(asset_token).transfer_public_to_commitment(
+            self.call(token_contract::Token::at(asset_token).transfer_public_to_commitment(
                 self.address,
                 asset_commitment,
                 change,
@@ -1269,7 +1314,7 @@ pub contract Vault {
 
         let outstanding_assets = assets - min_assets; // Reverts with underflow if invalid
         if outstanding_assets > 0 {
-            self.call(Token::at(asset_token).transfer_public_to_commitment(
+            self.call(token_contract::Token::at(asset_token).transfer_public_to_commitment(
                 self.address,
                 asset_commitment,
                 outstanding_assets,
@@ -1303,7 +1348,7 @@ pub contract Vault {
 
         let outstanding_assets = assets - min_assets; // Reverts with underflow if invalid
         if outstanding_assets > 0 {
-            self.call(Token::at(asset_token).transfer_public_to_commitment(
+            self.call(token_contract::Token::at(asset_token).transfer_public_to_commitment(
                 self.address,
                 asset_commitment,
                 outstanding_assets,
@@ -1330,7 +1375,7 @@ pub contract Vault {
 
         let change = max_assets - assets; // Reverts with underflow if invalid
         if change > 0 {
-            self.call(Token::at(asset_token).transfer_public_to_public(
+            self.call(token_contract::Token::at(asset_token).transfer_public_to_public(
                 self.address,
                 from,
                 change,
@@ -1368,7 +1413,7 @@ pub contract Vault {
     #[internal("public")]
     fn _total_assets() -> u128 {
         let asset_token = self.storage.asset.read();
-        self.view(Token::at(asset_token).balance_of_public(self.address))
+        self.view(token_contract::Token::at(asset_token).balance_of_public(self.address))
     }
 
     /// @notice Returns the total supply of shares
