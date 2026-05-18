@@ -52,6 +52,9 @@
   "config": {
     "aztecVersion": "4.2.1"
   },
+  "resolutions": {
+    "@aztec/foundation": "4.2.1"
+  },
   "engines": {
     "node": ">=22"
   },

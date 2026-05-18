@@ -817,35 +817,7 @@
     viem "npm:@aztec/viem@2.38.2"
     zod "^3.23.8"
 
-"@aztec/foundation@4.2.0":
-  version "4.2.0"
-  resolved "https://registry.yarnpkg.com/@aztec/foundation/-/foundation-4.2.0.tgz#2721fdf0a0cee5187b450873fe8ed5aa631a148e"
-  integrity sha512-UZc9VfFtSw/zCvpQtsgyz9bdztuX1vaa0g5jgImXsMAfrvPJPkg66IUmMY5rmzvpP1mZ4ySOZpXJ4XtQAaQG4w==
-  dependencies:
-    "@aztec/bb.js" "4.2.0"
-    "@koa/cors" "^5.0.0"
-    "@noble/curves" "=1.7.0"
-    "@noble/hashes" "^1.6.1"
-    "@scure/bip39" "^2.0.1"
-    bn.js "^5.2.1"
-    colorette "^2.0.20"
-    detect-node "^2.1.0"
-    hash.js "^1.1.7"
-    koa "^2.16.1"
-    koa-bodyparser "^4.4.0"
-    koa-compress "^5.1.0"
-    koa-router "^13.1.1"
-    leveldown "^6.1.1"
-    lodash.chunk "^4.2.0"
-    lodash.clonedeepwith "^4.5.0"
-    pako "^2.1.0"
-    pino "^9.5.0"
-    pino-pretty "^13.0.0"
-    sha3 "^2.1.4"
-    undici "^5.28.5"
-    zod "^3.23.8"
-
-"@aztec/foundation@4.2.1":
+"@aztec/foundation@4.2.0", "@aztec/foundation@4.2.1":
   version "4.2.1"
   resolved "https://registry.yarnpkg.com/@aztec/foundation/-/foundation-4.2.1.tgz#c80d41c61050689216a98d37caaaf1ef9f9ebc4e"
   integrity sha512-faTP7dPimH4M8VEA02gXtCcr3NjTgHFEJGbvjQ41JGPiGwVodU7l2Cs0YiVzDd+kI+wGnC7mjpMhBPjvSM5QjA==
