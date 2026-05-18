@@ -4,17 +4,6 @@ use aztec::test::helpers::authwit as authwit_cheatcodes;
 use generic_proxy::GenericProxy;
 use token_contract::Token;
 
-#[test(should_fail_with = "Trying to read from uninitialized PublicImmutable")]
-unconstrained fn withdraw_public_to_private_without_shares() {
-    let (env, vault_address, owner, recipient, _asset_address) =
-        utils::setup_vault_without_shares();
-
-    env.call_private(
-        owner,
-        Vault::at(vault_address).withdraw_public_to_private(owner, recipient, mint_amount, 0),
-    );
-}
-
 #[test]
 unconstrained fn withdraw_public_to_private_success() {
     // Setup with asset token
@@ -37,10 +26,8 @@ unconstrained fn withdraw_public_to_private_success() {
     utils::withdraw_public_to_private(
         env,
         vault_address,
-        shares_address,
         deposit_recipient,
         recipient,
-        deposit_amount,
         deposit_amount,
     );
 
@@ -83,11 +70,9 @@ unconstrained fn withdraw_public_to_private_after_yield() {
     utils::withdraw_public_to_private(
         env,
         vault_address,
-        shares_address,
         deposit_recipient,
         recipient,
         deposit_amount + 1,
-        deposit_amount,
     );
 
     // All shares are burnt
@@ -101,44 +86,6 @@ unconstrained fn withdraw_public_to_private_after_yield() {
     // Check asset balances. The vault should still have 1 token due to rounding.
     utils::check_public_balance(env, asset_address, vault_address, 1);
     utils::check_private_balance(env, asset_address, recipient, deposit_amount + 1);
-}
-
-#[test(should_fail_with = "Unknown auth witness for message hash ")]
-unconstrained fn withdraw_public_to_private_without_approval() {
-    // Setup with asset token
-    let (mut env, vault_address, owner, recipient, asset_address, shares_address) =
-        utils::setup_with_vault(true);
-
-    // Mint some asset tokens to owner
-    let deposit_amount: u128 = mint_amount;
-    let deposit_recipient = owner;
-    utils::mint_and_deposit_public_to_public(
-        env,
-        owner,
-        asset_address,
-        vault_address,
-        shares_address,
-        deposit_recipient,
-        deposit_amount,
-    );
-
-    // Withdraw
-    let proxy = env.deploy("@generic_proxy/GenericProxy").without_initializer();
-    let call_interface = Vault::at(vault_address).withdraw_public_to_private(
-        deposit_recipient,
-        recipient,
-        deposit_amount,
-        0,
-    );
-    // No authwit added from deposit_recipient to proxy
-    env.call_private(
-        deposit_recipient,
-        GenericProxy::at(proxy).forward_private_4(
-            call_interface.target_contract,
-            call_interface.selector,
-            call_interface.args,
-        ),
-    );
 }
 
 #[test(should_fail_with = "Unknown auth witness for message hash ")]
@@ -162,7 +109,7 @@ unconstrained fn withdraw_public_to_private_on_behalf_of_wrong_caller() {
 
     // Authorize someone to call withdraw_public_to_private (but authorize owner, not proxy)
     let withdraw_public_to_private_call_interface = Vault::at(vault_address)
-        .withdraw_public_to_private(deposit_recipient, recipient, deposit_amount, 0);
+        .withdraw_public_to_private(deposit_recipient, recipient, deposit_amount);
     authwit_cheatcodes::add_private_authwit_from_call(
         env,
         deposit_recipient,
@@ -176,12 +123,11 @@ unconstrained fn withdraw_public_to_private_on_behalf_of_wrong_caller() {
         deposit_recipient,
         recipient,
         deposit_amount,
-        0,
     );
     // No authwit added from deposit_recipient to proxy
     env.call_private(
         deposit_recipient,
-        GenericProxy::at(proxy).forward_private_4(
+        GenericProxy::at(proxy).forward_private_3(
             call_interface.target_contract,
             call_interface.selector,
             call_interface.args,
@@ -214,7 +160,6 @@ unconstrained fn withdraw_public_to_private_on_behalf_of_other_success() {
         deposit_recipient,
         recipient,
         deposit_amount,
-        0,
     );
     authwit_cheatcodes::add_private_authwit_from_call(
         env,
@@ -223,19 +168,10 @@ unconstrained fn withdraw_public_to_private_on_behalf_of_other_success() {
         call_interface,
     );
 
-    // Authwit 2: Authorize the vault to burn shares from deposit_recipient on the shares token (public burn in settlement)
-    utils::authorize_burn_public(
-        env,
-        shares_address,
-        vault_address,
-        deposit_recipient,
-        deposit_amount,
-    );
-
     // Withdraw
     env.call_private(
         deposit_recipient,
-        GenericProxy::at(proxy).forward_private_4(
+        GenericProxy::at(proxy).forward_private_3(
             call_interface.target_contract,
             call_interface.selector,
             call_interface.args,
