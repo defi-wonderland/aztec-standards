@@ -12,7 +12,7 @@ pub contract Token {
             functions::{authorize_once, external, initializer, internal, only_self, view},
             storage::storage,
         },
-        protocol::{address::AztecAddress, traits::{FromField}},
+        protocol::{address::AztecAddress, traits::FromField},
         state_vars::{Map, Owned, PublicImmutable, PublicMutable, StateVariable},
     };
     // note library
