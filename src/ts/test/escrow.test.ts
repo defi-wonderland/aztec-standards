@@ -123,9 +123,8 @@ describe('Escrow', () => {
         deployer: alice,
       });
 
-      const deployer = new ContractDeployer(TestLogicContractArtifact, wallet, undefined, 'constructor');
-      const { contract } = await deployer.deploy(escrowClassId).send({
-        contractAddressSalt: escrowSalt,
+      const deployer = new ContractDeployer(TestLogicContractArtifact, wallet, 'constructor');
+      const { contract } = await deployer.deploy([escrowClassId], { salt: escrowSalt }).send({
         from: alice,
       });
 

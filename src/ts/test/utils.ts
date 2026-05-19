@@ -56,7 +56,12 @@ interface WalletWithInternals {
     feeOptions: FeeOptions,
   ): Promise<TxExecutionRequest>;
   scopesFrom(from: AztecAddress): AztecAddress[];
-  pxe: { proveTx(txRequest: TxExecutionRequest, scopes: AztecAddress[]): Promise<TxProvingResult> };
+  pxe: {
+    proveTx(
+      txRequest: TxExecutionRequest,
+      opts: { scopes: AztecAddress[]; senderForTags?: AztecAddress },
+    ): Promise<TxProvingResult>;
+  };
 }
 
 import { TokenContract, TokenContractArtifact } from '../../../src/artifacts/Token.js';
@@ -302,10 +307,10 @@ export async function deployVaultAndAssetWithMinter(
   await wallet.registerContract(vaultInstance, VaultContractArtifact);
   await wallet.registerContract(sharesInstance, TokenContractArtifact);
 
-  await VaultDeployerContract.deployWithOpts({ method: 'deploy_vault', wallet }, ...poolDeployerArgs).send({
-    from: deployer,
-    contractAddressSalt: poolDeployerSalt,
-  });
+  await VaultDeployerContract.deployWithOpts(
+    { method: 'deploy_vault', wallet, instantiation: { salt: poolDeployerSalt } },
+    ...poolDeployerArgs,
+  ).send({ from: deployer });
 
   const vaultContract = await VaultContract.at(vaultInstance.address, wallet);
   const sharesContract = await TokenContract.at(sharesInstance.address, wallet);
@@ -372,9 +377,9 @@ export async function deployVaultWithInitialDeposit(
   await setPublicAuthWit(vaultInstance.address, transfer, depositor, wallet as EmbeddedWallet);
 
   await VaultDeployerContract.deployWithOpts(
-    { method: 'deploy_vault_with_initial_deposit', wallet },
+    { method: 'deploy_vault_with_initial_deposit', wallet, instantiation: { salt: poolDeployerSalt } },
     ...poolDeployerArgs,
-  ).send({ from: deployer, contractAddressSalt: poolDeployerSalt });
+  ).send({ from: deployer });
 
   const vaultContract = await VaultContract.at(vaultInstance.address, wallet);
   const sharesContract = await TokenContract.at(sharesInstance.address, wallet);
@@ -400,9 +405,7 @@ export async function deployEscrow(
   deployer: AztecAddress,
   salt: Fr = Fr.random(),
 ): Promise<{ contract: EscrowContract; instance: ContractInstanceWithAddress }> {
-  const { contract } = await EscrowContract.deployWithPublicKeys(publicKeys, wallet).send({
-    contractAddressSalt: salt,
-    universalDeploy: true,
+  const { contract } = await EscrowContract.deploy(wallet, { publicKeys, salt, universalDeploy: true }).send({
     from: deployer,
   });
 
@@ -419,11 +422,10 @@ export async function setPrivateAuthWit(
   authorizer: AztecAddress,
   wallet: EmbeddedWallet,
 ): Promise<AuthWitness> {
-  const intent: ContractFunctionInteractionCallIntent = {
-    caller: caller,
-    action: action,
-  };
-  return wallet.createAuthWit(authorizer, intent);
+  return wallet.createAuthWit(authorizer, {
+    caller,
+    call: await action.getFunctionCall(),
+  });
 }
 
 export async function setPublicAuthWit(
@@ -432,16 +434,8 @@ export async function setPublicAuthWit(
   authorizer: AztecAddress,
   wallet: EmbeddedWallet,
 ) {
-  const validateAction = await SetPublicAuthwitContractInteraction.create(
-    wallet,
-    authorizer,
-    {
-      caller: caller,
-      action: action,
-    },
-    true,
-  );
-  await validateAction.send({ from: authorizer });
+  const validateAction = await SetPublicAuthwitContractInteraction.create(wallet, authorizer, { caller, action }, true);
+  await validateAction.send();
 }
 
 // TODO: Replace wallet internals (privateExecutionResult) with simulate() + send() to get private return values via public API.
@@ -461,11 +455,11 @@ export async function initializeTransferCommitment(
 ): Promise<bigint> {
   // Use wallet internals to prove the tx and extract the private return value (the commitment)
   const interaction = token.methods.initialize_transfer_commitment(to.address, completer);
-  const executionPayload = await interaction.request({ from: caller });
+  const executionPayload = await interaction.request();
   const w = token.wallet as unknown as WalletWithInternals;
   const feeOptions = await w.completeFeeOptions(caller, executionPayload.feePayer, undefined);
   const txRequest = await w.createTxExecutionRequestFromPayloadAndFee(executionPayload, caller, feeOptions);
-  const provenTx = await w.pxe.proveTx(txRequest, w.scopesFrom(caller));
+  const provenTx = await w.pxe.proveTx(txRequest, { scopes: w.scopesFrom(caller), senderForTags: caller });
 
   // Extract the commitment from the nested private execution results
   const entrypoint = provenTx.privateExecutionResult.entrypoint;
@@ -499,11 +493,11 @@ export async function initializeTransferCommitmentNFT(
 ): Promise<bigint> {
   // Use wallet internals to prove the tx and extract the private return value (the commitment)
   const interaction = nft.methods.initialize_transfer_commitment(to.address, completer);
-  const executionPayload = await interaction.request({ from: caller });
+  const executionPayload = await interaction.request();
   const w = nft.wallet as unknown as WalletWithInternals;
   const feeOptions = await w.completeFeeOptions(caller, executionPayload.feePayer, undefined);
   const txRequest = await w.createTxExecutionRequestFromPayloadAndFee(executionPayload, caller, feeOptions);
-  const provenTx = await w.pxe.proveTx(txRequest, w.scopesFrom(caller));
+  const provenTx = await w.pxe.proveTx(txRequest, { scopes: w.scopesFrom(caller), senderForTags: caller });
 
   const entrypoint = provenTx.privateExecutionResult.entrypoint;
   const nestedResults = entrypoint.nestedExecutionResults;
@@ -551,9 +545,7 @@ export async function deployEscrowWithPublicKeysAndSalt(
   deployer: AztecAddress,
   salt: Fr = Fr.random(),
 ): Promise<EscrowContract> {
-  const { contract } = await EscrowContract.deployWithPublicKeys(publicKeys, wallet).send({
-    contractAddressSalt: salt,
-    universalDeploy: true,
+  const { contract } = await EscrowContract.deploy(wallet, { publicKeys, salt, universalDeploy: true }).send({
     from: deployer,
   });
   return contract;
@@ -823,29 +815,22 @@ function bytesToFields(bytes: Buffer): Fr[] {
 }
 
 /**
- * Derives AES symmetric key and IV from ECDH shared secret using Poseidon2
+ * Derives AES symmetric key and IV from an app-siloed ECDH shared secret using Poseidon2.
+ *
+ * Mirrors `derive_aes_symmetric_key_and_iv_from_shared_secret` in aztec-nr: for each `index k`,
+ * subkeys `2*k` and `2*k+1` are derived from `s_app` and the last 16 (little-end) bytes of each
+ * are concatenated, yielding the (key, iv) pair.
  */
-async function deriveAesSymmetricKeyAndIv(
-  sharedSecret: Point,
-  index: number,
-): Promise<{ key: Uint8Array; iv: Uint8Array }> {
-  // Generate two random 256-bit values using Poseidon2 with different separators
-  const kShift = index << 8;
-  const separator1 = kShift + DomainSeparator.SYMMETRIC_KEY;
-  const separator2 = kShift + DomainSeparator.SYMMETRIC_KEY_2;
-
-  const rand1 = await poseidon2HashWithSeparator([sharedSecret.x, sharedSecret.y], separator1);
-  const rand2 = await poseidon2HashWithSeparator([sharedSecret.x, sharedSecret.y], separator2);
+async function deriveAesSymmetricKeyAndIv(sApp: Fr, index: number): Promise<{ key: Uint8Array; iv: Uint8Array }> {
+  const rand1 = await poseidon2HashWithSeparator([sApp], DomainSeparator.ECDH_SUBKEY + 2 * index);
+  const rand2 = await poseidon2HashWithSeparator([sApp], DomainSeparator.ECDH_SUBKEY + 2 * index + 1);
 
   const rand1Bytes = rand1.toBuffer();
   const rand2Bytes = rand2.toBuffer();
 
-  // Extract the last 16 bytes from each (little end of big-endian representation)
   const key = new Uint8Array(16);
   const iv = new Uint8Array(16);
-
   for (let i = 0; i < 16; i++) {
-    // Take bytes from the "little end" of the be-bytes arrays
     key[i] = rand1Bytes[31 - i];
     iv[i] = rand2Bytes[31 - i];
   }

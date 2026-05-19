@@ -16,7 +16,7 @@ unconstrained fn mint_to_public_success() {
     assert(total_supply == mint_amount);
 }
 
-#[test(should_fail_with = "Contract execution has reverted: Assertion failed: caller is not minter 'minter.eq(sender)'")]
+#[test(should_fail_with = "caller is not minter")]
 unconstrained fn mint_to_public_failure_as_non_minter() {
     let (mut env, token_contract_address, owner, recipient, _) = utils::setup_with_minter(false);
 
