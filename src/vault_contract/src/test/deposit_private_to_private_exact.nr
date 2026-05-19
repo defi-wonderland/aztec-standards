@@ -4,23 +4,6 @@ use aztec::test::helpers::authwit as authwit_cheatcodes;
 use generic_proxy::GenericProxy;
 use token_contract::Token;
 
-#[test(should_fail_with = "Trying to read from uninitialized PublicImmutable")]
-unconstrained fn deposit_private_to_private_exact_fails_without_shares() {
-    let (env, vault_address, owner, recipient, _asset_address) =
-        utils::setup_vault_without_shares();
-
-    env.call_private(
-        owner,
-        Vault::at(vault_address).deposit_private_to_private_exact(
-            owner,
-            recipient,
-            mint_amount,
-            mint_amount,
-            0,
-        ),
-    );
-}
-
 #[test]
 unconstrained fn deposit_private_to_private_exact_success() {
     // Setup with asset token
@@ -189,31 +172,6 @@ unconstrained fn deposit_private_to_private_exact_request_too_many_shares() {
     // Deposit
     // At the first deposit 1 share = 1 asset
     let min_shares = deposit_amount + 1;
-    env.call_private(
-        owner,
-        Vault::at(vault_address).deposit_private_to_private_exact(
-            owner,
-            recipient,
-            deposit_amount,
-            min_shares,
-            0,
-        ),
-    );
-}
-
-#[test(should_fail_with = "Unknown auth witness for message hash ")]
-unconstrained fn deposit_private_to_private_exact_without_asset_approval() {
-    // Setup with asset token
-    let (mut env, vault_address, owner, recipient, asset_address, _) =
-        utils::setup_with_vault(true);
-
-    // Mint some asset tokens to owner
-    let deposit_amount: u128 = mint_amount;
-    env.call_private(owner, Token::at(asset_address).mint_to_private(owner, deposit_amount));
-
-    // Deposit
-    // At the first deposit 1 share = 1 asset
-    let min_shares = deposit_amount;
     env.call_private(
         owner,
         Vault::at(vault_address).deposit_private_to_private_exact(

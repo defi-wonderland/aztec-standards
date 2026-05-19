@@ -33,15 +33,7 @@ unconstrained fn preview_withdraw_success() {
     let preview_withdraw_assets =
         env.view_public(Vault::at(vault_address).preview_withdraw(shares_to_withdraw));
 
-    utils::withdraw_public_to_public(
-        env,
-        vault_address,
-        shares_address,
-        owner,
-        recipient,
-        deposit_amount,
-        deposit_amount,
-    );
+    utils::withdraw_public_to_public(env, vault_address, owner, recipient, deposit_amount);
 
     // Check recipient received assets (1:1 ratio)
     let expected_assets: u128 = shares_to_withdraw;
@@ -93,11 +85,9 @@ unconstrained fn preview_withdraw_with_yield_accrued_success() {
     utils::withdraw_public_to_public(
         env,
         vault_address,
-        shares_address,
         owner,
         recipient,
         expected_assets_to_withdraw,
-        deposit_amount,
     );
 
     // Check recipient received assets

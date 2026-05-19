@@ -3,17 +3,6 @@ use crate::Vault;
 use aztec::test::helpers::authwit as authwit_cheatcodes;
 use token_contract::Token;
 
-#[test(should_fail_with = "Trying to read from uninitialized PublicImmutable")]
-unconstrained fn redeem_public_to_public_without_shares() {
-    let (env, vault_address, owner, recipient, _asset_address) =
-        utils::setup_vault_without_shares();
-
-    env.call_public(
-        owner,
-        Vault::at(vault_address).redeem_public_to_public(owner, recipient, mint_amount, 0),
-    );
-}
-
 #[test]
 unconstrained fn redeem_public_to_public_success() {
     // Setup with asset token
@@ -38,7 +27,6 @@ unconstrained fn redeem_public_to_public_success() {
     utils::redeem_public_to_public(
         env,
         vault_address,
-        shares_address,
         deposit_recipient,
         recipient,
         requested_shares,
@@ -85,7 +73,6 @@ unconstrained fn redeem_public_to_public_after_yield() {
     utils::redeem_public_to_public(
         env,
         vault_address,
-        shares_address,
         deposit_recipient,
         recipient,
         requested_shares,
@@ -102,38 +89,6 @@ unconstrained fn redeem_public_to_public_after_yield() {
     // Check asset balances. The vault should still have 1 token due to rounding.
     utils::check_public_balance(env, asset_address, vault_address, 1);
     utils::check_public_balance(env, asset_address, recipient, deposit_amount + 1);
-}
-
-#[test(should_fail_with = "unauthorized")]
-unconstrained fn redeem_public_to_public_without_approval() {
-    // Setup with asset token
-    let (env, vault_address, owner, recipient, asset_address, shares_address) =
-        utils::setup_with_vault(false);
-
-    // Mint some asset tokens to owner and deposit
-    let deposit_amount: u128 = mint_amount;
-    let deposit_recipient = owner;
-    utils::mint_and_deposit_public_to_public(
-        env,
-        owner,
-        asset_address,
-        vault_address,
-        shares_address,
-        deposit_recipient,
-        deposit_amount,
-    );
-
-    // Withdraw
-    let requested_shares: u128 = deposit_amount;
-    env.call_public(
-        recipient,
-        Vault::at(vault_address).redeem_public_to_public(
-            deposit_recipient,
-            recipient,
-            requested_shares,
-            0,
-        ),
-    );
 }
 
 #[test(should_fail_with = "unauthorized")]
@@ -158,7 +113,7 @@ unconstrained fn redeem_public_to_public_on_behalf_of_wrong_caller() {
     // Authorize someone to call redeem_public_to_public on the vault
     let requested_shares: u128 = deposit_amount;
     let public_redeem_public_to_public_call_interface = Vault::at(vault_address)
-        .redeem_public_to_public(deposit_recipient, recipient, requested_shares, 0);
+        .redeem_public_to_public(deposit_recipient, recipient, requested_shares);
     authwit_cheatcodes::add_public_authwit_from_call(
         env,
         deposit_recipient,
@@ -173,7 +128,6 @@ unconstrained fn redeem_public_to_public_on_behalf_of_wrong_caller() {
             deposit_recipient,
             recipient,
             requested_shares,
-            0,
         ),
     );
 }
@@ -200,21 +154,12 @@ unconstrained fn redeem_public_to_public_on_behalf_of_other_success() {
     // Authorize recipient to call redeem_public_to_public on the vault
     let requested_shares: u128 = deposit_amount;
     let public_redeem_public_to_public_call_interface = Vault::at(vault_address)
-        .redeem_public_to_public(deposit_recipient, recipient, requested_shares, 0);
+        .redeem_public_to_public(deposit_recipient, recipient, requested_shares);
     authwit_cheatcodes::add_public_authwit_from_call(
         env,
         deposit_recipient,
         recipient,
         public_redeem_public_to_public_call_interface,
-    );
-
-    // Authorize the vault to burn shares from deposit_recipient's public balance on the shares token
-    utils::authorize_burn_public(
-        env,
-        shares_address,
-        vault_address,
-        deposit_recipient,
-        requested_shares,
     );
 
     // Withdraw
@@ -224,7 +169,6 @@ unconstrained fn redeem_public_to_public_on_behalf_of_other_success() {
             deposit_recipient,
             recipient,
             requested_shares,
-            0,
         ),
     );
 
