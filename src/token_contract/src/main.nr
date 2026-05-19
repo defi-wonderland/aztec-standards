@@ -379,16 +379,7 @@ pub contract Token {
     fn mint_to_commitment(commitment: Field, amount: u128) {
         let completer = self.msg_sender();
         _validate_minter(completer, self.storage.minter.read());
-        self.internal._increase_total_supply(amount);
-        self.internal._increase_commitment_balance(
-            uint_note::PartialUintNote::from_field(commitment),
-            completer,
-            amount,
-        );
-
-        self.emit(
-            Transfer { from: AztecAddress::zero(), to: _private_address_magic_value(), amount },
-        );
+        self.internal._mint_to_commitment(commitment, completer, amount);
     }
 
     /// @notice Internal function to increase the total supply by `amount`
@@ -633,12 +624,12 @@ pub contract Token {
         self.enqueue_self.increase_total_supply_internal(amount);
     }
 
-    /// @notice Mints tokens to a partial note commitment (used internally, completer is this contract)
+    /// @notice Mints tokens to a partial note commitment
     /// @param commitment The partial note representing the commitment
+    /// @param completer The address that will complete the partial note
     /// @param amount The amount of tokens to mint
     #[internal("public")]
-    fn _mint_to_commitment(commitment: Field, amount: u128) {
-        let completer = self.address;
+    fn _mint_to_commitment(commitment: Field, completer: AztecAddress, amount: u128) {
         self.internal._increase_total_supply(amount);
         self.internal._increase_commitment_balance(
             uint_note::PartialUintNote::from_field(commitment),

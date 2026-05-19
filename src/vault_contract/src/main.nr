@@ -1120,7 +1120,7 @@ pub contract Vault {
         let surplus = max_shares - shares; // Reverts with underflow if invalid
         if surplus > 0 {
             // Mint surplus back to the sender via commitment
-            self.internal._mint_to_commitment(commitment, surplus);
+            self.internal._mint_to_commitment(commitment, self.address, surplus);
         }
 
         // Transfer the assets to the recipient
@@ -1154,7 +1154,7 @@ pub contract Vault {
         let surplus = max_shares - shares; // Reverts with underflow if invalid
         if surplus > 0 {
             // Mint surplus back to the sender via commitment
-            self.internal._mint_to_commitment(commitment, surplus);
+            self.internal._mint_to_commitment(commitment, self.address, surplus);
         }
     }
 
@@ -1181,7 +1181,7 @@ pub contract Vault {
         let outstanding_shares = max_shares - min_shares; // Reverts with underflow if invalid
         if outstanding_shares > 0 {
             // Mint outstanding shares via commitment
-            self.internal._mint_to_commitment(commitment, outstanding_shares);
+            self.internal._mint_to_commitment(commitment, self.address, outstanding_shares);
         }
     }
 
@@ -1221,7 +1221,7 @@ pub contract Vault {
 
         if outstanding_shares > 0 {
             // Mint outstanding shares via commitment
-            self.internal._mint_to_commitment(commitment, outstanding_shares);
+            self.internal._mint_to_commitment(commitment, self.address, outstanding_shares);
         }
     }
 
