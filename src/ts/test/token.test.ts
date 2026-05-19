@@ -61,11 +61,10 @@ describe('Token', () => {
         deployer: deployerWallet,
       });
 
-      const deployer = new ContractDeployer(TokenContractArtifact, wallet, undefined, 'constructor_with_minter');
-      const { contract } = await deployer.deploy('PrivateToken', 'PT', 18, deployerWallet, AztecAddress.ZERO).send({
-        contractAddressSalt: salt,
-        from: deployerWallet,
-      });
+      const deployer = new ContractDeployer(TokenContractArtifact, wallet, 'constructor_with_minter');
+      const { contract } = await deployer
+        .deploy(['PrivateToken', 'PT', 18, deployerWallet, AztecAddress.ZERO], { salt })
+        .send({ from: deployerWallet });
 
       const contractMetadata = await wallet.getContractMetadata(deploymentData.address);
       expect(contractMetadata).toBeDefined();
@@ -88,15 +87,10 @@ describe('Token', () => {
         salt,
         deployer: deployerWallet,
       });
-      const deployer = new ContractDeployer(
-        TokenContractArtifact,
-        wallet,
-        undefined,
-        'constructor_with_initial_supply',
-      );
+      const deployer = new ContractDeployer(TokenContractArtifact, wallet, 'constructor_with_initial_supply');
       const { contract } = await deployer
-        .deploy('PrivateToken', 'PT', 18, 1, deployerWallet, AztecAddress.ZERO)
-        .send({ contractAddressSalt: salt, from: deployerWallet });
+        .deploy(['PrivateToken', 'PT', 18, 1, deployerWallet, AztecAddress.ZERO], { salt })
+        .send({ from: deployerWallet });
 
       const contractMetadata = await wallet.getContractMetadata(deploymentData.address);
       expect(contractMetadata).toBeDefined();
@@ -172,11 +166,14 @@ describe('Token', () => {
       action,
     };
     // alice creates authwitness
-    const authWitness = await wallet.createAuthWit(alice, intent);
+    const authWitness = await wallet.createAuthWit(alice, {
+      caller: intent.caller,
+      call: await intent.action.getFunctionCall(),
+    });
     // alice authorizes the public authwit
     const setPublicAuthwitInteraction = await SetPublicAuthwitContractInteraction.create(wallet, alice, intent, true);
 
-    await setPublicAuthwitInteraction.send({ from: alice });
+    await setPublicAuthwitInteraction.send();
 
     // check validity of alice's authwit
     const validity = await lookupValidity(wallet, alice, intent, authWitness);
@@ -230,7 +227,10 @@ describe('Token', () => {
     }
 
     const intent = { caller: carl, action };
-    const witness = await wallet.createAuthWit(alice, intent);
+    const witness = await wallet.createAuthWit(alice, {
+      caller: intent.caller,
+      call: await intent.action.getFunctionCall(),
+    });
 
     const validity = await lookupValidity(wallet, alice, intent, witness);
     expect(validity.isValidInPrivate).toBeTruthy();
