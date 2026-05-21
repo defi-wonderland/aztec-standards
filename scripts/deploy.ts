@@ -269,13 +269,14 @@ async function deployContract(
 
   logger.info(`Deploying ${label}...`);
 
-  const deployMethod = Contract.deploy(deployer, artifact, constructorArgs, constructorArtifact);
+  const deployMethod = Contract.deploy(deployer, artifact, constructorArgs, constructorArtifact, {
+    salt,
+    universalDeploy: true,
+  });
 
   try {
     await deployMethod.send({
       ...options,
-      contractAddressSalt: salt,
-      universalDeploy: true,
       wait: { waitForStatus: TxStatus.PROPOSED },
     });
   } catch (error: unknown) {
