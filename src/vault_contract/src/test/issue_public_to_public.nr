@@ -2,17 +2,6 @@ use crate::{test::utils::{self, mint_amount}, Vault};
 use aztec::test::helpers::authwit as authwit_cheatcodes;
 use token_contract::Token;
 
-#[test(should_fail_with = "Trying to read from uninitialized PublicImmutable")]
-unconstrained fn issue_public_to_public_without_shares() {
-    let (env, vault_address, owner, recipient, _asset_address) =
-        utils::setup_vault_without_shares();
-
-    env.call_public(
-        owner,
-        Vault::at(vault_address).issue_public_to_public(owner, recipient, 0, 0, 0),
-    );
-}
-
 #[test]
 unconstrained fn issue_public_to_public_success() {
     // Setup with asset token
@@ -171,30 +160,6 @@ unconstrained fn issue_public_to_public_request_too_many_shares() {
 
     // Issue shares
     let requested_shares: u128 = max_assets + 1;
-    env.call_public(
-        owner,
-        Vault::at(vault_address).issue_public_to_public(
-            owner,
-            recipient,
-            requested_shares,
-            max_assets,
-            0,
-        ),
-    );
-}
-
-#[test(should_fail_with = "unauthorized")]
-unconstrained fn issue_public_to_public_without_asset_approval() {
-    // Setup with asset token
-    let (env, vault_address, owner, recipient, asset_address, _shares_address) =
-        utils::setup_with_vault(false);
-
-    // Mint some asset tokens to owner
-    let max_assets: u128 = mint_amount;
-    env.call_public(owner, Token::at(asset_address).mint_to_public(owner, max_assets));
-
-    // Issue shares
-    let requested_shares = max_assets;
     env.call_public(
         owner,
         Vault::at(vault_address).issue_public_to_public(

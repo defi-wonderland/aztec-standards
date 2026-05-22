@@ -535,29 +535,25 @@ fn get_vault_offset() -> u128 { /* ... */ }
 
 ## Deployment Guide
 
-Deploying a Vault requires a two-step process because the vault and shares token are separate contracts with a circular dependency — the shares token needs the vault as its minter, and the vault needs to know the shares token address. To simplify this, the [`VaultDeployer`](../vault_deployer) contract wraps both steps into a single user-facing transaction: deploying a fresh `VaultDeployer` instance per vault atomically deploys and wires the vault + shares token pair.
+The vault is a single contract that implements both the ERC-4626 vault logic and the ERC-20 shares token. Deploying a vault is a single step: publish the contract class once per network, then deploy a vault instance by calling its initializer.
 
-A public factory that deploys and wires both contracts in one step is not currently possible because contract instance publishing (`publish_contract_instance_for_public_execution`) is private-only — it relies on a private oracle and `PrivateContext`. The `VaultDeployer` works around this by running the publishing + linking logic in its own private initializer, instead of as a reusable public factory. This approach can be revisited once [public instance registration](https://github.com/AztecProtocol/aztec-packages/issues/20771) is supported.
+### Step 1: Publish the contract class
 
-### Step 1: Publish the contract classes
+The `Vault` contract class must be published on-chain once per network before any vault instance can be deployed.
 
-The `Vault` and `Token` contract classes must be published on-chain once per network before any vault can be deployed. Each vault then references them by `ContractClassId`.
+### Step 2: Deploy a vault instance
 
-### Step 2: Deploy a `VaultDeployer` instance for the vault
-
-Deploy a new `VaultDeployer` instance with one of its two initializers. The initializer derives the vault and shares addresses (with the deployer instance as their `deployer`), publishes both contract instances, enqueues their constructors, and finally enqueues `set_shares_token` (or `set_shares_token_with_initial_deposit`) on the vault — all within the same transaction. The deployer-of-instance check on the vault ensures only this `VaultDeployer` instance can perform the link.
+Deploy a vault by calling one of its two initializers directly.
 
 #### Deployment without initial deposit
 
 ```rust
-VaultDeployer::interface().deploy_vault(
+Vault::interface().constructor(
     asset,
     vault_offset,
-    vault_class_id,
     shares_name,
     shares_symbol,
     shares_decimals,
-    shares_class_id,
 )
 ```
 
@@ -587,17 +583,15 @@ https://www.openzeppelin.com/news/a-novel-defense-against-erc4626-inflation-atta
 
 #### Deployment with initial deposit
 
-For stronger protection, use the `deploy_vault_with_initial_deposit` initializer to seed the vault as part of the same transaction:
+For stronger protection, use the `constructor_with_initial_deposit` initializer to seed the vault as part of the same deployment transaction:
 
 ```rust
-VaultDeployer::interface().deploy_vault_with_initial_deposit(
+Vault::interface().constructor_with_initial_deposit(
     asset,
     vault_offset,
-    vault_class_id,
     shares_name,
     shares_symbol,
     shares_decimals,
-    shares_class_id,
     initial_deposit,
     depositor,
     nonce,
@@ -621,8 +615,6 @@ Rather than relying on virtual math alone, this method ensures that an attacker 
 > - The `depositor` **must hold the `initial_deposit` amount in their public balance**
 > - An **authwit must be signed** authorizing this public transfer
 > - The **vault contract address must be known in advance** in order to correctly compute and sign the authwit
->
-> The vault address is fully determined by the `VaultDeployer` instance address (used as the vault's `deployer`), the `VaultDeployer` instance salt (reused as the vault's salt), the vault `ContractClassId`, and the vault's initialization hash (derived from the constructor selector and args). Deployers should precompute it from the `VaultDeployer` instantiation params and set up the depositor's public balance and authwit before submitting the `deploy_vault_with_initial_deposit` transaction.
 
 **Choosing the Initial Deposit Amount:**
 
