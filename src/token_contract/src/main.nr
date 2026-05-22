@@ -21,6 +21,8 @@ pub contract Token {
     use compressed_string::FieldCompressedString;
     // private balance library
     use balance_set::BalanceSet;
+    // authorization hook contract
+    use authorization_contract::AuthorizationContract;
 
     // gas-optimized max notes for initial transfer call
     global INITIAL_TRANSFER_CALL_MAX_NOTES: u32 = 2;
@@ -46,6 +48,7 @@ pub contract Token {
     /// @param total_supply The total supply of the token
     /// @param public_balances The public balances of the token
     /// @param minter The account permissioned to mint the token
+    /// @param auth_contract The authorization contract called on every transfer
     #[storage]
     struct Storage<Context> {
         name: PublicImmutable<FieldCompressedString, Context>,
@@ -55,6 +58,7 @@ pub contract Token {
         total_supply: PublicMutable<u128, Context>,
         public_balances: Map<AztecAddress, PublicMutable<u128, Context>, Context>,
         minter: PublicImmutable<AztecAddress, Context>,
+        auth_contract: PublicImmutable<AztecAddress, Context>,
     }
 
     /// @notice Initializes the token with an initial supply
@@ -64,6 +68,7 @@ pub contract Token {
     /// @param decimals The number of decimals of the token
     /// @param initial_supply The initial supply of the token
     /// @param to The address to mint the initial supply to
+    /// @param auth_contract The address of the authorization contract (zero address to disable)
     #[external("public")]
     #[initializer]
     fn constructor_with_initial_supply(
@@ -72,10 +77,12 @@ pub contract Token {
         decimals: u8,
         initial_supply: u128,
         to: AztecAddress,
+        auth_contract: AztecAddress,
     ) {
         self.storage.name.initialize(FieldCompressedString::from_string(name));
         self.storage.symbol.initialize(FieldCompressedString::from_string(symbol));
         self.storage.decimals.initialize(decimals);
+        self.storage.auth_contract.initialize(auth_contract);
 
         self.internal._mint_to_public(to, initial_supply);
     }
@@ -85,12 +92,20 @@ pub contract Token {
     /// @param symbol The symbol of the token
     /// @param decimals The number of decimals of the token
     /// @param minter The address of the minter
+    /// @param auth_contract The address of the authorization contract (zero address to disable)
     #[external("public")]
     #[initializer]
-    fn constructor_with_minter(name: str<31>, symbol: str<31>, decimals: u8, minter: AztecAddress) {
+    fn constructor_with_minter(
+        name: str<31>,
+        symbol: str<31>,
+        decimals: u8,
+        minter: AztecAddress,
+        auth_contract: AztecAddress,
+    ) {
         self.storage.name.initialize(FieldCompressedString::from_string(name));
         self.storage.symbol.initialize(FieldCompressedString::from_string(symbol));
         self.storage.decimals.initialize(decimals);
+        self.storage.auth_contract.initialize(auth_contract);
 
         self.storage.minter.initialize(minter);
     }
@@ -113,6 +128,8 @@ pub contract Token {
         amount: u128,
         _nonce: Field,
     ) {
+        self.internal._call_auth_private(from, amount, self.context.selector().to_field());
+
         self.internal._decrease_private_balance(from, amount, INITIAL_TRANSFER_CALL_MAX_NOTES);
 
         self.enqueue_self.increase_public_balance_internal(to, amount);
@@ -134,6 +151,8 @@ pub contract Token {
         amount: u128,
         _nonce: Field,
     ) -> Field {
+        self.internal._call_auth_private(from, amount, self.context.selector().to_field());
+
         self.internal._decrease_private_balance(from, amount, INITIAL_TRANSFER_CALL_MAX_NOTES);
 
         self.enqueue_self.increase_public_balance_internal(to, amount);
@@ -158,6 +177,8 @@ pub contract Token {
         amount: u128,
         _nonce: Field,
     ) {
+        self.internal._call_auth_private(from, amount, self.context.selector().to_field());
+
         self.internal._decrease_private_balance(from, amount, INITIAL_TRANSFER_CALL_MAX_NOTES);
 
         self.internal._increase_private_balance(to, amount);
@@ -178,6 +199,8 @@ pub contract Token {
         amount: u128,
         _nonce: Field,
     ) {
+        self.internal._call_auth_private(from, amount, self.context.selector().to_field());
+
         self.internal._decrease_private_balance(from, amount, INITIAL_TRANSFER_CALL_MAX_NOTES);
 
         let completer = self.msg_sender();
@@ -203,6 +226,8 @@ pub contract Token {
         amount: u128,
         _nonce: Field,
     ) {
+        self.internal._call_auth_private(from, amount, self.context.selector().to_field());
+
         self.enqueue_self.decrease_public_balance_internal(from, amount);
 
         self.internal._increase_private_balance(to, amount);
@@ -248,6 +273,8 @@ pub contract Token {
         amount: u128,
         _nonce: Field,
     ) {
+        self.internal._call_auth_public(from, amount, self.context.selector().to_field());
+
         self.internal._decrease_public_balance(from, amount);
         self.internal._increase_public_balance(to, amount);
 
@@ -270,6 +297,8 @@ pub contract Token {
         amount: u128,
         _nonce: Field,
     ) {
+        self.internal._call_auth_public(from, amount, self.context.selector().to_field());
+
         self.internal._decrease_public_balance(from, amount);
 
         let completer = self.msg_sender();
@@ -347,6 +376,14 @@ pub contract Token {
     #[view]
     fn decimals() -> u8 {
         self.storage.decimals.read()
+    }
+
+    /// @notice Returns the ARC-403 authorization hook contract address
+    /// @return The auth contract address (zero address means authorization is disabled)
+    #[external("public")]
+    #[view]
+    fn get_auth_contract() -> AztecAddress {
+        self.storage.auth_contract.read()
     }
 
     /** ==========================================================
@@ -427,6 +464,8 @@ pub contract Token {
     #[authorize_once("from", "_nonce")]
     #[external("private")]
     fn burn_private(from: AztecAddress, amount: u128, _nonce: Field) {
+        self.internal._call_auth_private(from, amount, self.context.selector().to_field());
+
         self.internal._burn_private(from, amount);
     }
 
@@ -438,6 +477,8 @@ pub contract Token {
     #[authorize_once("from", "_nonce")]
     #[external("public")]
     fn burn_public(from: AztecAddress, amount: u128, _nonce: Field) {
+        self.internal._call_auth_public(from, amount, self.context.selector().to_field());
+
         self.internal._burn_public(from, amount);
     }
 
@@ -454,6 +495,34 @@ pub contract Token {
     /** ==========================================================
      * ================= TOKEN LIBRARIES =========================
      * ======================================================== */
+
+    /// @notice ARC-403: calls the public authorization hook when one is configured
+    /// @dev Invoked from external public functions; no-ops when auth_contract is zero
+    /// @param from The address tokens are moved from (zero address for mints)
+    /// @param amount The amount of tokens being moved
+    /// @param selector The selector passed is the calling function's own selector
+    #[internal("public")]
+    fn _call_auth_public(from: AztecAddress, amount: u128, selector: Field) {
+        let auth = self.storage.auth_contract.read();
+        if !auth.eq(AztecAddress::zero()) {
+            self.call(AuthorizationContract::at(auth).authorize_public(from, amount, selector));
+        }
+    }
+
+    /// @notice ARC-403: calls the private authorization hook when one is configured
+    /// @dev Invoked from external private functions; no-ops when auth_contract is zero.
+    ///      Runs in private context, but the authorization contract may still create public
+    ///      side effects (e.g., via enqueued public calls or public events).
+    /// @param from The address tokens are moved from (zero address for mints)
+    /// @param amount The amount of tokens being moved
+    /// @param selector The selector passed is the calling function's own selector
+    #[internal("private")]
+    fn _call_auth_private(from: AztecAddress, amount: u128, selector: Field) {
+        let auth = self.storage.auth_contract.read();
+        if !auth.eq(AztecAddress::zero()) {
+            self.call(AuthorizationContract::at(auth).authorize_private(from, amount, selector));
+        }
+    }
 
     /// @notice Validates that the caller is the minter
     /// @param sender The address of the caller

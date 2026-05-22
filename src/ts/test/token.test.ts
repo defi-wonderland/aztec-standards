@@ -56,14 +56,14 @@ describe('Token', () => {
 
       const deploymentData = await getContractInstanceFromInstantiationParams(TokenContractArtifact, {
         constructorArtifact: 'constructor_with_minter',
-        constructorArgs: ['PrivateToken', 'PT', 18, deployerWallet],
+        constructorArgs: ['PrivateToken', 'PT', 18, deployerWallet, AztecAddress.ZERO],
         salt,
         deployer: deployerWallet,
       });
 
       const deployer = new ContractDeployer(TokenContractArtifact, wallet, 'constructor_with_minter');
       const { contract } = await deployer
-        .deploy(['PrivateToken', 'PT', 18, deployerWallet], { salt })
+        .deploy(['PrivateToken', 'PT', 18, deployerWallet, AztecAddress.ZERO], { salt })
         .send({ from: deployerWallet });
 
       const contractMetadata = await wallet.getContractMetadata(deploymentData.address);
@@ -83,13 +83,13 @@ describe('Token', () => {
 
       const deploymentData = await getContractInstanceFromInstantiationParams(TokenContractArtifact, {
         constructorArtifact: 'constructor_with_initial_supply',
-        constructorArgs: ['PrivateToken', 'PT', 18, 1, deployerWallet],
+        constructorArgs: ['PrivateToken', 'PT', 18, 1, deployerWallet, AztecAddress.ZERO],
         salt,
         deployer: deployerWallet,
       });
       const deployer = new ContractDeployer(TokenContractArtifact, wallet, 'constructor_with_initial_supply');
       const { contract } = await deployer
-        .deploy(['PrivateToken', 'PT', 18, 1, deployerWallet], { salt })
+        .deploy(['PrivateToken', 'PT', 18, 1, deployerWallet, AztecAddress.ZERO], { salt })
         .send({ from: deployerWallet });
 
       const contractMetadata = await wallet.getContractMetadata(deploymentData.address);
