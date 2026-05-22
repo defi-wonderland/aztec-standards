@@ -61,9 +61,9 @@ describe('Token', () => {
         deployer: deployerWallet,
       });
 
-      const deployer = new ContractDeployer(TokenContractArtifact, wallet, undefined, 'constructor_with_minter');
+      const deployer = new ContractDeployer(TokenContractArtifact, wallet, 'constructor_with_minter');
       const { contract } = await deployer
-        .deploy('PrivateToken', 'PT', 18, deployerWallet, AztecAddress.ZERO, { salt })
+        .deploy(['PrivateToken', 'PT', 18, deployerWallet, AztecAddress.ZERO], { salt })
         .send({ from: deployerWallet });
 
       const contractMetadata = await wallet.getContractMetadata(deploymentData.address);
@@ -89,7 +89,7 @@ describe('Token', () => {
       });
       const deployer = new ContractDeployer(TokenContractArtifact, wallet, 'constructor_with_initial_supply');
       const { contract } = await deployer
-        .deploy('PrivateToken', 'PT', 18, 1, deployerWallet, AztecAddress.ZERO, { salt })
+        .deploy(['PrivateToken', 'PT', 18, 1, deployerWallet, AztecAddress.ZERO], { salt })
         .send({ from: deployerWallet });
 
       const contractMetadata = await wallet.getContractMetadata(deploymentData.address);
