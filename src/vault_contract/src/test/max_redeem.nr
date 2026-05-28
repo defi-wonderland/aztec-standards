@@ -120,14 +120,7 @@ unconstrained fn max_redeem_updates_after_redemption() {
     // Redeem half the shares
     let redeem_amount: u128 = deposit_amount / 2;
 
-    utils::redeem_public_to_public(
-        env,
-        vault_address,
-        shares_address,
-        owner,
-        recipient,
-        redeem_amount,
-    );
+    utils::redeem_public_to_public(env, vault_address, owner, recipient, redeem_amount);
 
     // max_redeem should be reduced
     let final_max_redeem = env.view_public(Vault::at(vault_address).max_redeem(owner));
