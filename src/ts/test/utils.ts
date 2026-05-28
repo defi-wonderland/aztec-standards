@@ -320,7 +320,7 @@ export async function deployVaultWithInitialDeposit(
   await setPublicAuthWit(vaultInstance.address, transfer, depositor, wallet as EmbeddedWallet);
 
   const { contract: vaultContract } = await VaultContract.deployWithOpts(
-    { method: 'constructor_with_initial_deposit', wallet },
+    { method: 'constructor_with_initial_deposit', wallet, instantiation: { salt, deployer } },
     assetContract.address,
     1,
     SHARES_NAME,
@@ -329,7 +329,7 @@ export async function deployVaultWithInitialDeposit(
     initialDeposit,
     depositor,
     0,
-  ).send({ from: deployer, contractAddressSalt: salt });
+  ).send({ from: deployer });
 
   // Vault IS the shares token — wrap the same address as TokenContract
   const sharesContract = await TokenContract.at(vaultContract.address, wallet);
