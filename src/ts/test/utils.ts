@@ -97,9 +97,9 @@ export const setupTestSuite = async (proverEnabled: boolean = false) => {
   }
 
   const dataDirectory = join(tmpdir(), `aztec-standards-${randomBytes(8).toString('hex')}`);
-  const pxeConfig = { ...config, dataDirectory, proverEnabled };
+  const pxe = { ...config, dataDirectory, proverEnabled };
 
-  const wallet: EmbeddedWallet = await EmbeddedWallet.create(node, { pxeConfig });
+  const wallet: EmbeddedWallet = await EmbeddedWallet.create(node, { pxe });
 
   const accounts: AztecAddress[] = await registerInitialLocalNetworkAccountsInWallet(wallet);
 
@@ -566,6 +566,7 @@ export async function deriveContractAddress(
     initializationHash,
     salt,
     deployer,
+    immutablesHash: Fr.ZERO,
   });
 
   const address = await computeContractAddressFromInstance({
@@ -617,6 +618,7 @@ export async function deriveContractAddressWithConstructor(
     initializationHash,
     salt,
     deployer,
+    immutablesHash: Fr.ZERO,
   });
 
   return {
