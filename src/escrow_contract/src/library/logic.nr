@@ -41,6 +41,7 @@ pub fn _get_escrow(
         deployer: AztecAddress::from_field(0),
         contract_class_id: ContractClassId::from_field(escrow_class_id),
         initialization_hash: 0,
+        immutables_hash: 0,
         public_keys: computed_public_keys,
     };
 
