@@ -29,6 +29,9 @@ import {
   deployTokenWithMinter,
   AMOUNT,
   expectTokenBalances,
+  DEFAULT_PROVENANCE_LABEL,
+  composeProvenanceLabel,
+  expectPrivateBalanceAtLabel,
   wad,
   deployNFTWithMinter,
   assertOwnsPrivateNFT,
@@ -318,8 +321,6 @@ describe('Escrow', () => {
     });
 
     it('should be able to withdraw from escrow correctly', async () => {
-      const { result: privateBalance } = await token.methods.balance_of_private(escrow.address).simulate({ from: bob });
-
       await expectTokenBalances(token, escrow.address, wad(0), AMOUNT, escrow.address);
       await expectTokenBalances(token, bob, wad(0), wad(0), bob);
 
@@ -328,8 +329,10 @@ describe('Escrow', () => {
         .methods.withdraw(escrow.address, bob, token.address, AMOUNT)
         .send({ from: bob, additionalScopes: [escrow.address] });
 
+      const recipientLabel = await composeProvenanceLabel(token, DEFAULT_PROVENANCE_LABEL, AMOUNT, bob);
       await expectTokenBalances(token, escrow.address, wad(0), wad(0), escrow.address);
-      await expectTokenBalances(token, bob, wad(0), AMOUNT, bob);
+      await expectTokenBalances(token, bob, wad(0), wad(0), bob);
+      await expectPrivateBalanceAtLabel(token, bob, recipientLabel, AMOUNT);
     });
   });
 
