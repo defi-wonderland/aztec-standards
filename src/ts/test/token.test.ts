@@ -16,6 +16,9 @@ import {
   initializeTransferCommitment,
   expectTransferEvents,
   PRIVATE_ADDRESS,
+  DEFAULT_PROVENANCE_LABEL,
+  composeProvenanceLabel,
+  expectPrivateBalanceAtLabel,
 } from './utils.js';
 
 import { TokenContractArtifact, TokenContract } from '../../../src/artifacts/Token.js';
@@ -241,7 +244,9 @@ describe('Token', () => {
     // transfer_private_to_private: (no public events)
     await expectTransferEvents(privateTx.txHash, token.address, []);
 
+    const recipientLabel = await composeProvenanceLabel(token, DEFAULT_PROVENANCE_LABEL, AMOUNT, bob);
     expect((await token.methods.balance_of_private(alice).simulate({ from: alice })).result).toBe(0n);
-    expect((await token.methods.balance_of_private(bob).simulate({ from: bob })).result).toBe(AMOUNT);
+    expect((await token.methods.balance_of_private(bob).simulate({ from: bob })).result).toBe(0n);
+    await expectPrivateBalanceAtLabel(token, bob, recipientLabel, AMOUNT);
   }, 300_000);
 });

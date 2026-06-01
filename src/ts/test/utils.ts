@@ -153,6 +153,35 @@ export const expectTokenBalances = async (
   );
 };
 
+export const DEFAULT_PROVENANCE_LABEL = 0n;
+
+export const composeProvenanceLabel = async (
+  token: TokenContract,
+  label: bigint | number | Fr,
+  amount: bigint | number | Fr,
+  caller: AztecAddress,
+) => (await token.methods.compose_provenance_label(label, amount).simulate({ from: caller })).result;
+
+export const expectPrivateBalanceAtLabel = async (
+  token: TokenContract,
+  address: AztecAddress,
+  label: bigint | number | Fr,
+  privateBalance: bigint | number | Fr,
+  caller?: AztecAddress,
+) => {
+  const from = caller ? caller : address;
+  const toBigInt = (val: bigint | number | Fr) => {
+    if (typeof val === 'bigint') return val;
+    if (typeof val === 'number') return BigInt(val);
+    if (val instanceof Fr) return val.toBigInt();
+    throw new Error('Unsupported type for balance');
+  };
+
+  expect((await token.methods.balance_of_private_at_label(address, label).simulate({ from })).result).toBe(
+    toBigInt(privateBalance),
+  );
+};
+
 export const AMOUNT = 1000n;
 export const wad = (n: number = 1) => AMOUNT * BigInt(n);
 
