@@ -8,6 +8,10 @@ This implementation provides a robust foundation for fungible tokens on Aztec, e
 
 This contract follows the [AIP-20 Aztec Token Standard](https://forum.aztec.network/t/request-for-comments-aip-20-aztec-token-standard/7737). Feel free to review and discuss the specification on the Aztec forum.
 
+## ARC-403: Authorization Hook
+
+This contract also implements ARC-403, an optional authorization hook that calls an external **authorization contract** on every transfer and burn. This enables compliance policies (KYC, allowlists, transfer caps, sanctions screening, audit logging, pausability, etc.) to be plugged in without changing the token interface. If no authorization contract is set, the token behaves as a standard ARC-20. See [ARC-403 Authorization Hook](#arc-403-authorization-hook-1) for details.
+
 ## Transfer Events
 
 The contract emits a public `Transfer { from, to, amount }` event on every balance-changing operation (mints, burns, public transfers, and cross-domain private ↔ public moves), enabling indexers to track token movements.
@@ -33,6 +37,7 @@ The contract emits a public `Transfer { from, to, amount }` event on every balan
 - `public_balances: Map<AztecAddress, u128>`: Public balances per account.
 - `total_supply: u128`: Total token supply.
 - `minter: AztecAddress`: Authorized minter address (if set).
+- `auth_contract: AztecAddress`: ARC-403 authorization contract address (zero address disables the hook).
 
 ## Initializer Functions
 
@@ -45,6 +50,7 @@ The contract emits a public `Transfer { from, to, amount }` event on every balan
 /// @param decimals The number of decimals of the token
 /// @param initial_supply The initial supply of the token
 /// @param to The address to mint the initial supply to
+/// @param auth_contract The ARC-403 authorization contract address (zero address to disable)
 #[public]
 #[initializer]
 fn constructor_with_initial_supply(
@@ -53,6 +59,7 @@ fn constructor_with_initial_supply(
     decimals: u8,
     initial_supply: u128,
     to: AztecAddress,
+    auth_contract: AztecAddress,
 ) { /* ... */ }
 ```
 
@@ -63,6 +70,7 @@ fn constructor_with_initial_supply(
 /// @param symbol The symbol of the token
 /// @param decimals The number of decimals of the token
 /// @param minter The address of the minter
+/// @param auth_contract The ARC-403 authorization contract address (zero address to disable)
 #[public]
 #[initializer]
 fn constructor_with_minter(
@@ -70,6 +78,7 @@ fn constructor_with_minter(
     symbol: str<31>,
     decimals: u8,
     minter: AztecAddress,
+    auth_contract: AztecAddress,
 ) { /* ... */ }
 ```
 
@@ -119,6 +128,15 @@ fn symbol() -> FieldCompressedString { /* ... */ }
 #[public]
 #[view]
 fn decimals() -> u8 { /* ... */ }
+```
+
+### get_auth_contract
+```rust
+/// @notice Returns the ARC-403 authorization hook contract address
+/// @return The auth contract address (zero address means authorization is disabled)
+#[public]
+#[view]
+fn get_auth_contract() -> AztecAddress { /* ... */ }
 ```
 
 ## Utility Functions
@@ -329,3 +347,27 @@ fn mint_to_private(to: AztecAddress, amount: u128) { /* ... */ }
 #[private]
 fn burn_private(from: AztecAddress, amount: u128, nonce: Field) { /* ... */ }
 ```
+
+## ARC-403 Authorization Hook
+
+The authorization contract address is set at construction via the `auth_contract` parameter on both constructors and stored as an immutable field. A zero address disables the hook. When set, each hooked function calls either `authorize_private(from, amount, selector)` or `authorize_public(from, amount, selector)` on the authorization contract after authwit validation and before any balance mutation. The token operation reverts if the authorization call reverts. The hook variant matches the calling function's context — private functions call `authorize_private`, public functions call `authorize_public` — and the `selector` passed is the calling function's own selector.
+
+| Token function | Hook called |
+|----------------|-------------|
+| `transfer_private_to_private` | `authorize_private` |
+| `transfer_private_to_public` | `authorize_private` |
+| `transfer_private_to_public_with_commitment` | `authorize_private` |
+| `transfer_private_to_commitment` | `authorize_private` |
+| `transfer_public_to_private` | `authorize_private` |
+| `transfer_public_to_public` | `authorize_public` |
+| `transfer_public_to_commitment` | `authorize_public` |
+| `burn_private` | `authorize_private` |
+| `burn_public` | `authorize_public` |
+
+### Considerations
+
+- **Mints are not hooked.** `mint_to_public`, `mint_to_private`, and `mint_to_commitment` do not call the hook — minting is already gated by the `minter` address set at construction.
+- **`to` is not forwarded to the hook.** The recipient cannot be provided consistently across all transfer flows (commitment-based transfers seal the recipient inside a hash preimage the sender never sees), so it is omitted entirely rather than passed inconsistently. As a result, a blocked sender can still receive funds, but might not be able to spend them.
+- **`transfer_public_to_private` is not fully private.** It calls `authorize_private`, but spending a public balance inherently reveals `from` and `amount` on-chain regardless of any privacy the authorization contract provides. Authorization contracts can use the `selector` argument to distinguish this case.
+
+Reference implementations of authorization contracts (allowlist, signature-by-authority, transfer accumulator, pausable, etc.) can be found in the [aztec-arc403-extensions](https://github.com/defi-wonderland/aztec-arc403-extensions) repository.

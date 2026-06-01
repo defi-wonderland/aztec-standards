@@ -134,6 +134,7 @@ pub contract VaultDeployer {
             shares_symbol,
             shares_decimals,
             vault,
+            AztecAddress::zero(),
         );
         let shares = _derive_instance(
             shares_constructor.selector,
@@ -152,6 +153,7 @@ pub contract VaultDeployer {
             shares_symbol,
             shares_decimals,
             vault,
+            AztecAddress::zero(),
         ));
 
         (vault, shares)
