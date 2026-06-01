@@ -2,9 +2,12 @@ use bignum::bignum::BigNum;
 use bignum::U512;
 use sha512::sha512;
 
-use aztec::protocol::constants::{DOM_SEP__IVSK_M, DOM_SEP__NHK_M, DOM_SEP__OVSK_M, DOM_SEP__TSK_M};
-use aztec::protocol::point::Point;
-use aztec::protocol::public_keys::{IvpkM, NpkM, OvpkM, PublicKeys, TpkM};
+use aztec::protocol::constants::{
+    DEFAULT_FBPK_M_HASH, DEFAULT_MSPK_M_HASH, DOM_SEP__IVSK_M, DOM_SEP__NHK_M, DOM_SEP__OVSK_M,
+    DOM_SEP__TSK_M,
+};
+use aztec::protocol::point::EmbeddedCurvePoint;
+use aztec::protocol::public_keys::{hash_public_key, IvpkM, PublicKeys};
 use std::embedded_curve_ops::{EmbeddedCurveScalar, fixed_base_scalar_mul};
 
 pub use crate::types::master_secret_keys::MasterSecretKeys;
@@ -141,16 +144,18 @@ pub fn derive_keys(secret_key: Field) -> MasterSecretKeys {
 /// @param master_secret_keys The master secret keys
 /// @return PublicKeys containing the derived public keys.
 pub fn master_secret_keys_to_public_keys(master_secret_keys: MasterSecretKeys) -> PublicKeys {
-    let npk_m: Point = fixed_base_scalar_mul(master_secret_keys.nhk_m).into();
-    let ivpk_m: Point = fixed_base_scalar_mul(master_secret_keys.ivsk_m).into();
-    let ovpk_m: Point = fixed_base_scalar_mul(master_secret_keys.ovsk_m).into();
-    let tpk_m: Point = fixed_base_scalar_mul(master_secret_keys.tsk_m).into();
+    let npk_m: EmbeddedCurvePoint = fixed_base_scalar_mul(master_secret_keys.nhk_m);
+    let ivpk_m: EmbeddedCurvePoint = fixed_base_scalar_mul(master_secret_keys.ivsk_m);
+    let ovpk_m: EmbeddedCurvePoint = fixed_base_scalar_mul(master_secret_keys.ovsk_m);
+    let tpk_m: EmbeddedCurvePoint = fixed_base_scalar_mul(master_secret_keys.tsk_m);
 
     PublicKeys {
-        npk_m: NpkM { inner: npk_m },
+        npk_m_hash: hash_public_key(npk_m),
         ivpk_m: IvpkM { inner: ivpk_m },
-        ovpk_m: OvpkM { inner: ovpk_m },
-        tpk_m: TpkM { inner: tpk_m },
+        ovpk_m_hash: hash_public_key(ovpk_m),
+        tpk_m_hash: hash_public_key(tpk_m),
+        mspk_m_hash: DEFAULT_MSPK_M_HASH,
+        fbpk_m_hash: DEFAULT_FBPK_M_HASH,
     }
 }
 
