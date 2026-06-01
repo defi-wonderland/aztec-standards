@@ -2,7 +2,7 @@ use crate::Token;
 use aztec::{
     note::{constants::MAX_NOTES_PER_PAGE, note_viewer_options::NoteViewerOptions},
     oracle::random::random,
-    protocol::{address::AztecAddress, traits::Packable},
+    protocol::{address::AztecAddress, storage::map::derive_storage_slot_in_map, traits::Packable},
     state_vars::{OwnedStateVariable, PrivateSet},
     test::helpers::test_environment::TestEnvironment,
 };
@@ -11,6 +11,7 @@ use std::test::OracleMock;
 use uint_note::UintNote;
 
 pub global mint_amount: u128 = 10_000 as u128;
+pub global default_provenance_label: Field = 0;
 
 pub unconstrained fn setup_with_initial_supply(
     with_account_contracts: bool,
@@ -204,16 +205,71 @@ pub unconstrained fn get_private_balance(
     amt
 }
 
+pub unconstrained fn check_private_balance_at_label(
+    env: TestEnvironment,
+    token_contract_address: AztecAddress,
+    address: AztecAddress,
+    label: Field,
+    address_amount: u128,
+) {
+    let balance_of_private = get_private_balance_at_label(env, token_contract_address, address, label);
+    assert(balance_of_private == address_amount, "Private balance is not correct");
+}
+
+pub unconstrained fn get_private_balance_at_label(
+    env: TestEnvironment,
+    token_contract_address: AztecAddress,
+    address: AztecAddress,
+    label: Field,
+) -> u128 {
+    env.execute_utility(Token::at(token_contract_address).balance_of_private_at_label(address, label))
+}
+
+pub unconstrained fn compose_provenance_label(
+    env: TestEnvironment,
+    token_contract_address: AztecAddress,
+    label: Field,
+    amount: u128,
+) -> Field {
+    env.execute_utility(Token::at(token_contract_address).compose_provenance_label(label, amount))
+}
+
+pub unconstrained fn compose_provenance_pair(
+    env: TestEnvironment,
+    token_contract_address: AztecAddress,
+    left: Field,
+    right: Field,
+) -> Field {
+    env.execute_utility(Token::at(token_contract_address).compose_provenance_pair(left, right))
+}
+
 pub unconstrained fn get_private_balance_notes(
     env: TestEnvironment,
     token_contract_address: AztecAddress,
     account: AztecAddress,
     offset: u32,
 ) -> BoundedVec<UintNote, MAX_NOTES_PER_PAGE> {
+    get_private_balance_notes_at_label(
+        env,
+        token_contract_address,
+        account,
+        default_provenance_label,
+        offset,
+    )
+}
+
+pub unconstrained fn get_private_balance_notes_at_label(
+    env: TestEnvironment,
+    token_contract_address: AztecAddress,
+    account: AztecAddress,
+    label: Field,
+    offset: u32,
+) -> BoundedVec<UintNote, MAX_NOTES_PER_PAGE> {
     let notes = env.utility_context_at(token_contract_address, |context| {
         let options =
             NoteViewerOptions::<UintNote, <UintNote as Packable>::N>::new().set_offset(offset);
-        let private_balances_slot = Token::storage_layout().private_balances.slot;
+        let private_balances_slot =
+            derive_storage_slot_in_map(Token::storage_layout().private_balances.slot, label);
         let set: PrivateSet<UintNote, _> =
             OwnedStateVariable::new(context, private_balances_slot, account);
         let notes: BoundedVec<UintNote, MAX_NOTES_PER_PAGE> = set.view_notes(options);

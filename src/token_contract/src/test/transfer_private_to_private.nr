@@ -35,7 +35,13 @@ unconstrained fn transfer_private_on_behalf_of_other() {
         owner,
         mint_amount - transfer_amount,
     );
-    utils::check_private_balance(env, token_contract_address, recipient, transfer_amount);
+    let recipient_label = utils::compose_provenance_label(
+        env,
+        token_contract_address,
+        utils::default_provenance_label,
+        transfer_amount,
+    );
+    utils::check_private_balance_at_label(env, token_contract_address, recipient, recipient_label, transfer_amount);
 }
 
 #[test]
@@ -52,6 +58,38 @@ unconstrained fn transfer_private_zero_amount() {
     utils::check_private_balance(env, token_contract_address, owner, mint_amount);
     utils::check_private_balance(env, token_contract_address, recipient, 0);
 }
+
+#[test]
+unconstrained fn transfer_private_recipient_gets_composed_label() {
+    let (mut env, token_contract_address, owner, recipient) =
+        utils::setup_and_mint_to_private_without_minter(false);
+    let transfer_amount = 1234 as u128;
+    let composed_label = utils::compose_provenance_label(
+        env,
+        token_contract_address,
+        utils::default_provenance_label,
+        transfer_amount,
+    );
+
+    env.call_private(
+        owner,
+        Token::at(token_contract_address)
+            .transfer_private_to_private(owner, recipient, transfer_amount, 0),
+    );
+
+    let recipient_default_balance = utils::get_private_balance_at_label(
+        env,
+        token_contract_address,
+        recipient,
+        utils::default_provenance_label,
+    );
+    let recipient_labeled_balance =
+        utils::get_private_balance_at_label(env, token_contract_address, recipient, composed_label);
+
+    assert(recipient_default_balance == 0, "Recipient default label balance should be empty");
+    assert(recipient_labeled_balance == transfer_amount, "Recipient labeled balance is incorrect");
+}
+
 
 #[test]
 unconstrained fn transfer_private_multiple_notes_recursively() {
@@ -75,8 +113,30 @@ unconstrained fn transfer_private_multiple_notes_recursively() {
         .transfer_private_to_private(owner, recipient, transfer_amount, 0);
     env.call_private(owner, transfer_private_from_call_interface);
 
+    let head_label = utils::compose_provenance_label(
+        env,
+        token_contract_address,
+        utils::default_provenance_label,
+        notes_amount * 2,
+    );
+    let middle_label = utils::compose_provenance_label(
+        env,
+        token_contract_address,
+        utils::default_provenance_label,
+        notes_amount * 8,
+    );
+    let tail_label = utils::compose_provenance_label(
+        env,
+        token_contract_address,
+        utils::default_provenance_label,
+        notes_amount - (1 as u128),
+    );
+    let middle_tail_label = utils::compose_provenance_pair(env, token_contract_address, middle_label, tail_label);
+    let recipient_label = utils::compose_provenance_pair(env, token_contract_address, head_label, middle_tail_label);
+
     // NOTE: Removing this check makes the test fail.
-    let recipient_balance = utils::get_private_balance(env, token_contract_address, recipient);
+    let recipient_balance =
+        utils::get_private_balance_at_label(env, token_contract_address, recipient, recipient_label);
     assert(recipient_balance == transfer_amount, "Incorrect recipient balance");
 
     // Check that the notes still owned by the owner are correct
@@ -88,8 +148,8 @@ unconstrained fn transfer_private_multiple_notes_recursively() {
 
     // Check that the notes generated to the recipient are correct
     let recipient_notes: BoundedVec<UintNote, MAX_NOTES_PER_PAGE> =
-        utils::get_private_balance_notes(env, token_contract_address, recipient, 0);
-    assert(recipient_notes.len() == 1, "Incorrect transferred note count"); // 8999 UintNote x1
+        utils::get_private_balance_notes_at_label(env, token_contract_address, recipient, recipient_label, 0);
+    assert(recipient_notes.len() == 1, "Incorrect transferred note count"); // 10999 UintNote x1
     assert(recipient_notes.get(0).value == transfer_amount, "Incorrect transferred note amount");
 
     // Check balances
@@ -99,7 +159,7 @@ unconstrained fn transfer_private_multiple_notes_recursively() {
         owner,
         total_amount - transfer_amount,
     );
-    utils::check_private_balance(env, token_contract_address, recipient, transfer_amount);
+    utils::check_private_balance_at_label(env, token_contract_address, recipient, recipient_label, transfer_amount);
 }
 
 #[test(should_fail_with = "Balance too low")]

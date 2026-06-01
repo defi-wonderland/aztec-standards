@@ -2,6 +2,12 @@ pub mod test;
 
 use aztec::macros::aztec;
 
+unconstrained fn pick_private_balance_label_oracle(_account: Field, _amount: u128) -> Field {
+    // PoC placeholder for a wallet/PXE oracle. Returning the default label preserves existing tests,
+    // while the private circuit still treats the chosen label as unconstrained advice.
+    0
+}
+
 #[aztec]
 pub contract Token {
     // aztec library
@@ -12,7 +18,11 @@ pub contract Token {
             storage::storage,
         },
         messages::message_delivery::MessageDelivery,
-        protocol::{address::AztecAddress, traits::{FromField, ToField}},
+        protocol::{
+            address::AztecAddress,
+            hash::poseidon2_hash_with_separator,
+            traits::{FromField, ToField},
+        },
         state_vars::{Map, Owned, PublicImmutable, PublicMutable, StateVariable},
     };
     // note library
@@ -26,6 +36,8 @@ pub contract Token {
     global INITIAL_TRANSFER_CALL_MAX_NOTES: u32 = 2;
     // max notes transfer for recursive transfer call if initial max notes are exceeded
     global RECURSIVE_TRANSFER_CALL_MAX_NOTES: u32 = 8;
+    global DEFAULT_PROVENANCE_LABEL: Field = 0;
+    global DOM_SEP__TOKEN_PROVENANCE_LABEL: Field = 0x544f4b454e5f50524f56454e414e43455f4c4142454c;
 
     // Sentinel address used in Transfer events to represent the private side of a balance change.
     // sha224sum 'PRIVATE_ADDRESS'
@@ -51,7 +63,7 @@ pub contract Token {
         name: PublicImmutable<FieldCompressedString, Context>,
         symbol: PublicImmutable<FieldCompressedString, Context>,
         decimals: PublicImmutable<u8, Context>,
-        private_balances: Owned<BalanceSet<Context>, Context>,
+        private_balances: Map<Field, Owned<BalanceSet<Context>, Context>, Context>,
         total_supply: PublicMutable<u128, Context>,
         public_balances: Map<AztecAddress, PublicMutable<u128, Context>, Context>,
         minter: PublicImmutable<AztecAddress, Context>,
@@ -113,7 +125,7 @@ pub contract Token {
         amount: u128,
         _nonce: Field,
     ) {
-        self.internal._decrease_private_balance(from, amount, INITIAL_TRANSFER_CALL_MAX_NOTES);
+        let _ = self.internal._decrease_private_balance(from, amount, INITIAL_TRANSFER_CALL_MAX_NOTES);
 
         self.enqueue_self.increase_public_balance_internal(to, amount);
     }
@@ -134,7 +146,7 @@ pub contract Token {
         amount: u128,
         _nonce: Field,
     ) -> Field {
-        self.internal._decrease_private_balance(from, amount, INITIAL_TRANSFER_CALL_MAX_NOTES);
+        let _ = self.internal._decrease_private_balance(from, amount, INITIAL_TRANSFER_CALL_MAX_NOTES);
 
         self.enqueue_self.increase_public_balance_internal(to, amount);
 
@@ -158,9 +170,10 @@ pub contract Token {
         amount: u128,
         _nonce: Field,
     ) {
-        self.internal._decrease_private_balance(from, amount, INITIAL_TRANSFER_CALL_MAX_NOTES);
+        let recipient_label =
+            self.internal._decrease_private_balance(from, amount, INITIAL_TRANSFER_CALL_MAX_NOTES);
 
-        self.internal._increase_private_balance(to, amount);
+        self.internal._increase_private_balance_with_label(to, amount, recipient_label);
     }
 
     /// @notice Transfer tokens from a private balance to the recipient commitment, which must be already initialized.
@@ -178,13 +191,14 @@ pub contract Token {
         amount: u128,
         _nonce: Field,
     ) {
-        self.internal._decrease_private_balance(from, amount, INITIAL_TRANSFER_CALL_MAX_NOTES);
+        let recipient_label =
+            self.internal._decrease_private_balance(from, amount, INITIAL_TRANSFER_CALL_MAX_NOTES);
 
         let completer = self.msg_sender();
         PartialUintNote::from_field(commitment).complete_from_private(
             self.context,
             completer,
-            self.storage.private_balances.get_storage_slot(),
+            self.storage.private_balances.at(recipient_label).get_storage_slot(),
             amount,
         );
     }
@@ -226,7 +240,7 @@ pub contract Token {
     /// @return The change to return to the owner
     #[external("private")]
     #[only_self]
-    fn recurse_subtract_balance_internal(account: AztecAddress, amount: u128) -> u128 {
+    fn recurse_subtract_balance_internal(account: AztecAddress, amount: u128) -> (u128, Field, Field) {
         self.internal._subtract_balance(account, amount, RECURSIVE_TRANSFER_CALL_MAX_NOTES)
     }
 
@@ -358,7 +372,22 @@ pub contract Token {
     /// @return The private balance of the address
     #[external("utility")]
     unconstrained fn balance_of_private(owner: AztecAddress) -> u128 {
-        self.storage.private_balances.at(owner).balance_of()
+        self.storage.private_balances.at(DEFAULT_PROVENANCE_LABEL).at(owner).balance_of()
+    }
+
+    #[external("utility")]
+    unconstrained fn balance_of_private_at_label(owner: AztecAddress, label: Field) -> u128 {
+        self.storage.private_balances.at(label).at(owner).balance_of()
+    }
+
+    #[external("utility")]
+    unconstrained fn compose_provenance_label(label: Field, amount: u128) -> Field {
+        poseidon2_hash_with_separator([label, amount.to_field()], DOM_SEP__TOKEN_PROVENANCE_LABEL)
+    }
+
+    #[external("utility")]
+    unconstrained fn compose_provenance_pair(left: Field, right: Field) -> Field {
+        poseidon2_hash_with_separator([left, right], DOM_SEP__TOKEN_PROVENANCE_LABEL)
     }
 
     /** ==========================================================
@@ -468,13 +497,16 @@ pub contract Token {
     /// @param amount The amount of tokens to decrease the balance by
     /// @param max_notes The maximum number of notes to process in a single call
     #[internal("private")]
-    fn _decrease_private_balance(account: AztecAddress, amount: u128, max_notes: u32) {
+    fn _decrease_private_balance(account: AztecAddress, amount: u128, max_notes: u32) -> Field {
         // Subtracts `amount` from the private balance of `account`
-        let change = self.internal._subtract_balance(account, amount, max_notes);
+        let (change, last_label, composed_label) =
+            self.internal._subtract_balance(account, amount, max_notes);
         // Increases `change` to the private balance of `account`, and emits a private balance note to account
-        self.storage.private_balances.at(account).add(change).deliver(
+        self.storage.private_balances.at(last_label).at(account).add(change).deliver(
             MessageDelivery.ONCHAIN_CONSTRAINED,
         );
+
+        composed_label
     }
 
     /// @notice Increases the private balance of `to` by `amount`
@@ -482,8 +514,15 @@ pub contract Token {
     /// @param amount The amount of tokens to increase the balance by
     #[internal("private")]
     fn _increase_private_balance(to: AztecAddress, amount: u128) {
+        self.internal._increase_private_balance_with_label(to, amount, DEFAULT_PROVENANCE_LABEL);
+    }
+
+    #[internal("private")]
+    fn _increase_private_balance_with_label(to: AztecAddress, amount: u128, label: Field) {
         // Increases `amount` to the private balance of `to`, and emits a private balance note to `to` from `from`
-        self.storage.private_balances.at(to).add(amount).deliver(MessageDelivery.ONCHAIN_CONSTRAINED);
+        self.storage.private_balances.at(label).at(to).add(amount).deliver(
+            MessageDelivery.ONCHAIN_CONSTRAINED,
+        );
     }
 
     /// @notice Increases the public balance of `to` by `amount`
@@ -522,7 +561,7 @@ pub contract Token {
         commitment.complete(
             self.context,
             completer,
-            self.storage.private_balances.get_storage_slot(),
+            self.storage.private_balances.at(DEFAULT_PROVENANCE_LABEL).get_storage_slot(),
             amount,
         );
     }
@@ -534,11 +573,13 @@ pub contract Token {
     /// @param max_notes The maximum number of notes to process in a single call
     /// @return The change to return to the owner
     #[internal("private")]
-    fn _subtract_balance(account: AztecAddress, amount: u128, max_notes: u32) -> u128 {
-        let subtracted = self.storage.private_balances.at(account).try_sub(amount, max_notes);
+    fn _subtract_balance(account: AztecAddress, amount: u128, max_notes: u32) -> (u128, Field, Field) {
+        let label = self.internal._pick_private_balance_label(account, amount);
+        let subtracted =
+            self.storage.private_balances.at(label).at(account).try_sub(amount, max_notes);
         if subtracted >= amount {
             // We have achieved our goal of nullifying notes that add up to more than amount, so we return the change.
-            subtracted - amount
+            (subtracted - amount, label, self.internal._compose_provenance_label(label, amount))
         } else {
             // Failing to subtract any amount means that the owner was unable to produce more notes that could be nullified.
             assert(subtracted > 0, "Balance too low");
@@ -547,8 +588,30 @@ pub contract Token {
             // and try again.
             let remaining = amount - subtracted;
 
-            self.call_self.recurse_subtract_balance_internal(account, remaining)
+            let (change, last_label, tail_label) =
+                self.call_self.recurse_subtract_balance_internal(account, remaining);
+            let head_label = self.internal._compose_provenance_label(label, subtracted);
+            (
+                change,
+                last_label,
+                poseidon2_hash_with_separator(
+                    [head_label, tail_label],
+                    DOM_SEP__TOKEN_PROVENANCE_LABEL,
+                ),
+            )
         }
+    }
+
+    #[internal("private")]
+    fn _pick_private_balance_label(account: AztecAddress, amount: u128) -> Field {
+        // PoC hook: production would ask an unconstrained oracle/wallet for the next FIFO bucket.
+        // Safety: this PoC deliberately lets the wallet/PXE provide the next FIFO label unconstrained.
+        unsafe { crate::pick_private_balance_label_oracle(account.to_field(), amount) }
+    }
+
+    #[internal("private")]
+    fn _compose_provenance_label(label: Field, amount: u128) -> Field {
+        poseidon2_hash_with_separator([label, amount.to_field()], DOM_SEP__TOKEN_PROVENANCE_LABEL)
     }
 
     /// @notice Increases the total supply by `amount`
@@ -617,7 +680,7 @@ pub contract Token {
     /// @param amount The amount of tokens to burn
     #[internal("private")]
     fn _burn_private(from: AztecAddress, amount: u128) {
-        self.internal._decrease_private_balance(from, amount, INITIAL_TRANSFER_CALL_MAX_NOTES);
+        let _ = self.internal._decrease_private_balance(from, amount, INITIAL_TRANSFER_CALL_MAX_NOTES);
         self.enqueue_self.decrease_total_supply_internal(amount);
     }
 
