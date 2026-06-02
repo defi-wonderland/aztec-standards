@@ -51,11 +51,13 @@ pub contract Token {
         name: PublicImmutable<FieldCompressedString, Context>,
         symbol: PublicImmutable<FieldCompressedString, Context>,
         decimals: PublicImmutable<u8, Context>,
-        private_balances: Owned<BalanceSet<Context>, Context>,
+        private_balances: Map<Field, Owned<BalanceSet<Context>, Context>, Context>,
         total_supply: PublicMutable<u128, Context>,
         public_balances: Map<AztecAddress, PublicMutable<u128, Context>, Context>,
         minter: PublicImmutable<AztecAddress, Context>,
     }
+
+    global NULL_LABEL: Field = 0;
 
     /// @notice Initializes the token with an initial supply
     /// @dev Since this constructor doesn't set a minter address the mint functions will be disabled
@@ -184,7 +186,7 @@ pub contract Token {
         PartialUintNote::from_field(commitment).complete_from_private(
             self.context,
             completer,
-            self.storage.private_balances.get_storage_slot(),
+            self.storage.private_balances.at(NULL_LABEL).get_storage_slot(),
             amount,
         );
     }
@@ -358,7 +360,7 @@ pub contract Token {
     /// @return The private balance of the address
     #[external("utility")]
     unconstrained fn balance_of_private(owner: AztecAddress) -> u128 {
-        self.storage.private_balances.at(owner).balance_of()
+        self.storage.private_balances.at(NULL_LABEL).at(owner).balance_of()
     }
 
     /** ==========================================================
@@ -472,7 +474,7 @@ pub contract Token {
         // Subtracts `amount` from the private balance of `account`
         let change = self.internal._subtract_balance(account, amount, max_notes);
         // Increases `change` to the private balance of `account`, and emits a private balance note to account
-        self.storage.private_balances.at(account).add(change).deliver(
+        self.storage.private_balances.at(NULL_LABEL).at(account).add(change).deliver(
             MessageDelivery.ONCHAIN_CONSTRAINED,
         );
     }
@@ -483,7 +485,9 @@ pub contract Token {
     #[internal("private")]
     fn _increase_private_balance(to: AztecAddress, amount: u128) {
         // Increases `amount` to the private balance of `to`, and emits a private balance note to `to` from `from`
-        self.storage.private_balances.at(to).add(amount).deliver(MessageDelivery.ONCHAIN_CONSTRAINED);
+        self.storage.private_balances.at(NULL_LABEL).at(to).add(amount).deliver(
+            MessageDelivery.ONCHAIN_CONSTRAINED,
+        );
     }
 
     /// @notice Increases the public balance of `to` by `amount`
@@ -522,7 +526,7 @@ pub contract Token {
         commitment.complete(
             self.context,
             completer,
-            self.storage.private_balances.get_storage_slot(),
+            self.storage.private_balances.at(NULL_LABEL).get_storage_slot(),
             amount,
         );
     }
@@ -535,7 +539,8 @@ pub contract Token {
     /// @return The change to return to the owner
     #[internal("private")]
     fn _subtract_balance(account: AztecAddress, amount: u128, max_notes: u32) -> u128 {
-        let subtracted = self.storage.private_balances.at(account).try_sub(amount, max_notes);
+        let subtracted =
+            self.storage.private_balances.at(NULL_LABEL).at(account).try_sub(amount, max_notes);
         if subtracted >= amount {
             // We have achieved our goal of nullifying notes that add up to more than amount, so we return the change.
             subtracted - amount
