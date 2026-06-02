@@ -6,6 +6,7 @@ use aztec::macros::aztec;
 pub contract Token {
     // aztec library
     use aztec::{
+        capsules::CapsuleArray,
         macros::{
             events::event,
             functions::{authorize_once, external, initializer, internal, only_self, view},
@@ -57,7 +58,20 @@ pub contract Token {
         minter: PublicImmutable<AztecAddress, Context>,
     }
 
+    // Default label used when the caller does not choose one. A label makes a private balance
+    // non-fungible by tracing its origin (e.g. the mint it came from).
     global NULL_LABEL: Field = 0;
+
+    // Capsule base slots used to pass the caller's chosen label(s) from the PXE into private
+    // execution. These are PXE-local, scoped per address, and persist across the recursive
+    // folding frames of `_subtract_balance` (unlike ephemeral arrays, which are frame-isolated).
+    // The values are spaced far apart so the `CapsuleArray` element slots never collide.
+    // Ordered FIFO queue of labels to spend from, scoped to the account being debited.
+    global SPEND_LABELS_BASE_SLOT: Field = 0x10000000;
+    // Single label to credit when receiving/minting, scoped to the account being credited.
+    global RECEIVE_LABEL_SLOT: Field = 0x20000000;
+    // Single label to query, scoped to the owner being queried.
+    global QUERY_LABEL_SLOT: Field = 0x30000000;
 
     /// @notice Initializes the token with an initial supply
     /// @dev Since this constructor doesn't set a minter address the mint functions will be disabled
@@ -222,14 +236,14 @@ pub contract Token {
     }
 
     /// @notice Recursively subtracts balance from private balance
-    /// @dev Used to subtract private balances that exceed the max notes limit
+    /// @dev Used to subtract private balances that exceed the max notes limit, or to continue
+    ///      spending under the next label in the caller's queue
     /// @param account The address of the account to subtract the balance from
     /// @param amount The amount of tokens to subtract
-    /// @return The change to return to the owner
     #[external("private")]
     #[only_self]
-    fn recurse_subtract_balance_internal(account: AztecAddress, amount: u128) -> u128 {
-        self.internal._subtract_balance(account, amount, RECURSIVE_TRANSFER_CALL_MAX_NOTES)
+    fn recurse_subtract_balance_internal(account: AztecAddress, amount: u128) {
+        self.internal._subtract_balance(account, amount, RECURSIVE_TRANSFER_CALL_MAX_NOTES);
     }
 
     /** ==========================================================
@@ -355,12 +369,16 @@ pub contract Token {
      * ===================== UNCONSTRAINED =======================
      * ======================================================== */
 
-    /// @notice Returns the private balance of an account
+    /// @notice Returns the private balance of an account under the caller's chosen label
+    /// @dev The label to query is read from a capsule (defaulting to `NULL_LABEL`), so the caller
+    ///      can inspect any individual label balance without changing this method's signature.
     /// @param owner The address to query
-    /// @return The private balance of the address
+    /// @return The private balance of the address under the chosen label
     #[external("utility")]
     unconstrained fn balance_of_private(owner: AztecAddress) -> u128 {
-        self.storage.private_balances.at(NULL_LABEL).at(owner).balance_of()
+        let contract_address = self.context.this_address();
+        let label = _read_label(contract_address, owner, QUERY_LABEL_SLOT);
+        self.storage.private_balances.at(label).at(owner).balance_of()
     }
 
     /** ==========================================================
@@ -465,18 +483,57 @@ pub contract Token {
         assert(minter.eq(sender), "caller is not minter");
     }
 
+    /// @notice Pops the next label to spend from for `account` off the caller-provided queue
+    /// @dev Unconstrained: the label is the caller's free choice of which sub-balance to spend
+    ///      from, and only selects a storage slot of the caller's own notes. Backed by a capsule
+    ///      array so it persists across the recursive `_subtract_balance` frames. Returns
+    ///      `NULL_LABEL` once the queue is empty.
+    /// @param contract The address of this contract (the only contract allowed to read its capsules)
+    /// @param account The account whose spend-label queue is being consumed
+    /// @return The next label to spend from
+    #[contract_library_method]
+    unconstrained fn _pop_spend_label(
+        contract_address: AztecAddress,
+        account: AztecAddress,
+    ) -> Field {
+        let queue: CapsuleArray<Field> =
+            CapsuleArray::at(contract_address, SPEND_LABELS_BASE_SLOT, account);
+        if queue.len() == 0 {
+            NULL_LABEL
+        } else {
+            let label = queue.get(0);
+            queue.remove(0);
+            label
+        }
+    }
+
+    /// @notice Reads the single label stored by the caller at `slot`, scoped to `scope`
+    /// @dev Unconstrained: the label is the caller's free choice and only selects a storage slot.
+    ///      Returns `NULL_LABEL` when nothing was stored.
+    /// @param contract The address of this contract (the only contract allowed to read its capsules)
+    /// @param scope The address the label is scoped to (recipient when receiving, owner when querying)
+    /// @param slot The capsule slot holding the label
+    /// @return The chosen label
+    #[contract_library_method]
+    unconstrained fn _read_label(
+        contract_address: AztecAddress,
+        scope: AztecAddress,
+        slot: Field,
+    ) -> Field {
+        let stored: Option<Field> = aztec::oracle::capsules::load(contract_address, slot, scope);
+        stored.unwrap_or(NULL_LABEL)
+    }
+
     /// @notice Decreases the private balance of `account` by `amount` and emits a private balance note with the change to account
     /// @param account The address of the account to decrease the balance of
     /// @param amount The amount of tokens to decrease the balance by
     /// @param max_notes The maximum number of notes to process in a single call
     #[internal("private")]
     fn _decrease_private_balance(account: AztecAddress, amount: u128, max_notes: u32) {
-        // Subtracts `amount` from the private balance of `account`
-        let change = self.internal._subtract_balance(account, amount, max_notes);
-        // Increases `change` to the private balance of `account`, and emits a private balance note to account
-        self.storage.private_balances.at(NULL_LABEL).at(account).add(change).deliver(
-            MessageDelivery.ONCHAIN_CONSTRAINED,
-        );
+        // Subtracts `amount` from the private balance of `account`, spending across as many labels
+        // as needed. The change (if any) is re-deposited into the label it was spent from inside
+        // `_subtract_balance`, so provenance is preserved.
+        self.internal._subtract_balance(account, amount, max_notes);
     }
 
     /// @notice Increases the private balance of `to` by `amount`
@@ -484,8 +541,13 @@ pub contract Token {
     /// @param amount The amount of tokens to increase the balance by
     #[internal("private")]
     fn _increase_private_balance(to: AztecAddress, amount: u128) {
-        // Increases `amount` to the private balance of `to`, and emits a private balance note to `to` from `from`
-        self.storage.private_balances.at(NULL_LABEL).at(to).add(amount).deliver(
+        let contract_address = self.context.this_address();
+        // Safety: the label is an unconstrained choice of which sub-balance to credit (e.g. the
+        // minter choosing the mint origin). It only selects a storage slot for the recipient's own
+        // note, so an arbitrary value cannot affect any balance other than `to`'s.
+        let label = unsafe { _read_label(contract_address, to, RECEIVE_LABEL_SLOT) };
+        // Increases `amount` to the private balance of `to` under the chosen label, and emits a private balance note to `to`
+        self.storage.private_balances.at(label).at(to).add(amount).deliver(
             MessageDelivery.ONCHAIN_CONSTRAINED,
         );
     }
@@ -531,28 +593,41 @@ pub contract Token {
         );
     }
 
-    /// @notice Subtracts balance from private balance
-    /// @dev Subtracts amount from private balance and returns the change to the owner, recursively if necessary
+    /// @notice Subtracts balance from the private balance of `account`, spending across labels
+    /// @dev Pops the next label to spend from off the caller's queue, nullifies notes under that
+    ///      label up to `max_notes`, and re-deposits any change into the same label. When the
+    ///      popped label cannot cover the remaining amount, it recurses: the next frame pops the
+    ///      next label, draining label A, then B, then C, ... This leverages the arbitrary-length
+    ///      folding scheme, so the caller is not limited to a single label's balance.
     /// @param account The address of the account to subtract the balance from
     /// @param amount The amount of tokens to subtract
     /// @param max_notes The maximum number of notes to process in a single call
-    /// @return The change to return to the owner
     #[internal("private")]
-    fn _subtract_balance(account: AztecAddress, amount: u128, max_notes: u32) -> u128 {
+    fn _subtract_balance(account: AztecAddress, amount: u128, max_notes: u32) {
+        let contract_address = self.context.this_address();
+        // Safety: the label is an unconstrained choice of which sub-balance to spend from. It only
+        // selects a storage slot of the caller's own notes, so an arbitrary value cannot let the
+        // caller spend funds they do not own.
+        let label = unsafe { _pop_spend_label(contract_address, account) };
+
         let subtracted =
-            self.storage.private_balances.at(NULL_LABEL).at(account).try_sub(amount, max_notes);
+            self.storage.private_balances.at(label).at(account).try_sub(amount, max_notes);
         if subtracted >= amount {
-            // We have achieved our goal of nullifying notes that add up to more than amount, so we return the change.
-            subtracted - amount
+            // We nullified notes adding up to at least `amount`, so we return the change to the
+            // label it was spent from (preserving provenance of the remaining balance).
+            self.storage.private_balances.at(label).at(account).add(subtracted - amount).deliver(
+                MessageDelivery.ONCHAIN_CONSTRAINED,
+            );
         } else {
-            // Failing to subtract any amount means that the owner was unable to produce more notes that could be nullified.
+            // Failing to subtract any amount under this label means there are no more notes to
+            // nullify here and the caller did not queue a further label, so the balance is too low.
             assert(subtracted > 0, "Balance too low");
 
-            // try_sub failed to nullify enough notes to reach the target amount, so we compute the amount remaining
-            // and try again.
+            // try_sub failed to nullify enough notes to reach the target amount, so we compute the
+            // amount remaining and recurse, which pops the next label in the queue.
             let remaining = amount - subtracted;
 
-            self.call_self.recurse_subtract_balance_internal(account, remaining)
+            self.call_self.recurse_subtract_balance_internal(account, remaining);
         }
     }
 

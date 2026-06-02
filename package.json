@@ -17,6 +17,7 @@
     "test": "yarn test:nr && yarn test:js",
     "test:js": "vitest run",
     "test:nr": "aztec test",
+    "test:labels-poc": "aztec test labels_poc",
     "lint:prettier": "prettier '**/*.{js,ts}' --write",
     "bench": "NODE_NO_WARNINGS=1 aztec-benchmark --suffix _base",
     "ccc": "yarn clean && yarn compile && yarn codegen",
