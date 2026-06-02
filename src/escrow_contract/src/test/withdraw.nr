@@ -6,7 +6,7 @@ use token::{test::utils as token_utils, Token};
 #[test]
 unconstrained fn escrow_withdraw_success() {
     let escrow_secret: Field = 123456;
-    let (mut env, escrow_contract_address, token_contract_address, _, _, recipient, minter, logic_contract_address) =
+    let (env, escrow_contract_address, token_contract_address, _, _, recipient, minter, logic_contract_address) =
         escrow_utils::set_escrow_with_token_and_nft(false, escrow_secret);
 
     // Mint some tokens to escrow
@@ -37,7 +37,7 @@ unconstrained fn escrow_withdraw_success() {
 #[test]
 unconstrained fn escrow_withdraw_twice_success() {
     let escrow_secret: Field = 123456;
-    let (mut env, escrow_contract_address, token_contract_address, _, _, recipient, minter, logic_contract_address) =
+    let (env, escrow_contract_address, token_contract_address, _, _, recipient, minter, logic_contract_address) =
         escrow_utils::set_escrow_with_token_and_nft(false, escrow_secret);
 
     // Mint some tokens to escrow
@@ -87,7 +87,7 @@ unconstrained fn escrow_withdraw_twice_success() {
 #[test(should_fail_with = "Not Authorized")]
 unconstrained fn escrow_withdraw_unauthorized() {
     let escrow_secret: Field = 123456;
-    let (mut env, escrow_contract_address, token_contract_address, _, owner, recipient, _, _) =
+    let (env, escrow_contract_address, token_contract_address, _, owner, recipient, _, _) =
         escrow_utils::set_escrow_with_token_and_nft(false, escrow_secret);
 
     let amount: u128 = token_utils::mint_amount;

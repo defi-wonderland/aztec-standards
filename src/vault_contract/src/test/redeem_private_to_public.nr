@@ -18,7 +18,7 @@ unconstrained fn redeem_private_to_public_without_shares() {
 #[test]
 unconstrained fn redeem_private_to_public_success() {
     // Setup with asset token
-    let (mut env, vault_address, owner, recipient, asset_address, shares_address) =
+    let (env, vault_address, owner, recipient, asset_address, shares_address) =
         utils::setup_with_vault(true);
 
     // Mint some asset tokens to owner and deposit to get private shares
@@ -61,7 +61,7 @@ unconstrained fn redeem_private_to_public_success() {
 #[test]
 unconstrained fn redeem_private_to_public_after_yield() {
     // Setup with asset token
-    let (mut env, vault_address, owner, recipient, asset_address, shares_address) =
+    let (env, vault_address, owner, recipient, asset_address, shares_address) =
         utils::setup_with_vault(true);
 
     // Mint some asset tokens to owner and deposit to get private shares

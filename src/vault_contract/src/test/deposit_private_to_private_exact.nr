@@ -24,7 +24,7 @@ unconstrained fn deposit_private_to_private_exact_fails_without_shares() {
 #[test]
 unconstrained fn deposit_private_to_private_exact_success() {
     // Setup with asset token
-    let (mut env, vault_address, owner, recipient, asset_address, shares_address) =
+    let (env, vault_address, owner, recipient, asset_address, shares_address) =
         utils::setup_with_vault(true);
 
     // Mint some asset tokens to owner
@@ -70,7 +70,7 @@ unconstrained fn deposit_private_to_private_exact_success() {
 #[test]
 unconstrained fn deposit_private_to_private_exact_after_yield() {
     // Setup with asset token
-    let (mut env, vault_address, owner, recipient, asset_address, shares_address) =
+    let (env, vault_address, owner, recipient, asset_address, shares_address) =
         utils::setup_with_vault(true);
 
     // Mint some asset tokens to the vault contract
@@ -123,7 +123,7 @@ unconstrained fn deposit_private_to_private_exact_after_yield() {
 
 #[test]
 unconstrained fn deposit_private_to_private_exact_request_fewer_shares() {
-    let (mut env, vault_address, owner, recipient, asset_address, shares_address) =
+    let (env, vault_address, owner, recipient, asset_address, shares_address) =
         utils::setup_with_vault(true);
 
     // Mint some asset tokens to owner
@@ -169,7 +169,7 @@ unconstrained fn deposit_private_to_private_exact_request_fewer_shares() {
 #[test(should_fail_with = "Assertion failed: attempt to subtract with overflow ")]
 unconstrained fn deposit_private_to_private_exact_request_too_many_shares() {
     // Setup with asset token
-    let (mut env, vault_address, owner, recipient, asset_address, _) =
+    let (env, vault_address, owner, recipient, asset_address, _) =
         utils::setup_with_vault(true);
 
     // Mint some asset tokens to owner
@@ -204,7 +204,7 @@ unconstrained fn deposit_private_to_private_exact_request_too_many_shares() {
 #[test(should_fail_with = "Unknown auth witness for message hash ")]
 unconstrained fn deposit_private_to_private_exact_without_asset_approval() {
     // Setup with asset token
-    let (mut env, vault_address, owner, recipient, asset_address, _) =
+    let (env, vault_address, owner, recipient, asset_address, _) =
         utils::setup_with_vault(true);
 
     // Mint some asset tokens to owner

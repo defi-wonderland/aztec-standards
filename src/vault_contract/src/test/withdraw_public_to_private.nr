@@ -18,7 +18,7 @@ unconstrained fn withdraw_public_to_private_without_shares() {
 #[test]
 unconstrained fn withdraw_public_to_private_success() {
     // Setup with asset token
-    let (mut env, vault_address, owner, recipient, asset_address, shares_address) =
+    let (env, vault_address, owner, recipient, asset_address, shares_address) =
         utils::setup_with_vault(false);
 
     // Mint some asset tokens to owner
@@ -60,7 +60,7 @@ unconstrained fn withdraw_public_to_private_success() {
 #[test]
 unconstrained fn withdraw_public_to_private_after_yield() {
     // Setup with asset token
-    let (mut env, vault_address, owner, recipient, asset_address, shares_address) =
+    let (env, vault_address, owner, recipient, asset_address, shares_address) =
         utils::setup_with_vault(false);
 
     // Mint some asset tokens to owner

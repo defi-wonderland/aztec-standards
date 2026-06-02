@@ -23,7 +23,7 @@ unconstrained fn issue_public_to_private_without_shares() {
 #[test]
 unconstrained fn issue_public_to_private_success() {
     // Setup with asset token
-    let (mut env, vault_address, owner, recipient, asset_address, shares_address) =
+    let (env, vault_address, owner, recipient, asset_address, shares_address) =
         utils::setup_with_vault(false);
 
     // Mint some asset tokens to owner
@@ -69,7 +69,7 @@ unconstrained fn issue_public_to_private_success() {
 #[test]
 unconstrained fn issue_public_to_private_with_change_success() {
     // Setup with asset token
-    let (mut env, vault_address, owner, recipient, asset_address, shares_address) =
+    let (env, vault_address, owner, recipient, asset_address, shares_address) =
         utils::setup_with_vault(false);
 
     // Mint some asset tokens to owner
@@ -115,7 +115,7 @@ unconstrained fn issue_public_to_private_with_change_success() {
 #[test]
 unconstrained fn issue_public_to_private_after_yield() {
     // Setup with asset token
-    let (mut env, vault_address, owner, recipient, asset_address, shares_address) =
+    let (env, vault_address, owner, recipient, asset_address, shares_address) =
         utils::setup_with_vault(false);
 
     // Mint some asset tokens to the vault contract
@@ -164,7 +164,7 @@ unconstrained fn issue_public_to_private_after_yield() {
 #[test(should_fail_with = "Assertion failed: attempt to subtract with overflow")]
 unconstrained fn issue_public_to_private_request_too_many_shares() {
     // Setup with asset token
-    let (mut env, vault_address, owner, recipient, asset_address, _shares_address) =
+    let (env, vault_address, owner, recipient, asset_address, _shares_address) =
         utils::setup_with_vault(false);
 
     // Mint some asset tokens to owner
@@ -199,7 +199,7 @@ unconstrained fn issue_public_to_private_request_too_many_shares() {
 #[test(should_fail_with = "unauthorized")]
 unconstrained fn issue_public_to_private_without_asset_approval() {
     // Setup with asset token
-    let (mut env, vault_address, owner, recipient, asset_address, _shares_address) =
+    let (env, vault_address, owner, recipient, asset_address, _shares_address) =
         utils::setup_with_vault(true);
 
     // Mint some asset tokens to owner
