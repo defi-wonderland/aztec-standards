@@ -3,7 +3,7 @@ use crate::{test::utils, Token};
 #[test]
 unconstrained fn mint_to_private_success() {
     // Setup without account contracts. We are not using authwits here, so dummy accounts are enough
-    let (mut env, token_contract_address, owner, _, minter) = utils::setup_with_minter(false);
+    let (env, token_contract_address, owner, _, minter) = utils::setup_with_minter(false);
 
     let mint_amount: u128 = 10_000;
     env.call_private(minter, Token::at(token_contract_address).mint_to_private(owner, mint_amount));
@@ -17,7 +17,7 @@ unconstrained fn mint_to_private_success() {
 #[test(should_fail_with = "Assertion failed: caller is not minter")]
 unconstrained fn mint_to_private_failure_as_non_minter() {
     // Setup without account contracts. We are not using authwits here, so dummy accounts are enough
-    let (mut env, token_contract_address, owner, recipient, _) = utils::setup_with_minter(false);
+    let (env, token_contract_address, owner, recipient, _) = utils::setup_with_minter(false);
 
     let mint_amount: u128 = 10_000;
     let mint_to_private_call_interface =
@@ -28,7 +28,7 @@ unconstrained fn mint_to_private_failure_as_non_minter() {
 
 #[test(should_fail_with = "Contract execution has reverted: Assertion failed: attempt to add with overflow 'self.storage.total_supply.read() + amount'")]
 unconstrained fn mint_to_private_failure_recipient_balance_overflow() {
-    let (mut env, token_contract_address, owner, recipient, minter) =
+    let (env, token_contract_address, owner, recipient, minter) =
         utils::setup_with_minter(false);
     env.call_private(
         minter,
@@ -41,7 +41,7 @@ unconstrained fn mint_to_private_failure_recipient_balance_overflow() {
 #[test(should_fail_with = "Contract execution has reverted: Assertion failed: attempt to add with overflow 'self.storage.total_supply.read() + amount'")]
 unconstrained fn mint_to_private_failure_total_supply_overflow() {
     // Setup without account contracts. We are not using authwits here, so dummy accounts are enough
-    let (mut env, token_contract_address, owner, recipient, minter) =
+    let (env, token_contract_address, owner, recipient, minter) =
         utils::setup_with_minter(false);
 
     env.call_private(

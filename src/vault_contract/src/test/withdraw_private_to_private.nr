@@ -18,7 +18,7 @@ unconstrained fn withdraw_private_to_private_without_shares() {
 #[test]
 unconstrained fn withdraw_private_to_private_success() {
     // Setup with asset token
-    let (mut env, vault_address, owner, recipient, asset_address, shares_address) =
+    let (env, vault_address, owner, recipient, asset_address, shares_address) =
         utils::setup_with_vault(true);
 
     // Mint some asset tokens to owner
@@ -62,7 +62,7 @@ unconstrained fn withdraw_private_to_private_success() {
 #[test]
 unconstrained fn withdraw_private_to_private_after_yield() {
     // Setup with asset token
-    let (mut env, vault_address, owner, recipient, asset_address, shares_address) =
+    let (env, vault_address, owner, recipient, asset_address, shares_address) =
         utils::setup_with_vault(true);
 
     // Mint some asset tokens to owner
@@ -110,7 +110,7 @@ unconstrained fn withdraw_private_to_private_after_yield() {
 #[test]
 unconstrained fn withdraw_private_to_private_request_fewer_assets() {
     // Setup with asset token
-    let (mut env, vault_address, owner, recipient, asset_address, shares_address) =
+    let (env, vault_address, owner, recipient, asset_address, shares_address) =
         utils::setup_with_vault(true);
 
     // Mint some asset tokens to owner
@@ -155,7 +155,7 @@ unconstrained fn withdraw_private_to_private_request_fewer_assets() {
 #[test(should_fail_with = "Insufficient shares burnt")]
 unconstrained fn withdraw_private_to_private_request_too_many_assets() {
     // Setup with asset token
-    let (mut env, vault_address, owner, recipient, asset_address, shares_address) =
+    let (env, vault_address, owner, recipient, asset_address, shares_address) =
         utils::setup_with_vault(true);
 
     // Mint some asset tokens to owner

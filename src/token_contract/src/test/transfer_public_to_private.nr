@@ -4,7 +4,7 @@ use generic_proxy::GenericProxy;
 
 #[test]
 unconstrained fn transfer_public_to_private_success() {
-    let (mut env, token_contract_address, sender, recipient) =
+    let (env, token_contract_address, sender, recipient) =
         utils::setup_and_mint_to_public_without_minter(false);
 
     utils::check_public_balance(env, token_contract_address, sender, mint_amount);
@@ -36,7 +36,7 @@ unconstrained fn transfer_public_to_private_success() {
 
 #[test(should_fail_with = "Assertion failed: attempt to subtract with overflow 'self.storage.public_balances.at(from).read() - amount'")]
 unconstrained fn transfer_public_to_private_not_enough_balance() {
-    let (mut env, token_contract_address, sender, recipient) =
+    let (env, token_contract_address, sender, recipient) =
         utils::setup_and_mint_to_public_without_minter(false);
 
     utils::check_public_balance(env, token_contract_address, sender, mint_amount);
@@ -58,7 +58,7 @@ unconstrained fn transfer_public_to_private_not_enough_balance() {
 
 #[test]
 unconstrained fn transfer_public_to_private_authwitness_success() {
-    let (mut env, token_contract_address, sender, recipient, proxy) =
+    let (env, token_contract_address, sender, recipient, proxy) =
         utils::setup_and_mint_to_public_with_proxy();
 
     let transfer_amount = mint_amount / 2;
@@ -89,7 +89,7 @@ unconstrained fn transfer_public_to_private_authwitness_success() {
 
 #[test(should_fail_with = "Unknown auth witness for message hash")]
 unconstrained fn transfer_public_to_private_authwitness_unauthorized() {
-    let (mut env, token_contract_address, sender, _recipient, proxy) =
+    let (env, token_contract_address, sender, _recipient, proxy) =
         utils::setup_and_mint_to_public_with_proxy();
 
     let transfer_amount = mint_amount / 2;

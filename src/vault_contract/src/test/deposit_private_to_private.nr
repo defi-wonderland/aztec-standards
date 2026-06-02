@@ -24,7 +24,7 @@ unconstrained fn deposit_private_to_private_without_shares() {
 #[test]
 unconstrained fn deposit_private_to_private_success() {
     // Setup with asset token
-    let (mut env, vault_address, owner, recipient, asset_address, shares_address) =
+    let (env, vault_address, owner, recipient, asset_address, shares_address) =
         utils::setup_with_vault(true);
 
     // Mint some asset tokens to owner
@@ -70,7 +70,7 @@ unconstrained fn deposit_private_to_private_success() {
 #[test]
 unconstrained fn deposit_private_to_private_after_yield() {
     // Setup with asset token
-    let (mut env, vault_address, owner, recipient, asset_address, shares_address) =
+    let (env, vault_address, owner, recipient, asset_address, shares_address) =
         utils::setup_with_vault(true);
 
     // Mint some asset tokens to the vault contract
@@ -124,7 +124,7 @@ unconstrained fn deposit_private_to_private_after_yield() {
 #[test]
 unconstrained fn deposit_private_to_private_request_fewer_shares() {
     // Setup with asset token
-    let (mut env, vault_address, owner, recipient, asset_address, shares_address) =
+    let (env, vault_address, owner, recipient, asset_address, shares_address) =
         utils::setup_with_vault(true);
 
     // Mint some asset tokens to owner
@@ -170,7 +170,7 @@ unconstrained fn deposit_private_to_private_request_fewer_shares() {
 #[test(should_fail_with = "Too many shares requested")]
 unconstrained fn deposit_private_to_private_request_too_many_shares() {
     // Setup with asset token
-    let (mut env, vault_address, owner, recipient, asset_address, _shares_address) =
+    let (env, vault_address, owner, recipient, asset_address, _shares_address) =
         utils::setup_with_vault(true);
 
     // Mint some asset tokens to owner
@@ -206,7 +206,7 @@ unconstrained fn deposit_private_to_private_request_too_many_shares() {
 #[test(should_fail_with = "Unknown auth witness for message hash ")]
 unconstrained fn deposit_private_to_private_without_asset_approval() {
     // Setup with asset token
-    let (mut env, vault_address, owner, recipient, asset_address, _shares_address) =
+    let (env, vault_address, owner, recipient, asset_address, _shares_address) =
         utils::setup_with_vault(true);
 
     // Mint some asset tokens to owner
@@ -274,7 +274,7 @@ unconstrained fn deposit_private_to_private_on_behalf_of_wrong_caller() {
 #[test]
 unconstrained fn deposit_private_to_private_on_behalf_of_other_success() {
     // Setup with asset token
-    let (mut env, vault_address, owner, recipient, asset_address, shares_address) =
+    let (env, vault_address, owner, recipient, asset_address, shares_address) =
         utils::setup_with_vault(true);
 
     // Mint some asset tokens to owner
