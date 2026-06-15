@@ -1,7 +1,8 @@
 use crate::{
     test::utils::{
         authorize_transfer_public_to_public, check_public_balance, get_public_balance,
-        redeem_public_to_public, setup_vault_without_shares, setup_with_vault_initial_deposit,
+        redeem_public_to_public, setup_vault_without_shares, setup_with_vault,
+        setup_with_vault_initial_deposit,
     },
     Vault,
 };
@@ -114,20 +115,16 @@ unconstrained fn vault_with_initial_deposit_yield_distribution() {
 unconstrained fn vault_with_initial_deposit_fail_zero_amount() {
     let (mut env, vault_address, owner, _recipient, _asset_address) = setup_vault_without_shares();
 
-    // Deploy shares token with vault as minter
-    let shares_initializer = Token::interface().constructor_with_minter(
-        "SharesToken00000000000000000000",
-        "SHARES0000000000000000000000000",
-        18,
-        vault_address,
-    );
-    let shares_address =
-        env.deploy("@token_contract/Token").with_public_initializer(owner, shares_initializer);
-
     // Calling with initial_deposit == 0 must revert and never silently succeed without
     // providing the inflation-attack protection the function name implies.
-    env.call_public(
-        owner,
-        Vault::at(vault_address).set_shares_token_with_initial_deposit(shares_address, 0, owner, 0),
-    );
+    env.call_public(owner, Vault::at(vault_address).initial_deposit(0, owner, 0));
+}
+
+#[test(should_fail_with = "initial deposit not pending")]
+unconstrained fn vault_initial_deposit_fail_not_pending() {
+    // A vault deployed without expecting an initial deposit (set_shares_token only, initial_deposit_pending
+    // = false) must reject initial_deposit forever -- it can never be retroactively seeded.
+    let (env, vault_address, owner, _recipient, _asset_address, _shares_address) = setup_with_vault(false);
+
+    env.call_public(owner, Vault::at(vault_address).initial_deposit(100, owner, 0));
 }

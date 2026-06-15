@@ -37,7 +37,7 @@ pub unconstrained fn setup_with_vault(
         env.deploy("@token_contract/Token").with_public_initializer(owner, asset_initializer);
 
     // Deploy vault with explicit deployer=owner, then call initializer
-    let vault_init = Vault::interface().constructor(asset_address, 1);
+    let vault_init = Vault::interface().constructor(asset_address, 1, false);
     let vault_instance = cheatcodes::deploy(
         "@vault_contract/Vault",
         vault_init.name,
@@ -47,7 +47,7 @@ pub unconstrained fn setup_with_vault(
         owner,
     );
     let vault_address = vault_instance.to_address();
-    env.call_public(owner, Vault::at(vault_address).constructor(asset_address, 1));
+    env.call_public(owner, Vault::at(vault_address).constructor(asset_address, 1, false));
 
     // Deploy shares token with vault as minter
     let shares_initializer = Token::interface().constructor_with_minter(
@@ -91,8 +91,8 @@ pub unconstrained fn setup_with_vault_initial_deposit(
     let asset_address =
         env.deploy("@token_contract/Token").with_public_initializer(owner, asset_initializer);
 
-    // Deploy vault with explicit deployer=owner, then call initializer
-    let vault_init = Vault::interface().constructor(asset_address, 1);
+    // Deploy vault with explicit deployer=owner, armed for an initial deposit, then call initializer
+    let vault_init = Vault::interface().constructor(asset_address, 1, true);
     let vault_instance = cheatcodes::deploy(
         "@vault_contract/Vault",
         vault_init.name,
@@ -102,7 +102,7 @@ pub unconstrained fn setup_with_vault_initial_deposit(
         owner,
     );
     let vault_address = vault_instance.to_address();
-    env.call_public(owner, Vault::at(vault_address).constructor(asset_address, 1));
+    env.call_public(owner, Vault::at(vault_address).constructor(asset_address, 1, true));
 
     // Deploy shares token with vault as minter
     let shares_initializer = Token::interface().constructor_with_minter(
@@ -120,16 +120,9 @@ pub unconstrained fn setup_with_vault_initial_deposit(
     // Authorize vault to transfer assets from owner
     authorize_transfer_public_to_public(env, asset_address, vault_address, owner, initial_deposit);
 
-    // Set shares and make initial deposit (deployer-only, one-shot)
-    env.call_public(
-        owner,
-        Vault::at(vault_address).set_shares_token_with_initial_deposit(
-            shares_address,
-            initial_deposit,
-            owner,
-            0,
-        ),
-    );
+    // Wire the shares token (deployer-only, one-shot), then make the one-shot initial deposit.
+    env.call_public(owner, Vault::at(vault_address).set_shares_token(shares_address));
+    env.call_public(owner, Vault::at(vault_address).initial_deposit(initial_deposit, owner, 0));
 
     (env, vault_address, owner, recipient, asset_address, shares_address)
 }
@@ -151,7 +144,7 @@ pub unconstrained fn setup_vault_without_shares() -> (TestEnvironment, AztecAddr
         env.deploy("@token_contract/Token").with_public_initializer(owner, asset_initializer);
 
     // Deploy vault with explicit deployer=owner, call initializer, but do NOT call set_shares
-    let vault_init = Vault::interface().constructor(asset_address, 1);
+    let vault_init = Vault::interface().constructor(asset_address, 1, false);
     let vault_instance = cheatcodes::deploy(
         "@vault_contract/Vault",
         vault_init.name,
@@ -161,7 +154,7 @@ pub unconstrained fn setup_vault_without_shares() -> (TestEnvironment, AztecAddr
         owner,
     );
     let vault_address = vault_instance.to_address();
-    env.call_public(owner, Vault::at(vault_address).constructor(asset_address, 1));
+    env.call_public(owner, Vault::at(vault_address).constructor(asset_address, 1, false));
 
     (env, vault_address, owner, recipient, asset_address)
 }
