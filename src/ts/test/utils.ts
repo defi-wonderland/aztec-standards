@@ -17,7 +17,14 @@ import {
 } from '@aztec/aztec.js/contracts';
 import { AuthWitness, SetPublicAuthwitContractInteraction } from '@aztec/aztec.js/authorization';
 import { decodeFromAbi } from '@aztec/aztec.js/abi';
-import { getDefaultInitializer, getInitializer } from '@aztec/stdlib/abi';
+import {
+  FunctionSelector,
+  encodeArguments,
+  getAllFunctionAbis,
+  getDefaultInitializer,
+  getInitializer,
+} from '@aztec/stdlib/abi';
+import { HashedValues } from '@aztec/stdlib/tx';
 import {
   computeInitializationHash,
   computeSaltedInitializationHash,
@@ -56,7 +63,7 @@ interface WalletWithInternals {
 
 import { TokenContract, TokenContractArtifact } from '../../../src/artifacts/Token.js';
 import { VaultContract, VaultContractArtifact } from '../../../src/artifacts/Vault.js';
-import { VaultDeployerContract, VaultDeployerContractArtifact } from '../../../src/artifacts/VaultDeployer.js';
+import { CyclicDeployerContract } from '../../../src/artifacts/CyclicDeployer.js';
 import { NFTContract } from '../../../src/artifacts/NFT.js';
 import { TestLogicContract } from '../../../src/artifacts/TestLogic.js';
 import { EscrowContract } from '../../../src/artifacts/Escrow.js';
@@ -235,19 +242,172 @@ export async function deployNFTWithMinter(wallet: EmbeddedWallet, deployer: Azte
 
 // --- Vault Utils ---
 
+const SHARES_NAME = 'SharesToken';
+const SHARES_SYMBOL = 'ST';
+const SHARES_DECIMALS = 18;
+const VAULT_OFFSET = 1;
+
 /**
- * Publishes the Vault contract class on-chain (needed before deploying pool VaultDeployer instances).
- * Each vault pool deploys its own VaultDeployer instance via initializers; there is no shared factory.
+ * Publishes the Vault contract class on-chain. The CyclicDeployer publishes Vault instances from a private
+ * function, which requires the Vault class to be registered beforehand.
  */
 export async function ensureVaultContractClassPublished(wallet: Wallet, deployer: AztecAddress): Promise<void> {
-  await VaultContract.deploy(wallet, deployer, 1).send({ from: deployer });
+  await VaultContract.deploy(wallet, deployer, VAULT_OFFSET, false).send({ from: deployer });
 }
 
 /**
- * Deploys asset token plus a new VaultDeployer instance (initializer deploy_vault) that atomically
- * publishes and wires vault + shares. Child deployer addresses use this pool deployer instance address.
- * @param wallet - The wallet to deploy the contract with.
- * @param deployer - The account that deploys the pool VaultDeployer instance (parent deployer).
+ * Constructor dispatch spec for one contract of a cyclic deployment, following the standard's hash-based model.
+ * The deployer treats constructor calldata opaquely: it derives the address from `selector` + `initArgsHash`
+ * and dispatches the constructor by `calldataHash`. `calldata` is the matching preimage that must be supplied
+ * to the tx as an extra hashed arg so the dispatched-by-hash public call resolves.
+ */
+type ContractCtorSpec = {
+  selector: FunctionSelector;
+  initArgsHash: Fr;
+  calldataHash: Fr;
+  calldata: HashedValues;
+};
+
+/**
+ * Computes the constructor dispatch spec for a contract from its artifact and constructor arguments.
+ * `initArgsHash` matches the protocol's public initialization check (`hash_args(calldata[1..])`) and
+ * `calldataHash` matches `hash_calldata_array([selector, ...args])` used by the deployer's hash dispatch.
+ */
+async function computeContractCtorSpec(
+  artifact: typeof VaultContractArtifact,
+  constructorName: string,
+  args: unknown[],
+): Promise<ContractCtorSpec> {
+  const ctorAbi = getInitializer(artifact, constructorName);
+  if (!ctorAbi) {
+    throw new Error(`Constructor ${constructorName} not found in artifact`);
+  }
+  const selector = await FunctionSelector.fromNameAndParameters(ctorAbi.name, ctorAbi.parameters);
+  const encodedArgs = encodeArguments(ctorAbi, args);
+  const initArgs = await HashedValues.fromArgs(encodedArgs);
+  const calldata = await HashedValues.fromCalldata([selector.toField(), ...encodedArgs]);
+  return { selector, initArgsHash: initArgs.hash, calldataHash: calldata.hash, calldata };
+}
+
+/**
+ * Packs a class id and a {@link ContractCtorSpec} into the deployer's `ContractSpec` struct: the four opaque
+ * fields the deployer uses to derive the contract address (`class_id` + `init_selector` +
+ * `init_args_hash`) and to dispatch its public constructor (`init_calldata_hash`).
+ */
+function toContractSpec(classId: Fr, spec: ContractCtorSpec) {
+  return {
+    class_id: classId,
+    init_selector: spec.selector.toField(),
+    init_args_hash: spec.initArgsHash,
+    init_calldata_hash: spec.calldataHash,
+  };
+}
+
+/**
+ * Computes the selector of a Vault setter, the runtime selector the deployer dispatches for the deferred link.
+ * The deployer is type-agnostic, so the setter's selector is supplied as data rather than via a typed stub.
+ */
+async function vaultSetterSelector(name: string): Promise<Fr> {
+  // Public functions live in `nonDispatchPublicFunctions`, so search the full ABI set, not just `functions`.
+  const fnAbi = getAllFunctionAbis(VaultContractArtifact).find((f) => f.name === name);
+  if (!fnAbi) {
+    throw new Error(`Function ${name} not found in Vault artifact`);
+  }
+  const selector = await FunctionSelector.fromNameAndParameters(fnAbi.name, fnAbi.parameters);
+  return selector.toField();
+}
+
+/**
+ * Computes the calldata-hash dispatch spec for an opaque {@link Action} on a Vault public function (the initial
+ * deposit). The deployer dispatches it by `calldataHash`; `calldata` is the preimage that must be supplied to the
+ * tx as an extra hashed arg.
+ */
+async function computeVaultActionSpec(
+  name: string,
+  args: unknown[],
+): Promise<{ calldataHash: Fr; calldata: HashedValues }> {
+  const fnAbi = getAllFunctionAbis(VaultContractArtifact).find((f) => f.name === name);
+  if (!fnAbi) {
+    throw new Error(`Function ${name} not found in Vault artifact`);
+  }
+  const selector = await FunctionSelector.fromNameAndParameters(fnAbi.name, fnAbi.parameters);
+  const encodedArgs = encodeArguments(fnAbi, args);
+  const calldata = await HashedValues.fromCalldata([selector.toField(), ...encodedArgs]);
+  return { calldataHash: calldata.hash, calldata };
+}
+
+/**
+ * Deploys a reusable CyclicDeployer instance and derives + registers the vault and shares instances it will
+ * publish, plus the constructor dispatch specs the deployer consumes. `deploy` is a regular private function,
+ * so a single instance can deploy any number of pairs; the per-deployment salt is the sole address
+ * disambiguator. Both contracts use the CyclicDeployer instance as their (non-universal) deployer, so their
+ * addresses are precomputable here. The shares `minter` is the derived vault address, resolved off-chain and
+ * baked into the shares constructor hashes (the deployer dispatches them opaquely).
+ * @returns The CyclicDeployer contract, the deployment salt, the derived contract instances, class IDs, and ctor specs.
+ */
+async function prepareVaultDeployment(
+  wallet: Wallet,
+  deployer: AztecAddress,
+  asset: AztecAddress,
+  expectsInitialDeposit: boolean,
+) {
+  const vaultClass = await getContractClassFromArtifact(VaultContractArtifact);
+  const tokenClass = await getContractClassFromArtifact(TokenContractArtifact);
+
+  // Deploy a fresh CyclicDeployer instance (publishing its class on first use). It has no constructor, so
+  // its address does not depend on the deployment it performs.
+  const { contract: cyclicDeployer } = await CyclicDeployerContract.deploy(wallet).send({ from: deployer });
+
+  const salt = Fr.random();
+
+  // The vault's `initial_deposit_pending` flag is committed in its address, so the deposit vs no-deposit
+  // variants derive distinct vaults and the deposit action can only ever run on an armed vault.
+  const vaultCtorArgs = [asset, VAULT_OFFSET, expectsInitialDeposit];
+
+  const vaultInstance = await getContractInstanceFromInstantiationParams(VaultContractArtifact, {
+    constructorArtifact: 'constructor',
+    constructorArgs: vaultCtorArgs,
+    salt,
+    deployer: cyclicDeployer.address,
+  });
+
+  const sharesInstance = await getContractInstanceFromInstantiationParams(TokenContractArtifact, {
+    constructorArtifact: 'constructor_with_minter',
+    constructorArgs: [SHARES_NAME, SHARES_SYMBOL, SHARES_DECIMALS, vaultInstance.address],
+    salt,
+    deployer: cyclicDeployer.address,
+  });
+
+  // Precompute the opaque constructor dispatch specs. The vault is resolved first (no cross-contract arg);
+  // the derived vault address is then embedded as the shares `minter`.
+  const vaultCtorSpec = await computeContractCtorSpec(VaultContractArtifact, 'constructor', vaultCtorArgs);
+  const sharesCtorSpec = await computeContractCtorSpec(TokenContractArtifact, 'constructor_with_minter', [
+    SHARES_NAME,
+    SHARES_SYMBOL,
+    SHARES_DECIMALS,
+    vaultInstance.address,
+  ]);
+
+  // Register the contract instance preimages so the get_contract_instance oracle resolves them during publication.
+  await wallet.registerContract(vaultInstance, VaultContractArtifact);
+  await wallet.registerContract(sharesInstance, TokenContractArtifact);
+
+  return {
+    cyclicDeployer: cyclicDeployer as CyclicDeployerContract,
+    salt,
+    vaultInstance,
+    sharesInstance,
+    vaultSpec: toContractSpec(vaultClass.id, vaultCtorSpec),
+    sharesSpec: toContractSpec(tokenClass.id, sharesCtorSpec),
+    // The constructor calldata preimages the deployer's hash-dispatched public calls resolve against.
+    extraHashedArgs: [vaultCtorSpec.calldata, sharesCtorSpec.calldata],
+  };
+}
+
+/**
+ * Deploys an asset token plus a vault + shares pair atomically published and wired by a CyclicDeployer.
+ * @param wallet - The wallet to deploy the contracts with.
+ * @param deployer - The account that submits the deployment transactions.
  * @returns [vault, asset, shares] contract instances.
  */
 export async function deployVaultAndAssetWithMinter(
@@ -262,42 +422,23 @@ export async function deployVaultAndAssetWithMinter(
     deployer,
   ).send({ from: deployer });
 
-  const vaultClass = await getContractClassFromArtifact(VaultContractArtifact);
-  const tokenClass = await getContractClassFromArtifact(TokenContractArtifact);
+  const { cyclicDeployer, salt, vaultInstance, sharesInstance, vaultSpec, sharesSpec, extraHashedArgs } =
+    await prepareVaultDeployment(wallet, deployer, assetContract.address, false);
 
-  const poolDeployerSalt = Fr.random();
-
-  const poolDeployerArgs = [assetContract.address, 1, vaultClass.id, 'SharesToken', 'ST', 18, tokenClass.id] as const;
-
-  const poolDeployerInstance = await getContractInstanceFromInstantiationParams(VaultDeployerContractArtifact, {
-    constructorArtifact: 'deploy_vault',
-    constructorArgs: [...poolDeployerArgs],
-    salt: poolDeployerSalt,
-    deployer,
-  });
-
-  const vaultInstance = await getContractInstanceFromInstantiationParams(VaultContractArtifact, {
-    constructorArtifact: 'constructor',
-    constructorArgs: [assetContract.address, 1],
-    salt: poolDeployerSalt,
-    deployer: poolDeployerInstance.address,
-  });
-
-  const sharesInstance = await getContractInstanceFromInstantiationParams(TokenContractArtifact, {
-    constructorArtifact: 'constructor_with_minter',
-    constructorArgs: ['SharesToken', 'ST', 18, vaultInstance.address],
-    salt: poolDeployerSalt,
-    deployer: poolDeployerInstance.address,
-  });
-
-  await wallet.registerContract(poolDeployerInstance, VaultDeployerContractArtifact);
-  await wallet.registerContract(vaultInstance, VaultContractArtifact);
-  await wallet.registerContract(sharesInstance, TokenContractArtifact);
-
-  await VaultDeployerContract.deployWithOpts(
-    { method: 'deploy_vault', wallet, instantiation: { salt: poolDeployerSalt } },
-    ...poolDeployerArgs,
-  ).send({ from: deployer });
+  // linked = vault (defers set_shares_token), target = shares (its ctor embeds the vault as minter).
+  // No actions: both action calldata hashes are zero, so neither is dispatched.
+  await cyclicDeployer.methods
+    .deploy(
+      salt,
+      vaultSpec,
+      sharesSpec,
+      { setter_selector: await vaultSetterSelector('set_shares_token') },
+      { calldata_hash: Fr.ZERO },
+      { calldata_hash: Fr.ZERO },
+    )
+    // Supply the constructor calldata preimages so the deployer's hash-dispatched public calls resolve.
+    .with({ extraHashedArgs })
+    .send({ from: deployer });
 
   const vaultContract = await VaultContract.at(vaultInstance.address, wallet);
   const sharesContract = await TokenContract.at(sharesInstance.address, wallet);
@@ -306,8 +447,7 @@ export async function deployVaultAndAssetWithMinter(
 }
 
 /**
- * Deploys a new pool VaultDeployer (initializer deploy_vault_with_initial_deposit) to atomically
- * deploy vault + shares and seed the vault from the depositor.
+ * Deploys a vault + shares pair and seeds the vault from the depositor in the same transaction.
  * @returns [vault, shares] contract instances.
  */
 export async function deployVaultWithInitialDeposit(
@@ -317,56 +457,32 @@ export async function deployVaultWithInitialDeposit(
   initialDeposit: bigint,
   depositor: AztecAddress,
 ): Promise<[VaultContract, TokenContract]> {
-  const vaultClass = await getContractClassFromArtifact(VaultContractArtifact);
-  const tokenClass = await getContractClassFromArtifact(TokenContractArtifact);
+  const { cyclicDeployer, salt, vaultInstance, sharesInstance, vaultSpec, sharesSpec, extraHashedArgs } =
+    await prepareVaultDeployment(wallet, deployer, assetContract.address, true);
 
-  const poolDeployerSalt = Fr.random();
-
-  const poolDeployerArgs = [
-    assetContract.address,
-    1,
-    vaultClass.id,
-    'SharesToken',
-    'ST',
-    18,
-    tokenClass.id,
-    initialDeposit,
-    depositor,
-    0,
-  ] as const;
-
-  const poolDeployerInstance = await getContractInstanceFromInstantiationParams(VaultDeployerContractArtifact, {
-    constructorArtifact: 'deploy_vault_with_initial_deposit',
-    constructorArgs: [...poolDeployerArgs],
-    salt: poolDeployerSalt,
-    deployer,
-  });
-
-  const vaultInstance = await getContractInstanceFromInstantiationParams(VaultContractArtifact, {
-    constructorArtifact: 'constructor',
-    constructorArgs: [assetContract.address, 1],
-    salt: poolDeployerSalt,
-    deployer: poolDeployerInstance.address,
-  });
-
-  const sharesInstance = await getContractInstanceFromInstantiationParams(TokenContractArtifact, {
-    constructorArtifact: 'constructor_with_minter',
-    constructorArgs: ['SharesToken', 'ST', 18, vaultInstance.address],
-    salt: poolDeployerSalt,
-    deployer: poolDeployerInstance.address,
-  });
-
-  await wallet.registerContract(poolDeployerInstance, VaultDeployerContractArtifact);
-  await wallet.registerContract(vaultInstance, VaultContractArtifact);
-  await wallet.registerContract(sharesInstance, TokenContractArtifact);
-
+  // The vault pulls the initial deposit from the depositor, so the depositor must authorize the
+  // (precomputed) vault to transfer on the asset token.
   const transfer = assetContract.methods.transfer_public_to_public(depositor, vaultInstance.address, initialDeposit, 0);
   await setPublicAuthWit(vaultInstance.address, transfer, depositor, wallet as EmbeddedWallet);
 
-  await VaultDeployerContract.deployWithOpts(
-    { method: 'deploy_vault_with_initial_deposit', wallet, instantiation: { salt: poolDeployerSalt } },
-    ...poolDeployerArgs,
-  ).send({ from: deployer });
+  // The initial deposit is an opaque Action dispatched on `linked` (the vault) by calldata hash after wiring.
+  const depositAction = await computeVaultActionSpec('initial_deposit', [initialDeposit, depositor, 0]);
+
+  // linked = vault (defers set_shares_token, runs the deposit action), target = shares (embeds vault as minter).
+  // The deposit is the `linked` action; the `target` action is zero (no shares-side action).
+  await cyclicDeployer.methods
+    .deploy(
+      salt,
+      vaultSpec,
+      sharesSpec,
+      { setter_selector: await vaultSetterSelector('set_shares_token') },
+      { calldata_hash: depositAction.calldataHash },
+      { calldata_hash: Fr.ZERO },
+    )
+    // Supply the constructor calldata preimages plus the action calldata preimage so all hash-dispatched
+    // public calls resolve.
+    .with({ extraHashedArgs: [...extraHashedArgs, depositAction.calldata] })
+    .send({ from: deployer });
 
   const vaultContract = await VaultContract.at(vaultInstance.address, wallet);
   const sharesContract = await TokenContract.at(sharesInstance.address, wallet);
