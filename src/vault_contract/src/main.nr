@@ -12,7 +12,7 @@ pub contract Vault {
         macros::{functions::{external, initializer, internal, only_self, view}, storage::storage},
         oracle::get_contract_instance::get_contract_instance_deployer_avm,
         protocol::address::AztecAddress,
-        state_vars::PublicImmutable,
+        state_vars::{PublicImmutable, PublicMutable},
     };
     use token_contract::Token;
 
@@ -26,11 +26,14 @@ pub contract Vault {
     /// @param asset The underlying asset token address
     /// @param shares The shares token address (minter must be this vault)
     /// @param vault_offset The offset used to prevent inflation attacks
+    /// @param initial_deposit_pending Whether a one-shot initial deposit is still pending. Set at construction
+    ///        (only when the vault is deployed expecting an initial deposit) and consumed by `initial_deposit`.
     #[storage]
     struct Storage<Context> {
         asset: PublicImmutable<AztecAddress, Context>,
         shares: PublicImmutable<AztecAddress, Context>,
         vault_offset: PublicImmutable<u128, Context>,
+        initial_deposit_pending: PublicMutable<bool, Context>,
     }
 
     /// @notice Initializes the vault with asset and offset
@@ -38,17 +41,21 @@ pub contract Vault {
     ///      vault as minter. The vault must NOT use universal deploy (deployer must be non-zero)
     ///      so the deployer address can authorize set_shares_token calls.
     ///      The vault address can be precomputed before shares exists since shares is not a constructor arg.
+    ///      `initial_deposit_pending` arms the one-shot `initial_deposit` action: it is committed in the
+    ///      vault's address, so a vault deployed without it can never be seeded after the fact.
     /// @param asset The underlying asset token address
     /// @param vault_offset The offset used to prevent inflation attacks (typically 1)
+    /// @param initial_deposit_pending Whether this vault will be seeded via the one-shot initial_deposit action
     #[external("public")]
     #[initializer]
-    fn constructor(asset: AztecAddress, vault_offset: u128) {
+    fn constructor(asset: AztecAddress, vault_offset: u128, initial_deposit_pending: bool) {
         assert(!asset.is_zero(), "asset must not be zero");
         assert(vault_offset > 0, "vault_offset must be greater than 0");
         let deployer = get_contract_instance_deployer_avm(self.address).unwrap();
         assert(!deployer.is_zero(), "universal deploy not supported");
         self.storage.asset.initialize(asset);
         self.storage.vault_offset.initialize(vault_offset);
+        self.storage.initial_deposit_pending.write(initial_deposit_pending);
     }
 
     /// @notice Sets the shares token address (one-time, deployer-only, immutable after set)
@@ -65,27 +72,28 @@ pub contract Vault {
         self.storage.shares.initialize(shares);
     }
 
-    /// @notice Sets the shares token and makes an initial deposit for inflation-attack protection
-    /// @dev Must be called after deploying the shares token with this vault as minter.
-    ///      Only the contract deployer (from the contract instance) can call this.
-    ///      PublicImmutable.initialize() ensures this can only ever be set once -- any subsequent
-    ///      call will revert. All vault operations read shares via PublicImmutable.read() which
-    ///      reverts if shares has not been initialized, so the vault is inoperable until this is called.
-    /// @param shares The shares token address (minter must be this vault)
+    /// @notice Makes the one-shot initial deposit for inflation-attack protection
+    /// @dev Must be called after `set_shares_token`, by the contract deployer, and only on a vault that was
+    ///      deployed expecting an initial deposit (`initial_deposit_pending = true`). It is one-shot: the
+    ///      `initial_deposit_pending` flag set at construction is consumed here, so it can never run twice, and it
+    ///      reverts on vaults deployed without an initial deposit. It assumes a fresh vault (no prior
+    ///      deposits), which the deployer guarantees by enqueueing this immediately after `set_shares_token`
+    ///      in the same atomic deployment transaction.
     /// @param initial_deposit The initial deposit amount of the asset
     /// @param depositor The address of the initial depositor of the assets
     /// @param nonce The nonce used for authwitness for the transfer of the initial deposit
     #[external("public")]
-    fn set_shares_token_with_initial_deposit(
-        shares: AztecAddress,
-        initial_deposit: u128,
-        depositor: AztecAddress,
-        nonce: Field,
-    ) {
+    fn initial_deposit(initial_deposit: u128, depositor: AztecAddress, nonce: Field) {
         assert(initial_deposit > 0, "initial_deposit must be greater than 0");
         let deployer = get_contract_instance_deployer_avm(self.address).unwrap();
         assert(self.msg_sender().eq(deployer), "caller is not deployer");
-        self.storage.shares.initialize(shares);
+        // One-shot capability: set at construction, consumed here. A vault deployed without an initial
+        // deposit never has this pending, so this reverts; a second call also reverts.
+        assert(self.storage.initial_deposit_pending.read(), "initial deposit not pending");
+        self.storage.initial_deposit_pending.write(false);
+
+        // The shares token must already be wired (set_shares_token ran first), or this read reverts.
+        let shares = self.storage.shares.read();
 
         // Caller deposits assets, shares are minted to this contract and are permanently locked.
         let from = depositor;
