@@ -48,9 +48,12 @@ pub contract CyclicDeployer {
     use aztec::{
         macros::functions::{external, initialization_utils::compute_initialization_hash, internal},
         protocol::{
-            abis::function_selector::FunctionSelector, address::AztecAddress,
-            contract_class_id::ContractClassId, contract_instance::ContractInstance,
-            public_keys::PublicKeys, traits::{Deserialize, FromField, Serialize, ToField},
+            abis::function_selector::FunctionSelector,
+            address::AztecAddress,
+            contract_class_id::ContractClassId,
+            contract_instance::ContractInstance,
+            public_keys::PublicKeys,
+            traits::{Deserialize, FromField, Serialize, ToField},
         },
         publish_contract_instance::publish_contract_instance_for_public_execution,
     };
@@ -145,15 +148,25 @@ pub contract CyclicDeployer {
     #[internal("private")]
     fn _deploy_contract(salt: Field, spec: ContractSpec) -> AztecAddress {
         // 1. Derive the contract address on-chain, with this instance as the deployer.
-        let address =
-            _derive_instance(spec.init_selector, spec.init_args_hash, spec.class_id, salt, self.address);
+        let address = _derive_instance(
+            spec.init_selector,
+            spec.init_args_hash,
+            spec.class_id,
+            salt,
+            self.address,
+        );
 
         // 2. Publish the instance (reverts on a duplicate or already-published address).
         publish_contract_instance_for_public_execution(context, address);
 
         // 3. Run the public constructor by dispatching its precomputed calldata hash. `hide_msg_sender` is
         //    false so the constructor sees this contract as `msg_sender`, satisfying the deployer check.
-        context.call_public_function_with_calldata_hash(address, spec.init_calldata_hash, false, false);
+        context.call_public_function_with_calldata_hash(
+            address,
+            spec.init_calldata_hash,
+            false,
+            false,
+        );
 
         address
     }
@@ -167,7 +180,12 @@ pub contract CyclicDeployer {
     #[internal("private")]
     fn _run_action(address: AztecAddress, action: Action) {
         if action.calldata_hash != 0 {
-            context.call_public_function_with_calldata_hash(address, action.calldata_hash, false, false);
+            context.call_public_function_with_calldata_hash(
+                address,
+                action.calldata_hash,
+                false,
+                false,
+            );
         }
     }
 

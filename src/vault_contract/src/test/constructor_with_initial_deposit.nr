@@ -124,7 +124,8 @@ unconstrained fn vault_with_initial_deposit_fail_zero_amount() {
 unconstrained fn vault_initial_deposit_fail_not_pending() {
     // A vault deployed without expecting an initial deposit (set_shares_token only, initial_deposit_pending
     // = false) must reject initial_deposit forever -- it can never be retroactively seeded.
-    let (env, vault_address, owner, _recipient, _asset_address, _shares_address) = setup_with_vault(false);
+    let (env, vault_address, owner, _recipient, _asset_address, _shares_address) =
+        setup_with_vault(false);
 
     env.call_public(owner, Vault::at(vault_address).initial_deposit(100, owner, 0));
 }
