@@ -20,7 +20,7 @@ unconstrained fn constructor_success() {
     let asset_address =
         env.deploy("@token_contract/Token").with_public_initializer(owner, asset_initializer);
 
-    let vault_initializer = Vault::interface().constructor(asset_address, 1);
+    let vault_initializer = Vault::interface().constructor(asset_address, 1, false);
     let vault_instance = cheatcodes::deploy(
         "@vault_contract/Vault",
         vault_initializer.name,
@@ -30,7 +30,7 @@ unconstrained fn constructor_success() {
         owner,
     );
     let vault_address = vault_instance.to_address();
-    env.call_public(owner, Vault::at(vault_address).constructor(asset_address, 1));
+    env.call_public(owner, Vault::at(vault_address).constructor(asset_address, 1, false));
 }
 
 #[test(should_fail_with = "vault_offset must be greater than 0")]
@@ -47,7 +47,7 @@ unconstrained fn constructor_fail_zero_offset() {
     let asset_address =
         env.deploy("@token_contract/Token").with_public_initializer(owner, asset_initializer);
 
-    let vault_init = Vault::interface().constructor(asset_address, 0);
+    let vault_init = Vault::interface().constructor(asset_address, 0, false);
     let vault_instance = cheatcodes::deploy(
         "@vault_contract/Vault",
         vault_init.name,
@@ -57,7 +57,7 @@ unconstrained fn constructor_fail_zero_offset() {
         owner,
     );
     let vault_address = vault_instance.to_address();
-    env.call_public(owner, Vault::at(vault_address).constructor(asset_address, 0));
+    env.call_public(owner, Vault::at(vault_address).constructor(asset_address, 0, false));
 }
 
 #[test(should_fail_with = "asset must not be zero")]
@@ -67,7 +67,7 @@ unconstrained fn constructor_fail_zero_asset() {
 
     let zero_asset = AztecAddress::zero();
 
-    let vault_init = Vault::interface().constructor(zero_asset, 1);
+    let vault_init = Vault::interface().constructor(zero_asset, 1, false);
     let vault_instance = cheatcodes::deploy(
         "@vault_contract/Vault",
         vault_init.name,
@@ -77,7 +77,7 @@ unconstrained fn constructor_fail_zero_asset() {
         owner,
     );
     let vault_address = vault_instance.to_address();
-    env.call_public(owner, Vault::at(vault_address).constructor(zero_asset, 1));
+    env.call_public(owner, Vault::at(vault_address).constructor(zero_asset, 1, false));
 }
 
 #[test(should_fail_with = "universal deploy not supported")]
@@ -96,7 +96,7 @@ unconstrained fn constructor_fail_universal_deploy() {
 
     // Deploy vault with deployer=0 (universal), call from real address
     // Constructor reads instance.deployer and rejects zero
-    let vault_init = Vault::interface().constructor(asset_address, 1);
+    let vault_init = Vault::interface().constructor(asset_address, 1, false);
     let vault_instance = cheatcodes::deploy(
         "@vault_contract/Vault",
         vault_init.name,
@@ -106,5 +106,5 @@ unconstrained fn constructor_fail_universal_deploy() {
         AztecAddress::zero(),
     );
     let vault_address = vault_instance.to_address();
-    env.call_public(owner, Vault::at(vault_address).constructor(asset_address, 1));
+    env.call_public(owner, Vault::at(vault_address).constructor(asset_address, 1, false));
 }
