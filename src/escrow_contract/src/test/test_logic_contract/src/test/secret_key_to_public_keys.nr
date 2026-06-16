@@ -18,14 +18,13 @@ unconstrained fn secret_key_to_public_keys_success() {
         TestLogic::at(logic_contract_address).secret_key_to_public_keys(secret_key_1),
     );
 
-    assert_eq(vector_public_keys_1.npk_m.inner.x, public_keys_1.npk_m.inner.x);
-    assert_eq(vector_public_keys_1.npk_m.inner.y, public_keys_1.npk_m.inner.y);
+    assert_eq(vector_public_keys_1.npk_m_hash, public_keys_1.npk_m_hash);
     assert_eq(vector_public_keys_1.ivpk_m.inner.x, public_keys_1.ivpk_m.inner.x);
     assert_eq(vector_public_keys_1.ivpk_m.inner.y, public_keys_1.ivpk_m.inner.y);
-    assert_eq(vector_public_keys_1.ovpk_m.inner.x, public_keys_1.ovpk_m.inner.x);
-    assert_eq(vector_public_keys_1.ovpk_m.inner.y, public_keys_1.ovpk_m.inner.y);
-    assert_eq(vector_public_keys_1.tpk_m.inner.x, public_keys_1.tpk_m.inner.x);
-    assert_eq(vector_public_keys_1.tpk_m.inner.y, public_keys_1.tpk_m.inner.y);
+    assert_eq(vector_public_keys_1.ovpk_m_hash, public_keys_1.ovpk_m_hash);
+    assert_eq(vector_public_keys_1.tpk_m_hash, public_keys_1.tpk_m_hash);
+    assert_eq(vector_public_keys_1.mspk_m_hash, public_keys_1.mspk_m_hash);
+    assert_eq(vector_public_keys_1.fbpk_m_hash, public_keys_1.fbpk_m_hash);
     assert_eq(vector_public_keys_1, public_keys_1);
 
     let public_keys_2 = env.call_private(
@@ -33,14 +32,13 @@ unconstrained fn secret_key_to_public_keys_success() {
         TestLogic::at(logic_contract_address).secret_key_to_public_keys(secret_key_2),
     );
 
-    assert_eq(vector_public_keys_2.npk_m.inner.x, public_keys_2.npk_m.inner.x);
-    assert_eq(vector_public_keys_2.npk_m.inner.y, public_keys_2.npk_m.inner.y);
+    assert_eq(vector_public_keys_2.npk_m_hash, public_keys_2.npk_m_hash);
     assert_eq(vector_public_keys_2.ivpk_m.inner.x, public_keys_2.ivpk_m.inner.x);
     assert_eq(vector_public_keys_2.ivpk_m.inner.y, public_keys_2.ivpk_m.inner.y);
-    assert_eq(vector_public_keys_2.ovpk_m.inner.x, public_keys_2.ovpk_m.inner.x);
-    assert_eq(vector_public_keys_2.ovpk_m.inner.y, public_keys_2.ovpk_m.inner.y);
-    assert_eq(vector_public_keys_2.tpk_m.inner.x, public_keys_2.tpk_m.inner.x);
-    assert_eq(vector_public_keys_2.tpk_m.inner.y, public_keys_2.tpk_m.inner.y);
+    assert_eq(vector_public_keys_2.ovpk_m_hash, public_keys_2.ovpk_m_hash);
+    assert_eq(vector_public_keys_2.tpk_m_hash, public_keys_2.tpk_m_hash);
+    assert_eq(vector_public_keys_2.mspk_m_hash, public_keys_2.mspk_m_hash);
+    assert_eq(vector_public_keys_2.fbpk_m_hash, public_keys_2.fbpk_m_hash);
     assert_eq(vector_public_keys_2, public_keys_2);
 }
 
