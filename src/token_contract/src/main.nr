@@ -483,7 +483,9 @@ pub contract Token {
     #[internal("private")]
     fn _increase_private_balance(to: AztecAddress, amount: u128) {
         // Increases `amount` to the private balance of `to`, and emits a private balance note to `to` from `from`
-        self.storage.private_balances.at(to).add(amount).deliver(MessageDelivery::onchain_constrained());
+        self.storage.private_balances.at(to).add(amount).deliver(
+            MessageDelivery::onchain_constrained(),
+        );
     }
 
     /// @notice Increases the public balance of `to` by `amount`
