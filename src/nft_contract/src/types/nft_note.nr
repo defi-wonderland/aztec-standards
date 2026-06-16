@@ -4,7 +4,7 @@ use aztec::{
     macros::notes::custom_note,
     messages::{
         logs::partial_note::encode_partial_note_private_message,
-        message_delivery::{do_private_message_delivery, MessageDelivery},
+        delivery::{do_private_message_delivery, MessageDelivery},
     },
     note::{note_interface::{NoteHash, NoteType}, utils::compute_note_nullifier},
     oracle::random::random,
@@ -133,7 +133,7 @@ impl NFTNote {
             },
             Option::none(),
             recipient,
-            MessageDelivery.ONCHAIN_UNCONSTRAINED,
+            MessageDelivery::onchain_unconstrained(),
         );
 
         let partial_note = PartialNFTNote { commitment };
