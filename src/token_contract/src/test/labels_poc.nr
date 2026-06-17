@@ -2,7 +2,7 @@
 //!
 //! A private origin label is `H(seed)`, where the contract draws `seed` from `random()`. Minting
 //! (or re-entry) nullifies the seed, so the same label can never be created twice. Tests pin the
-//! seed by mocking the `getRandomField` oracle, then assert against `origin_label(seed)`.
+//! seed by mocking the `aztec_utl_getRandomField` oracle, then assert against `origin_label(seed)`.
 //!
 //! Run: `yarn test:labels-poc` (uses `aztec test`, not bare `nargo test`).
 use crate::{
@@ -108,11 +108,11 @@ unconstrained fn poc_burn_drains_and_discloses() {
     let burn_amount = mint_amount / 2;
     push_spend_label(env, token, owner, label_a);
 
-    // Burn discloses the burned label to the minter (LabelRetired kind=BURN), so the minter scope
-    // is needed; the burned origin is drained from the owner's bucket.
+    // Burn emits a plaintext private label log (kind=LABEL_BURN); the burned origin is drained
+    // from the owner's bucket.
     env.call_private_opts(
         owner,
-        CallPrivateOptions::new().with_additional_scopes([minter]),
+        CallPrivateOptions::new(),
         Token::at(token).burn_private(owner, burn_amount, 0),
     );
 
@@ -148,10 +148,10 @@ unconstrained fn poc_spend_single_label_bucket() {
     let transfer_amount = mint_amount / 2;
     push_spend_label(env, token, owner, label_a);
 
-    // De-shielding discloses the spent label to the minter, so the minter scope is needed too.
+    // De-shielding emits a plaintext private label log for the spent label.
     env.call_private_opts(
         owner,
-        CallPrivateOptions::new().with_additional_scopes([recipient, minter]),
+        CallPrivateOptions::new().with_additional_scopes([recipient]),
         Token::at(token).transfer_private_to_public(owner, recipient, transfer_amount, 0),
     );
 
@@ -255,10 +255,10 @@ unconstrained fn poc_spend_across_two_labels_in_queue() {
     push_spend_label(env, token, owner, label_b);
 
     let spend_amount = (half + half) - 1;
-    // De-shielding discloses each spent label to the minter, so the minter scope is needed too.
+    // De-shielding emits a plaintext private label log for each spent label.
     env.call_private_opts(
         owner,
-        CallPrivateOptions::new().with_additional_scopes([recipient, minter]),
+        CallPrivateOptions::new().with_additional_scopes([recipient]),
         Token::at(token).transfer_private_to_public(owner, recipient, spend_amount, 0),
     );
 

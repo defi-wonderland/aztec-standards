@@ -16,6 +16,7 @@ pub contract Token {
         oracle::random::random,
         protocol::{
             address::AztecAddress,
+            constants::PRIVATE_LOG_CIPHERTEXT_LEN,
             hash::poseidon2_hash_with_separator,
             traits::{FromField, ToField},
         },
@@ -43,20 +44,6 @@ pub contract Token {
         from: AztecAddress,
         to: AztecAddress,
         amount: u128,
-    }
-
-    /// @notice Emitted (privately, to the minter) when labeled value leaves the private domain --
-    ///         either de-shielded to a public address or burned -- disclosing the origin label
-    /// @dev Lets the issuer learn which origin label left private and how much. `kind` is
-    ///      `SINK_DESHIELD` (to public address `to`) or `SINK_BURN` (`to` is the burner; value
-    ///      destroyed). Once value is public it commingles, so flows in/out of a public address
-    ///      cannot be told apart -- an accepted caveat of this model.
-    #[event]
-    struct LabelRetired {
-        label: Field,
-        to: AztecAddress,
-        amount: u128,
-        kind: u8,
     }
 
     /// @param name The name of the token
@@ -101,12 +88,15 @@ pub contract Token {
     // ASCII 'COUNTER'
     global COUNTER_LABEL_SEPARATOR: Field = 0x434f554e544552;
 
-    // Per-label sink applied by `_drain` to each drained (label, amount): credit the recipient, or
-    // disclose the exit to the minter (de-shield or burn). DESHIELD/BURN double as the disclosure
-    // `kind` so the minter can tell a de-shield (to a public address) from a burn (value destroyed).
-    global SINK_CREDIT: u8 = 0;
-    global SINK_DESHIELD: u8 = 1;
-    global SINK_BURN: u8 = 2;
+    // Label lifecycle kinds. CREDIT is an internal drain sink; CREATED/DESHIELD/BURN are emitted as
+    // plaintext private logs with payload [tag, label, amount, kind].
+    global LABEL_CREDIT: u8 = 0;
+    global LABEL_CREATED: u8 = 1;
+    global LABEL_DESHIELD: u8 = 2;
+    global LABEL_BURN: u8 = 3;
+
+    // ASCII 'LABEL_DISCLOSURE'
+    global LABEL_DISCLOSURE_LOG_TAG: Field = 0x4c4142454c5f444953434c4f53555245;
 
     // Capsule base slots used to pass the caller's chosen label(s) from the PXE into private
     // execution. These are PXE-local, scoped per address, and persist across the recursive
@@ -161,8 +151,8 @@ pub contract Token {
 
     /// @notice Transfer tokens from private balance to public balance
     /// @dev Spends notes, emits a new note (UintNote) with any remaining change, enqueues a public
-    ///      call, and discloses each spent origin label to the minter (the value leaves the private
-    ///      domain into the public address-label `to`).
+    ///      call, and emits a plaintext private log for each spent origin label (the value leaves
+    ///      the private domain into the public address-label `to`).
     /// @param from The address of the sender
     /// @param to The address of the recipient
     /// @param amount The amount of tokens to transfer
@@ -175,7 +165,7 @@ pub contract Token {
         amount: u128,
         _nonce: Field,
     ) {
-        self.internal._drain(from, amount, INITIAL_TRANSFER_CALL_MAX_NOTES, SINK_DESHIELD, to);
+        self.internal._drain(from, amount, INITIAL_TRANSFER_CALL_MAX_NOTES, LABEL_DESHIELD, to);
 
         self.enqueue_self.increase_public_balance_internal(to, amount);
     }
@@ -196,7 +186,7 @@ pub contract Token {
         amount: u128,
         _nonce: Field,
     ) -> Field {
-        self.internal._drain(from, amount, INITIAL_TRANSFER_CALL_MAX_NOTES, SINK_DESHIELD, to);
+        self.internal._drain(from, amount, INITIAL_TRANSFER_CALL_MAX_NOTES, LABEL_DESHIELD, to);
 
         self.enqueue_self.increase_public_balance_internal(to, amount);
 
@@ -224,7 +214,7 @@ pub contract Token {
         _nonce: Field,
     ) {
         // Drain `from`'s labels and credit `to` the same label(s): recipient inherits the origin(s).
-        self.internal._drain(from, amount, INITIAL_TRANSFER_CALL_MAX_NOTES, SINK_CREDIT, to);
+        self.internal._drain(from, amount, INITIAL_TRANSFER_CALL_MAX_NOTES, LABEL_CREDIT, to);
     }
 
     /// @notice Transfer tokens from a private balance to the recipient commitment, which must be already initialized.
@@ -301,7 +291,7 @@ pub contract Token {
     ///      burner (BURN).
     /// @param from The address being drained
     /// @param amount The amount of tokens left to drain
-    /// @param mode The sink mode (SINK_CREDIT / SINK_DESHIELD / SINK_BURN)
+    /// @param mode The sink mode (LABEL_CREDIT / LABEL_DESHIELD / LABEL_BURN)
     /// @param to The credit recipient, de-shield destination, or burner
     #[external("private")]
     #[only_self]
@@ -641,6 +631,8 @@ pub contract Token {
         // Nullify the seed so this origin label can never be created again.
         self.context.push_nullifier(poseidon2_hash_with_separator([seed], SEED_NULL_SEPARATOR));
 
+        self.internal._disclose_label(label, amount, LABEL_CREATED);
+
         self.storage.private_balances.at(label).at(to).add(amount).deliver(
             MessageDelivery.ONCHAIN_CONSTRAINED,
         );
@@ -699,7 +691,7 @@ pub contract Token {
     /// @param from The address being drained
     /// @param amount The amount of tokens to drain
     /// @param max_notes The maximum number of notes to process in a single call
-    /// @param mode The per-label sink (SINK_CREDIT / SINK_DESHIELD / SINK_BURN)
+    /// @param mode The per-label sink (LABEL_CREDIT / LABEL_DESHIELD / LABEL_BURN)
     /// @param to The credit recipient (CREDIT), de-shield destination (DESHIELD), or burner (BURN)
     #[internal("private")]
     fn _drain(from: AztecAddress, amount: u128, max_notes: u32, mode: u8, to: AztecAddress) {
@@ -729,29 +721,39 @@ pub contract Token {
         }
     }
 
-    /// @notice Applies a drain's per-label sink: credit the recipient, or disclose the exit to the minter
-    /// @dev SINK_CREDIT credits `to` under `label`, so a private->private recipient inherits the exact
-    ///      source label and cannot relabel. SINK_DESHIELD / SINK_BURN emit a `LabelRetired` event
-    ///      (kind = the mode) privately to the minter, so the issuer learns which origin left the
-    ///      private domain and how much (de-shield to a public address, or burn).
+    /// @notice Applies a drain's per-label sink: credit the recipient, or disclose the exit
+    /// @dev LABEL_CREDIT credits `to` under `label`, so a private->private recipient inherits the exact
+    ///      source label and cannot relabel. LABEL_DESHIELD / LABEL_BURN emit a plaintext private
+    ///      log (kind = the mode), so indexers can learn which origin left the private domain and
+    ///      how much (de-shield to a public address, or burn).
     /// @param mode The sink mode
     /// @param label The origin label being credited or retired
     /// @param to The credit recipient (CREDIT), de-shield destination (DESHIELD), or burner (BURN)
     /// @param amount The amount for this label
     #[internal("private")]
     fn _apply_sink(mode: u8, label: Field, to: AztecAddress, amount: u128) {
-        if mode == SINK_CREDIT {
+        if mode == LABEL_CREDIT {
             self.storage.private_balances.at(label).at(to).add(amount).deliver(
                 MessageDelivery.ONCHAIN_CONSTRAINED,
             );
         } else {
-            // SINK_DESHIELD or SINK_BURN: disclose the exit to the minter; `kind` = `mode`.
-            let minter = self.storage.minter.read();
-            self.emit(LabelRetired { label, to, amount, kind: mode }).deliver_to(
-                minter,
-                MessageDelivery.ONCHAIN_CONSTRAINED,
-            );
+            // LABEL_DESHIELD or LABEL_BURN: disclose the exit as a plaintext private log.
+            self.internal._disclose_label(label, amount, mode);
         }
+    }
+
+    /// @notice Emits a plaintext private log for a label lifecycle transition
+    /// @param label The label being created or retired
+    /// @param amount The amount associated with this label log
+    /// @param kind The lifecycle kind (LABEL_CREATED / LABEL_DESHIELD / LABEL_BURN)
+    #[internal("private")]
+    fn _disclose_label(label: Field, amount: u128, kind: u8) {
+        // Raw private log API: no recipient encryption, no event ABI, and no public enqueue.
+        let log: BoundedVec<Field, PRIVATE_LOG_CIPHERTEXT_LEN> = BoundedVec::from_parts(
+            [label, amount as Field, kind as Field].concat([0; PRIVATE_LOG_CIPHERTEXT_LEN - 3]),
+            3,
+        );
+        self.context.emit_private_log_vec_unsafe(LABEL_DISCLOSURE_LOG_TAG, log);
     }
 
     /// @notice Subtracts `amount` from a SINGLE origin label of `account`, returning change to it
@@ -854,9 +856,9 @@ pub contract Token {
     /// @param amount The amount of tokens to burn
     #[internal("private")]
     fn _burn_private(from: AztecAddress, amount: u128) {
-        // Drain `from`'s labels and disclose each burned origin to the minter (kind = BURN), so the
-        // issuer learns which origins left the private domain -- symmetric with a de-shield.
-        self.internal._drain(from, amount, INITIAL_TRANSFER_CALL_MAX_NOTES, SINK_BURN, from);
+        // Drain `from`'s labels and disclose each burned origin (kind = BURN), symmetric with a
+        // de-shield.
+        self.internal._drain(from, amount, INITIAL_TRANSFER_CALL_MAX_NOTES, LABEL_BURN, from);
         self.enqueue_self.decrease_total_supply_internal(amount);
     }
 
