@@ -1,3 +1,5 @@
+pub mod capsule_labels;
+pub mod labels_poc;
 mod burn_private;
 mod burn_public;
 mod mint_to_private;
