@@ -1,25 +1,25 @@
 //! Lean PoC suite for labeled (non-fungible) private balances.
 //!
 //! A private origin label is `H(seed)`, where the contract draws `seed` from `random()`. Minting
-//! (or re-entry) nullifies the seed, so the same label can never be created twice. Tests pin the
-//! seed by mocking the `aztec_utl_getRandomField` oracle, then assert against `origin_label(seed)`.
+//! (or re-entry) nullifies the seed, so fresh private origins should create distinct labels. Tests
+//! learn the generated label from the plaintext private disclosure log emitted by the contract.
 //!
 //! Run: `yarn test:labels-poc` (uses `aztec test`, not bare `nargo test`).
 use crate::{
     test::{
-        capsule_labels::{clear_spend_labels, origin_label, push_spend_label, set_query_label},
+        capsule_labels::{clear_spend_labels, push_spend_label, set_query_label},
         utils::{self, mint_amount},
     },
     Token,
 };
 use aztec::{
     protocol::address::AztecAddress,
-    test::helpers::test_environment::{CallPrivateOptions, TestEnvironment},
+    test::helpers::{test_environment::{CallPrivateOptions, TestEnvironment}, txe_oracles},
 };
-use std::test::OracleMock;
 
-global SEED_A: Field = 0xA;
-global SEED_B: Field = 0xB;
+global LABEL_CREATED: Field = 1;
+global LABEL_DESHIELD: Field = 2;
+global LABEL_BURN: Field = 3;
 
 unconstrained fn balance_under_label(
     env: TestEnvironment,
@@ -31,50 +31,84 @@ unconstrained fn balance_under_label(
     env.execute_utility(Token::at(token_contract_address).balance_of_private(owner))
 }
 
+unconstrained fn label_disclosure_at(kind: Field, occurrence: u32) -> (Field, u128) {
+    let effects = txe_oracles::get_last_tx_effects();
+    let mut seen = 0;
+    let mut found = false;
+    let mut label = 0;
+    let mut amount = 0 as u128;
+
+    for i in 0..effects.private_logs.len() {
+        let log = effects.private_logs.get(i);
+
+        // The label disclosure log payload is [tag, label, amount, kind]. Other private logs
+        // emitted by note delivery have different lengths and are ignored here.
+        if log.len() == 4 {
+            if log.get(3) == kind {
+                if seen == occurrence {
+                    found = true;
+                    label = log.get(1);
+                    amount = log.get(2) as u128;
+                }
+                seen += 1;
+            }
+        }
+    }
+
+    assert(found, "missing label disclosure");
+    (label, amount)
+}
+
+unconstrained fn last_label_disclosure(kind: Field) -> (Field, u128) {
+    label_disclosure_at(kind, 0)
+}
+
 unconstrained fn mint_labeled(
     env: TestEnvironment,
     token: AztecAddress,
     recipient: AztecAddress,
     amount: u128,
     minter: AztecAddress,
-    seed: Field,
-) {
-    // Pin the contract's random seed so the resulting label H(seed) is recomputable in the test.
-    let _ = OracleMock::mock("aztec_utl_getRandomField").returns(seed);
+) -> Field {
     env.call_private_opts(
         minter,
         CallPrivateOptions::new().with_additional_scopes([recipient]),
         Token::at(token).mint_to_private(recipient, amount),
     );
+
+    let (label, logged_amount) = last_label_disclosure(LABEL_CREATED);
+    assert(logged_amount == amount, "created label amount log wrong");
+    label
 }
 
 #[test]
 unconstrained fn poc_mint_creates_label() {
     let (env, token, account, _, minter) = utils::setup_with_minter(false);
 
-    mint_labeled(env, token, account, mint_amount, minter, SEED_A);
+    let label = mint_labeled(env, token, account, mint_amount, minter);
 
-    let label_a = origin_label(SEED_A);
     assert(
-        balance_under_label(env, token, account, label_a) == mint_amount,
-        "mint should land under H(seed)",
-    );
-    // A different seed derives a different, empty bucket.
-    assert(
-        balance_under_label(env, token, account, origin_label(SEED_B)) == 0 as u128,
-        "a different seed's bucket should be empty",
+        balance_under_label(env, token, account, label) == mint_amount,
+        "mint should land under disclosed label",
     );
 }
 
-#[test(should_fail)]
-unconstrained fn poc_seed_is_single_use() {
+#[test]
+unconstrained fn poc_random_mint_labels_are_distinct() {
     let (env, token, account, _, minter) = utils::setup_with_minter(false);
 
-    // First mint of seed A succeeds and nullifies the seed.
-    mint_labeled(env, token, account, mint_amount, minter, SEED_A);
-    // Re-minting the same seed must revert: its nullifier already exists, so the same label can
-    // never be minted again.
-    mint_labeled(env, token, account, mint_amount, minter, SEED_A);
+    let first_label = mint_labeled(env, token, account, mint_amount, minter);
+    let second_label = mint_labeled(env, token, account, mint_amount, minter);
+
+    assert(first_label != second_label, "random mint labels should differ");
+    assert(
+        balance_under_label(env, token, account, first_label) == mint_amount,
+        "first label balance wrong",
+    );
+    assert(
+        balance_under_label(env, token, account, second_label) == mint_amount,
+        "second label balance wrong",
+    );
 }
 
 #[test]
@@ -83,18 +117,19 @@ unconstrained fn poc_reentry_creates_fresh_label() {
 
     // Give `owner` public funds, then shield them (public -> private).
     env.call_public(minter, Token::at(token).mint_to_public(owner, mint_amount));
-    // Pin the fresh per-event seed the re-entry will use (random in production).
-    let _ = OracleMock::mock("aztec_utl_getRandomField").returns(SEED_A);
     env.call_private_opts(
         owner,
         CallPrivateOptions::new().with_additional_scopes([recipient]),
         Token::at(token).transfer_public_to_private(owner, recipient, mint_amount, 0),
     );
 
-    // Re-entry mints a fresh private origin H(seed) -- a per-event id, not a function of `from`.
+    let (label, logged_amount) = last_label_disclosure(LABEL_CREATED);
+    assert(logged_amount == mint_amount, "re-entry label amount log wrong");
+
+    // Re-entry mints a fresh private origin label -- a per-event id, not a function of `from`.
     assert(
-        balance_under_label(env, token, recipient, origin_label(SEED_A)) == mint_amount,
-        "re-entry should land under a fresh per-event H(seed) label",
+        balance_under_label(env, token, recipient, label) == mint_amount,
+        "re-entry should land under a fresh disclosed label",
     );
 }
 
@@ -102,8 +137,7 @@ unconstrained fn poc_reentry_creates_fresh_label() {
 unconstrained fn poc_burn_drains_and_discloses() {
     let (env, token, owner, _, minter) = utils::setup_with_minter(false);
 
-    mint_labeled(env, token, owner, mint_amount, minter, SEED_A);
-    let label_a = origin_label(SEED_A);
+    let label_a = mint_labeled(env, token, owner, mint_amount, minter);
 
     let burn_amount = mint_amount / 2;
     push_spend_label(env, token, owner, label_a);
@@ -115,6 +149,10 @@ unconstrained fn poc_burn_drains_and_discloses() {
         CallPrivateOptions::new(),
         Token::at(token).burn_private(owner, burn_amount, 0),
     );
+
+    let (retired_label, retired_amount) = last_label_disclosure(LABEL_BURN);
+    assert(retired_label == label_a, "burn label log wrong");
+    assert(retired_amount == burn_amount, "burn amount log wrong");
 
     assert(
         balance_under_label(env, token, owner, label_a) == mint_amount - burn_amount,
@@ -128,11 +166,8 @@ unconstrained fn poc_labeled_mints_are_isolated() {
 
     let half = mint_amount / 2;
 
-    mint_labeled(env, token, account, half, minter, SEED_A);
-    mint_labeled(env, token, account, half, minter, SEED_B);
-
-    let label_a = origin_label(SEED_A);
-    let label_b = origin_label(SEED_B);
+    let label_a = mint_labeled(env, token, account, half, minter);
+    let label_b = mint_labeled(env, token, account, half, minter);
 
     assert(balance_under_label(env, token, account, label_a) == half, "label A balance wrong");
     assert(balance_under_label(env, token, account, label_b) == half, "label B balance wrong");
@@ -142,8 +177,7 @@ unconstrained fn poc_labeled_mints_are_isolated() {
 unconstrained fn poc_spend_single_label_bucket() {
     let (env, token, owner, recipient, minter) = utils::setup_with_minter(false);
 
-    mint_labeled(env, token, owner, mint_amount, minter, SEED_A);
-    let label_a = origin_label(SEED_A);
+    let label_a = mint_labeled(env, token, owner, mint_amount, minter);
 
     let transfer_amount = mint_amount / 2;
     push_spend_label(env, token, owner, label_a);
@@ -154,6 +188,10 @@ unconstrained fn poc_spend_single_label_bucket() {
         CallPrivateOptions::new().with_additional_scopes([recipient]),
         Token::at(token).transfer_private_to_public(owner, recipient, transfer_amount, 0),
     );
+
+    let (retired_label, retired_amount) = last_label_disclosure(LABEL_DESHIELD);
+    assert(retired_label == label_a, "de-shield label log wrong");
+    assert(retired_amount == transfer_amount, "de-shield amount log wrong");
 
     assert(
         balance_under_label(env, token, owner, label_a) == mint_amount - transfer_amount,
@@ -168,11 +206,8 @@ unconstrained fn poc_private_transfer_preserves_labels() {
     let half = mint_amount / 2;
     let quarter = mint_amount / 4;
 
-    mint_labeled(env, token, owner, half, minter, SEED_A);
-    mint_labeled(env, token, owner, half, minter, SEED_B);
-
-    let label_a = origin_label(SEED_A);
-    let label_b = origin_label(SEED_B);
+    let label_a = mint_labeled(env, token, owner, half, minter);
+    let label_b = mint_labeled(env, token, owner, half, minter);
 
     // Spend all of A and half of B, in queue order.
     clear_spend_labels(env, token, owner);
@@ -212,8 +247,7 @@ unconstrained fn poc_private_transfer_preserves_labels() {
 unconstrained fn poc_commitment_preserves_label() {
     let (env, token, owner, recipient, minter) = utils::setup_with_minter(false);
 
-    mint_labeled(env, token, owner, mint_amount, minter, SEED_A);
-    let label_a = origin_label(SEED_A);
+    let label_a = mint_labeled(env, token, owner, mint_amount, minter);
 
     // Recipient's commitment, completable by `owner`.
     let commitment = env.call_private_opts(
@@ -244,11 +278,8 @@ unconstrained fn poc_spend_across_two_labels_in_queue() {
 
     let half = mint_amount / 2;
 
-    mint_labeled(env, token, owner, half, minter, SEED_A);
-    mint_labeled(env, token, owner, half, minter, SEED_B);
-
-    let label_a = origin_label(SEED_A);
-    let label_b = origin_label(SEED_B);
+    let label_a = mint_labeled(env, token, owner, half, minter);
+    let label_b = mint_labeled(env, token, owner, half, minter);
 
     clear_spend_labels(env, token, owner);
     push_spend_label(env, token, owner, label_a);
@@ -261,6 +292,13 @@ unconstrained fn poc_spend_across_two_labels_in_queue() {
         CallPrivateOptions::new().with_additional_scopes([recipient]),
         Token::at(token).transfer_private_to_public(owner, recipient, spend_amount, 0),
     );
+
+    let (retired_label_a, retired_amount_a) = label_disclosure_at(LABEL_DESHIELD, 0);
+    let (retired_label_b, retired_amount_b) = label_disclosure_at(LABEL_DESHIELD, 1);
+    assert(retired_label_a == label_a, "first de-shield label log wrong");
+    assert(retired_amount_a == half, "first de-shield amount log wrong");
+    assert(retired_label_b == label_b, "second de-shield label log wrong");
+    assert(retired_amount_b == half - 1, "second de-shield amount log wrong");
 
     assert(
         balance_under_label(env, token, owner, label_a) == 0 as u128,
