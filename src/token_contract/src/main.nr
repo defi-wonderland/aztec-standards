@@ -13,7 +13,12 @@ pub contract Token {
             storage::storage,
         },
         messages::message_delivery::MessageDelivery,
-        protocol::{address::AztecAddress, traits::{FromField, ToField}},
+        oracle::random::random,
+        protocol::{
+            address::AztecAddress,
+            hash::poseidon2_hash_with_separator,
+            traits::{FromField, ToField},
+        },
         state_vars::{Map, Owned, PublicImmutable, PublicMutable, StateVariable},
     };
     // note library
@@ -40,6 +45,20 @@ pub contract Token {
         amount: u128,
     }
 
+    /// @notice Emitted (privately, to the minter) when labeled value leaves the private domain --
+    ///         either de-shielded to a public address or burned -- disclosing the origin label
+    /// @dev Lets the issuer learn which origin label left private and how much. `kind` is
+    ///      `SINK_DESHIELD` (to public address `to`) or `SINK_BURN` (`to` is the burner; value
+    ///      destroyed). Once value is public it commingles, so flows in/out of a public address
+    ///      cannot be told apart -- an accepted caveat of this model.
+    #[event]
+    struct LabelRetired {
+        label: Field,
+        to: AztecAddress,
+        amount: u128,
+        kind: u8,
+    }
+
     /// @param name The name of the token
     /// @param symbol The symbol of the token
     /// @param decimals The number of decimals of the token
@@ -47,6 +66,7 @@ pub contract Token {
     /// @param total_supply The total supply of the token
     /// @param public_balances The public balances of the token
     /// @param minter The account permissioned to mint the token
+    /// @param label_counter Monotonic counter for allocating public origin labels H(counter)
     #[storage]
     struct Storage<Context> {
         name: PublicImmutable<FieldCompressedString, Context>,
@@ -56,20 +76,44 @@ pub contract Token {
         total_supply: PublicMutable<u128, Context>,
         public_balances: Map<AztecAddress, PublicMutable<u128, Context>, Context>,
         minter: PublicImmutable<AztecAddress, Context>,
+        label_counter: PublicMutable<Field, Context>,
     }
 
-    // Default label used when the caller does not choose one. A label makes a private balance
-    // non-fungible by tracing its origin (e.g. the mint it came from).
-    global NULL_LABEL: Field = 0;
+    // Labeling is mandatory: there is no default/unlabeled bucket. Every private note lives under a
+    // real origin label, a unique per-event id that traces all private flow from the tx that created
+    // it. A label is created by whichever context creates the origin: H(seed) in private (random
+    // seed, nullified), or H(counter) in public (a monotonic counter, since the AVM lacks randomness).
+
+    // Domain separator for a private origin label H(seed). Uniqueness/non-replay is enforced by the
+    // seed nullifier below. (Minting is minter-gated and the minter is immutable, so every private
+    // mint label provably originates from the one minter without putting the minter in the hash.)
+    // ASCII 'LABEL'
+    global LABEL_SEPARATOR: Field = 0x4c4142454c;
+
+    // Domain separator for the single-use nullifier pushed on a private origin seed, so the same seed
+    // (hence label) can never be created twice -- a replay produces a duplicate nullifier and reverts.
+    // ASCII 'SEED'
+    global SEED_NULL_SEPARATOR: Field = 0x53454544;
+
+    // Domain separator for a public origin label H(counter). Origins created in a PUBLIC context
+    // (commitment completions) cannot use randomness, so they draw a monotonic public counter; the
+    // separate separator keeps these disjoint from the private H(seed) labels.
+    // ASCII 'COUNTER'
+    global COUNTER_LABEL_SEPARATOR: Field = 0x434f554e544552;
+
+    // Per-label sink applied by `_drain` to each drained (label, amount): credit the recipient, or
+    // disclose the exit to the minter (de-shield or burn). DESHIELD/BURN double as the disclosure
+    // `kind` so the minter can tell a de-shield (to a public address) from a burn (value destroyed).
+    global SINK_CREDIT: u8 = 0;
+    global SINK_DESHIELD: u8 = 1;
+    global SINK_BURN: u8 = 2;
 
     // Capsule base slots used to pass the caller's chosen label(s) from the PXE into private
     // execution. These are PXE-local, scoped per address, and persist across the recursive
-    // folding frames of `_subtract_balance` (unlike ephemeral arrays, which are frame-isolated).
-    // The values are spaced far apart so the `CapsuleArray` element slots never collide.
+    // folding frames of `_drain` (unlike ephemeral arrays, which are frame-isolated). The values
+    // are spaced far apart so the `CapsuleArray` element slots never collide.
     // Ordered FIFO queue of labels to spend from, scoped to the account being debited.
     global SPEND_LABELS_BASE_SLOT: Field = 0x10000000;
-    // Single label to credit when receiving/minting, scoped to the account being credited.
-    global RECEIVE_LABEL_SLOT: Field = 0x20000000;
     // Single label to query, scoped to the owner being queried.
     global QUERY_LABEL_SLOT: Field = 0x30000000;
 
@@ -116,7 +160,9 @@ pub contract Token {
     * ======================================================== */
 
     /// @notice Transfer tokens from private balance to public balance
-    /// @dev Spends notes, emits a new note (UintNote) with any remaining change, and enqueues a public call
+    /// @dev Spends notes, emits a new note (UintNote) with any remaining change, enqueues a public
+    ///      call, and discloses each spent origin label to the minter (the value leaves the private
+    ///      domain into the public address-label `to`).
     /// @param from The address of the sender
     /// @param to The address of the recipient
     /// @param amount The amount of tokens to transfer
@@ -129,7 +175,7 @@ pub contract Token {
         amount: u128,
         _nonce: Field,
     ) {
-        self.internal._decrease_private_balance(from, amount, INITIAL_TRANSFER_CALL_MAX_NOTES);
+        self.internal._drain(from, amount, INITIAL_TRANSFER_CALL_MAX_NOTES, SINK_DESHIELD, to);
 
         self.enqueue_self.increase_public_balance_internal(to, amount);
     }
@@ -150,7 +196,7 @@ pub contract Token {
         amount: u128,
         _nonce: Field,
     ) -> Field {
-        self.internal._decrease_private_balance(from, amount, INITIAL_TRANSFER_CALL_MAX_NOTES);
+        self.internal._drain(from, amount, INITIAL_TRANSFER_CALL_MAX_NOTES, SINK_DESHIELD, to);
 
         self.enqueue_self.increase_public_balance_internal(to, amount);
 
@@ -161,7 +207,10 @@ pub contract Token {
     }
 
     /// @notice Transfer tokens from private balance to another private balance
-    /// @dev Spends notes, emits a new note (UintNote) with any remaining change, and sends a note to the recipient
+    /// @dev Spends `from`'s notes across as many origin labels as needed, and for each label
+    ///      drained credits `to` the same amount under the SAME label. The recipient therefore
+    ///      inherits the exact origin(s) of the funds and cannot relabel them; a spend that draws
+    ///      from N labels produces N labeled notes for `to` (provenance-preserving aggregation).
     /// @param from The address of the sender
     /// @param to The address of the recipient
     /// @param amount The amount of tokens to transfer
@@ -174,14 +223,16 @@ pub contract Token {
         amount: u128,
         _nonce: Field,
     ) {
-        self.internal._decrease_private_balance(from, amount, INITIAL_TRANSFER_CALL_MAX_NOTES);
-
-        self.internal._increase_private_balance(to, amount);
+        // Drain `from`'s labels and credit `to` the same label(s): recipient inherits the origin(s).
+        self.internal._drain(from, amount, INITIAL_TRANSFER_CALL_MAX_NOTES, SINK_CREDIT, to);
     }
 
     /// @notice Transfer tokens from a private balance to the recipient commitment, which must be already initialized.
-    /// @dev Spends notes, emits a new note (UintNote) with any remaining change, and enqueues a public call.
-    ///      The `msg_sender` must be the completer of the partial note.
+    /// @dev Spends notes under a SINGLE origin label, emits a new note (UintNote) with any remaining
+    ///      change, and completes the commitment into that same label so the recipient inherits the
+    ///      funds' origin. A commitment is one note = one label and the completion only receives the
+    ///      opaque commitment (no recipient address to deliver remainder notes to), so the funding
+    ///      label must cover the full `amount`; multi-origin sends use multiple commitments.
     /// @param from The address of the sender
     /// @param commitment The partial note representing the commitment (privacy entrance that the recipient shares with the sender)
     /// @param amount The amount of tokens to transfer
@@ -194,13 +245,19 @@ pub contract Token {
         amount: u128,
         _nonce: Field,
     ) {
-        self.internal._decrease_private_balance(from, amount, INITIAL_TRANSFER_CALL_MAX_NOTES);
+        let contract_address = self.context.this_address();
+        // Safety: the label is the caller's choice of which of `from`'s own sub-balances to fund
+        // from; it only selects a storage slot of the caller's own notes. The commitment is then
+        // completed into this SAME label, so the recipient's funds carry the spent label's origin
+        // and cannot be relabeled.
+        let label = unsafe { _pop_spend_label(contract_address, from) };
+        self.internal._subtract_from_label(from, label, amount, INITIAL_TRANSFER_CALL_MAX_NOTES);
 
         let completer = self.msg_sender();
         PartialUintNote::from_field(commitment).complete_from_private(
             self.context,
             completer,
-            self.storage.private_balances.at(NULL_LABEL).get_storage_slot(),
+            self.storage.private_balances.at(label).get_storage_slot(),
             amount,
         );
     }
@@ -221,7 +278,9 @@ pub contract Token {
     ) {
         self.enqueue_self.decrease_public_balance_internal(from, amount);
 
-        self.internal._increase_private_balance(to, amount);
+        // Re-entry creates a fresh private origin (per-event H(seed)). `from` is already on the
+        // public record, so the label is a new per-tx id, not a function of `from`.
+        self.internal._credit_fresh_origin(to, amount);
     }
 
     /// @notice Initializes a transfer commitment to be used for transfers/mints
@@ -235,15 +294,37 @@ pub contract Token {
         commitment.to_field()
     }
 
-    /// @notice Recursively subtracts balance from private balance
-    /// @dev Used to subtract private balances that exceed the max notes limit, or to continue
-    ///      spending under the next label in the caller's queue
-    /// @param account The address of the account to subtract the balance from
-    /// @param amount The amount of tokens to subtract
+    /// @notice Recursively drains `from` across spend-queue labels, applying the sink per label
+    /// @dev Continues a `_drain` under the next label in `from`'s queue when the current label
+    ///      cannot cover the remaining amount. `mode` selects the per-label sink (credit `to` /
+    ///      disclose a de-shield / disclose a burn); `to` is the recipient (CREDIT/DESHIELD) or the
+    ///      burner (BURN).
+    /// @param from The address being drained
+    /// @param amount The amount of tokens left to drain
+    /// @param mode The sink mode (SINK_CREDIT / SINK_DESHIELD / SINK_BURN)
+    /// @param to The credit recipient, de-shield destination, or burner
     #[external("private")]
     #[only_self]
-    fn recurse_subtract_balance_internal(account: AztecAddress, amount: u128) {
-        self.internal._subtract_balance(account, amount, RECURSIVE_TRANSFER_CALL_MAX_NOTES);
+    fn recurse_drain_internal(from: AztecAddress, amount: u128, mode: u8, to: AztecAddress) {
+        self.internal._drain(from, amount, RECURSIVE_TRANSFER_CALL_MAX_NOTES, mode, to);
+    }
+
+    /// @notice Recursively subtracts balance from a SINGLE label of `account`
+    /// @dev Used to drain a funding label that exceeds the max notes limit when completing a
+    ///      commitment. Unlike `recurse_drain_internal`, it stays on the same `label`
+    ///      (it does not pop the next label), so the commitment funding remains single-origin.
+    /// @param account The address of the account to subtract the balance from
+    /// @param label The single origin label to drain
+    /// @param amount The amount of tokens left to subtract
+    #[external("private")]
+    #[only_self]
+    fn recurse_subtract_from_label_internal(account: AztecAddress, label: Field, amount: u128) {
+        self.internal._subtract_from_label(
+            account,
+            label,
+            amount,
+            RECURSIVE_TRANSFER_CALL_MAX_NOTES,
+        );
     }
 
     /** ==========================================================
@@ -289,9 +370,13 @@ pub contract Token {
         self.internal._decrease_public_balance(from, amount);
 
         let completer = self.msg_sender();
+        // Public-funded origin: allocate a fresh public label H(counter). The completer cannot
+        // choose it (it's the contract's counter), so this cannot stamp an arbitrary origin.
+        let label = self.internal._next_public_label();
         self.internal._increase_commitment_balance(
             PartialUintNote::from_field(commitment),
             completer,
+            label,
             amount,
         );
 
@@ -370,15 +455,20 @@ pub contract Token {
      * ======================================================== */
 
     /// @notice Returns the private balance of an account under the caller's chosen label
-    /// @dev The label to query is read from a capsule (defaulting to `NULL_LABEL`), so the caller
-    ///      can inspect any individual label balance without changing this method's signature.
+    /// @dev The label to query is read from a capsule (which must be set -- there is no default
+    ///      bucket), so the caller can inspect any individual label balance without changing this
+    ///      method's signature.
     /// @param owner The address to query
     /// @return The private balance of the address under the chosen label
     #[external("utility")]
     unconstrained fn balance_of_private(owner: AztecAddress) -> u128 {
         let contract_address = self.context.this_address();
-        let label = _read_label(contract_address, owner, QUERY_LABEL_SLOT);
-        self.storage.private_balances.at(label).at(owner).balance_of()
+        // The queried label is the caller's free choice of which sub-balance to read; it must be
+        // set (no default bucket) and only selects a storage slot, so it leaks/affects nothing else.
+        let label: Option<Field> =
+            aztec::oracle::capsules::load(contract_address, QUERY_LABEL_SLOT, owner);
+        assert(label.is_some(), "no query label");
+        self.storage.private_balances.at(label.unwrap()).at(owner).balance_of()
     }
 
     /** ==========================================================
@@ -416,9 +506,13 @@ pub contract Token {
         let completer = self.msg_sender();
         _validate_minter(completer, self.storage.minter.read());
         self.internal._increase_total_supply(amount);
+        // Minted to a commitment in public context (no AVM randomness for an H(seed)), so allocate
+        // a fresh public origin label H(counter) -- unique per event, completer cannot choose it.
+        let label = self.internal._next_public_label();
         self.internal._increase_commitment_balance(
             PartialUintNote::from_field(commitment),
             completer,
+            label,
             amount,
         );
 
@@ -483,11 +577,34 @@ pub contract Token {
         assert(minter.eq(sender), "caller is not minter");
     }
 
+    /// @notice Derives the mint origin label `H(seed)`
+    /// @dev Minting is minter-gated and the minter is immutable, so every label produced here
+    ///      provably comes from the one minter; the seed only needs to be unique, which the mint's
+    ///      single-use seed nullifier enforces. Deterministic: anyone can recompute `H(seed)`.
+    /// @param seed The mint seed (unique per mint; nullified at mint time)
+    /// @return The origin label
+    #[contract_library_method]
+    fn _label(seed: Field) -> Field {
+        poseidon2_hash_with_separator([seed], LABEL_SEPARATOR)
+    }
+
+    /// @notice Allocates the next public origin label `H(counter)` and advances the counter
+    /// @dev For origins created in a PUBLIC context (commitment completions), where the AVM has no
+    ///      randomness. The monotonic counter makes each label unique without a nullifier, and the
+    ///      counter is contract state (not a caller input), so a completer cannot choose the label.
+    /// @return A fresh public origin label
+    #[internal("public")]
+    fn _next_public_label() -> Field {
+        let counter = self.storage.label_counter.read() + 1;
+        self.storage.label_counter.write(counter);
+        poseidon2_hash_with_separator([counter], COUNTER_LABEL_SEPARATOR)
+    }
+
     /// @notice Pops the next label to spend from for `account` off the caller-provided queue
     /// @dev Unconstrained: the label is the caller's free choice of which sub-balance to spend
     ///      from, and only selects a storage slot of the caller's own notes. Backed by a capsule
-    ///      array so it persists across the recursive `_subtract_balance` frames. Returns
-    ///      `NULL_LABEL` once the queue is empty.
+    ///      array so it persists across the recursive `_drain` frames. Reverts when the
+    ///      queue is empty (no default bucket exists).
     /// @param contract The address of this contract (the only contract allowed to read its capsules)
     /// @param account The account whose spend-label queue is being consumed
     /// @return The next label to spend from
@@ -498,55 +615,32 @@ pub contract Token {
     ) -> Field {
         let queue: CapsuleArray<Field> =
             CapsuleArray::at(contract_address, SPEND_LABELS_BASE_SLOT, account);
-        if queue.len() == 0 {
-            NULL_LABEL
-        } else {
-            let label = queue.get(0);
-            queue.remove(0);
-            label
-        }
+        // Mandatory labeling: there is no default bucket to fall back to, so the caller must name
+        // which origin label(s) to spend from.
+        assert(queue.len() != 0, "no spend label");
+        let label = queue.get(0);
+        queue.remove(0);
+        label
     }
 
-    /// @notice Reads the single label stored by the caller at `slot`, scoped to `scope`
-    /// @dev Unconstrained: the label is the caller's free choice and only selects a storage slot.
-    ///      Returns `NULL_LABEL` when nothing was stored.
-    /// @param contract The address of this contract (the only contract allowed to read its capsules)
-    /// @param scope The address the label is scoped to (recipient when receiving, owner when querying)
-    /// @param slot The capsule slot holding the label
-    /// @return The chosen label
-    #[contract_library_method]
-    unconstrained fn _read_label(
-        contract_address: AztecAddress,
-        scope: AztecAddress,
-        slot: Field,
-    ) -> Field {
-        let stored: Option<Field> = aztec::oracle::capsules::load(contract_address, slot, scope);
-        stored.unwrap_or(NULL_LABEL)
-    }
-
-    /// @notice Decreases the private balance of `account` by `amount` and emits a private balance note with the change to account
-    /// @param account The address of the account to decrease the balance of
-    /// @param amount The amount of tokens to decrease the balance by
-    /// @param max_notes The maximum number of notes to process in a single call
-    #[internal("private")]
-    fn _decrease_private_balance(account: AztecAddress, amount: u128, max_notes: u32) {
-        // Subtracts `amount` from the private balance of `account`, spending across as many labels
-        // as needed. The change (if any) is re-deposited into the label it was spent from inside
-        // `_subtract_balance`, so provenance is preserved.
-        self.internal._subtract_balance(account, amount, max_notes);
-    }
-
-    /// @notice Increases the private balance of `to` by `amount`
+    /// @notice Credits `to` under a brand-new private origin label `H(seed)` and nullifies the seed
+    /// @dev The single place that mints a NEW private origin: used by both `mint_to_private` and
+    ///      `public->private` re-entry. The seed only needs to be unique (it is not a meaningful
+    ///      minter choice); it is drawn from fresh `random()`. Single-use: the seed nullifier makes
+    ///      a second use of the same seed (hence label) unprovable, so
+    ///      every origin is a unique per-event id.
     /// @param to The address of the recipient
-    /// @param amount The amount of tokens to increase the balance by
+    /// @param amount The amount of tokens to credit
     #[internal("private")]
-    fn _increase_private_balance(to: AztecAddress, amount: u128) {
-        let contract_address = self.context.this_address();
-        // Safety: the label is an unconstrained choice of which sub-balance to credit (e.g. the
-        // minter choosing the mint origin). It only selects a storage slot for the recipient's own
-        // note, so an arbitrary value cannot affect any balance other than `to`'s.
-        let label = unsafe { _read_label(contract_address, to, RECEIVE_LABEL_SLOT) };
-        // Increases `amount` to the private balance of `to` under the chosen label, and emits a private balance note to `to`
+    fn _credit_fresh_origin(to: AztecAddress, amount: u128) {
+        // Safety: the seed only selects the (new) origin bucket of the recipient's own notes; a
+        // (vanishingly unlikely, or maliciously replayed) repeat reverts on the duplicate nullifier.
+        let seed = unsafe { random() };
+        let label = _label(seed);
+
+        // Nullify the seed so this origin label can never be created again.
+        self.context.push_nullifier(poseidon2_hash_with_separator([seed], SEED_NULL_SEPARATOR));
+
         self.storage.private_balances.at(label).at(to).add(amount).deliver(
             MessageDelivery.ONCHAIN_CONSTRAINED,
         );
@@ -574,60 +668,118 @@ pub contract Token {
         self.storage.public_balances.at(from).write(new_balance);
     }
 
-    /// @notice Completes a partial note
-    /// @dev Completes a partial note and increases the balance of the commitment by `amount`
+    /// @notice Completes a partial note into the given origin label's slot
+    /// @dev Completes a partial note and increases the balance of the commitment by `amount`,
+    ///      bucketed under `label` (the funding origin), so commitment value carries provenance.
     /// @param commitment The partial note representing the commitment (privacy entrance)
     /// @param completer The address used to compute the validity commitment
+    /// @param label The origin label the completed note is credited under
     /// @param amount The amount of tokens to increase the balance of the commitment by
     #[internal("public")]
     fn _increase_commitment_balance(
         commitment: PartialUintNote,
         completer: AztecAddress,
+        label: Field,
         amount: u128,
     ) {
         commitment.complete(
             self.context,
             completer,
-            self.storage.private_balances.at(NULL_LABEL).get_storage_slot(),
+            self.storage.private_balances.at(label).get_storage_slot(),
             amount,
         );
     }
 
-    /// @notice Subtracts balance from the private balance of `account`, spending across labels
-    /// @dev Pops the next label to spend from off the caller's queue, nullifies notes under that
-    ///      label up to `max_notes`, and re-deposits any change into the same label. When the
-    ///      popped label cannot cover the remaining amount, it recurses: the next frame pops the
-    ///      next label, draining label A, then B, then C, ... This leverages the arbitrary-length
-    ///      folding scheme, so the caller is not limited to a single label's balance.
+    /// @notice Drains `amount` from `from` across spend-queue labels, applying `mode`'s sink per label
+    /// @dev The one canonical multi-label drain. Pops the next label off `from`'s spend queue,
+    ///      nullifies notes under it up to `max_notes`, returns any change to the SAME label
+    ///      (preserving provenance), applies the per-label sink, and recurses to the next queued
+    ///      label when one cannot cover the remainder. Replaces the former private->private /
+    ///      de-shield / burn drains, which differed only in this per-label sink.
+    /// @param from The address being drained
+    /// @param amount The amount of tokens to drain
+    /// @param max_notes The maximum number of notes to process in a single call
+    /// @param mode The per-label sink (SINK_CREDIT / SINK_DESHIELD / SINK_BURN)
+    /// @param to The credit recipient (CREDIT), de-shield destination (DESHIELD), or burner (BURN)
+    #[internal("private")]
+    fn _drain(from: AztecAddress, amount: u128, max_notes: u32, mode: u8, to: AztecAddress) {
+        let contract_address = self.context.this_address();
+        // Safety: the label only selects a storage slot of `from`'s own notes; an arbitrary value
+        // cannot spend funds they do not own (try_sub finds nothing and the assert below reverts).
+        let label = unsafe { _pop_spend_label(contract_address, from) };
+
+        let subtracted =
+            self.storage.private_balances.at(label).at(from).try_sub(amount, max_notes);
+        if subtracted >= amount {
+            // Return the change to `from` under the source label (preserving provenance), ...
+            self.storage.private_balances.at(label).at(from).add(subtracted - amount).deliver(
+                MessageDelivery.ONCHAIN_CONSTRAINED,
+            );
+            // ... and apply the sink for the full drained amount under this label.
+            self.internal._apply_sink(mode, label, to, amount);
+        } else {
+            // This label is exhausted within `max_notes`; apply the sink for what it gave, then
+            // recurse to the next queued label for the remainder.
+            assert(subtracted > 0, "Balance too low");
+
+            self.internal._apply_sink(mode, label, to, subtracted);
+            let remaining = amount - subtracted;
+
+            self.call_self.recurse_drain_internal(from, remaining, mode, to);
+        }
+    }
+
+    /// @notice Applies a drain's per-label sink: credit the recipient, or disclose the exit to the minter
+    /// @dev SINK_CREDIT credits `to` under `label`, so a private->private recipient inherits the exact
+    ///      source label and cannot relabel. SINK_DESHIELD / SINK_BURN emit a `LabelRetired` event
+    ///      (kind = the mode) privately to the minter, so the issuer learns which origin left the
+    ///      private domain and how much (de-shield to a public address, or burn).
+    /// @param mode The sink mode
+    /// @param label The origin label being credited or retired
+    /// @param to The credit recipient (CREDIT), de-shield destination (DESHIELD), or burner (BURN)
+    /// @param amount The amount for this label
+    #[internal("private")]
+    fn _apply_sink(mode: u8, label: Field, to: AztecAddress, amount: u128) {
+        if mode == SINK_CREDIT {
+            self.storage.private_balances.at(label).at(to).add(amount).deliver(
+                MessageDelivery.ONCHAIN_CONSTRAINED,
+            );
+        } else {
+            // SINK_DESHIELD or SINK_BURN: disclose the exit to the minter; `kind` = `mode`.
+            let minter = self.storage.minter.read();
+            self.emit(LabelRetired { label, to, amount, kind: mode }).deliver_to(
+                minter,
+                MessageDelivery.ONCHAIN_CONSTRAINED,
+            );
+        }
+    }
+
+    /// @notice Subtracts `amount` from a SINGLE origin label of `account`, returning change to it
+    /// @dev Like `_drain` but stays on a fixed `label` instead of popping the spend
+    ///      queue: it recurses over note batches of the SAME label until `amount` is covered. Used
+    ///      to fund a commitment from one origin (commitments hold a single label). Reverts if the
+    ///      label cannot cover `amount`.
     /// @param account The address of the account to subtract the balance from
+    /// @param label The single origin label to drain
     /// @param amount The amount of tokens to subtract
     /// @param max_notes The maximum number of notes to process in a single call
     #[internal("private")]
-    fn _subtract_balance(account: AztecAddress, amount: u128, max_notes: u32) {
-        let contract_address = self.context.this_address();
-        // Safety: the label is an unconstrained choice of which sub-balance to spend from. It only
-        // selects a storage slot of the caller's own notes, so an arbitrary value cannot let the
-        // caller spend funds they do not own.
-        let label = unsafe { _pop_spend_label(contract_address, account) };
-
+    fn _subtract_from_label(account: AztecAddress, label: Field, amount: u128, max_notes: u32) {
         let subtracted =
             self.storage.private_balances.at(label).at(account).try_sub(amount, max_notes);
         if subtracted >= amount {
-            // We nullified notes adding up to at least `amount`, so we return the change to the
-            // label it was spent from (preserving provenance of the remaining balance).
+            // Return the change to `account` under the same label (preserving provenance).
             self.storage.private_balances.at(label).at(account).add(subtracted - amount).deliver(
                 MessageDelivery.ONCHAIN_CONSTRAINED,
             );
         } else {
-            // Failing to subtract any amount under this label means there are no more notes to
-            // nullify here and the caller did not queue a further label, so the balance is too low.
+            // No more notes to nullify under this label; the single-label balance is too low.
             assert(subtracted > 0, "Balance too low");
 
-            // try_sub failed to nullify enough notes to reach the target amount, so we compute the
-            // amount remaining and recurse, which pops the next label in the queue.
+            // Recurse on the SAME label (not the next in the queue) to drain its remaining notes.
             let remaining = amount - subtracted;
 
-            self.call_self.recurse_subtract_balance_internal(account, remaining);
+            self.call_self.recurse_subtract_from_label_internal(account, label, remaining);
         }
     }
 
@@ -672,12 +824,17 @@ pub contract Token {
         self.emit(Transfer { from: AztecAddress::zero(), to, amount });
     }
 
-    /// @notice Mints tokens to a private balance and enqueues a public call to increase the total supply
+    /// @notice Mints tokens to a private balance under a fresh, unique origin label
+    /// @dev Derives label = H(seed) from a per-mint random seed and pushes a single-use nullifier
+    ///      on the seed, so the same label can never be minted again (a replayed seed reverts on
+    ///      the duplicate nullifier). Minting is minter-gated by the caller, so every label here
+    ///      originates from the one minter.
     /// @param to The address of the recipient
     /// @param amount The amount of tokens to mint
     #[internal("private")]
     fn _mint_to_private(to: AztecAddress, amount: u128) {
-        self.internal._increase_private_balance(to, amount);
+        // A mint creates a fresh private origin (H(seed) + single-use nullifier) and bumps supply.
+        self.internal._credit_fresh_origin(to, amount);
         self.enqueue_self.increase_total_supply_internal(amount);
     }
 
@@ -697,7 +854,9 @@ pub contract Token {
     /// @param amount The amount of tokens to burn
     #[internal("private")]
     fn _burn_private(from: AztecAddress, amount: u128) {
-        self.internal._decrease_private_balance(from, amount, INITIAL_TRANSFER_CALL_MAX_NOTES);
+        // Drain `from`'s labels and disclose each burned origin to the minter (kind = BURN), so the
+        // issuer learns which origins left the private domain -- symmetric with a de-shield.
+        self.internal._drain(from, amount, INITIAL_TRANSFER_CALL_MAX_NOTES, SINK_BURN, from);
         self.enqueue_self.decrease_total_supply_internal(amount);
     }
 
