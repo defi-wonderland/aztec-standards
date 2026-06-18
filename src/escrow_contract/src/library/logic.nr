@@ -2,7 +2,7 @@
 use aztec::{
     context::PrivateContext,
     event::event_emission::emit_event_in_private,
-    messages::message_delivery::MessageDelivery,
+    messages::delivery::MessageDelivery,
     protocol::{
         address::AztecAddress,
         contract_class_id::ContractClassId,
@@ -41,6 +41,7 @@ pub fn _get_escrow(
         deployer: AztecAddress::from_field(0),
         contract_class_id: ContractClassId::from_field(escrow_class_id),
         initialization_hash: 0,
+        immutables_hash: 0,
         public_keys: computed_public_keys,
     };
 
@@ -64,7 +65,7 @@ pub fn _share_escrow(
 
     emit_event_in_private(context, event_struct).deliver_to(
         account,
-        MessageDelivery.ONCHAIN_CONSTRAINED,
+        MessageDelivery::onchain_constrained(),
     );
 }
 
