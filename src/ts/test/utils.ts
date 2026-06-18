@@ -16,7 +16,7 @@ import {
   getContractInstanceFromInstantiationParams,
 } from '@aztec/aztec.js/contracts';
 import { AuthWitness, SetPublicAuthwitContractInteraction } from '@aztec/aztec.js/authorization';
-import { decodeFromAbi } from '@aztec/aztec.js/abi';
+import { getPublicEvents } from '@aztec/aztec.js/events';
 import { getDefaultInitializer, getInitializer } from '@aztec/stdlib/abi';
 import {
   computeInitializationHash,
@@ -649,31 +649,18 @@ export type TransferEvent = {
 };
 
 /**
- * Queries the node for public logs emitted in a transaction by a specific contract,
- * and decodes them as Transfer events.
+ * Queries the node for public Transfer events emitted in a transaction by a specific contract.
  *
- * @param txHash - The transaction hash to query logs for.
- * @param contractAddress - The contract address to filter logs by.
+ * @param txHash - The transaction hash to query events for.
+ * @param contractAddress - The contract address to filter events by.
  * @returns An array of decoded TransferEvent objects.
  */
 export async function getTransferEvents(txHash: TxHash, contractAddress: AztecAddress): Promise<TransferEvent[]> {
-  const response = await node.getPublicLogs({
-    txHash,
+  const { events } = await getPublicEvents<TransferEvent>(node, TokenContract.events.Transfer, {
     contractAddress,
+    txHash,
   });
-
-  const eventMetadata = TokenContract.events.Transfer;
-  const expectedFieldCount = 3; // from, to, amount
-
-  return response.logs
-    .filter((extLog) => {
-      const eventFields = extLog.log.getEmittedFieldsWithoutTag();
-      return eventFields.length === expectedFieldCount;
-    })
-    .map((extLog) => {
-      const eventFields = extLog.log.getEmittedFieldsWithoutTag();
-      return decodeFromAbi([eventMetadata.abiType], eventFields) as TransferEvent;
-    });
+  return events.map((e) => e.event);
 }
 
 /**
@@ -714,31 +701,18 @@ export type NFTTransferEvent = {
 };
 
 /**
- * Queries the node for public logs emitted in a transaction by a specific NFT contract,
- * and decodes them as Transfer events.
+ * Queries the node for public Transfer events emitted in a transaction by a specific NFT contract.
  *
- * @param txHash - The transaction hash to query logs for.
- * @param contractAddress - The NFT contract address to filter logs by.
+ * @param txHash - The transaction hash to query events for.
+ * @param contractAddress - The NFT contract address to filter events by.
  * @returns An array of decoded NFTTransferEvent objects.
  */
 export async function getNFTTransferEvents(txHash: TxHash, contractAddress: AztecAddress): Promise<NFTTransferEvent[]> {
-  const response = await node.getPublicLogs({
-    txHash,
+  const { events } = await getPublicEvents<NFTTransferEvent>(node, NFTContract.events.Transfer, {
     contractAddress,
+    txHash,
   });
-
-  const eventMetadata = NFTContract.events.Transfer;
-  const expectedFieldCount = 3; // from, to, token_id
-
-  return response.logs
-    .filter((extLog) => {
-      const eventFields = extLog.log.getEmittedFieldsWithoutTag();
-      return eventFields.length === expectedFieldCount;
-    })
-    .map((extLog) => {
-      const eventFields = extLog.log.getEmittedFieldsWithoutTag();
-      return decodeFromAbi([eventMetadata.abiType], eventFields) as NFTTransferEvent;
-    });
+  return events.map((e) => e.event);
 }
 
 /**
