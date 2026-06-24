@@ -1,9 +1,10 @@
 use crate::types::multitoken_note::MultiTokenNote;
 use aztec::{
     context::UtilityContext,
-    note::{HintedNote, note_viewer_options::NoteViewerOptions},
+    note::{HintedNote, note_interface::NoteProperties, note_viewer_options::NoteViewerOptions},
     protocol::constants::MAX_NOTE_HASH_READ_REQUESTS_PER_CALL,
     state_vars::PrivateSet,
+    utils::comparison::Comparator,
 };
 use std::ops::Add;
 
@@ -39,22 +40,25 @@ pub fn preprocess_multitoken_min_sum(
 /// Sums the value of an owner's notes whose token id equals `id`, paging through the note set.
 ///
 /// Recurses across pages, mirroring `balance_set::BalanceSet::balance_of_with_offset`, plus a per-id filter. Because
-/// the set shares one slot across all token ids, we filter on `token_id == id` while summing. This is an off-chain
-/// utility helper with no proving or on-chain cost and no fixed cap; its cost grows with the owner's note count.
+/// the set shares one slot across all token ids, we filter on `token_id == id` at the oracle level via `select`, so we
+/// only page through the notes matching `id` instead of fetching every note and discarding the rest while summing.
+/// This is an off-chain utility helper with no proving or on-chain cost and no fixed cap; its cost grows with the
+/// owner's note count for `id`.
 pub unconstrained fn balance_of_id_with_offset(
     set: PrivateSet<MultiTokenNote, UtilityContext>,
     id: Field,
     offset: u32,
 ) -> u128 {
     let mut options = NoteViewerOptions::new();
-    let notes = set.view_notes(options.set_offset(offset));
+    let notes = set.view_notes(options.set_offset(offset).select(
+        MultiTokenNote::properties().token_id,
+        Comparator.EQ,
+        id,
+    ));
     let mut balance = 0 as u128;
     for i in 0..options.limit {
         if i < notes.len() {
-            let note = notes.get_unchecked(i);
-            if note.token_id == id {
-                balance += note.value;
-            }
+            balance += notes.get_unchecked(i).value;
         }
     }
     if notes.len() == options.limit {
