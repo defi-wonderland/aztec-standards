@@ -1,13 +1,10 @@
 use crate::test::utils as logic_utils;
 use crate::TestLogic;
+use aztec::test::helpers::test_environment::CallPrivateOptions;
 use escrow_contract::test::utils as escrow_utils;
 use token::{test::utils as token_utils, Token};
 
-// TODO (reenable test): TXE scope enforcement means only the `from` address's notes are accessible during
-// private execution. The escrow's token notes are not in scope when called from the logic contract.
-// The TS tests handle this via `additionalScopes: [escrow.address]`, but TXE doesn't support it yet.
-// See: https://github.com/AztecProtocol/aztec-packages/blob/v4.2.0-aztecnr-rc.2/noir-projects/aztec-nr/aztec/src/test/helpers/test_environment.nr#L953-L954
-#[allow(dead_code)]
+#[test]
 unconstrained fn withdraw_success() {
     let (mut env, token, _owner, recipient, minter) = token_utils::setup_with_minter(false);
 
@@ -23,7 +20,11 @@ unconstrained fn withdraw_success() {
     token_utils::check_private_balance(env, token, escrow, amount);
 
     let caller = env.create_light_account();
-    env.call_private(caller, TestLogic::at(logic).withdraw(escrow, recipient, token, amount));
+    env.call_private_opts(
+        caller,
+        CallPrivateOptions::new().with_additional_scopes([escrow]),
+        TestLogic::at(logic).withdraw(escrow, recipient, token, amount),
+    );
 
     // Check recipient got tokens
     token_utils::check_private_balance(env, token, recipient, amount);
