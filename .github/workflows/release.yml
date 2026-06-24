@@ -1,6 +1,12 @@
 name: Production Release
 
 on:
+  workflow_call:
+    inputs:
+      version:
+        description: 'Version from package.json (e.g., 1.0.0 or 1.0.0-beta.1). Do NOT include the "v" prefix.'
+        required: false
+        type: string
   workflow_dispatch:
     inputs:
       version:
@@ -14,16 +20,17 @@ concurrency:
 
 jobs:
   # ══════════════════════════════════════════════════════════════════════════════
-  # PRODUCTION RELEASE JOB
+  # RELEASE JOB
   # ══════════════════════════════════════════════════════════════════════════════
   release:
     name: Release
-    environment: Production
+    environment: Publisher
     runs-on: ubuntu-latest-m
     timeout-minutes: 60
-    if: github.ref == 'refs/heads/main'
+    if: github.event_name == 'workflow_call' || github.event_name == 'workflow_dispatch' || (github.event_name == 'release' && github.event.release.draft == false)
     permissions:
       contents: write  # Required to create and push tags
+      id-token: write  # Required for npm OIDC trusted publishing
 
     env:
       PROJECT_NAME: '@defi-wonderland/aztec-standards'
@@ -44,11 +51,16 @@ jobs:
       # TODO: Automate changing package.json version from the workflow input
       #       (e.g., open a PR or push a signed commit) so manual edits are not required.
       - name: Validate input version matches package.json
+        if: github.ref == 'refs/heads/main'
         run: |
-          INPUT_VERSION="${{ github.event.inputs.version }}"
+          INPUT_VERSION="${{ inputs.version || github.event.inputs.version }}"
           PKG_VERSION=$(node -p "require('./package.json').version")
           echo "Input version: $INPUT_VERSION"
           echo "package.json version: $PKG_VERSION"
+          if [ -z "$INPUT_VERSION" ]; then
+            echo "::error::Input version is required for stable releases from main. Re-run with the matching version (no 'v' prefix)."
+            exit 1
+          fi
           if [ "$INPUT_VERSION" != "$PKG_VERSION" ]; then
             echo "::error::Input version ($INPUT_VERSION) does not match package.json version ($PKG_VERSION). Update package.json or re-run with the matching version (no 'v' prefix)."
             exit 1
@@ -63,12 +75,26 @@ jobs:
           node-version: '22'
           registry-url: 'https://registry.npmjs.org'
 
-      - name: Publish to NPM
-        run: cd export/${{ env.PROJECT_NAME }} && npm publish --access public --tag latest
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      - name: Update npm (for OIDC support)
+        run: npm install -g npm@11.16.0
+
+      - name: Update version (dev branch)
+        if: github.ref == 'refs/heads/dev'
+        run: npm version --new-version "0.0.0-snapshot.${GITHUB_SHA::8}" --no-git-tag-version
+        working-directory: export/${{ env.PROJECT_NAME }}
+
+      - name: Publish snapshot (dev branch)
+        if: github.ref == 'refs/heads/dev'
+        run: npm publish --access public --tag snapshot
+        working-directory: export/${{ env.PROJECT_NAME }}
+
+      - name: Publish stable (main branch or release)
+        if: github.ref == 'refs/heads/main' || (startsWith(github.ref, 'refs/tags/release-') && github.event.release.target_commitish == 'main')
+        run: npm publish --access public
+        working-directory: export/${{ env.PROJECT_NAME }}
 
       - name: Create GitHub Release Tag (adds 'v' prefix to input)
+        if: github.ref == 'refs/heads/main' && github.event_name == 'workflow_dispatch'
         run: |
           TAG_NAME="v${{ github.event.inputs.version }}"
           # Check if tag already exists
