@@ -11,7 +11,6 @@ pub contract MultiToken {
             functions::{authorize_once, external, initializer, internal, only_self, view},
             storage::storage,
         },
-        messages::message_delivery::MessageDelivery,
         note::{note_getter_options::{NoteGetterOptions, SortOrder}, note_interface::NoteProperties},
         protocol::{address::AztecAddress, traits::{FromField, ToField}},
         state_vars::{Map, Owned, PrivateSet, PublicImmutable, PublicMutable, StateVariable},
@@ -23,7 +22,7 @@ pub contract MultiToken {
     use multitoken_authorization_contract::MultiTokenAuthorizationContract;
     // multitoken note structs + per-id balance library (min-sum preprocessor + private balance paging)
     use crate::types::{
-        balance::{balance_of_id_with_offset, preprocess_multitoken_min_sum},
+        balance::{add_to_id_balance, balance_of_id_with_offset, preprocess_multitoken_min_sum},
         multitoken_note::{MultiTokenNote, PartialMultiTokenNote},
     };
 
@@ -522,10 +521,7 @@ pub contract MultiToken {
     /// @param amount The amount of tokens to increase the balance by
     #[internal("private")]
     fn _increase_private_balance(to: AztecAddress, id: Field, amount: u128) {
-        let note = MultiTokenNote { token_id: id, value: amount };
-        self.storage.private_balances.at(to).insert(note).deliver(
-            MessageDelivery.ONCHAIN_CONSTRAINED,
-        );
+        add_to_id_balance(self.storage.private_balances.at(to), id, amount);
     }
 
     /// @notice Subtracts `amount` of `id` from a private balance, recursing across frames if necessary

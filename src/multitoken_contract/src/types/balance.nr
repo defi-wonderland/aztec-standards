@@ -1,6 +1,7 @@
 use crate::types::multitoken_note::MultiTokenNote;
 use aztec::{
-    context::UtilityContext,
+    context::{PrivateContext, UtilityContext},
+    messages::message_delivery::MessageDelivery,
     note::{HintedNote, note_interface::NoteProperties, note_viewer_options::NoteViewerOptions},
     protocol::constants::MAX_NOTE_HASH_READ_REQUESTS_PER_CALL,
     state_vars::PrivateSet,
@@ -35,6 +36,22 @@ pub fn preprocess_multitoken_min_sum(
         }
     }
     selected
+}
+
+/// Credits `amount` of `id` to the owner of `set` by inserting a `MultiTokenNote` and delivering it on-chain.
+///
+/// Mirrors `balance_set::BalanceSet::add`: a zero `amount` yields no note. A zero-value note is valid and would
+/// otherwise be inserted and delivered like any other one - costing a note hash plus an on-chain private log (DA gas)
+/// under ONCHAIN_CONSTRAINED delivery - without ever changing the owner's balance.
+pub fn add_to_id_balance(
+    set: PrivateSet<MultiTokenNote, &mut PrivateContext>,
+    id: Field,
+    amount: u128,
+) {
+    if amount != 0 {
+        let note = MultiTokenNote { token_id: id, value: amount };
+        set.insert(note).deliver(MessageDelivery.ONCHAIN_CONSTRAINED);
+    }
 }
 
 /// Sums the value of an owner's notes whose token id equals `id`, paging through the note set.
