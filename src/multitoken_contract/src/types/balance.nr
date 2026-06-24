@@ -2,7 +2,12 @@ use crate::types::multitoken_note::MultiTokenNote;
 use aztec::{
     context::{PrivateContext, UtilityContext},
     messages::message_delivery::MessageDelivery,
-    note::{HintedNote, note_interface::NoteProperties, note_viewer_options::NoteViewerOptions},
+    note::{
+        HintedNote,
+        note_getter_options::{NoteGetterOptions, SortOrder},
+        note_interface::NoteProperties,
+        note_viewer_options::NoteViewerOptions,
+    },
     protocol::constants::MAX_NOTE_HASH_READ_REQUESTS_PER_CALL,
     state_vars::PrivateSet,
     utils::comparison::Comparator,
@@ -52,6 +57,33 @@ pub fn add_to_id_balance(
         let note = MultiTokenNote { token_id: id, value: amount };
         set.insert(note).deliver(MessageDelivery.ONCHAIN_CONSTRAINED);
     }
+}
+
+/// Pops up to `max_notes` notes of `id` from `set` in one frame, returning the total value nullified. This is the
+/// `MultiTokenNote` analogue of `balance_set::BalanceSet::try_sub`, plus a per-id `select`.
+///
+/// The `select` is CONSTRAINED (pop_notes proves each returned note matches), so every nullified note has
+/// `token_id == id`; the min-sum preprocessor stops once `amount` is covered. The select is applied at the DB level
+/// BEFORE the `set_limit` cap, so only id-matching notes are ever nullified (per-id isolation).
+pub fn try_sub(
+    set: PrivateSet<MultiTokenNote, &mut PrivateContext>,
+    id: Field,
+    amount: u128,
+    max_notes: u32,
+) -> u128 {
+    let options = NoteGetterOptions::with_preprocessor(preprocess_multitoken_min_sum, amount)
+        .select(MultiTokenNote::properties().token_id, Comparator.EQ, id)
+        .sort(MultiTokenNote::properties().value, SortOrder.DESC)
+        .set_limit(max_notes);
+    let notes = set.pop_notes(options);
+
+    let mut nullified = 0 as u128;
+    for i in 0..options.limit {
+        if i < notes.len() {
+            nullified += notes.get_unchecked(i).value;
+        }
+    }
+    nullified
 }
 
 /// Sums the value of an owner's notes whose token id equals `id`, paging through the note set.

@@ -11,10 +11,8 @@ pub contract MultiToken {
             functions::{authorize_once, external, initializer, internal, only_self, view},
             storage::storage,
         },
-        note::{note_getter_options::{NoteGetterOptions, SortOrder}, note_interface::NoteProperties},
         protocol::{address::AztecAddress, traits::{FromField, ToField}},
         state_vars::{Map, Owned, PrivateSet, PublicImmutable, PublicMutable, StateVariable},
-        utils::comparison::Comparator,
     };
     // compression library
     use compressed_string::FieldCompressedString;
@@ -22,7 +20,7 @@ pub contract MultiToken {
     use multitoken_authorization_contract::MultiTokenAuthorizationContract;
     // multitoken note structs + per-id balance library (min-sum preprocessor + private balance paging)
     use crate::types::{
-        balance::{add_to_id_balance, balance_of_id_with_offset, preprocess_multitoken_min_sum},
+        balance::{add_to_id_balance, balance_of_id_with_offset, try_sub},
         multitoken_note::{MultiTokenNote, PartialMultiTokenNote},
     };
 
@@ -534,7 +532,12 @@ pub contract MultiToken {
     /// @return The change to return to the owner
     #[internal("private")]
     fn _subtract_balance(account: AztecAddress, id: Field, amount: u128, max_notes: u32) -> u128 {
-        let subtracted = self.internal._try_subtract_id(account, id, amount, max_notes);
+        let subtracted = try_sub(
+            self.storage.private_balances.at(account),
+            id,
+            amount,
+            max_notes,
+        );
         if subtracted >= amount {
             // We have achieved our goal of nullifying notes that add up to more than amount, so we return the change.
             subtracted - amount
@@ -548,32 +551,6 @@ pub contract MultiToken {
 
             self.call_self.recurse_subtract_balance_internal(account, id, remaining)
         }
-    }
-
-    /// @notice Pops up to `max_notes` notes of `id` from `account` in ONE frame; returns the total value nullified
-    /// @dev The `select` is CONSTRAINED (pop_notes proves each returned note matches), so every nullified note has
-    ///      token_id == id; the min-sum preprocessor stops once `amount` is covered. The select is applied at the DB
-    ///      level BEFORE the `set_limit` cap, so only id-matching notes are ever nullified (per-id isolation).
-    /// @param account The address of the account to subtract the balance from
-    /// @param id The token id to subtract
-    /// @param amount The target amount of tokens to nullify
-    /// @param max_notes The maximum number of notes to process in a single call
-    /// @return The total value of the notes nullified in this frame
-    #[internal("private")]
-    fn _try_subtract_id(account: AztecAddress, id: Field, amount: u128, max_notes: u32) -> u128 {
-        let options = NoteGetterOptions::with_preprocessor(preprocess_multitoken_min_sum, amount)
-            .select(MultiTokenNote::properties().token_id, Comparator.EQ, id)
-            .sort(MultiTokenNote::properties().value, SortOrder.DESC)
-            .set_limit(max_notes);
-        let notes = self.storage.private_balances.at(account).pop_notes(options);
-
-        let mut nullified = 0 as u128;
-        for i in 0..options.limit {
-            if i < notes.len() {
-                nullified += notes.get_unchecked(i).value;
-            }
-        }
-        nullified
     }
 
     /// @notice Increases the public balance of `owner` for `id` by `amount`
