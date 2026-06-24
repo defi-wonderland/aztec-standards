@@ -3,8 +3,8 @@ use aztec::{
     keys::getters::{get_nhk_app, get_public_keys, try_get_public_keys},
     macros::notes::custom_note,
     messages::{
+        delivery::{do_private_message_delivery, MessageDelivery},
         logs::partial_note::encode_partial_note_private_message,
-        message_delivery::{do_private_message_delivery, MessageDelivery},
     },
     note::{note_interface::{NoteHash, NoteType}, utils::compute_note_nullifier},
     oracle::random::random,
@@ -66,8 +66,7 @@ impl NoteHash for NFTNote {
         owner: AztecAddress,
         note_hash_for_nullification: Field,
     ) -> Field {
-        let owner_npk_m = get_public_keys(owner).npk_m;
-        let owner_npk_m_hash = owner_npk_m.hash();
+        let owner_npk_m_hash = get_public_keys(owner).npk_m_hash;
         let secret = context.request_nhk_app(owner_npk_m_hash);
         compute_note_nullifier(note_hash_for_nullification, [secret])
     }
@@ -78,8 +77,7 @@ impl NoteHash for NFTNote {
         note_hash_for_nullification: Field,
     ) -> Option<Field> {
         try_get_public_keys(owner).map(|public_keys| {
-            let owner_npk_m = public_keys.npk_m;
-            let owner_npk_m_hash = owner_npk_m.hash();
+            let owner_npk_m_hash = public_keys.npk_m_hash;
             let secret = get_nhk_app(owner_npk_m_hash);
             compute_note_nullifier(note_hash_for_nullification, [secret])
         })
@@ -135,7 +133,7 @@ impl NFTNote {
             },
             Option::none(),
             recipient,
-            MessageDelivery.ONCHAIN_UNCONSTRAINED,
+            MessageDelivery::onchain_unconstrained(),
         );
 
         let partial_note = PartialNFTNote { commitment };
@@ -144,7 +142,7 @@ impl NFTNote {
         // the nullifier tree since it uses its own separator, making collisions with actual note nullifiers
         // practically impossible.
         let validity_commitment = partial_note.compute_validity_commitment(completer);
-        context.push_nullifier(validity_commitment);
+        context.push_nullifier_unsafe(validity_commitment);
 
         partial_note
     }

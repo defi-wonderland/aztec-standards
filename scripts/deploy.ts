@@ -408,7 +408,7 @@ export async function deployContracts(options: CLIOptions, config: DeploymentCon
   const node = createAztecNodeClient(nodeUrl);
   const isLocalNetwork = config.network.name === 'local-network';
   const wallet = await EmbeddedWallet.create(nodeUrl, {
-    pxeConfig: {
+    pxe: {
       proverEnabled: !isLocalNetwork,
       dataDirectory: config.deployer.dataDirectory,
       dataStoreMapSizeKb: 1e6,

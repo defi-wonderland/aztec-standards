@@ -172,6 +172,7 @@ pub contract VaultDeployer {
             deployer,
             contract_class_id,
             initialization_hash,
+            immutables_hash: 0,
             public_keys: PublicKeys::default(),
         }
             .to_address()
