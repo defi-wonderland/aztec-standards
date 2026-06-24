@@ -538,17 +538,17 @@ pub contract MultiToken {
     /// @return The change to return to the owner
     #[internal("private")]
     fn _subtract_balance(account: AztecAddress, id: Field, amount: u128, max_notes: u32) -> u128 {
-        let nullified = self.internal._try_subtract_id(account, id, amount, max_notes);
-        if nullified >= amount {
+        let subtracted = self.internal._try_subtract_id(account, id, amount, max_notes);
+        if subtracted >= amount {
             // We have achieved our goal of nullifying notes that add up to more than amount, so we return the change.
-            nullified - amount
+            subtracted - amount
         } else {
             // Failing to subtract any amount means that the owner was unable to produce more notes of this id that
             // could be nullified.
-            assert(nullified > 0, "Balance too low");
+            assert(subtracted > 0, "Balance too low");
 
             // We covered part of `amount`; fetch the remainder in a fresh frame (fresh note budget).
-            let remaining = amount - nullified;
+            let remaining = amount - subtracted;
 
             self.call_self.recurse_subtract_balance_internal(account, id, remaining)
         }
