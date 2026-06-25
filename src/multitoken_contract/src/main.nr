@@ -12,15 +12,15 @@ pub contract MultiToken {
             storage::storage,
         },
         protocol::{address::AztecAddress, traits::{FromField, ToField}},
-        state_vars::{Map, Owned, PrivateSet, PublicImmutable, PublicMutable, StateVariable},
+        state_vars::{Map, Owned, PublicImmutable, PublicMutable, StateVariable},
     };
     // compression library
     use compressed_string::FieldCompressedString;
     // authorization hook contract (id-bearing ARC-403 interface)
     use multitoken_authorization_contract::MultiTokenAuthorizationContract;
-    // multitoken note structs + per-id balance library (min-sum preprocessor + private balance paging)
+    // multitoken note structs + per-id balance set (owner-scoped wrapper over PrivateSet<MultiTokenNote>)
     use crate::types::{
-        balance::{add_to_id_balance, balance_of_id_with_offset, try_sub},
+        balance::MultiBalanceSet,
         multitoken_note::{MultiTokenNote, PartialMultiTokenNote},
     };
 
@@ -56,8 +56,9 @@ pub contract MultiToken {
         name: PublicImmutable<FieldCompressedString, Context>,
         symbol: PublicImmutable<FieldCompressedString, Context>,
         // PRIVATE: a single note set; `Owned` threads the owner into each note and keeps ONE base slot. Each note
-        // self-describes its token id; per-owner scoping is `private_balances.at(owner)`.
-        private_balances: Owned<PrivateSet<MultiTokenNote, Context>, Context>,
+        // self-describes its token id; per-owner scoping is `private_balances.at(owner)`, which yields a
+        // `MultiBalanceSet` whose ops are scoped to a token id via `select(token_id == id)`.
+        private_balances: Owned<MultiBalanceSet<Context>, Context>,
         // PUBLIC: id -> owner -> balance. Keyed by id by necessity (public == id is visible).
         public_balances: Map<Field, Map<AztecAddress, PublicMutable<u128, Context>, Context>, Context>,
         minter: PublicImmutable<AztecAddress, Context>,
@@ -353,7 +354,7 @@ pub contract MultiToken {
     /// @return The private balance of `owner` for `id`
     #[external("utility")]
     unconstrained fn balance_of_private(owner: AztecAddress, id: Field) -> u128 {
-        balance_of_id_with_offset(self.storage.private_balances.at(owner), id, 0)
+        self.storage.private_balances.at(owner).balance_of(id)
     }
 
     /** ==========================================================
@@ -519,7 +520,7 @@ pub contract MultiToken {
     /// @param amount The amount of tokens to increase the balance by
     #[internal("private")]
     fn _increase_private_balance(to: AztecAddress, id: Field, amount: u128) {
-        add_to_id_balance(self.storage.private_balances.at(to), id, amount);
+        self.storage.private_balances.at(to).add(id, amount);
     }
 
     /// @notice Subtracts `amount` of `id` from a private balance, recursing across frames if necessary
@@ -532,12 +533,7 @@ pub contract MultiToken {
     /// @return The change to return to the owner
     #[internal("private")]
     fn _subtract_balance(account: AztecAddress, id: Field, amount: u128, max_notes: u32) -> u128 {
-        let subtracted = try_sub(
-            self.storage.private_balances.at(account),
-            id,
-            amount,
-            max_notes,
-        );
+        let subtracted = self.storage.private_balances.at(account).try_sub(id, amount, max_notes);
         if subtracted >= amount {
             // We have achieved our goal of nullifying notes that add up to more than amount, so we return the change.
             subtracted - amount
