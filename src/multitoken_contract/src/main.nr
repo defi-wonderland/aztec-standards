@@ -506,12 +506,9 @@ pub contract MultiToken {
     /// @param max_notes The maximum number of notes to process in a single call
     #[internal("private")]
     fn _decrease_private_balance(account: AztecAddress, id: Field, amount: u128, max_notes: u32) {
-        // Subtracts `amount` of `id` from the private balance of `account`, returning any change to re-credit.
+        // Subtract `amount` of `id`, then re-credit any change as a same-id note.
         let change = self.internal._subtract_balance(account, id, amount, max_notes);
-        if change > 0 {
-            // Re-credit the change as a same-id note to `account`.
-            self.internal._increase_private_balance(account, id, change);
-        }
+        self.internal._increase_private_balance(account, id, change);
     }
 
     /// @notice Increases the private balance of `to` for `id` by `amount`
@@ -565,9 +562,8 @@ pub contract MultiToken {
     /// @param amount The amount of tokens to decrease the balance by
     #[internal("public")]
     fn _decrease_public_balance(owner: AztecAddress, id: Field, amount: u128) {
-        let current = self.storage.public_balances.at(id).at(owner).read();
-        assert(current >= amount, "Balance too low");
-        self.storage.public_balances.at(id).at(owner).write(current - amount);
+        let new_balance = self.storage.public_balances.at(id).at(owner).read() - amount;
+        self.storage.public_balances.at(id).at(owner).write(new_balance);
     }
 
     /// @notice Completes a partial note, crediting `amount` of `id` to the commitment
