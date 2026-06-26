@@ -6,6 +6,8 @@ members = [
 "src/vault_deployer",
 "src/dripper",
 "src/nft_contract",
+"src/multitoken_contract",
+"src/multitoken_contract/src/test/multitoken_authorization_contract",
 "src/escrow_contract",
 "src/escrow_contract/src/test/test_logic_contract",
 "src/generic_proxy",
