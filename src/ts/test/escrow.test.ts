@@ -1,4 +1,3 @@
-import { TxStatus } from '@aztec/aztec.js/tx';
 import { deriveKeys } from '@aztec/stdlib/keys';
 import { PublicKeys } from '@aztec/aztec.js/keys';
 import { type AztecNode } from '@aztec/aztec.js/node';
@@ -6,7 +5,7 @@ import { AztecAddress } from '@aztec/aztec.js/addresses';
 import { type EmbeddedWallet } from '@aztec/wallets/embedded';
 import { BlockNumber } from '@aztec/foundation/branded-types';
 import { ContractDeployer } from '@aztec/aztec.js/deployment';
-import { Fr, Point } from '@aztec/aztec.js/fields';
+import { Fr } from '@aztec/aztec.js/fields';
 import { PublicKey } from '@aztec/stdlib/keys';
 import {
   getContractInstanceFromInstantiationParams,
@@ -48,8 +47,10 @@ type NoirWrappedPoint = {
   };
 };
 
-const noirWrappedPointToPoint = (wrapped: NoirWrappedPoint) =>
-  new Point(new Fr(wrapped.inner.x), new Fr(wrapped.inner.y), !!wrapped.inner.is_infinite);
+// `PublicKey` is a Grumpkin curve point; its constructor derives `isInfinite` from `x`/`y`,
+// so the Noir `is_infinite` flag carries no extra information for a valid (non-infinity) key.
+const noirWrappedPointToPublicKey = (wrapped: NoirWrappedPoint): PublicKey =>
+  new PublicKey(new Fr(wrapped.inner.x), new Fr(wrapped.inner.y));
 
 // Builds a JS `PublicKeys` from the new v5 PublicKeys layout returned by the Noir circuit:
 // `{ npk_m_hash, ivpk_m: { inner: { x, y, is_infinite } }, ovpk_m_hash, tpk_m_hash, mspk_m_hash, fbpk_m_hash }`.
@@ -63,7 +64,7 @@ const noirPublicKeysToPublicKeys = (publicKeys: {
 }): PublicKeys =>
   new PublicKeys(
     new Fr(publicKeys.npk_m_hash),
-    noirWrappedPointToPoint(publicKeys.ivpk_m) as unknown as PublicKey,
+    noirWrappedPointToPublicKey(publicKeys.ivpk_m),
     new Fr(publicKeys.ovpk_m_hash),
     new Fr(publicKeys.tpk_m_hash),
     new Fr(publicKeys.mspk_m_hash),
