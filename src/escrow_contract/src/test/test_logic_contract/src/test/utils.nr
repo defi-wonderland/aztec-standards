@@ -3,8 +3,9 @@ use aztec::{
     event::{event_interface::EventInterface, EventSelector},
     protocol::{
         address::AztecAddress,
-        point::Point,
-        public_keys::{IvpkM, NpkM, OvpkM, PublicKeys, TpkM},
+        constants::{DEFAULT_FBPK_M_HASH, DEFAULT_MSPK_M_HASH},
+        point::EmbeddedCurvePoint,
+        public_keys::{IvpkM, PublicKeys},
         traits::Serialize,
     },
     test::helpers::test_environment::TestEnvironment,
@@ -56,10 +57,18 @@ pub unconstrained fn get_test_vector() -> (PublicKeys, Field, PublicKeys, Field)
     let tpk_y_1: Field = 0x1ef6fce001c800647bb2b7137517181306c713f671c0e65339dd11d57c863ee8;
 
     let public_keys_1 = PublicKeys {
-        npk_m: NpkM { inner: Point { x: npk_x_1, y: npk_y_1, is_infinite: false } },
-        ivpk_m: IvpkM { inner: Point { x: ivpk_x_1, y: ivpk_y_1, is_infinite: false } },
-        ovpk_m: OvpkM { inner: Point { x: ovpk_x_1, y: ovpk_y_1, is_infinite: false } },
-        tpk_m: TpkM { inner: Point { x: tpk_x_1, y: tpk_y_1, is_infinite: false } },
+        npk_m_hash: aztec::protocol::public_keys::hash_public_key(
+            EmbeddedCurvePoint { x: npk_x_1, y: npk_y_1 },
+        ),
+        ivpk_m: IvpkM { inner: EmbeddedCurvePoint { x: ivpk_x_1, y: ivpk_y_1 } },
+        ovpk_m_hash: aztec::protocol::public_keys::hash_public_key(
+            EmbeddedCurvePoint { x: ovpk_x_1, y: ovpk_y_1 },
+        ),
+        tpk_m_hash: aztec::protocol::public_keys::hash_public_key(
+            EmbeddedCurvePoint { x: tpk_x_1, y: tpk_y_1 },
+        ),
+        mspk_m_hash: DEFAULT_MSPK_M_HASH,
+        fbpk_m_hash: DEFAULT_FBPK_M_HASH,
     };
 
     // Secret key 2: string "RANDOM_SECRET_KEY" left-padded to 32 bytes with spaces
@@ -76,10 +85,18 @@ pub unconstrained fn get_test_vector() -> (PublicKeys, Field, PublicKeys, Field)
     let tpk_y_2: Field = 0x0cc1c1631501a99ed1797f4d701df03c9663989fee1fb311266459b47f523e07;
 
     let public_keys_2 = PublicKeys {
-        npk_m: NpkM { inner: Point { x: npk_x_2, y: npk_y_2, is_infinite: false } },
-        ivpk_m: IvpkM { inner: Point { x: ivpk_x_2, y: ivpk_y_2, is_infinite: false } },
-        ovpk_m: OvpkM { inner: Point { x: ovpk_x_2, y: ovpk_y_2, is_infinite: false } },
-        tpk_m: TpkM { inner: Point { x: tpk_x_2, y: tpk_y_2, is_infinite: false } },
+        npk_m_hash: aztec::protocol::public_keys::hash_public_key(
+            EmbeddedCurvePoint { x: npk_x_2, y: npk_y_2 },
+        ),
+        ivpk_m: IvpkM { inner: EmbeddedCurvePoint { x: ivpk_x_2, y: ivpk_y_2 } },
+        ovpk_m_hash: aztec::protocol::public_keys::hash_public_key(
+            EmbeddedCurvePoint { x: ovpk_x_2, y: ovpk_y_2 },
+        ),
+        tpk_m_hash: aztec::protocol::public_keys::hash_public_key(
+            EmbeddedCurvePoint { x: tpk_x_2, y: tpk_y_2 },
+        ),
+        mspk_m_hash: DEFAULT_MSPK_M_HASH,
+        fbpk_m_hash: DEFAULT_FBPK_M_HASH,
     };
 
     (public_keys_1, secret_key_1, public_keys_2, secret_key_2)

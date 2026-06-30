@@ -12,7 +12,7 @@ pub contract NFT {
             functions::{authorize_once, external, initializer, internal, only_self, view},
             storage::storage,
         },
-        messages::message_delivery::MessageDelivery,
+        messages::delivery::MessageDelivery,
         note::{
             constants::MAX_NOTES_PER_PAGE, note_getter_options::NoteGetterOptions,
             note_interface::NoteProperties, note_viewer_options::NoteViewerOptions,
@@ -360,7 +360,7 @@ pub contract NFT {
 
         self.enqueue_self.mint_to_private_internal(token_id);
         self.storage.private_nfts.at(to).insert(NFTNote { token_id }).deliver(
-            MessageDelivery.ONCHAIN_CONSTRAINED,
+            MessageDelivery::onchain_constrained(),
         );
     }
 
@@ -454,7 +454,7 @@ pub contract NFT {
     fn _update_private_token_owner(to: AztecAddress, token_id: Field) {
         let new_note = NFTNote { token_id };
         self.storage.private_nfts.at(to).insert(new_note).deliver(
-            MessageDelivery.ONCHAIN_CONSTRAINED,
+            MessageDelivery::onchain_constrained(),
         );
     }
 
