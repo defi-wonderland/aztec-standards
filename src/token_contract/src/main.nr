@@ -128,7 +128,7 @@ pub contract Token {
         amount: u128,
         _nonce: Field,
     ) {
-        self.internal._call_auth_private(from, amount, self.context.selector().to_field());
+        self.internal._call_auth_private(from, amount);
 
         self.internal._decrease_private_balance(from, amount, INITIAL_TRANSFER_CALL_MAX_NOTES);
 
@@ -151,7 +151,7 @@ pub contract Token {
         amount: u128,
         _nonce: Field,
     ) -> Field {
-        self.internal._call_auth_private(from, amount, self.context.selector().to_field());
+        self.internal._call_auth_private(from, amount);
 
         self.internal._decrease_private_balance(from, amount, INITIAL_TRANSFER_CALL_MAX_NOTES);
 
@@ -177,7 +177,7 @@ pub contract Token {
         amount: u128,
         _nonce: Field,
     ) {
-        self.internal._call_auth_private(from, amount, self.context.selector().to_field());
+        self.internal._call_auth_private(from, amount);
 
         self.internal._decrease_private_balance(from, amount, INITIAL_TRANSFER_CALL_MAX_NOTES);
 
@@ -199,7 +199,7 @@ pub contract Token {
         amount: u128,
         _nonce: Field,
     ) {
-        self.internal._call_auth_private(from, amount, self.context.selector().to_field());
+        self.internal._call_auth_private(from, amount);
 
         self.internal._decrease_private_balance(from, amount, INITIAL_TRANSFER_CALL_MAX_NOTES);
 
@@ -226,7 +226,7 @@ pub contract Token {
         amount: u128,
         _nonce: Field,
     ) {
-        self.internal._call_auth_private(from, amount, self.context.selector().to_field());
+        self.internal._call_auth_private(from, amount);
 
         self.enqueue_self.decrease_public_balance_internal(from, amount);
 
@@ -273,7 +273,7 @@ pub contract Token {
         amount: u128,
         _nonce: Field,
     ) {
-        self.internal._call_auth_public(from, amount, self.context.selector().to_field());
+        self.internal._call_auth_public(from, amount);
 
         self.internal._decrease_public_balance(from, amount);
         self.internal._increase_public_balance(to, amount);
@@ -297,7 +297,7 @@ pub contract Token {
         amount: u128,
         _nonce: Field,
     ) {
-        self.internal._call_auth_public(from, amount, self.context.selector().to_field());
+        self.internal._call_auth_public(from, amount);
 
         self.internal._decrease_public_balance(from, amount);
 
@@ -464,7 +464,7 @@ pub contract Token {
     #[authorize_once("from", "_nonce")]
     #[external("private")]
     fn burn_private(from: AztecAddress, amount: u128, _nonce: Field) {
-        self.internal._call_auth_private(from, amount, self.context.selector().to_field());
+        self.internal._call_auth_private(from, amount);
 
         self.internal._burn_private(from, amount);
     }
@@ -477,7 +477,7 @@ pub contract Token {
     #[authorize_once("from", "_nonce")]
     #[external("public")]
     fn burn_public(from: AztecAddress, amount: u128, _nonce: Field) {
-        self.internal._call_auth_public(from, amount, self.context.selector().to_field());
+        self.internal._call_auth_public(from, amount);
 
         self.internal._burn_public(from, amount);
     }
@@ -500,11 +500,11 @@ pub contract Token {
     /// @dev Invoked from external public functions; no-ops when auth_contract is zero
     /// @param from The address tokens are moved from (zero address for mints)
     /// @param amount The amount of tokens being moved
-    /// @param selector The selector passed is the calling function's own selector
     #[internal("public")]
-    fn _call_auth_public(from: AztecAddress, amount: u128, selector: Field) {
+    fn _call_auth_public(from: AztecAddress, amount: u128) {
         let auth = self.storage.auth_contract.read();
         if !auth.eq(AztecAddress::zero()) {
+            let selector = self.context.selector().to_field();
             self.call(AuthorizationContract::at(auth).authorize_public(from, amount, selector));
         }
     }
@@ -515,11 +515,11 @@ pub contract Token {
     ///      side effects (e.g., via enqueued public calls or public events).
     /// @param from The address tokens are moved from (zero address for mints)
     /// @param amount The amount of tokens being moved
-    /// @param selector The selector passed is the calling function's own selector
     #[internal("private")]
-    fn _call_auth_private(from: AztecAddress, amount: u128, selector: Field) {
+    fn _call_auth_private(from: AztecAddress, amount: u128) {
         let auth = self.storage.auth_contract.read();
         if !auth.eq(AztecAddress::zero()) {
+            let selector = self.context.selector().to_field();
             self.call(AuthorizationContract::at(auth).authorize_private(from, amount, selector));
         }
     }

@@ -1,12 +1,9 @@
 use crate::Escrow;
 use crate::test::utils as escrow_utils;
+use aztec::test::helpers::test_environment::CallPrivateOptions;
 use nft::{NFT, test::utils as nft_utils};
 
-// TODO (reenable test): TXE scope enforcement means only the `from` address's notes are accessible during
-// private execution. The escrow's NFT notes are not in scope when called from logic_contract_address.
-// The TS tests handle this via `additionalScopes: [escrow.address]`, but TXE doesn't support it yet.
-// See: https://github.com/AztecProtocol/aztec-packages/blob/v4.2.0-aztecnr-rc.2/noir-projects/aztec-nr/aztec/src/test/helpers/test_environment.nr#L953-L954
-#[allow(dead_code)]
+#[test]
 unconstrained fn escrow_withdraw_nft_success() {
     let escrow_secret: Field = 123456;
     let (mut env, escrow_contract_address, _, nft_contract_address, _, recipient, minter, logic_contract_address) =
@@ -27,8 +24,9 @@ unconstrained fn escrow_withdraw_nft_success() {
         token_id,
     );
 
-    env.call_private(
+    env.call_private_opts(
         logic_contract_address,
+        CallPrivateOptions::new().with_additional_scopes([escrow_contract_address]),
         Escrow::at(escrow_contract_address).withdraw_nft(nft_contract_address, token_id, recipient),
     );
 
