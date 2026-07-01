@@ -636,7 +636,8 @@ export async function deriveContractAddressWithConstructor(
  * Must match the PRIVATE_ADDRESS_MAGIC_VALUE in the Noir contract:
  * sha224sum 'PRIVATE_ADDRESS'
  */
-export const PRIVATE_ADDRESS = AztecAddress.fromBigInt(0x1ea7e01501975545617c2e694d931cb576b691a4a867fed81ebd3264n);
+export const PRIVATE_ADDRESS =
+  AztecAddress.fromBigIntUnsafe(0x1ea7e01501975545617c2e694d931cb576b691a4a867fed81ebd3264n);
 
 /** Represents a decoded Transfer event. */
 export type TransferEvent = {
