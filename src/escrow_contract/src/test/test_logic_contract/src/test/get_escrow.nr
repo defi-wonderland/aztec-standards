@@ -31,7 +31,7 @@ unconstrained fn get_escrow_correct_instance() {
     assert_eq(escrow_instance.salt, logic.to_field(), "Salt is not the logic contract");
     assert_eq(escrow_instance.deployer, AztecAddress::from_field(0), "Deployer is not zero");
     assert_eq(
-        escrow_instance.contract_class_id.to_field(),
+        escrow_instance.original_contract_class_id.to_field(),
         escrow_class_id,
         "Escrow class id mismatch",
     );

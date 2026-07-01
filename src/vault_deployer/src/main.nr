@@ -170,7 +170,7 @@ pub contract VaultDeployer {
         ContractInstance {
             salt,
             deployer,
-            contract_class_id,
+            original_contract_class_id: contract_class_id,
             initialization_hash,
             immutables_hash: 0,
             public_keys: PublicKeys::default(),
