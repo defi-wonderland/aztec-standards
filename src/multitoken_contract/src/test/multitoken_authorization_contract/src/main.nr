@@ -8,7 +8,7 @@ use aztec::macros::aztec;
 #[aztec]
 pub contract MultiTokenAuthorizationContract {
     use aztec::{
-        macros::{functions::{external, internal, only_self}, storage::storage},
+        macros::{functions::{external, internal, only_self, view}, storage::storage},
         protocol::{address::AztecAddress, traits::{Deserialize, Packable, Serialize}},
         state_vars::PublicMutable,
     };
@@ -64,6 +64,14 @@ pub contract MultiTokenAuthorizationContract {
     #[external("public")]
     fn set_should_revert(value: bool) {
         self.storage.should_revert.write(value);
+    }
+
+    /// @notice Test-only reader for the most recent recorded hook invocation
+    /// @return The parameters of the last authorize_private or authorize_public call
+    #[external("public")]
+    #[view]
+    fn get_last_call() -> AuthCall {
+        self.storage.last_call.read()
     }
 
     /// @notice Public entrypoint for enqueued dispatch from authorize_private; shared write path lives in _record_call
