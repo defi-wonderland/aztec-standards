@@ -877,23 +877,11 @@ export async function getMultiTokenTransferEvents(
   txHash: TxHash,
   contractAddress: AztecAddress,
 ): Promise<MultiTokenTransferEvent[]> {
-  const response = await node.getPublicLogs({
-    txHash,
+  const { events } = await getPublicEvents<MultiTokenTransferEvent>(node, MultiTokenContract.events.TransferSingle, {
     contractAddress,
+    txHash,
   });
-
-  const eventMetadata = MultiTokenContract.events.TransferSingle;
-  const expectedFieldCount = 4; // from, to, id, amount
-
-  return response.logs
-    .filter((extLog) => {
-      const eventFields = extLog.log.getEmittedFieldsWithoutTag();
-      return eventFields.length === expectedFieldCount;
-    })
-    .map((extLog) => {
-      const eventFields = extLog.log.getEmittedFieldsWithoutTag();
-      return decodeFromAbi([eventMetadata.abiType], eventFields) as MultiTokenTransferEvent;
-    });
+  return events.map((e) => e.event);
 }
 
 /**
