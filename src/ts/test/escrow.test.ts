@@ -1,4 +1,3 @@
-import { TxStatus } from '@aztec/aztec.js/tx';
 import { deriveKeys } from '@aztec/stdlib/keys';
 import { PublicKeys } from '@aztec/aztec.js/keys';
 import { type AztecNode } from '@aztec/aztec.js/node';
@@ -6,7 +5,8 @@ import { AztecAddress } from '@aztec/aztec.js/addresses';
 import { type EmbeddedWallet } from '@aztec/wallets/embedded';
 import { BlockNumber } from '@aztec/foundation/branded-types';
 import { ContractDeployer } from '@aztec/aztec.js/deployment';
-import { Fr, Point } from '@aztec/aztec.js/fields';
+import { Fr } from '@aztec/aztec.js/fields';
+import { PublicKey } from '@aztec/stdlib/keys';
 import {
   getContractInstanceFromInstantiationParams,
   getContractClassFromArtifact,
@@ -47,8 +47,29 @@ type NoirWrappedPoint = {
   };
 };
 
-const noirWrappedPointToPoint = (wrapped: NoirWrappedPoint) =>
-  new Point(new Fr(wrapped.inner.x), new Fr(wrapped.inner.y), !!wrapped.inner.is_infinite);
+// `PublicKey` is a Grumpkin curve point; its constructor derives `isInfinite` from `x`/`y`,
+// so the Noir `is_infinite` flag carries no extra information for a valid (non-infinity) key.
+const noirWrappedPointToPublicKey = (wrapped: NoirWrappedPoint): PublicKey =>
+  new PublicKey(new Fr(wrapped.inner.x), new Fr(wrapped.inner.y));
+
+// Builds a JS `PublicKeys` from the new v5 PublicKeys layout returned by the Noir circuit:
+// `{ npk_m_hash, ivpk_m: { inner: { x, y, is_infinite } }, ovpk_m_hash, tpk_m_hash, mspk_m_hash, fbpk_m_hash }`.
+const noirPublicKeysToPublicKeys = (publicKeys: {
+  npk_m_hash: FrInput;
+  ivpk_m: NoirWrappedPoint;
+  ovpk_m_hash: FrInput;
+  tpk_m_hash: FrInput;
+  mspk_m_hash: FrInput;
+  fbpk_m_hash: FrInput;
+}): PublicKeys =>
+  new PublicKeys(
+    new Fr(publicKeys.npk_m_hash),
+    noirWrappedPointToPublicKey(publicKeys.ivpk_m),
+    new Fr(publicKeys.ovpk_m_hash),
+    new Fr(publicKeys.tpk_m_hash),
+    new Fr(publicKeys.mspk_m_hash),
+    new Fr(publicKeys.fbpk_m_hash),
+  );
 
 describe('Escrow', () => {
   let cleanup: () => Promise<void>;
@@ -156,30 +177,13 @@ describe('Escrow', () => {
         .secret_key_to_public_keys(escrowSk)
         .simulate({ from: alice });
 
-      expect(new Fr(circuitPublicKeys.npk_m.inner.x).toString()).toBe(
-        escrowKeys.publicKeys.masterNullifierPublicKey.x.toString(),
-      );
-      expect(new Fr(circuitPublicKeys.npk_m.inner.y).toString()).toBe(
-        escrowKeys.publicKeys.masterNullifierPublicKey.y.toString(),
-      );
-      expect(new Fr(circuitPublicKeys.ivpk_m.inner.x).toString()).toBe(
-        escrowKeys.publicKeys.masterIncomingViewingPublicKey.x.toString(),
-      );
-      expect(new Fr(circuitPublicKeys.ivpk_m.inner.y).toString()).toBe(
-        escrowKeys.publicKeys.masterIncomingViewingPublicKey.y.toString(),
-      );
-      expect(new Fr(circuitPublicKeys.ovpk_m.inner.x).toString()).toBe(
-        escrowKeys.publicKeys.masterOutgoingViewingPublicKey.x.toString(),
-      );
-      expect(new Fr(circuitPublicKeys.ovpk_m.inner.y).toString()).toBe(
-        escrowKeys.publicKeys.masterOutgoingViewingPublicKey.y.toString(),
-      );
-      expect(new Fr(circuitPublicKeys.tpk_m.inner.x).toString()).toBe(
-        escrowKeys.publicKeys.masterTaggingPublicKey.x.toString(),
-      );
-      expect(new Fr(circuitPublicKeys.tpk_m.inner.y).toString()).toBe(
-        escrowKeys.publicKeys.masterTaggingPublicKey.y.toString(),
-      );
+      expect(new Fr(circuitPublicKeys.npk_m_hash).toString()).toBe(escrowKeys.publicKeys.npkMHash.toString());
+      expect(new Fr(circuitPublicKeys.ivpk_m.inner.x).toString()).toBe(escrowKeys.publicKeys.ivpkM.x.toString());
+      expect(new Fr(circuitPublicKeys.ivpk_m.inner.y).toString()).toBe(escrowKeys.publicKeys.ivpkM.y.toString());
+      expect(new Fr(circuitPublicKeys.ovpk_m_hash).toString()).toBe(escrowKeys.publicKeys.ovpkMHash.toString());
+      expect(new Fr(circuitPublicKeys.tpk_m_hash).toString()).toBe(escrowKeys.publicKeys.tpkMHash.toString());
+      expect(new Fr(circuitPublicKeys.mspk_m_hash).toString()).toBe(escrowKeys.publicKeys.mspkMHash.toString());
+      expect(new Fr(circuitPublicKeys.fbpk_m_hash).toString()).toBe(escrowKeys.publicKeys.fbpkMHash.toString());
     });
   });
 
@@ -188,12 +192,7 @@ describe('Escrow', () => {
       const { result: escrow_address } = await logic.methods.get_escrow(escrowSk).simulate({ from: alice });
 
       const { result: publicKeys } = await logic.methods.secret_key_to_public_keys(escrowSk).simulate({ from: alice });
-      const publicKeysObj = new PublicKeys(
-        noirWrappedPointToPoint(publicKeys.npk_m),
-        noirWrappedPointToPoint(publicKeys.ivpk_m),
-        noirWrappedPointToPoint(publicKeys.ovpk_m),
-        noirWrappedPointToPoint(publicKeys.tpk_m),
-      );
+      const publicKeysObj = noirPublicKeysToPublicKeys(publicKeys);
       const escrow_instance = await getContractInstanceFromInstantiationParams(EscrowContractArtifact, {
         salt: escrowSalt,
         publicKeys: publicKeysObj,
@@ -206,12 +205,7 @@ describe('Escrow', () => {
       const { result: escrow_address } = await logic.methods.get_escrow(escrowSk).simulate({ from: alice });
 
       const { result: publicKeys } = await logic.methods.secret_key_to_public_keys(escrowSk).simulate({ from: alice });
-      const publicKeysObj = new PublicKeys(
-        noirWrappedPointToPoint(publicKeys.npk_m),
-        noirWrappedPointToPoint(publicKeys.ivpk_m),
-        noirWrappedPointToPoint(publicKeys.ovpk_m),
-        noirWrappedPointToPoint(publicKeys.tpk_m),
-      );
+      const publicKeysObj = noirPublicKeysToPublicKeys(publicKeys);
       const incorrect_escrow_instance = await getContractInstanceFromInstantiationParams(EscrowContractArtifact, {
         salt: escrowSalt,
         publicKeys: publicKeysObj,
@@ -225,12 +219,7 @@ describe('Escrow', () => {
       const { result: escrow_address } = await logic.methods.get_escrow(escrowSk).simulate({ from: alice });
 
       const { result: publicKeys } = await logic.methods.secret_key_to_public_keys(escrowSk).simulate({ from: alice });
-      const publicKeysObj = new PublicKeys(
-        noirWrappedPointToPoint(publicKeys.npk_m),
-        noirWrappedPointToPoint(publicKeys.ivpk_m),
-        noirWrappedPointToPoint(publicKeys.ovpk_m),
-        noirWrappedPointToPoint(publicKeys.tpk_m),
-      );
+      const publicKeysObj = noirPublicKeysToPublicKeys(publicKeys);
       const incorrect_escrow_instance = await getContractInstanceFromInstantiationParams(EscrowContractArtifact, {
         salt: new Fr(1),
         publicKeys: publicKeysObj,
