@@ -1,7 +1,7 @@
 use crate::types::multitoken_note::MultiTokenNote;
 use aztec::{
     context::{PrivateContext, UtilityContext},
-    messages::message_delivery::MessageDelivery,
+    messages::delivery::MessageDelivery,
     note::{
         HintedNote,
         note_getter_options::{NoteGetterOptions, SortOrder},
@@ -62,7 +62,7 @@ impl MultiBalanceSet<&mut PrivateContext> {
     pub fn add(self: Self, id: Field, amount: u128) {
         if amount != 0 {
             let note = MultiTokenNote { token_id: id, value: amount };
-            self.set.insert(note).deliver(MessageDelivery.ONCHAIN_CONSTRAINED);
+            self.set.insert(note).deliver(MessageDelivery::onchain_constrained());
         }
     }
 
