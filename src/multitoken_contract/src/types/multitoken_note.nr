@@ -3,19 +3,22 @@ use aztec::{
     keys::getters::{get_nhk_app, get_public_keys, try_get_public_keys},
     macros::notes::custom_note,
     messages::{
+        delivery::{do_private_message_delivery, MessageDelivery},
         logs::partial_note::encode_partial_note_private_message,
-        message_delivery::{do_private_message_delivery, MessageDelivery},
     },
-    note::{note_interface::{NoteHash, NoteType}, utils::compute_note_nullifier},
+    note::{
+        note_interface::{NoteHash, NoteType},
+        utils::{compute_note_hash, compute_note_nullifier},
+    },
     oracle::random::random,
     protocol::{
         address::AztecAddress,
         constants::{
-            DOM_SEP__NOTE_COMPLETION_LOG_TAG, DOM_SEP__NOTE_HASH,
+            DOM_SEP__NOTE_COMPLETION_LOG_TAG, DOM_SEP__PARTIAL_NOTE_COMMITMENT,
             DOM_SEP__PARTIAL_NOTE_VALIDITY_COMMITMENT,
         },
         hash::{compute_log_tag, compute_siloed_nullifier, poseidon2_hash_with_separator},
-        traits::{Deserialize, FromField, Hash, Packable, Serialize, ToField},
+        traits::{Deserialize, FromField, Packable, Serialize, ToField},
     },
 };
 
@@ -75,8 +78,7 @@ impl NoteHash for MultiTokenNote {
         owner: AztecAddress,
         note_hash_for_nullification: Field,
     ) -> Field {
-        let owner_npk_m = get_public_keys(owner).npk_m;
-        let owner_npk_m_hash = owner_npk_m.hash();
+        let owner_npk_m_hash = get_public_keys(owner).npk_m_hash;
         let secret = context.request_nhk_app(owner_npk_m_hash);
         compute_note_nullifier(note_hash_for_nullification, [secret])
     }
@@ -87,8 +89,7 @@ impl NoteHash for MultiTokenNote {
         note_hash_for_nullification: Field,
     ) -> Option<Field> {
         try_get_public_keys(owner).map(|public_keys| {
-            let owner_npk_m = public_keys.npk_m;
-            let owner_npk_m_hash = owner_npk_m.hash();
+            let owner_npk_m_hash = public_keys.npk_m_hash;
             let secret = get_nhk_app(owner_npk_m_hash);
             compute_note_nullifier(note_hash_for_nullification, [secret])
         })
@@ -144,7 +145,7 @@ impl MultiTokenNote {
             },
             Option::none(),
             recipient,
-            MessageDelivery.ONCHAIN_UNCONSTRAINED,
+            MessageDelivery::onchain_unconstrained(),
         );
 
         let partial_note = PartialMultiTokenNote { commitment };
@@ -153,7 +154,7 @@ impl MultiTokenNote {
         // nullifier tree since it uses its own separator, making collisions with actual note nullifiers practically
         // impossible.
         let validity_commitment = partial_note.compute_validity_commitment(completer);
-        context.push_nullifier(validity_commitment);
+        context.push_nullifier_unsafe(validity_commitment);
 
         partial_note
     }
@@ -162,7 +163,10 @@ impl MultiTokenNote {
 /// Computes a commitment to the private content of a partial MultiTokenNote, i.e. the fields that will remain private
 /// (the owner and randomness). All other note fields (storage slot, token id and value) will be made public.
 fn compute_partial_commitment(owner: AztecAddress, randomness: Field) -> Field {
-    poseidon2_hash_with_separator([owner.to_field(), randomness], DOM_SEP__NOTE_HASH)
+    poseidon2_hash_with_separator(
+        [owner.to_field(), randomness],
+        DOM_SEP__PARTIAL_NOTE_COMMITMENT,
+    )
 }
 
 #[derive(Packable)]
@@ -257,7 +261,7 @@ impl PartialMultiTokenNote {
         //  inserted in public as the public values are provided and the note hash computed.
         let log_tag = compute_log_tag(self.commitment, DOM_SEP__NOTE_COMPLETION_LOG_TAG);
         let payload = BoundedVec::from_array([storage_slot, token_id, value.to_field()]);
-        context.emit_private_log_vec_unsafe(log_tag, payload);
+        context.emit_private_log_unsafe(log_tag, payload);
         context.push_note_hash(self.compute_complete_note_hash(storage_slot, token_id, value));
     }
 
@@ -278,13 +282,10 @@ impl PartialMultiTokenNote {
         token_id: Field,
         value: u128,
     ) -> Field {
-        // Here we finalize the note hash by including the (public) storage slot, token id and value into the partial
-        // note commitment. Note that we use the same separator as we used for the first round of poseidon - this is not
-        // an issue.
-        poseidon2_hash_with_separator(
-            [self.commitment, storage_slot, token_id, value.to_field()],
-            DOM_SEP__NOTE_HASH,
-        )
+        // Finalize the note hash by folding the (public) storage slot, token id and value into the partial note
+        // commitment. `compute_note_hash` fixes the storage slot at the first position of the preimage (preventing
+        // cross-slot collisions) and appends the remaining fields in order.
+        compute_note_hash(storage_slot, [self.commitment, token_id, value.to_field()])
     }
 }
 
