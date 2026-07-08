@@ -36,8 +36,9 @@ pub contract MultiToken {
         AztecAddress::from_field(0x1ea7e01501975545617c2e694d931cb576b691a4a867fed81ebd3264);
 
     /// @notice Emitted only on operations whose token id is already revealed on-chain (any public-balance write or
-    /// commitment completion). Fully-private operations (transfer_private_to_private, mint_to_private, burn_private)
-    /// emit no event, as an id-bearing event would leak the token id.
+    /// public commitment completion). Fully-private operations (transfer_private_to_private,
+    /// transfer_private_to_commitment, mint_to_private, burn_private) emit no event, as an id-bearing event would leak
+    /// the token id.
     #[event]
     struct TransferSingle {
         from: AztecAddress,

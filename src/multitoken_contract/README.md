@@ -26,7 +26,7 @@ Mints (`mint_to_private`, `mint_to_public`, `mint_to_commitment`) are **not** ho
 
 ## TransferSingle Events
 
-A public `TransferSingle { from, to, id, amount }` event is emitted only on operations whose token id is already revealed on-chain (any public-balance write or commitment completion). Fully-private operations emit nothing, since an id-bearing event would leak the token id.
+A public `TransferSingle { from, to, id, amount }` event is emitted only on operations whose token id is already revealed on-chain (any public-balance write or public commitment completion). Fully-private operations emit nothing, since an id-bearing event would leak the token id.
 
 | Operation | Event Pattern |
 |-----------|---------------|
