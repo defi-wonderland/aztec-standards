@@ -6,6 +6,8 @@ members = [
 "src/vault_deployer",
 "src/dripper",
 "src/nft_contract",
+"src/multitoken_contract",
+"src/multitoken_contract/src/test/multitoken_authorization_contract",
 "src/escrow_contract",
 "src/escrow_contract/src/test/test_logic_contract",
 "src/generic_proxy",
@@ -14,6 +16,7 @@ members = [
 [benchmark]
 token = "benchmarks/token_contract.benchmark.ts"
 nft = "benchmarks/nft_contract.benchmark.ts"
+multitoken = "benchmarks/multitoken_contract.benchmark.ts"
 vault = "benchmarks/vault_contract.benchmark.ts"
 escrow = "benchmarks/escrow_contract.benchmark.ts"
 logic = "benchmarks/logic_contract.benchmark.ts"

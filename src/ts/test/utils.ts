@@ -60,6 +60,7 @@ import { VaultDeployerContract, VaultDeployerContractArtifact } from '../../../s
 import { NFTContract } from '../../../src/artifacts/NFT.js';
 import { TestLogicContract } from '../../../src/artifacts/TestLogic.js';
 import { EscrowContract } from '../../../src/artifacts/Escrow.js';
+import { MultiTokenContract } from '../../../src/artifacts/MultiToken.js';
 
 import { expect } from 'vitest';
 
@@ -741,5 +742,173 @@ export async function expectNFTTransferEvents(
     expect(events[i].from).toEqual(expected[i].from);
     expect(events[i].to).toEqual(expected[i].to);
     expect(events[i].token_id).toEqual(expected[i].token_id);
+  }
+}
+
+// --- MultiToken Utils ---
+//
+// MultiToken is token-shaped (public + private balances, commitments, ARC-403 authwit hook) but
+// NFT-shaped in that every balance-bearing op carries an `id: Field`. Its event is the 4-field
+// `TransferSingle{from,to,id,amount}` (eventSelector 0x2429b477) — the existing 3-field `Transfer`
+// helpers cannot be reused (see the design-contract E-01 and the plan's divergence guard).
+
+/** Human-readable name/symbol used by the MultiToken deploy helper (kept as constants so tests can round-trip them). */
+export const MULTITOKEN_NAME = 'MultiToken';
+export const MULTITOKEN_SYMBOL = 'MTK';
+
+/** Token-id fixture used across the MultiToken happy-path tests. */
+export const ID_A = 1n;
+
+/**
+ * Packs a short (<=31 byte) ASCII string into a single Field, big-endian — the encoding used by the
+ * Noir `FieldCompressedString` that MultiToken's ctor takes for name/symbol (codegen shape `{ value }`).
+ * The MultiToken ctor stores exactly the Field it is given, so the deploy-and-read-back round-trip in
+ * tests holds regardless of any subtle byte-order difference; a real string is used so the value is meaningful.
+ * @param s - The string to pack (max 31 bytes).
+ * @returns The packed Field.
+ */
+export function fieldFromShortString(s: string): Fr {
+  const bytes = new TextEncoder().encode(s);
+  if (bytes.length > 31) {
+    throw new Error(`String "${s}" is too long to pack into a single Field (max 31 bytes)`);
+  }
+  let acc = 0n;
+  for (const b of bytes) {
+    acc = (acc << 8n) + BigInt(b);
+  }
+  return new Fr(acc);
+}
+
+/**
+ * Normalises the value of a decoded `FieldCompressedString` (returned by `name()`/`symbol()`) to a bigint,
+ * tolerating whether the SDK decodes the struct to `{ value }` (bigint or Fr) or to a bare scalar.
+ */
+export function compressedStringToBigInt(result: any): bigint {
+  const v = result?.value ?? result;
+  if (typeof v === 'bigint') return v;
+  if (typeof v === 'number') return BigInt(v);
+  return v.toBigInt();
+}
+
+/**
+ * Deploys the MultiToken contract with a specified minter (and optional ARC-403 auth contract).
+ * @param wallet - The wallet to deploy the contract with.
+ * @param deployer - The account that sends the deploy tx.
+ * @param minter - The address stored as the (immutable) minter.
+ * @param authContract - Optional ARC-403 hook contract address; `AztecAddress.ZERO` (default) disables the hook.
+ * @returns A deployed MultiTokenContract instance.
+ */
+export async function deployMultiTokenWithMinter(
+  wallet: Wallet,
+  deployer: AztecAddress,
+  minter: AztecAddress,
+  authContract: AztecAddress = AztecAddress.ZERO,
+  options?: DeployOptions,
+): Promise<MultiTokenContract> {
+  const { contract } = await MultiTokenContract.deployWithOpts(
+    { method: 'constructor_with_minter', wallet },
+    { value: fieldFromShortString(MULTITOKEN_NAME) },
+    { value: fieldFromShortString(MULTITOKEN_SYMBOL) },
+    minter,
+    authContract,
+  ).send({ ...options, from: deployer });
+  return contract as MultiTokenContract;
+}
+
+// TODO: Replace wallet internals (privateExecutionResult) with simulate() + send() to get private return values via public API.
+/**
+ * Initializes a MultiToken transfer commitment (partial note) and returns its commitment Field.
+ * Mirrors `initializeTransferCommitment` (the ONLY sanctioned wallet-internals escape hatch) — the
+ * MultiToken `initialize_transfer_commitment(to, completer)` is id-AGNOSTIC (the completer binds the id
+ * at completion), so the signature is identical to the Token/NFT variant. Reaches into
+ * `WalletWithInternals` to extract the partial-note commitment from `provenTx.privateExecutionResult`.
+ * @param token - The MultiToken contract instance.
+ * @param caller - The account that sends (and settles) the initialize tx.
+ * @param to - The address of the note recipient.
+ * @param completer - The address allowed to complete the partial note.
+ * @returns Partial note commitment.
+ */
+export async function initializeMultiTokenTransferCommitment(
+  token: MultiTokenContract,
+  caller: AztecAddress,
+  to: AztecAddress,
+  completer: AztecAddress,
+): Promise<bigint> {
+  const interaction = token.methods.initialize_transfer_commitment(to, completer);
+  const executionPayload = await interaction.request();
+  const w = token.wallet as unknown as WalletWithInternals;
+  const feeOptions = await w.completeFeeOptions(caller, executionPayload.feePayer, undefined);
+  const txRequest = await w.createTxExecutionRequestFromPayloadAndFee(executionPayload, caller, feeOptions);
+  const provenTx = await w.pxe.proveTx(txRequest, { scopes: w.scopesFrom(caller), senderForTags: caller });
+
+  const entrypoint = provenTx.privateExecutionResult.entrypoint;
+  const nestedResults = entrypoint.nestedExecutionResults;
+  const returnValues = nestedResults[0].returnValues;
+  const commitment = returnValues[0].toBigInt();
+
+  const tx = await provenTx.toTx();
+  const txHash = tx.getTxHash();
+  await node.sendTx(tx);
+  await waitForTx(node, txHash);
+
+  return commitment;
+}
+
+// --- MultiToken Transfer Event Utils ---
+
+/** Represents a decoded MultiToken TransferSingle event (4 fields: from, to, id, amount). */
+export type MultiTokenTransferEvent = {
+  from: AztecAddress;
+  to: AztecAddress;
+  id: bigint;
+  amount: bigint;
+};
+
+/**
+ * Queries the node for public logs emitted in a transaction by a specific MultiToken contract,
+ * and decodes them as `TransferSingle` events (4 fields; `id` distinguishes it from the 3-field
+ * Token/NFT `Transfer`). An empty array serves the "no public events" privacy assertions.
+ *
+ * @param txHash - The transaction hash to query logs for.
+ * @param contractAddress - The MultiToken contract address to filter logs by.
+ * @returns An array of decoded MultiTokenTransferEvent objects.
+ */
+export async function getMultiTokenTransferEvents(
+  txHash: TxHash,
+  contractAddress: AztecAddress,
+): Promise<MultiTokenTransferEvent[]> {
+  const { events } = await getPublicEvents<MultiTokenTransferEvent>(node, MultiTokenContract.events.TransferSingle, {
+    contractAddress,
+    txHash,
+  });
+  return events.map((e) => e.event);
+}
+
+/**
+ * Asserts that the TransferSingle events emitted by a specific MultiToken contract in a transaction
+ * match the expected events exactly (count and content, order-sensitive).
+ *
+ * Comment convention above expectMultiTokenTransferEvents calls: `operation: TransferSingle(from, to, id, amount)`
+ * - Mint to public:   `// mint_to_public: TransferSingle(0x0, alice, id, AMOUNT)`
+ * - Mint to commitment:`// mint_to_commitment: TransferSingle(0x0, PRIVATE, id, AMOUNT)`
+ * - No events:         `// transfer_private_to_private: (no public events)`
+ *
+ * @param txHash - The transaction hash to query logs for.
+ * @param contractAddress - The MultiToken contract address to filter logs by.
+ * @param expected - The expected TransferSingle events in order.
+ */
+export async function expectMultiTokenTransferEvents(
+  txHash: TxHash,
+  contractAddress: AztecAddress,
+  expected: MultiTokenTransferEvent[],
+): Promise<void> {
+  const events = await getMultiTokenTransferEvents(txHash, contractAddress);
+
+  expect(events.length).toBe(expected.length);
+  for (let i = 0; i < expected.length; i++) {
+    expect(events[i].from).toEqual(expected[i].from);
+    expect(events[i].to).toEqual(expected[i].to);
+    expect(events[i].id).toEqual(expected[i].id);
+    expect(events[i].amount).toEqual(expected[i].amount);
   }
 }
