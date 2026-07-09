@@ -56,5 +56,5 @@ pub unconstrained fn get_escrow_class_id() -> Field {
         random(),
         AztecAddress::zero(),
     );
-    escrow_instance.contract_class_id.to_field()
+    escrow_instance.original_contract_class_id.to_field()
 }
