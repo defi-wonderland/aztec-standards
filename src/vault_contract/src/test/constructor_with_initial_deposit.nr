@@ -5,6 +5,7 @@ use crate::{
     },
     Vault,
 };
+use aztec::protocol::address::AztecAddress;
 use token_contract::test::utils::{check_total_supply, get_total_supply};
 use token_contract::Token;
 
@@ -120,6 +121,7 @@ unconstrained fn vault_with_initial_deposit_fail_zero_amount() {
         "SHARES0000000000000000000000000",
         18,
         vault_address,
+        AztecAddress::zero(),
     );
     let shares_address =
         env.deploy("@token_contract/Token").with_public_initializer(owner, shares_initializer);
